@@ -165,7 +165,7 @@ export function createStore(db) {
          WHERE b.id = ? AND m.user_id = ?`).get(id, userId) || null,
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
     businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
-    createBusiness(userId, { name, logo_url = '', brand_color = '#2563eb', plan = 'free' }) {
+    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'free' }) {
       const r = q(
         'INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key) VALUES (?, ?, ?, ?, ?, ?)',
       ).run(userId, name, logo_url, brand_color, plan, token(12));
@@ -210,6 +210,9 @@ export function createStore(db) {
            (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
               WHERE c.business_id = b.id AND r.created_at >= datetime('now', 'start of month')) AS month_responses
          FROM businesses b LEFT JOIN users u ON u.id = b.user_id ORDER BY b.id DESC`).all(),
+    openIssuesCount: (businessId) =>
+      q(`SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.sentiment = 'negative' AND r.status = 'new'`).get(businessId).n,
     monthlyResponseCount: (businessId) =>
       q(`SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
          WHERE c.business_id = ? AND r.created_at >= datetime('now', 'start of month')`).get(businessId).n,
@@ -466,6 +469,19 @@ export function createStore(db) {
     },
 
     // ---------- analytics ----------
+    /** Headline numbers for the window [now - fromDays, now - toDays), used for trends. */
+    periodSummary(businessId, { campaignId = null, fromDays, toDays = 0 }) {
+      const args = [businessId, sqlTime(-fromDays * 864e5), sqlTime(-toDays * 864e5)];
+      const cf = campaignId ? 'AND c.id = ?' : '';
+      if (campaignId) args.push(campaignId);
+      const r = q(
+        `SELECT COUNT(*) AS responses, AVG(r.rating) AS avg_rating, SUM(r.review_clicks != '[]') AS reviewed
+         FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cf}`,
+      ).get(...args);
+      return { responses: r.responses || 0, avgRating: r.avg_rating || 0, reviewed: r.reviewed || 0 };
+    },
+
     stats(businessId, { campaignId = null, days = 30 } = {}) {
       const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 19).replace('T', ' ');
       const cFilter = campaignId ? 'AND c.id = ?' : '';

@@ -48,15 +48,21 @@ export function createContext(
     },
 
     render(req, res, title, body, extra = {}) {
+      const b = req.business;
       res.send(
         adminPage({
           title,
           user: req.user,
-          business: req.business,
+          business: b,
           businesses: req.businesses,
           csrf: req.user?.csrf,
           flash: req.query?.ok ? 'נשמר בהצלחה' : '',
           isSuperadmin: ctx.isSuperadmin(req.user),
+          current: req.originalUrl,
+          openCount: b ? store.openIssuesCount(b.id) : 0,
+          usage: b
+            ? { used: store.monthlyResponseCount(b.id), limit: req.plan.monthlyResponses, planLabel: req.plan.label }
+            : null,
           body,
           ...extra,
         }),

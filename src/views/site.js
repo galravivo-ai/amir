@@ -1,5 +1,6 @@
 import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { h } from '../util.js';
+import { icon, starMark } from './icons.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 export function operatorInfo() {
@@ -23,7 +24,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
 </head>
 <body class="site">
 <header class="site-head">
-  <a class="brand" href="/">★ ${h(op.brand)}</a>
+  <a class="brand" href="/"><span class="brand-mark" style="width:36px;height:36px">${starMark(20)}</span>${h(op.brand)}</a>
   <nav>
     <a href="/#how">איך זה עובד</a>
     <a href="/#features">פיצ'רים</a>
@@ -31,8 +32,8 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#faq">שאלות</a>
   </nav>
   <div class="site-cta">
-    <a href="/login">כניסה</a>
-    ${signupOpen ? '<a class="btn primary" href="/register">התחילו בחינם</a>' : ''}
+    <a href="/login">כניסה לחשבון</a>
+    ${signupOpen ? '<a class="btn primary" href="/register">הרשמה חינם</a>' : ''}
   </div>
 </header>
 ${body}
@@ -50,38 +51,43 @@ ${body}
 
 // ---------------------------------------------------------------- landing
 
-function phoneMock() {
-  const rows = [
-    ['😍', 5, 'מצוין'],
-    ['🙂', 4, 'טוב'],
-    ['😐', 3, 'בסדר'],
-    ['😕', 2, 'לא טוב'],
-    ['😡', 1, 'גרוע'],
-  ];
-  return `<div class="phone" aria-hidden="true">
-    <div class="phone-screen">
-      <div class="muted small">קפה הדוגמה</div>
-      <div class="phone-title">איך הייתה החוויה שלך?</div>
-      ${rows
-        .map(
-          ([face, n, label]) => `<div class="phone-row"><span>${face}</span>
-            <span class="phone-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span><span class="muted">${label}</span></div>`,
-        )
-        .join('')}
+function heroVisual() {
+  const bars = [60, 78, 52, 96, 110, 84, 70, 66, 100, 120, 94, 88, 104, 124];
+  const max = Math.max(...bars);
+  return `<div class="hero-visual" aria-hidden="true">
+    <div class="mock-dash">
+      <div class="mock-side"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mock-main">
+        <b>לוח בקרה</b>
+        <div class="mock-kpis">
+          <span>דירוג ממוצע<strong>4.6</strong></span>
+          <span>דירוגים<strong>312</strong></span>
+          <span>לגוגל<strong>148</strong></span>
+        </div>
+        <div class="mock-bars">${bars.map((v) => `<i style="height:${Math.round((v / max) * 100)}%"></i>`).join('')}</div>
+        <div class="mock-rows">
+          <span><span>אבי · ★★</span><span class="badge st-late">באיחור</span></span>
+          <span><span>מיכל · ★</span><span class="badge st-new">חדש</span></span>
+        </div>
+      </div>
     </div>
+    <div class="mock-phone"><div>
+      <div class="top">נו, איך היה?</div>
+      <div class="nums"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+    </div></div>
   </div>`;
 }
 
 export function landingView({ signupOpen }) {
   const features = [
-    ['📱', 'QR וקישור אישי', 'שלט להדפסה לכל שולחן או קופה, או קישור אישי ללקוח בוואטסאפ, SMS או מייל, עם תזכורת אוטומטית.'],
-    ['⭐', 'יותר ביקורות בגוגל', 'לקוחות מרוצים מקבלים כפתור גדול לכתיבת ביקורת בגוגל, ברגע שהחוויה עוד טרייה.'],
-    ['🚨', 'תופסים לקוח כועס בזמן', 'לקוח לא מרוצה משאיר פרטים, ואתם מקבלים התראה מיידית כדי לחזור אליו לפני שהוא כותב ביקורת.'],
-    ['⏱️', 'מעקב טיפול', 'כל פנייה עם סטטוס, הערות וזמן טיפול. פנייה שנתקעה מסומנת באדום ושולחת תזכורת.'],
-    ['✨', 'עוזר AI', 'מנסח תשובה אישית ללקוח לא מרוצה, ומסכם לכם מה עובד ומה צריך לתקן.'],
-    ['📊', 'לוח בקרה', 'דירוג ממוצע, NPS, קליקים לביקורת, מגמות, ומאיזה שולחן או עובד מגיעים הדירוגים.'],
-    ['💬', 'המלצות באתר שלכם', 'לקוחות מרוצים מאשרים פרסום, ואתם מציגים את ההמלצות באתר בשתי שורות קוד.'],
-    ['👥', 'צוות וסניפים', 'כמה סניפים ועסקים בחשבון אחד, עם הרשאות לכל עובד.'],
+    ['qr', 'QR וקישור אישי', 'שלט להדפסה לכל שולחן או קופה, או קישור אישי ללקוח בוואטסאפ, SMS או מייל, עם תזכורת אוטומטית.'],
+    ['chart', 'יותר ביקורות בגוגל', 'לקוחות מרוצים מקבלים כפתור גדול לכתיבת ביקורת בגוגל, ברגע שהחוויה עוד טרייה.'],
+    ['bell', 'תופסים לקוח כועס בזמן', 'לקוח לא מרוצה משאיר פרטים, ואתם מקבלים התראה מיידית כדי לחזור אליו לפני שהוא כותב ביקורת.'],
+    ['clock', 'מעקב טיפול', 'כל פנייה עם סטטוס, הערות וזמן טיפול. פנייה שנתקעה מסומנת באדום ושולחת תזכורת.'],
+    ['spark', 'עוזר AI', 'מנסח תשובה אישית ללקוח לא מרוצה, ומסכם לכם מה עובד ומה צריך לתקן.'],
+    ['home', 'לוח בקרה', 'דירוג ממוצע, NPS, קליקים לביקורת, מגמות, ומאיזה שולחן או עובד מגיעים הדירוגים.'],
+    ['chat', 'המלצות באתר שלכם', 'לקוחות מרוצים מאשרים פרסום, ואתם מציגים את ההמלצות באתר בשתי שורות קוד.'],
+    ['team', 'צוות וסניפים', 'כמה סניפים ועסקים בחשבון אחד, עם הרשאות לכל עובד.'],
   ];
   const plans = Object.entries(PLANS);
   const price = (p) =>
@@ -100,7 +106,7 @@ export function landingView({ signupOpen }) {
     ['אפשר לשנות את השאלות?', 'כן. בוחרים שאלות, סוגי תשובות, ולמי כל שאלה מוצגת: לכולם, רק למרוצים או רק ללא מרוצים.'],
     ['מה עם פרטיות הלקוחות שלי?', 'המידע שייך לכם, לא מוצג לאף אחד אחר ולא נמכר. פרטים מלאים ב<a href="/privacy">מדיניות הפרטיות</a>.'],
   ];
-  const cta = signupOpen ? '<a class="btn primary big-inline" href="/register">התחילו בחינם</a>' : '<a class="btn primary big-inline" href="/login">כניסה</a>';
+  const cta = signupOpen ? '<a class="btn accent big-inline" href="/register">להתחיל בחינם</a>' : '<a class="btn accent big-inline" href="/login">כניסה</a>';
   return sitePage({
     title: `${operatorInfo().brand} · יותר ביקורות טובות, פחות לקוחות כועסים`,
     description: 'מערכת לאיסוף משוב מלקוחות, הגדלת ביקורות בגוגל וטיפול בלקוחות לא מרוצים. QR, סקר קצר, התראות ו-AI.',
@@ -108,12 +114,17 @@ export function landingView({ signupOpen }) {
     body: `
 <section class="hero">
   <div class="hero-text">
-    <h1>יותר ביקורות טובות בגוגל.<br>פחות לקוחות שהולכים כועסים.</h1>
-    <p class="lead">הלקוח סורק QR ומדרג בפחות מדקה. לקוח מרוצה מגיע ישר לכתיבת ביקורת בגוגל, ולקוח לא מרוצה מדבר איתכם לפני שהוא מדבר עליכם.</p>
-    <div class="actions">${cta}<a class="btn" href="#how">איך זה עובד</a></div>
-    <p class="muted small">בלי כרטיס אשראי · בעברית · מותאם לנייד</p>
+    <span class="hero-pill"><b>חדש</b>עוזר AI שמנסח תשובות ללקוחות</span>
+    <h1>מערכת לניהול ביקורות ושביעות רצון, <em>לעסקים בישראל</em></h1>
+    <p class="lead">QR לכל סניף, סקר קצר ללקוח, הפניה של מרוצים לגוגל, וטיפול מסודר בכל לקוח שלא היה מרוצה. הכול במקום אחד, בעברית.</p>
+    <div class="actions">${cta}<a class="btn big-inline" href="#how">איך זה עובד</a></div>
+    <div class="checks">
+      <span>${icon('check', 18)}בלי כרטיס אשראי</span>
+      <span>${icon('check', 18)}בעברית מלאה</span>
+      <span>${icon('check', 18)}עומד בכללי גוגל</span>
+    </div>
   </div>
-  ${phoneMock()}
+  ${heroVisual()}
 </section>
 
 <section class="band" id="how">
@@ -128,7 +139,7 @@ export function landingView({ signupOpen }) {
 <section class="band alt" id="features">
   <h2>כל מה שצריך כדי לנהל את המוניטין</h2>
   <div class="features">
-    ${features.map(([icon, t, d]) => `<div class="feature"><div class="f-icon">${icon}</div><h3>${h(t)}</h3><p>${h(d)}</p></div>`).join('')}
+    ${features.map(([ic, t, d]) => `<div class="feature"><div class="f-icon">${icon(ic, 22)}</div><h3>${h(t)}</h3><p>${h(d)}</p></div>`).join('')}
   </div>
 </section>
 

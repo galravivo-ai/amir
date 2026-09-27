@@ -1,32 +1,32 @@
 import { h } from '../util.js';
+import { icon, starMark } from './icons.js';
 import { publicPage } from './layout.js';
 
-const FACES = ['😡', '😕', '😐', '🙂', '😍'];
+const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
 
 export function ratingView({ campaign, business, t, src, invite }) {
-  const buttons = [5, 4, 3, 2, 1]
+  const tiles = [1, 2, 3, 4, 5]
     .map(
-      (n) => `<button type="submit" name="rating" value="${n}" class="rate-btn">
-        <span class="face" aria-hidden="true">${FACES[n - 1]}</span>
-        <span class="stars" aria-hidden="true">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>
-        <span class="rate-label">${h(t.rate_labels[n - 1])}</span>
+      (n) => `<button type="submit" name="rating" value="${n}" class="rate-btn" aria-label="${n} · ${h(t.rate_labels[n - 1])}">
+        ${n}<small>${h(t.rate_labels[n - 1])}</small>
       </button>`,
     )
     .join('');
-  const greeting = invite?.customer_name ? `<p class="greet">${h(invite.customer_name)},</p>` : '';
   return publicPage({
     title: t.title,
+    heading: t.title,
+    sub: t.subtitle,
+    above: invite?.customer_name ? `<p class="greet">${h(invite.customer_name)},</p>` : '',
     lang: campaign.lang,
     dir: t.dir,
     business,
-    body: `${greeting}
-      <h1>${h(t.title)}</h1>
-      <p class="muted">${h(t.subtitle)}</p>
-      <form method="post" action="/r/${h(campaign.slug)}/rate" class="rating-form">
+    body: `<form method="post" action="/r/${h(campaign.slug)}/rate" class="rating-form">
         <input type="hidden" name="src" value="${h(src)}">
         <input type="hidden" name="i" value="${h(invite?.token || '')}">
-        ${buttons}
-      </form>`,
+        ${tiles}
+      </form>
+      <div class="rate-scale"><span>${h(t.rate_labels[0])}</span><span>${h(t.rate_labels[4])}</span></div>
+      <div class="rate-hint">${starMark(24)}<span>${h(t.rate_hint)}</span></div>`,
   });
 }
 
@@ -80,19 +80,19 @@ export function questionsView({ campaign, business, t, response, questions, valu
       : '';
   return publicPage({
     title: t.title,
+    heading: negative ? t.q_negative : t.q_positive,
+    above: `<div class="picked" aria-label="${response.rating} / 5">${stars(response.rating)}</div>`,
     lang: campaign.lang,
     dir: t.dir,
     business,
-    body: `<div class="picked">${'★'.repeat(response.rating)}${'☆'.repeat(5 - response.rating)}</div>
-      <h1>${h(negative ? t.q_negative : t.q_positive)}</h1>
-      <form method="post" action="/f/${h(response.token)}" class="survey">
+    body: `<form method="post" action="/f/${h(response.token)}" class="survey">
         ${questions.map((q) => questionField(q, t, values[`q_${q.id}`], errors[q.id])).join('')}
         <fieldset class="q"><legend>${h(t.comment_label)}</legend>
           <textarea name="comment" rows="3" maxlength="3000">${h(values.comment ?? '')}</textarea>
         </fieldset>
         ${contact}
         ${consent}
-        <button class="btn primary big" type="submit">${h(negative ? t.send : t.next)}</button>
+        <button class="btn big" type="submit">${h(negative ? t.send : t.next)}</button>
       </form>`,
   });
 }
@@ -105,14 +105,14 @@ export function thanksView({ campaign, business, t, response }) {
 
   let body;
   if (response.sentiment === 'positive') {
-    body = `<div class="big-icon">🎉</div>
-      <h1>${h(t.thanks_positive_title)}</h1>
+    body = `<div class="thanks">
+      <div class="thanks-icon">${icon('heart', 34)}</div>
       <p>${h(t.thanks_positive_body)}</p>
       <div class="review-links">
         ${links
           .map((l) =>
             l.google
-              ? `<a class="btn primary big google" href="${go(l.key)}" rel="noopener">
+              ? `<a class="btn big google" href="${go(l.key)}" rel="noopener">
                   <span class="g">G</span> ${h(l.label)}</a>`
               : '',
           )
@@ -126,13 +126,14 @@ export function thanksView({ campaign, business, t, response }) {
                  .join('')}</div>`
             : ''
         }
-      </div>`;
+      </div>
+    </div>`;
   } else {
     // Customers who were not satisfied still get access to the public review
     // links (Google policy forbids "review gating"); the private channel is
     // simply offered first.
-    body = `<div class="big-icon">🤝</div>
-      <h1>${h(t.thanks_negative_title)}</h1>
+    body = `<div class="thanks">
+      <div class="thanks-icon">${icon('handshake', 34)}</div>
       <p>${h(t.thanks_negative_body)}</p>
       ${
         links.length
@@ -143,9 +144,11 @@ export function thanksView({ campaign, business, t, response }) {
                 .join('')}</div>
             </div>`
           : ''
-      }`;
+      }
+    </div>`;
   }
-  return publicPage({ title: t.title, lang: campaign.lang, dir: t.dir, business, body });
+  const heading = response.sentiment === 'positive' ? t.thanks_positive_title : t.thanks_negative_title;
+  return publicPage({ title: heading, heading, lang: campaign.lang, dir: t.dir, business, body });
 }
 
 export function messageView({ t, business, campaign, message }) {
@@ -154,6 +157,7 @@ export function messageView({ t, business, campaign, message }) {
     lang: campaign?.lang || 'he',
     dir: t?.dir || 'rtl',
     business,
-    body: `<h1>${h(message)}</h1>`,
+    heading: message,
+    body: '',
   });
 }

@@ -11,7 +11,7 @@ if (store.userByEmail(email)) {
 }
 
 const userId = store.createUser({ email, name: 'דמו', passwordHash: hashPassword('demo12345') });
-const bizId = store.createBusiness(userId, { name: 'קפה הדוגמה', brand_color: '#0f766e', plan: 'business' });
+const bizId = store.createBusiness(userId, { name: 'קפה הדוגמה', plan: 'business' });
 store.setSuperadmin(userId, true);
 const campaignId = store.createCampaign(bizId, {
   name: 'סניף מרכזי',

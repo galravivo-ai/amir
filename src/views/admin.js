@@ -2,6 +2,7 @@ import { EDITABLE_TEXT_KEYS, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
 import { formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
+import { icon } from './icons.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -9,40 +10,49 @@ const stars = (n) => `<span class="stars-sm">${'★'.repeat(n)}${'☆'.repeat(5 
 
 // ---------------------------------------------------------------- dashboard
 
-function kpi(label, value, hint = '') {
+function kpi(label, value, hint = '', trend = '') {
   return `<div class="kpi"><div class="kpi-label">${h(label)}</div><div class="kpi-value">${value}</div>${
-    hint ? `<div class="kpi-hint">${h(hint)}</div>` : ''
+    hint ? `<div class="kpi-hint ${trend}">${h(hint)}</div>` : ''
   }</div>`;
 }
 
+/** Stacked daily bars: satisfied (purple) under unsatisfied (orange). */
 function dailyChart(daily) {
   const w = 720;
-  const hgt = 180;
-  const pad = 24;
-  const max = Math.max(1, ...daily.map((d) => Math.max(d.scans, d.responses)));
-  const step = (w - pad * 2) / daily.length;
-  const bw = Math.max(2, step * 0.38);
-  const y = (v) => hgt - pad - (v / max) * (hgt - pad * 2);
+  const hgt = 220;
+  const padX = 8;
+  const padTop = 16;
+  const padBottom = 26;
+  const max = Math.max(4, ...daily.map((d) => d.responses));
+  const top = Math.ceil(max / 4) * 4;
+  const plotH = hgt - padTop - padBottom;
+  const step = (w - padX * 2) / daily.length;
+  const bw = Math.max(3, step * 0.62);
+  const y = (v) => padTop + plotH - (v / top) * plotH;
+  const grid = [0, 0.5, 1]
+    .map((f) => `<line class="grid" x1="${padX}" x2="${w - padX}" y1="${y(top * f)}" y2="${y(top * f)}"/>
+      <text class="tick" x="${w - padX}" y="${y(top * f) - 4}" text-anchor="end">${Math.round(top * f)}</text>`)
+    .join('');
   const bars = daily
     .map((d, i) => {
-      const x = pad + i * step;
-      return `<g><title>${h(d.date)}: ${d.scans} סריקות, ${d.responses} תגובות, ${d.negative} שליליות</title>
-        <rect x="${x}" y="${y(d.scans)}" width="${bw}" height="${hgt - pad - y(d.scans)}" class="bar-scans"/>
-        <rect x="${x + bw}" y="${y(d.responses)}" width="${bw}" height="${hgt - pad - y(d.responses)}" class="bar-resp"/>
-        <rect x="${x + bw}" y="${y(d.negative)}" width="${bw}" height="${hgt - pad - y(d.negative)}" class="bar-neg"/>
+      const x = padX + i * step + (step - bw) / 2;
+      const pos = d.responses - d.negative;
+      const r = Math.min(4, bw / 2);
+      return `<g><title>${h(d.date)}: ${pos} מרוצים, ${d.negative} לא מרוצים, ${d.scans} סריקות</title>
+        ${pos ? `<rect class="bar-pos" x="${x}" y="${y(pos)}" width="${bw}" height="${y(0) - y(pos)}" rx="${r}"/>` : ''}
+        ${d.negative ? `<rect class="bar-neg" x="${x}" y="${y(d.responses)}" width="${bw}" height="${y(pos) - y(d.responses) - 1}" rx="${r}"/>` : ''}
       </g>`;
     })
     .join('');
-  const first = daily[0]?.date.slice(5) ?? '';
-  const last = daily.at(-1)?.date.slice(5) ?? '';
-  return `<svg viewBox="0 0 ${w} ${hgt}" class="chart" role="img" aria-label="מגמה יומית" direction="ltr">
-    <line x1="${pad}" y1="${hgt - pad}" x2="${w - pad}" y2="${hgt - pad}" class="axis"/>
-    <text x="${pad}" y="${hgt - 6}" class="tick">${first}</text>
-    <text x="${w - pad}" y="${hgt - 6}" class="tick" text-anchor="end">${last}</text>
-    <text x="${pad}" y="14" class="tick">${max}</text>
-    ${bars}
-  </svg>
-  <div class="legend"><span class="sw scans"></span>סריקות <span class="sw resp"></span>תגובות <span class="sw neg"></span>לא מרוצים</div>`;
+  const label = (d) => d.date.slice(8, 10) + '.' + d.date.slice(5, 7);
+  const ticks = [0, Math.floor(daily.length / 2), daily.length - 1]
+    .map((i, k) => `<text class="tick" x="${padX + i * step + step / 2}" y="${hgt - 6}" text-anchor="${['start', 'middle', 'end'][k]}">${label(daily[i])}</text>`)
+    .join('');
+  return `<svg viewBox="0 0 ${w} ${hgt}" class="chart" role="img" aria-label="דירוגים לפי יום" direction="ltr">
+    ${grid}
+    <line class="axis" x1="${padX}" x2="${w - padX}" y1="${y(0)}" y2="${y(0)}"/>
+    ${bars}${ticks}
+  </svg>`;
 }
 
 function distribution(dist) {
@@ -73,22 +83,73 @@ function optionBreakdown(optionCounts) {
     .join('');
 }
 
-export function dashboardView({ stats, campaigns, campaignId, days, recentNegative, quotaWarning = '', can = () => true }) {
+function greeting(name) {
+  const hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hour12: false }));
+  const part = hour >= 5 && hour < 12 ? 'בוקר טוב' : hour < 17 && hour >= 12 ? 'צהריים טובים' : hour >= 17 && hour < 22 ? 'ערב טוב' : 'לילה טוב';
+  const first = String(name ?? '').trim().split(/\s+/)[0];
+  return first ? `${part}, ${first}` : part;
+}
+
+function trendPct(now, before) {
+  if (!before) return ['', ''];
+  const change = Math.round(((now - before) / before) * 100);
+  if (change === 0) return ['ללא שינוי מהתקופה הקודמת', ''];
+  return [`${change > 0 ? '▲' : '▼'} ${Math.abs(change)}% מהתקופה הקודמת`, change > 0 ? 'up' : 'down'];
+}
+
+function trendDiff(now, before) {
+  if (!before || !now) return ['', ''];
+  const diff = Math.round((now - before) * 10) / 10;
+  if (diff === 0) return ['ללא שינוי מהתקופה הקודמת', ''];
+  return [`${diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)} מהתקופה הקודמת`, diff > 0 ? 'up' : 'down'];
+}
+
+function waitingList(rows) {
+  if (!rows.length) return '<p class="muted">אין פניות פתוחות. כל הכבוד!</p>';
+  return `<div class="waiting">${rows
+    .map((r) => {
+      const name = r.customer_name || 'לקוח/ה';
+      const pill = r.overdue ? '<span class="badge st-late">באיחור</span>' : statusBadge(r.status);
+      return `<a href="/admin/responses/${r.id}">
+        <span class="w-avatar">${h(name.trim().charAt(0))}</span>
+        <span class="w-body">
+          <span class="w-name">${h(name)} ${stars(r.rating)}</span>
+          <span class="w-text">${h(r.comment) || '<span class="muted">בלי הערה</span>'}</span>
+        </span>
+        ${pill}
+      </a>`;
+    })
+    .join('')}</div>`;
+}
+
+export function dashboardView({
+  stats,
+  prev,
+  campaigns,
+  campaignId,
+  days,
+  waiting,
+  userName,
+  quotaWarning = '',
+  can = () => true,
+}) {
   const filter = `<form method="get" class="filters">
-      <select name="campaign"><option value="">כל הקמפיינים</option>${campaigns
+      <select name="campaign" aria-label="קמפיין" onchange="this.form.submit()"><option value="">כל הקמפיינים</option>${campaigns
         .map((c) => `<option value="${c.id}" ${c.id === campaignId ? 'selected' : ''}>${h(c.name)}</option>`)
         .join('')}</select>
-      <select name="days">${[7, 30, 90, 365]
+      <select name="days" aria-label="תקופה" onchange="this.form.submit()">${[7, 30, 90, 365]
         .map((d) => `<option value="${d}" ${d === days ? 'selected' : ''}>${d} ימים</option>`)
         .join('')}</select>
-      <button class="btn">סינון</button>
+      <noscript><button class="btn">סינון</button></noscript>
+      ${can('manager') ? '<a class="btn accent" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
     </form>`;
 
   if (!campaigns.length) {
-    return `<h1>ברוכים הבאים!</h1>
+    return `<div class="dash-head"><div class="titles"><h1>${h(greeting(userName))}</h1></div></div>
       <div class="card empty">
+        <h2>מתחילים כאן</h2>
         <p>השלב הראשון: ליצור קמפיין (למשל "סניף ראשי" או "קופה"). כל קמפיין מקבל QR וקישור משלו.</p>
-        ${can('manager') ? '<a class="btn primary" href="/admin/campaigns/new">יצירת קמפיין ראשון</a>' : '<p class="muted">מנהל העסק עוד לא יצר קמפיין.</p>'}
+        ${can('manager') ? '<a class="btn accent big-inline" href="/admin/campaigns/new">+ יצירת קמפיין ראשון</a>' : '<p class="muted">מנהל העסק עוד לא יצר קמפיין.</p>'}
       </div>`;
   }
 
@@ -100,42 +161,63 @@ export function dashboardView({ stats, campaigns, campaignId, days, recentNegati
         : stats.avgResolveHours < 48
           ? `${stats.avgResolveHours.toFixed(1)} שע׳`
           : `${(stats.avgResolveHours / 24).toFixed(1)} ימים`;
-  return `<div class="page-head"><h1>לוח בקרה</h1>${filter}</div>
+  const [respHint, respTrend] = trendPct(stats.responses, prev.responses);
+  const [avgHint, avgTrend] = trendDiff(stats.avgRating, prev.avgRating);
+
+  return `<div class="dash-head">
+      <div class="titles"><h1>${h(greeting(userName))}</h1><p class="muted" style="margin:0">מה קרה ב-${days} הימים האחרונים</p></div>
+      ${filter}
+    </div>
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${
       stats.overdue
-        ? `<a class="alert-bar" href="/admin/responses?overdue=1">⚠ ${stats.overdue} פניות של לקוחות לא מרוצים ממתינות מעבר לזמן הטיפול שהוגדר. לטיפול ←</a>`
+        ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
+            stats.overdue === 1 ? 'לקוח לא מרוצה אחד מחכה' : `${stats.overdue} לקוחות לא מרוצים מחכים`
+          } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
     <div class="kpis">
-      ${kpi('סריקות / כניסות', stats.scans, `${stats.uniqueVisitors} מבקרים ייחודיים`)}
-      ${kpi('דירוגים', stats.responses, `${pct(stats.responseRate)} מהכניסות`)}
-      ${kpi('דירוג ממוצע', stats.avgRating ? stats.avgRating.toFixed(2) : '—', `${stats.positive} מרוצים · ${stats.negative} לא מרוצים`)}
-      ${kpi('קליקים לביקורת', stats.reviewClicks, `${pct(stats.reviewConversion)} מהמדרגים`)}
-      ${kpi('NPS', stats.nps ?? '—', stats.npsCount ? `${stats.npsCount} עונים` : 'אין נתונים')}
-      ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} באיחור` : 'לקוחות לא מרוצים שממתינים')}
-      ${kpi('זמן טיפול ממוצע', resolve, 'מקבלת הפנייה ועד שטופלה')}
+      ${kpi('דירוג ממוצע', stats.avgRating ? stats.avgRating.toFixed(1) : '—', avgHint || `${stats.positive} מרוצים · ${stats.negative} לא מרוצים`, avgTrend)}
+      ${kpi('דירוגים', stats.responses.toLocaleString('he-IL'), respHint || `${pct(stats.responseRate)} מהסריקות`, respTrend)}
+      ${kpi('קליקים לביקורת בגוגל', stats.reviewClicks.toLocaleString('he-IL'), `${pct(stats.reviewConversion)} מהמדרגים`)}
+      ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} באיחור` : 'אין פניות באיחור', stats.overdue ? 'down' : 'up')}
+    </div>
+    <div class="dash-grid">
+      <section class="card">
+        <div class="card-head"><h3>דירוגים לפי יום</h3>
+          <div class="legend"><span><i class="sw pos"></i>מרוצים</span><span><i class="sw neg"></i>לא מרוצים</span></div>
+        </div>
+        ${dailyChart(stats.daily)}
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>מחכים לטיפול</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>
+        ${waitingList(waiting)}
+      </section>
     </div>
     <div class="grid2">
-      <section class="card"><h3>מגמה יומית</h3>${dailyChart(stats.daily)}</section>
       <section class="card"><h3>התפלגות דירוגים</h3>${distribution(stats.distribution)}</section>
+      <section class="card"><h3>מה הלקוחות אומרים</h3>${optionBreakdown(stats.optionCounts)}</section>
     </div>
     <div class="grid2">
-      <section class="card"><h3>מה הלקוחות אומרים</h3>${optionBreakdown(stats.optionCounts)}</section>
+      <section class="card">
+        <h3>מדדים נוספים</h3>
+        <dl class="dl">
+          <dt>סריקות וכניסות</dt><dd>${stats.scans.toLocaleString('he-IL')} (${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים)</dd>
+          <dt>NPS</dt><dd>${stats.nps ?? '—'}${stats.npsCount ? ` <span class="muted small">(${stats.npsCount} עונים)</span>` : ''}</dd>
+          <dt>זמן טיפול ממוצע</dt><dd>${resolve}</dd>
+          <dt>מרוצים / לא מרוצים</dt><dd>${stats.positive} / ${stats.negative}</dd>
+        </dl>
+      </section>
       <section class="card"><h3>מקורות סריקה</h3>
         ${
           stats.sources.length
             ? `<table class="table"><thead><tr><th>מקור</th><th>סריקות</th></tr></thead><tbody>${stats.sources
                 .map((s) => `<tr><td>${h(s.source || 'ללא מקור')}</td><td>${s.scans}</td></tr>`)
                 .join('')}</tbody></table>`
-            : '<p class="muted">אין עדיין סריקות. אפשר להוסיף <code>?src=table-4</code> לקישור כדי לדעת מאיפה הגיעו.</p>'
+            : '<p class="muted">אין עדיין סריקות. אפשר ליצור QR נפרד לכל שולחן או קופה בעמוד השליחה של הקמפיין.</p>'
         }
       </section>
-    </div>
-    <section class="card">
-      <h3>לקוחות לא מרוצים אחרונים</h3>
-      ${responsesTable(recentNegative)}
-    </section>`;
+    </div>`;
 }
 
 // ---------------------------------------------------------------- responses
@@ -204,7 +286,7 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
     </div>`;
 }
 
-export function responseDetailView({ r, csrf, businessName, can = () => true, aiAvailable = false, widgetAvailable = false, aiError = '' }) {
+export function responseDetailView({ r, csrf, businessName, can = () => true, aiAvailable = false, aiReason = '', widgetAvailable = false, aiError = '' }) {
   const questions = parseJson(r.campaign_questions, []);
   const answers = parseJson(r.answers, {});
   const labelOf = Object.fromEntries(questions.map((q) => [q.id, q.label]));
@@ -259,7 +341,7 @@ export function responseDetailView({ r, csrf, businessName, can = () => true, ai
         ${r.resolved_at ? `<p class="muted small">טופל ב-${h(formatDate(r.resolved_at))}</p>` : ''}
       </section>
     </div>
-    ${r.sentiment === 'negative' && can('manager') ? draftSection({ r, csrf, aiAvailable, aiError }) : ''}
+    ${r.sentiment === 'negative' && can('manager') ? draftSection({ r, csrf, aiAvailable, aiReason, aiError }) : ''}
     ${r.publish_consent && widgetAvailable ? publishSection({ r, csrf, canEdit: can('manager') }) : ''}
     ${
       can('owner')
@@ -271,11 +353,11 @@ export function responseDetailView({ r, csrf, businessName, can = () => true, ai
     }`;
 }
 
-function draftSection({ r, csrf, aiAvailable, aiError }) {
+function draftSection({ r, csrf, aiAvailable, aiReason, aiError }) {
   const button = aiAvailable
     ? `<form method="post" action="/admin/responses/${r.id}/draft" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='כותב...'">
         ${csrfField(csrf)}<button class="btn">${r.ai_draft ? 'ניסוח מחדש' : '✨ ניסוח תשובה עם AI'}</button></form>`
-    : '<p class="muted small">ניסוח תשובה עם AI זמין בתוכנית מקצועי ומעלה, כשמפתח ה-AI מוגדר בשרת.</p>';
+    : `<p class="muted small">${h(aiReason)}</p>`;
   return `<section class="card stack" id="draft">
     <h3>תשובה ללקוח</h3>
     ${aiError ? `<div class="error">${h(aiError)}</div>` : ''}

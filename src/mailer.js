@@ -38,7 +38,7 @@ export function createMailer(db, { smtpUrl = process.env.SMTP_URL, from = proces
 }
 
 /** Wraps email content in a simple RTL Hebrew layout. */
-export function emailLayout({ title, body, color = '#2563eb', footer = '' }) {
+export function emailLayout({ title, body, color = '#4b2bd6', footer = '' }) {
   return `<!doctype html><html lang="he" dir="rtl"><body style="margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#1f2330">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px">
 <div style="background:#fff;border-radius:12px;padding:24px;border-top:4px solid ${color};text-align:right">
@@ -49,6 +49,6 @@ ${body}
 </div></body></html>`;
 }
 
-export function emailButton(url, label, color = '#2563eb') {
+export function emailButton(url, label, color = '#4b2bd6') {
   return `<p style="margin:20px 0"><a href="${h(url)}" style="background:${color};color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">${h(label)}</a></p>`;
 }

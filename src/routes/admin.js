@@ -29,13 +29,14 @@ export function adminRoutes(ctx) {
     const campaignId = campaigns.find((c) => c.id === Number(req.query.campaign))?.id ?? null;
     const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     const stats = store.stats(req.business.id, { campaignId, days });
-    const recentNegative = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', limit: 8 });
+    const prev = store.periodSummary(req.business.id, { campaignId, fromDays: days * 2, toDays: days });
+    const waiting = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', status: 'new', limit: 5 });
     const monthly = store.monthlyResponseCount(req.business.id);
     const quotaWarning =
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    render(req, res, 'לוח בקרה', V.dashboardView({ stats, campaigns, campaignId, days, recentNegative, quotaWarning, can: req.can }));
+    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, userName: req.user.name, quotaWarning, can: req.can }));
   });
 
   // ---------- responses ----------
@@ -127,6 +128,9 @@ export function adminRoutes(ctx) {
         businessName: req.business.name,
         can: req.can,
         aiAvailable: Boolean(ctx.ai) && req.plan.ai,
+        aiReason: !req.plan.ai
+          ? 'ניסוח תשובה עם AI זמין בתוכנית מקצועי ומעלה.'
+          : 'עוזר ה-AI עוד לא הופעל בשרת. מנהל המערכת צריך להגדיר מפתח AI.',
         widgetAvailable: req.plan.widget,
         aiError: req.query.aierr ? String(req.query.aierr).slice(0, 200) : '',
       }),

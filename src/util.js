@@ -107,7 +107,7 @@ export function imageMime(buf) {
   return null;
 }
 
-export function safeColor(color, fallback = '#2563eb') {
+export function safeColor(color, fallback = '#4b2bd6') {
   return /^#[0-9a-fA-F]{6}$/.test(String(color ?? '')) ? color : fallback;
 }
 

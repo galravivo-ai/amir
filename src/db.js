@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   logo_url TEXT NOT NULL DEFAULT '',
-  brand_color TEXT NOT NULL DEFAULT '#2563eb',
+  brand_color TEXT NOT NULL DEFAULT '#4b2bd6',
   webhook_url TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -186,6 +186,10 @@ const MIGRATIONS = [
   );
   ALTER TABLE businesses ADD COLUMN logo_version TEXT;
   ALTER TABLE users ADD COLUMN terms_accepted_at TEXT;
+  `,
+  // v3: new brand. Businesses still on the old default color move to the new purple.
+  `
+  UPDATE businesses SET brand_color = '#4b2bd6' WHERE lower(brand_color) = '#2563eb';
   `,
 ];
 
