@@ -7,31 +7,6 @@ const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}
 const pct = (x) => `${Math.round(x * 100)}%`;
 const stars = (n) => `<span class="stars-sm">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
 
-// ---------------------------------------------------------------- auth
-
-export function authView({ mode, error = '', values = {}, allowSignup }) {
-  const isLogin = mode === 'login';
-  return `
-  <div class="auth card">
-    <h1>${isLogin ? 'כניסה' : 'הרשמה'}</h1>
-    ${error ? `<div class="error">${h(error)}</div>` : ''}
-    <form method="post" action="/${isLogin ? 'login' : 'register'}" class="stack">
-      ${isLogin ? '' : `<label>שם<input name="name" required maxlength="80" value="${h(values.name)}"></label>`}
-      <label>אימייל<input name="email" type="email" required value="${h(values.email)}" dir="ltr"></label>
-      <label>סיסמה<input name="password" type="password" required minlength="8" dir="ltr"></label>
-      ${isLogin ? '' : `<label>שם העסק הראשון<input name="business" required maxlength="100" value="${h(values.business)}"></label>`}
-      <button class="btn primary">${isLogin ? 'כניסה' : 'יצירת חשבון'}</button>
-    </form>
-    ${
-      isLogin
-        ? allowSignup
-          ? '<p class="muted">אין חשבון? <a href="/register">להרשמה</a></p>'
-          : ''
-        : '<p class="muted">כבר רשומים? <a href="/login">לכניסה</a></p>'
-    }
-  </div>`;
-}
-
 // ---------------------------------------------------------------- dashboard
 
 function kpi(label, value, hint = '') {
@@ -98,7 +73,7 @@ function optionBreakdown(optionCounts) {
     .join('');
 }
 
-export function dashboardView({ stats, campaigns, campaignId, days, recentNegative }) {
+export function dashboardView({ stats, campaigns, campaignId, days, recentNegative, quotaWarning = '', can = () => true }) {
   const filter = `<form method="get" class="filters">
       <select name="campaign"><option value="">כל הקמפיינים</option>${campaigns
         .map((c) => `<option value="${c.id}" ${c.id === campaignId ? 'selected' : ''}>${h(c.name)}</option>`)
@@ -113,18 +88,33 @@ export function dashboardView({ stats, campaigns, campaignId, days, recentNegati
     return `<h1>ברוכים הבאים!</h1>
       <div class="card empty">
         <p>השלב הראשון: ליצור קמפיין (למשל "סניף ראשי" או "קופה"). כל קמפיין מקבל QR וקישור משלו.</p>
-        <a class="btn primary" href="/admin/campaigns/new">יצירת קמפיין ראשון</a>
+        ${can('manager') ? '<a class="btn primary" href="/admin/campaigns/new">יצירת קמפיין ראשון</a>' : '<p class="muted">מנהל העסק עוד לא יצר קמפיין.</p>'}
       </div>`;
   }
 
+  const resolve =
+    stats.avgResolveHours == null
+      ? '—'
+      : stats.avgResolveHours < 1
+        ? `${Math.max(1, Math.round(stats.avgResolveHours * 60))} דק׳`
+        : stats.avgResolveHours < 48
+          ? `${stats.avgResolveHours.toFixed(1)} שע׳`
+          : `${(stats.avgResolveHours / 24).toFixed(1)} ימים`;
   return `<div class="page-head"><h1>לוח בקרה</h1>${filter}</div>
+    ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
+    ${
+      stats.overdue
+        ? `<a class="alert-bar" href="/admin/responses?overdue=1">⚠ ${stats.overdue} פניות של לקוחות לא מרוצים ממתינות מעבר לזמן הטיפול שהוגדר. לטיפול ←</a>`
+        : ''
+    }
     <div class="kpis">
       ${kpi('סריקות / כניסות', stats.scans, `${stats.uniqueVisitors} מבקרים ייחודיים`)}
       ${kpi('דירוגים', stats.responses, `${pct(stats.responseRate)} מהכניסות`)}
       ${kpi('דירוג ממוצע', stats.avgRating ? stats.avgRating.toFixed(2) : '—', `${stats.positive} מרוצים · ${stats.negative} לא מרוצים`)}
       ${kpi('קליקים לביקורת', stats.reviewClicks, `${pct(stats.reviewConversion)} מהמדרגים`)}
       ${kpi('NPS', stats.nps ?? '—', stats.npsCount ? `${stats.npsCount} עונים` : 'אין נתונים')}
-      ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, 'לקוחות לא מרוצים שממתינים')}
+      ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} באיחור` : 'לקוחות לא מרוצים שממתינים')}
+      ${kpi('זמן טיפול ממוצע', resolve, 'מקבלת הפנייה ועד שטופלה')}
     </div>
     <div class="grid2">
       <section class="card"><h3>מגמה יומית</h3>${dailyChart(stats.daily)}</section>
@@ -161,14 +151,18 @@ export function responsesTable(rows) {
     <tbody>${rows
       .map((r) => {
         const clicks = parseJson(r.review_clicks, []);
-        return `<tr class="${r.sentiment}">
+        return `<tr class="${r.sentiment}${r.overdue ? ' late' : ''}">
           <td data-l="תאריך"><a href="/admin/responses/${r.id}">${h(formatDate(r.created_at))}</a></td>
           <td data-l="קמפיין">${h(r.campaign_name)}${r.source ? `<div class="muted small">${h(r.source)}</div>` : ''}</td>
           <td data-l="דירוג">${stars(r.rating)}</td>
           <td data-l="הערה" class="clip">${h(r.comment) || (r.completed ? '' : '<span class="muted small">לא השלים סקר</span>')}</td>
           <td data-l="לקוח">${h(r.customer_name)} ${r.phone ? `<div class="small" dir="ltr">${h(r.phone)}</div>` : ''}</td>
           <td data-l="ביקורת">${clicks.length ? h(clicks.join(', ')) : '—'}</td>
-          <td data-l="סטטוס">${r.sentiment === 'negative' ? statusBadge(r.status) : '<span class="badge st-ok">מרוצה</span>'}</td>
+          <td data-l="סטטוס">${
+            r.sentiment === 'negative'
+              ? `${statusBadge(r.status)}${r.overdue ? ' <span class="badge st-late">באיחור</span>' : ''}`
+              : `<span class="badge st-ok">מרוצה</span>${r.published ? ' <span class="badge st-pub">באתר</span>' : ''}`
+          }</td>
         </tr>`;
       })
       .join('')}</tbody></table>`;
@@ -198,6 +192,8 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
       <select name="status">${opt('', 'כל הסטטוסים', filters.status)}${Object.entries(STATUSES)
         .map(([k, v]) => opt(k, v, filters.status))
         .join('')}</select>
+      <label class="check"><input type="checkbox" name="overdue" value="1" ${filters.overdue ? 'checked' : ''}> באיחור בלבד</label>
+      <label class="check"><input type="checkbox" name="consent" value="1" ${filters.consent ? 'checked' : ''}> אישרו פרסום</label>
       <input name="q" placeholder="חיפוש בשם / טלפון / הערה" value="${h(filters.q)}">
       <button class="btn">סינון</button>
     </form>
@@ -208,7 +204,7 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
     </div>`;
 }
 
-export function responseDetailView({ r, csrf, businessName }) {
+export function responseDetailView({ r, csrf, businessName, can = () => true, aiAvailable = false, widgetAvailable = false, aiError = '' }) {
   const questions = parseJson(r.campaign_questions, []);
   const answers = parseJson(r.answers, {});
   const labelOf = Object.fromEntries(questions.map((q) => [q.id, q.label]));
@@ -245,7 +241,9 @@ export function responseDetailView({ r, csrf, businessName }) {
           <a class="btn" href="tel:${h(r.phone)}">חיוג</a>` : ''}
           ${r.email ? `<a class="btn" href="mailto:${h(r.email)}">אימייל</a>` : ''}
         </div>
-        <h3>טיפול</h3>
+        ${
+          can('manager')
+            ? `<h3>טיפול</h3>
         <form method="post" action="/admin/responses/${r.id}" class="stack">
           ${csrfField(csrf)}
           <label>סטטוס<select name="status">${Object.entries(STATUSES)
@@ -253,15 +251,61 @@ export function responseDetailView({ r, csrf, businessName }) {
             .join('')}</select></label>
           <label>הערות פנימיות<textarea name="notes" rows="4" maxlength="5000">${h(r.notes)}</textarea></label>
           <button class="btn primary">שמירה</button>
-        </form>
+        </form>`
+            : r.notes
+              ? `<h3>הערות פנימיות</h3><p class="pre">${h(r.notes)}</p>`
+              : ''
+        }
+        ${r.resolved_at ? `<p class="muted small">טופל ב-${h(formatDate(r.resolved_at))}</p>` : ''}
       </section>
-    </div>`;
+    </div>
+    ${r.sentiment === 'negative' && can('manager') ? draftSection({ r, csrf, aiAvailable, aiError }) : ''}
+    ${r.publish_consent && widgetAvailable ? publishSection({ r, csrf, canEdit: can('manager') }) : ''}`;
+}
+
+function draftSection({ r, csrf, aiAvailable, aiError }) {
+  const button = aiAvailable
+    ? `<form method="post" action="/admin/responses/${r.id}/draft" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='כותב...'">
+        ${csrfField(csrf)}<button class="btn">${r.ai_draft ? 'ניסוח מחדש' : '✨ ניסוח תשובה עם AI'}</button></form>`
+    : '<p class="muted small">ניסוח תשובה עם AI זמין בתוכנית מקצועי ומעלה, כשמפתח ה-AI מוגדר בשרת.</p>';
+  return `<section class="card stack" id="draft">
+    <h3>תשובה ללקוח</h3>
+    ${aiError ? `<div class="error">${h(aiError)}</div>` : ''}
+    ${
+      r.ai_draft
+        ? `<textarea id="draft-text" rows="6">${h(r.ai_draft)}</textarea>
+           <p class="muted small">זו טיוטה. קראו, ערכו ורק אז שלחו.</p>
+           <div class="actions">
+             <button type="button" class="btn" onclick="navigator.clipboard.writeText(document.getElementById('draft-text').value);this.textContent='הועתק ✓'">העתקה</button>
+             ${r.phone ? `<button type="button" class="btn wa" data-href="${h(waLink(r.phone, ''))}" onclick="window.open(this.dataset.href+'?text='+encodeURIComponent(document.getElementById('draft-text').value),'_blank','noopener')">שליחה בוואטסאפ</button>` : ''}
+             ${r.email ? `<button type="button" class="btn" data-email="${h(r.email)}" onclick="location.href='mailto:'+encodeURIComponent(this.dataset.email)+'?body='+encodeURIComponent(document.getElementById('draft-text').value)">שליחה במייל</button>` : ''}
+           </div>`
+        : ''
+    }
+    ${button}
+  </section>`;
+}
+
+function publishSection({ r, csrf, canEdit }) {
+  return `<section class="card stack">
+    <h3>המלצה לאתר</h3>
+    <p class="muted small">הלקוח אישר לפרסם את ההערה שלו באתר העסק (עם שם פרטי בלבד).</p>
+    ${
+      canEdit
+        ? `<form method="post" action="/admin/responses/${r.id}/publish">${csrfField(csrf)}
+            <input type="hidden" name="published" value="${r.published ? 0 : 1}">
+            <button class="btn ${r.published ? '' : 'primary'}">${r.published ? 'הסרה מהאתר' : 'פרסום בווידג\'ט'}</button></form>`
+        : `<p>${r.published ? 'מפורסם באתר' : 'לא מפורסם'}</p>`
+    }
+  </section>`;
 }
 
 // ---------------------------------------------------------------- campaigns
 
-export function campaignsView({ campaigns, baseUrl }) {
-  return `<div class="page-head"><h1>קמפיינים ו-QR</h1><a class="btn primary" href="/admin/campaigns/new">+ קמפיין חדש</a></div>
+export function campaignsView({ campaigns, baseUrl, can = () => true, limitReached = '' }) {
+  const newButton = can('manager') && !limitReached ? '<a class="btn primary" href="/admin/campaigns/new">+ קמפיין חדש</a>' : '';
+  return `<div class="page-head"><h1>קמפיינים ו-QR</h1>${newButton}</div>
+    ${limitReached && can('manager') ? `<div class="warn">${h(limitReached)}</div>` : ''}
     <p class="muted">כל קמפיין = קישור + QR משלו, עם שאלות, סף שביעות רצון ויעדי ביקורת. מתאים לסניפים, עמדות, עובדים או ערוצים שונים.</p>
     ${
       campaigns.length
@@ -275,7 +319,7 @@ export function campaignsView({ campaigns, baseUrl }) {
                   <div class="small" dir="ltr"><a href="${h(url)}" target="_blank" rel="noopener">${h(url)}</a></div>
                   <div class="small muted">סף מרוצים: ${c.threshold}★ ומעלה · ${c.questionsList.length} שאלות · ${c.google_review_url ? 'גוגל מחובר' : '<b>חסר קישור גוגל</b>'}</div>
                   <div class="actions">
-                    <a class="btn" href="/admin/campaigns/${c.id}">עריכה</a>
+                    ${can('manager') ? `<a class="btn" href="/admin/campaigns/${c.id}">עריכה</a>` : ''}
                     <a class="btn" href="/admin/campaigns/${c.id}/share">QR, שלטים ושליחה</a>
                     <a class="btn" href="/admin?campaign=${c.id}">נתונים</a>
                   </div>
@@ -337,6 +381,19 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
           .join('')}</select></label>
         ${isNew ? '' : `<label class="check"><input type="checkbox" name="active" value="1" ${c.active ? 'checked' : ''}> פעיל</label>`}
       </div>
+      <div class="row">
+        <label>תזכורת במייל למי שלא דירג<select name="reminder_hours">${[
+          [0, 'בלי תזכורת'],
+          [24, 'אחרי יום'],
+          [48, 'אחרי יומיים'],
+          [72, 'אחרי 3 ימים'],
+          [168, 'אחרי שבוע'],
+        ]
+          .map(([v, l]) => `<option value="${v}" ${Number(c.reminder_hours ?? 48) === v ? 'selected' : ''}>${l}</option>`)
+          .join('')}</select></label>
+        <label class="check"><input type="checkbox" name="ask_consent" value="1" ${c.ask_consent ?? 1 ? 'checked' : ''}>
+          לבקש מלקוחות מרוצים אישור לפרסם את ההערה באתר</label>
+      </div>
     </section>
 
     <section class="card stack">
@@ -384,7 +441,7 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
   }`;
 }
 
-export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName }) {
+export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, can = () => true, emailInvites = false, mailEnabled = false }) {
   const url = `${baseUrl}/r/${campaign.slug}`;
   const inviteUrl = (t) => `${url}?i=${t}`;
   const inviteMsg = (inv) =>
@@ -410,18 +467,26 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
     </section>
     <section class="card stack">
       <h3>שליחת בקשה אישית ללקוח</h3>
-      <p class="muted small">קישור אישי עם שם הלקוח. ניתן לשלוח בוואטסאפ או SMS ולעקוב אם נפתח ומולא.</p>
-      <form method="post" action="/admin/campaigns/${campaign.id}/invites" class="stack">
+      <p class="muted small">קישור אישי עם שם הלקוח. ניתן לשלוח בוואטסאפ או SMS ולעקוב אם נפתח ומולא.${
+        emailInvites ? ' אם ממלאים אימייל, הבקשה נשלחת אוטומטית במייל, ועם תזכורת למי שלא ענה.' : ''
+      }</p>
+      ${
+        can('manager')
+          ? `<form method="post" action="/admin/campaigns/${campaign.id}/invites" class="stack">
         ${csrfField(csrf)}
         <div class="row">
           <input name="customer_name" placeholder="שם הלקוח" maxlength="80">
           <input name="phone" placeholder="טלפון" maxlength="30" dir="ltr">
+          ${emailInvites ? '<input name="email" type="email" placeholder="אימייל (לא חובה)" maxlength="120" dir="ltr">' : ''}
         </div>
         <button class="btn primary">יצירת קישור</button>
-      </form>
+        ${emailInvites && !mailEnabled ? '<p class="muted small">שימו לב: שליחת מיילים עוד לא הוגדרה בשרת, ההודעות נשמרות ביומן בלבד.</p>' : ''}
+      </form>`
+          : ''
+      }
       ${
         newInvite
-          ? `<div class="flash">נוצר קישור: <span dir="ltr">${h(inviteUrl(newInvite.token))}</span>
+          ? `<div class="flash">${newInvite.email_sent_at ? `נשלח מייל ל-<span dir="ltr">${h(newInvite.email)}</span>. ` : ''}נוצר קישור: <span dir="ltr">${h(inviteUrl(newInvite.token))}</span>
               <div class="actions"><a class="btn wa" target="_blank" rel="noopener" href="${h(
                 waLink(newInvite.phone, inviteMsg(newInvite)),
               )}">שליחה בוואטסאפ</a>
@@ -432,7 +497,8 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
         invites.length
           ? `<table class="table"><thead><tr><th>לקוח</th><th>נשלח</th><th>נפתח</th><th>דירג</th><th></th></tr></thead><tbody>${invites
               .map(
-                (inv) => `<tr><td>${h(inv.customer_name)}<div class="small" dir="ltr">${h(inv.phone)}</div></td>
+                (inv) => `<tr><td>${h(inv.customer_name)}<div class="small" dir="ltr">${h(inv.phone)} ${h(inv.email)}</div>
+                  ${inv.email_sent_at ? `<div class="small muted">✉ נשלח במייל${inv.reminder_sent_at ? ' + תזכורת' : ''}</div>` : ''}</td>
                   <td class="small">${h(formatDate(inv.created_at))}</td>
                   <td>${inv.opened_at ? '✓' : '—'}</td><td>${inv.responded_at ? '✓' : '—'}</td>
                   <td><a class="btn-link" target="_blank" rel="noopener" href="${h(waLink(inv.phone, inviteMsg(inv)))}">שליחה שוב</a></td></tr>`,
@@ -457,30 +523,4 @@ export function posterView({ campaign, business, qrSvg, t }) {
     <p class="poster-biz">${h(business.name)}</p>
     <button class="btn primary noprint" onclick="print()">הדפסה</button>
   </div></body></html>`;
-}
-
-// ---------------------------------------------------------------- business
-
-export function businessView({ business, csrf }) {
-  return `<h1>הגדרות עסק</h1>
-  <form method="post" action="/admin/business" class="stack card">
-    ${csrfField(csrf)}
-    <label>שם העסק<input name="name" required maxlength="100" value="${h(business.name)}"></label>
-    <label>קישור ללוגו<input name="logo_url" dir="ltr" value="${h(business.logo_url)}" placeholder="https://..."></label>
-    <label>צבע מותג<input name="brand_color" type="color" value="${h(business.brand_color)}"></label>
-    <label>Webhook להתראות
-      <input name="webhook_url" dir="ltr" value="${h(business.webhook_url)}" placeholder="https://hook.make.com/...">
-    </label>
-    <p class="muted small">בכל משוב שהושלם נשלחת בקשת POST עם JSON (אירוע <code>feedback.negative</code> או <code>feedback.positive</code>). חברו ל-Make / Zapier / n8n כדי לקבל התראה בוואטסאפ, מייל או סלאק על לקוח לא מרוצה.</p>
-    <button class="btn primary">שמירה</button>
-  </form>
-  <section class="card stack">
-    <h3>עסק נוסף</h3>
-    <p class="muted small">מנהלים כמה עסקים או לקוחות? כל עסק עם מיתוג, קמפיינים ונתונים נפרדים.</p>
-    <form method="post" action="/admin/businesses" class="row">
-      ${csrfField(csrf)}
-      <input name="name" required maxlength="100" placeholder="שם העסק החדש">
-      <button class="btn">הוספה</button>
-    </form>
-  </section>`;
 }

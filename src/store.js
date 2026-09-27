@@ -1,5 +1,5 @@
 import { parseJson } from './db.js';
-import { slugify, token } from './util.js';
+import { sha256, slugify, sqlTime, token } from './util.js';
 
 export const QUESTION_TYPES = {
   choice: 'בחירה אחת',
@@ -13,6 +13,14 @@ export const AUDIENCES = {
   positive: 'מרוצים בלבד',
   negative: 'לא מרוצים בלבד',
 };
+
+export const ROLES = {
+  owner: 'בעלים',
+  manager: 'מנהל',
+  viewer: 'צפייה בלבד',
+};
+const ROLE_RANK = { viewer: 1, manager: 2, owner: 3 };
+export const roleAtLeast = (role, min) => (ROLE_RANK[role] || 0) >= ROLE_RANK[min];
 
 export const STATUSES = {
   new: 'חדש',
@@ -96,6 +104,36 @@ export function createStore(db) {
       return Number(r.lastInsertRowid);
     },
     userByEmail: (email) => q('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase()),
+    userById: (id) => q('SELECT * FROM users WHERE id = ?').get(id) || null,
+    updateUserName: (id, name) => q('UPDATE users SET name = ? WHERE id = ?').run(name, id),
+    updateUserPassword(id, passwordHash, keepSessionId = null) {
+      q('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
+      // Changing the password signs out every other session.
+      q('DELETE FROM sessions WHERE user_id = ? AND id IS NOT ?').run(id, keepSessionId);
+    },
+    setSuperadmin: (id, on) => q('UPDATE users SET is_superadmin = ? WHERE id = ?').run(on ? 1 : 0, id),
+    allUsers: () =>
+      q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.created_at,
+           (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS businesses
+         FROM users u ORDER BY u.id DESC`).all(),
+
+    // ---------- password reset ----------
+    createPasswordReset(userId) {
+      const raw = token(24);
+      q('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(
+        sha256(raw),
+        userId,
+        sqlTime(60 * 60e3),
+      );
+      return raw;
+    },
+    passwordResetByToken: (raw) =>
+      q('SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?').get(
+        sha256(raw),
+        sqlTime(),
+      ) || null,
+    usePasswordReset: (raw) =>
+      q("UPDATE password_resets SET used_at = datetime('now') WHERE token_hash = ?").run(sha256(raw)),
     countUsers: () => q('SELECT COUNT(*) AS n FROM users').get().n,
 
     createSession(userId, days = 30) {
@@ -109,7 +147,7 @@ export function createStore(db) {
       if (!id) return null;
       return (
         q(
-          `SELECT s.id AS session_id, s.csrf, u.id, u.email, u.name
+          `SELECT s.id AS session_id, s.csrf, u.id, u.email, u.name, u.is_superadmin
            FROM sessions s JOIN users u ON u.id = s.user_id
            WHERE s.id = ? AND s.expires_at > ?`,
         ).get(id, new Date().toISOString()) || null
@@ -118,23 +156,88 @@ export function createStore(db) {
     deleteSession: (id) => q('DELETE FROM sessions WHERE id = ?').run(id),
 
     // ---------- businesses ----------
-    businessesFor: (userId) => q('SELECT * FROM businesses WHERE user_id = ? ORDER BY id').all(userId),
-    business: (id, userId) => q('SELECT * FROM businesses WHERE id = ? AND user_id = ?').get(id, userId) || null,
+    /** Businesses the user belongs to, with their role in each. */
+    businessesFor: (userId) =>
+      q(`SELECT b.*, m.role FROM businesses b JOIN memberships m ON m.business_id = b.id
+         WHERE m.user_id = ? ORDER BY b.id`).all(userId),
+    business: (id, userId) =>
+      q(`SELECT b.*, m.role FROM businesses b JOIN memberships m ON m.business_id = b.id
+         WHERE b.id = ? AND m.user_id = ?`).get(id, userId) || null,
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
-    createBusiness(userId, { name, logo_url = '', brand_color = '#2563eb' }) {
-      const r = q('INSERT INTO businesses (user_id, name, logo_url, brand_color) VALUES (?, ?, ?, ?)').run(
-        userId,
-        name,
-        logo_url,
-        brand_color,
-      );
-      return Number(r.lastInsertRowid);
+    businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
+    createBusiness(userId, { name, logo_url = '', brand_color = '#2563eb', plan = 'free' }) {
+      const r = q(
+        'INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run(userId, name, logo_url, brand_color, plan, token(12));
+      const id = Number(r.lastInsertRowid);
+      q("INSERT INTO memberships (business_id, user_id, role) VALUES (?, ?, 'owner')").run(id, userId);
+      return id;
     },
+    /** Updates only whitelisted columns that are present in `f`. */
     updateBusiness(id, f) {
-      q(
-        'UPDATE businesses SET name = ?, logo_url = ?, brand_color = ?, webhook_url = ? WHERE id = ?',
-      ).run(f.name, f.logo_url, f.brand_color, f.webhook_url, id);
+      const allowed = [
+        'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
+        'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at',
+      ];
+      const keys = allowed.filter((k) => f[k] !== undefined);
+      if (!keys.length) return;
+      q(`UPDATE businesses SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(
+        ...keys.map((k) => (typeof f[k] === 'boolean' ? Number(f[k]) : f[k])),
+        id,
+      );
     },
+    ensureWidgetKey(id) {
+      q('UPDATE businesses SET widget_key = ? WHERE id = ? AND widget_key IS NULL').run(token(12), id);
+    },
+    allBusinesses: () =>
+      q(`SELECT b.*, u.email AS owner_email,
+           (SELECT COUNT(*) FROM campaigns c WHERE c.business_id = b.id) AS campaigns,
+           (SELECT COUNT(*) FROM memberships m WHERE m.business_id = b.id) AS members,
+           (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+              WHERE c.business_id = b.id AND r.created_at >= datetime('now', 'start of month')) AS month_responses
+         FROM businesses b LEFT JOIN users u ON u.id = b.user_id ORDER BY b.id DESC`).all(),
+    monthlyResponseCount: (businessId) =>
+      q(`SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.created_at >= datetime('now', 'start of month')`).get(businessId).n,
+
+    // ---------- team ----------
+    membersOf: (businessId) =>
+      q(`SELECT u.id, u.email, u.name, m.role, m.created_at FROM memberships m JOIN users u ON u.id = m.user_id
+         WHERE m.business_id = ? ORDER BY m.created_at`).all(businessId),
+    /** Emails of people who should get operational alerts (owners + managers). */
+    alertRecipients: (businessId) =>
+      q(`SELECT u.email FROM memberships m JOIN users u ON u.id = m.user_id
+         WHERE m.business_id = ? AND m.role IN ('owner', 'manager')`).all(businessId).map((r) => r.email),
+    addMember(businessId, userId, role) {
+      q('INSERT OR IGNORE INTO memberships (business_id, user_id, role) VALUES (?, ?, ?)').run(businessId, userId, role);
+    },
+    setMemberRole: (businessId, userId, role) =>
+      q('UPDATE memberships SET role = ? WHERE business_id = ? AND user_id = ?').run(role, businessId, userId),
+    removeMember: (businessId, userId) =>
+      q('DELETE FROM memberships WHERE business_id = ? AND user_id = ?').run(businessId, userId),
+    countOwners: (businessId) =>
+      q("SELECT COUNT(*) AS n FROM memberships WHERE business_id = ? AND role = 'owner'").get(businessId).n,
+    createTeamInvite(businessId, { email, role, invitedBy }) {
+      const raw = token(24);
+      q(`INSERT INTO team_invites (business_id, email, role, token_hash, invited_by, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(businessId, email.toLowerCase(), role, sha256(raw), invitedBy, sqlTime(7 * 864e5));
+      return raw;
+    },
+    teamInviteByToken: (raw) =>
+      q(`SELECT t.*, b.name AS business_name FROM team_invites t JOIN businesses b ON b.id = t.business_id
+         WHERE t.token_hash = ? AND t.accepted_at IS NULL AND t.expires_at > ?`).get(sha256(raw), sqlTime()) || null,
+    acceptTeamInvite(invite, userId) {
+      q("UPDATE team_invites SET accepted_at = datetime('now') WHERE id = ?").run(invite.id);
+      q('INSERT OR REPLACE INTO memberships (business_id, user_id, role) VALUES (?, ?, ?)').run(
+        invite.business_id,
+        userId,
+        invite.role,
+      );
+    },
+    pendingTeamInvites: (businessId) =>
+      q(`SELECT * FROM team_invites WHERE business_id = ? AND accepted_at IS NULL AND expires_at > ?
+         ORDER BY id DESC`).all(businessId, sqlTime()),
+    deleteTeamInvite: (businessId, id) => q('DELETE FROM team_invites WHERE business_id = ? AND id = ?').run(businessId, id),
     deleteBusiness: (id) => q('DELETE FROM businesses WHERE id = ?').run(id),
 
     // ---------- campaigns ----------
@@ -146,8 +249,9 @@ export function createStore(db) {
     campaignById: (id) => hydrateCampaign(q('SELECT * FROM campaigns WHERE id = ?').get(id)),
     createCampaign(businessId, f) {
       const r = q(
-        `INSERT INTO campaigns (business_id, name, slug, lang, google_review_url, extra_links, threshold, questions, texts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO campaigns (business_id, name, slug, lang, google_review_url, extra_links, threshold, questions, texts,
+           reminder_hours, ask_consent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         businessId,
         f.name,
@@ -158,13 +262,15 @@ export function createStore(db) {
         f.threshold ?? 4,
         JSON.stringify(f.questions ?? DEFAULT_QUESTIONS),
         JSON.stringify(f.texts || {}),
+        f.reminder_hours ?? 48,
+        f.ask_consent === false ? 0 : 1,
       );
       return Number(r.lastInsertRowid);
     },
     updateCampaign(id, f) {
       q(
         `UPDATE campaigns SET name = ?, lang = ?, google_review_url = ?, extra_links = ?, threshold = ?,
-           questions = ?, texts = ?, active = ?
+           questions = ?, texts = ?, active = ?, reminder_hours = ?, ask_consent = ?
          WHERE id = ?`,
       ).run(
         f.name,
@@ -175,22 +281,35 @@ export function createStore(db) {
         JSON.stringify(f.questions),
         JSON.stringify(f.texts),
         f.active ? 1 : 0,
+        f.reminder_hours ?? 48,
+        f.ask_consent ? 1 : 0,
         id,
       );
     },
     deleteCampaign: (id) => q('DELETE FROM campaigns WHERE id = ?').run(id),
 
     // ---------- invites ----------
-    createInvite(campaignId, { customer_name, phone }) {
+    createInvite(campaignId, { customer_name, phone, email = '' }) {
       const t = token(9);
-      q('INSERT INTO invites (campaign_id, token, customer_name, phone) VALUES (?, ?, ?, ?)').run(
+      q('INSERT INTO invites (campaign_id, token, customer_name, phone, email) VALUES (?, ?, ?, ?, ?)').run(
         campaignId,
         t,
         customer_name,
         phone,
+        email,
       );
       return t;
     },
+    markInviteEmailed: (id) => q("UPDATE invites SET email_sent_at = datetime('now') WHERE id = ?").run(id),
+    markInviteReminded: (id) => q("UPDATE invites SET reminder_sent_at = datetime('now') WHERE id = ?").run(id),
+    /** Email invites that were sent, not answered, and are due for their single reminder. */
+    invitesDueForReminder: () =>
+      q(`SELECT i.*, c.slug, c.name AS campaign_name, c.business_id
+         FROM invites i JOIN campaigns c ON c.id = i.campaign_id
+         WHERE i.email != '' AND i.email_sent_at IS NOT NULL AND i.responded_at IS NULL
+           AND i.reminder_sent_at IS NULL AND c.active = 1 AND c.reminder_hours > 0
+           AND i.email_sent_at <= datetime('now', '-' || c.reminder_hours || ' hours')
+           AND i.email_sent_at >= datetime('now', '-14 days')`).all(),
     invitesFor: (campaignId, limit = 50) =>
       q('SELECT * FROM invites WHERE campaign_id = ? ORDER BY id DESC LIMIT ?').all(campaignId, limit),
     inviteByToken: (campaignId, t) =>
@@ -224,9 +343,19 @@ export function createStore(db) {
     completeResponse(id, f) {
       q(
         `UPDATE responses SET answers = ?, comment = ?, customer_name = ?, phone = ?, email = ?,
-           wants_contact = ?, completed = 1, updated_at = datetime('now')
+           wants_contact = ?, publish_consent = ?, published = ?, completed = 1, updated_at = datetime('now')
          WHERE id = ?`,
-      ).run(JSON.stringify(f.answers), f.comment, f.customer_name, f.phone, f.email, f.wants_contact ? 1 : 0, id);
+      ).run(
+        JSON.stringify(f.answers),
+        f.comment,
+        f.customer_name,
+        f.phone,
+        f.email,
+        f.wants_contact ? 1 : 0,
+        f.publish_consent ? 1 : 0,
+        f.published ? 1 : 0,
+        id,
+      );
     },
     addReviewClick(id, platform) {
       const row = q('SELECT review_clicks FROM responses WHERE id = ?').get(id);
@@ -241,15 +370,59 @@ export function createStore(db) {
          WHERE r.id = ? AND c.business_id = ?`,
       ).get(id, businessId) || null,
     updateResponseStatus(id, status, notes) {
-      q("UPDATE responses SET status = ?, notes = ?, updated_at = datetime('now') WHERE id = ?").run(
-        status,
-        notes,
-        id,
-      );
+      q(`UPDATE responses SET status = ?, notes = ?, updated_at = datetime('now'),
+           resolved_at = CASE WHEN ? IN ('resolved', 'closed') THEN COALESCE(resolved_at, datetime('now')) ELSE NULL END
+         WHERE id = ?`).run(status, notes, status, id);
     },
-    listResponses(businessId, { campaignId, sentiment, status, search, limit = 100, offset = 0 } = {}) {
+    setPublished: (id, on) => q('UPDATE responses SET published = ? WHERE id = ? AND publish_consent = 1').run(on ? 1 : 0, id),
+    setAiDraft: (id, text) => q('UPDATE responses SET ai_draft = ? WHERE id = ?').run(text, id),
+    /** Testimonials approved for the public widget. */
+    publishedTestimonials: (businessId, limit = 30) =>
+      q(`SELECT r.id, r.rating, r.comment, r.customer_name, r.created_at FROM responses r
+         JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.published = 1 AND r.publish_consent = 1 AND r.comment != ''
+         ORDER BY r.id DESC LIMIT ?`).all(businessId, limit),
+    /** Negative tickets past the business SLA that have not triggered an alert yet. */
+    overdueUnalerted: () =>
+      q(`SELECT r.*, c.name AS campaign_name, c.business_id, b.sla_hours
+         FROM responses r JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
+         WHERE r.sentiment = 'negative' AND r.status = 'new' AND r.sla_alerted_at IS NULL AND b.sla_hours > 0
+           AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')
+           AND r.created_at >= datetime('now', '-30 days')`).all(),
+    markSlaAlerted: (id) => q("UPDATE responses SET sla_alerted_at = datetime('now') WHERE id = ?").run(id),
+    /** Completed responses, newest first, for AI summaries. */
+    responsesForInsights(businessId, { campaignId = null, days = 30, limit = 300 } = {}) {
+      return q(
+        `SELECT r.rating, r.answers, r.comment, c.questions FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.completed = 1 AND r.created_at >= ? ${campaignId ? 'AND c.id = ?' : ''}
+         ORDER BY r.id DESC LIMIT ?`,
+      ).all(...[businessId, sqlTime(-days * 864e5), ...(campaignId ? [campaignId] : []), limit]);
+    },
+
+    // ---------- AI insights ----------
+    saveInsight(f) {
+      const r = q(
+        `INSERT INTO ai_insights (business_id, campaign_id, days, response_count, content, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(f.business_id, f.campaign_id ?? null, f.days, f.response_count, f.content, f.created_by ?? null);
+      return Number(r.lastInsertRowid);
+    },
+    insightsFor: (businessId, limit = 10) =>
+      q(`SELECT i.*, c.name AS campaign_name, u.name AS author FROM ai_insights i
+         LEFT JOIN campaigns c ON c.id = i.campaign_id LEFT JOIN users u ON u.id = i.created_by
+         WHERE i.business_id = ? ORDER BY i.id DESC LIMIT ?`).all(businessId, limit),
+
+    // ---------- outbox ----------
+    recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),
+    listResponses(businessId, { campaignId, sentiment, status, search, overdue, consent, limit = 100, offset = 0 } = {}) {
       const where = ['c.business_id = ?'];
       const args = [businessId];
+      if (overdue) {
+        where.push(
+          "r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0 AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')",
+        );
+      }
+      if (consent) where.push("r.publish_consent = 1 AND r.comment != ''");
       if (campaignId) {
         where.push('r.campaign_id = ?');
         args.push(campaignId);
@@ -267,8 +440,11 @@ export function createStore(db) {
         const like = `%${search}%`;
         args.push(like, like, like, like);
       }
-      const sql = `SELECT r.*, c.name AS campaign_name FROM responses r
-        JOIN campaigns c ON c.id = r.campaign_id
+      const sql = `SELECT r.*, c.name AS campaign_name,
+          (r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0
+            AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')) AS overdue
+        FROM responses r
+        JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
         WHERE ${where.join(' AND ')}
         ORDER BY r.id DESC LIMIT ? OFFSET ?`;
       return q(sql).all(...args, limit, offset);
@@ -295,10 +471,18 @@ export function createStore(db) {
                 SUM(r.sentiment = 'positive') AS positive,
                 SUM(r.sentiment = 'negative') AS negative,
                 SUM(r.sentiment = 'negative' AND r.status IN ('new','in_progress')) AS open_issues,
-                SUM(r.review_clicks != '[]') AS reviewed
+                SUM(r.review_clicks != '[]') AS reviewed,
+                AVG(CASE WHEN r.resolved_at IS NOT NULL
+                    THEN (julianday(r.resolved_at) - julianday(r.created_at)) * 24 END) AS avg_resolve_hours
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
          WHERE c.business_id = ? AND r.created_at >= ? ${cFilter}`,
       ).get(...base);
+      const overdue = q(
+        `SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         JOIN businesses b ON b.id = c.business_id
+         WHERE c.business_id = ? ${cFilter} AND r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0
+           AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')`,
+      ).get(...(campaignId ? [businessId, campaignId] : [businessId])).n;
 
       const dist = [0, 0, 0, 0, 0];
       for (const row of q(
@@ -376,6 +560,8 @@ export function createStore(db) {
         positive: agg.positive || 0,
         negative: agg.negative || 0,
         openIssues: agg.open_issues || 0,
+        overdue,
+        avgResolveHours: agg.avg_resolve_hours ?? null,
         reviewClicks: evMap.review_click?.n || 0,
         reviewedResponses: agg.reviewed || 0,
         reviewConversion: responses ? (agg.reviewed || 0) / responses : 0,

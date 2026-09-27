@@ -93,11 +93,112 @@ CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_business ON campaigns(business_id);
 `;
 
+// Each entry upgrades the schema by one version (tracked in PRAGMA user_version).
+// Never edit an entry that has shipped; append a new one instead.
+const MIGRATIONS = [
+  // v1: teams, email, SLA, widget, AI, plans
+  `
+  ALTER TABLE users ADD COLUMN is_superadmin INTEGER NOT NULL DEFAULT 0;
+
+  CREATE TABLE memberships (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'owner',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, user_id)
+  );
+  INSERT OR IGNORE INTO memberships (business_id, user_id, role) SELECT id, user_id, 'owner' FROM businesses;
+  CREATE INDEX idx_memberships_user ON memberships(user_id);
+
+  CREATE TABLE team_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL,
+    accepted_at TEXT
+  );
+
+  CREATE TABLE password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+  );
+
+  ALTER TABLE businesses ADD COLUMN plan TEXT NOT NULL DEFAULT 'free';
+  ALTER TABLE businesses ADD COLUMN alert_emails TEXT NOT NULL DEFAULT '';
+  ALTER TABLE businesses ADD COLUMN alert_negative INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE businesses ADD COLUMN weekly_report INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE businesses ADD COLUMN last_weekly_report_at TEXT;
+  ALTER TABLE businesses ADD COLUMN sla_hours INTEGER NOT NULL DEFAULT 24;
+  ALTER TABLE businesses ADD COLUMN widget_key TEXT;
+  ALTER TABLE businesses ADD COLUMN widget_auto_publish INTEGER NOT NULL DEFAULT 0;
+  CREATE UNIQUE INDEX idx_businesses_widget ON businesses(widget_key);
+
+  ALTER TABLE campaigns ADD COLUMN reminder_hours INTEGER NOT NULL DEFAULT 48;
+  ALTER TABLE campaigns ADD COLUMN ask_consent INTEGER NOT NULL DEFAULT 1;
+
+  ALTER TABLE invites ADD COLUMN email TEXT NOT NULL DEFAULT '';
+  ALTER TABLE invites ADD COLUMN email_sent_at TEXT;
+  ALTER TABLE invites ADD COLUMN reminder_sent_at TEXT;
+
+  ALTER TABLE responses ADD COLUMN publish_consent INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE responses ADD COLUMN published INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE responses ADD COLUMN resolved_at TEXT;
+  ALTER TABLE responses ADD COLUMN sla_alerted_at TEXT;
+  ALTER TABLE responses ADD COLUMN ai_draft TEXT NOT NULL DEFAULT '';
+
+  CREATE TABLE ai_insights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
+    days INTEGER NOT NULL,
+    response_count INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER REFERENCES businesses(id) ON DELETE SET NULL,
+    kind TEXT NOT NULL,
+    to_addr TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_outbox_created ON outbox(created_at);
+  `,
+];
+
+function migrate(db) {
+  const current = db.prepare('PRAGMA user_version').get().user_version;
+  for (let v = current; v < MIGRATIONS.length; v++) {
+    db.exec('BEGIN');
+    try {
+      db.exec(MIGRATIONS[v]);
+      db.exec(`PRAGMA user_version = ${v + 1}`);
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw new Error(`Migration ${v + 1} failed: ${err.message}`);
+    }
+  }
+}
+
 export function openDb(file = process.env.DB_FILE || 'data/reviews.db') {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 

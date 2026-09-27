@@ -5,6 +5,19 @@ import { openDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { googleReviewUrl, csvEscape, waNumber } from '../src/util.js';
 
+// Deterministic stand-in for the Claude-backed helper.
+const fakeAi = {
+  calls: [],
+  async draftReply(input) {
+    this.calls.push(['draft', input]);
+    return `טיוטה עבור ${input.customerName}`;
+  },
+  async summarize(input) {
+    this.calls.push(['summary', input]);
+    return `## בשורה התחתונה\nנותחו ${input.rows.length} משובים\n- **שירות** טוב`;
+  },
+};
+
 let server;
 let base;
 let store;
@@ -22,7 +35,11 @@ before(async () => {
   });
   await new Promise((r) => hookServer.listen(0, r));
 
-  const created = createApp(openDb(':memory:'), { publicLimit: { windowMs: 60e3, max: 1000 } });
+  const created = createApp(openDb(':memory:'), {
+    publicLimit: { windowMs: 60e3, max: 1000 },
+    authLimit: { windowMs: 60e3, max: 1000 },
+    ai: fakeAi,
+  });
   store = created.store;
   server = created.app.listen(0);
   await new Promise((r) => server.once('listening', r));
@@ -58,7 +75,7 @@ function client() {
 }
 
 async function csrfOf(c) {
-  const page = await c.req('/admin/business');
+  const page = await c.req('/account');
   return page.text.match(/name="_csrf" value="([^"]+)"/)[1];
 }
 
@@ -90,6 +107,7 @@ async function createCampaign(c, extra = {}) {
       q_audience: 'all',
       q_options: '',
       q_required: '0',
+      ask_consent: '1',
       ...extra,
     },
   });
@@ -152,9 +170,14 @@ test('happy customer: rating -> questions -> Google review link tracked', async 
 test('unhappy customer: private feedback + ticket + webhook, public links still available', async () => {
   const owner = await registeredOwner('sad@example.com');
   const csrf = await csrfOf(owner);
-  await owner.req('/admin/business', {
+  await owner.req('/admin/business/notifications', {
     method: 'POST',
-    form: { _csrf: csrf, name: 'Test Cafe', brand_color: '#123456', webhook_url: `http://127.0.0.1:${hookServer.address().port}/hook` },
+    form: {
+      _csrf: csrf,
+      alert_negative: '1',
+      sla_hours: '24',
+      webhook_url: `http://127.0.0.1:${hookServer.address().port}/hook`,
+    },
   });
   const campaign = await createCampaign(owner);
   const customer = client();
@@ -248,4 +271,216 @@ test('output is escaped', async () => {
   assert.match(page.text, /&lt;script&gt;/);
   const qr = await owner.req(`/admin/campaigns/${campaign.id}/qr.svg`);
   assert.match(qr.text, /<svg/);
+});
+
+// ------------------------------------------------------------ new features
+
+const outbox = (kind) => store.recentOutbox(500).filter((m) => m.kind === kind);
+const bizOf = (email) => store.businessesFor(store.userByEmail(email).id)[0];
+
+async function completeSurvey(slug, rating, form = {}) {
+  const customer = client();
+  const rate = await customer.req(`/r/${slug}/rate`, { method: 'POST', form: { rating: String(rating) } });
+  await customer.req(rate.location, { method: 'POST', form });
+  return store.responseByToken(rate.location.split('/').pop());
+}
+
+test('negative feedback emails the owner', async () => {
+  const owner = await registeredOwner('alerts@example.com');
+  const campaign = await createCampaign(owner);
+  await completeSurvey(campaign.slug, 1, { comment: 'terrible', customer_name: 'Avi' });
+  const mail = outbox('negative_alert').find((m) => m.to_addr === 'alerts@example.com');
+  assert.ok(mail, 'alert email recorded');
+  assert.match(mail.body, /terrible/);
+});
+
+test('password reset flow', async () => {
+  await registeredOwner('forgot@example.com');
+  const anon = client();
+  const r = await anon.req('/forgot', { method: 'POST', form: { email: 'forgot@example.com' } });
+  assert.match(r.text, /אם האימייל רשום/);
+  const mail = outbox('password_reset').find((m) => m.to_addr === 'forgot@example.com');
+  const link = mail.body.match(/\/reset\/([\w-]+)/)[0];
+
+  const mismatch = await anon.req(link, { method: 'POST', form: { password: 'newpassword1', password2: 'other' } });
+  assert.equal(mismatch.status, 422);
+  const ok = await anon.req(link, { method: 'POST', form: { password: 'newpassword1', password2: 'newpassword1' } });
+  assert.equal(ok.status, 303);
+  const reused = await anon.req(link);
+  assert.equal(reused.status, 410, 'reset link works only once');
+
+  const login = await client().req('/login', { method: 'POST', form: { email: 'forgot@example.com', password: 'newpassword1' } });
+  assert.equal(login.location, '/admin');
+  // Unknown emails get the same answer and no mail.
+  await anon.req('/forgot', { method: 'POST', form: { email: 'nobody@example.com' } });
+  assert.equal(outbox('password_reset').filter((m) => m.to_addr === 'nobody@example.com').length, 0);
+});
+
+test('team invites and roles', async () => {
+  const owner = await registeredOwner('boss@example.com');
+  const campaign = await createCampaign(owner);
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+
+  const inv = await owner.req('/admin/team/invite', {
+    method: 'POST',
+    form: { _csrf: await csrfOf(owner), email: 'staff@example.com', role: 'viewer' },
+  });
+  const raw = new URL(base + inv.location).searchParams.get('link');
+  assert.ok(outbox('team_invite').some((m) => m.to_addr === 'staff@example.com'));
+
+  const staff = client();
+  const join = await staff.req(`/join/${raw}`, { method: 'POST', form: { name: 'Staff', password: 'password123' } });
+  assert.equal(join.status, 303);
+  assert.equal(store.business(campaign.business_id, store.userByEmail('staff@example.com').id).role, 'viewer');
+  assert.equal((await staff.req(`/join/${raw}`)).status, 410, 'invite is single use');
+
+  // Viewer: can read, cannot change.
+  assert.equal((await staff.req('/admin/responses')).status, 200);
+  assert.equal((await staff.req('/admin/business')).status, 403);
+  assert.equal((await staff.req('/admin/campaigns/new')).status, 403);
+  const r = await completeSurvey(campaign.slug, 2, { comment: 'meh' });
+  const upd = await staff.req(`/admin/responses/${r.id}`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(staff), status: 'resolved', notes: '' },
+  });
+  assert.equal(upd.status, 403);
+
+  // Owner promotes to manager, who can then handle tickets.
+  const staffId = store.userByEmail('staff@example.com').id;
+  await owner.req(`/admin/team/members/${staffId}`, { method: 'POST', form: { _csrf: await csrfOf(owner), role: 'manager' } });
+  const upd2 = await staff.req(`/admin/responses/${r.id}`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(staff), status: 'resolved', notes: 'done' },
+  });
+  assert.equal(upd2.status, 303);
+  assert.ok(store.responseForBusiness(r.id, campaign.business_id).resolved_at);
+
+  // The last owner can't be demoted.
+  const bossId = store.userByEmail('boss@example.com').id;
+  const demote = await owner.req(`/admin/team/members/${bossId}`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(owner), role: 'viewer' },
+  });
+  assert.match(demote.location, /err=/);
+});
+
+test('plan limits: free plan has one campaign and no AI', async () => {
+  const owner = await registeredOwner('free@example.com');
+  await createCampaign(owner);
+  const second = await owner.req('/admin/campaigns', {
+    method: 'POST',
+    form: { _csrf: await csrfOf(owner), name: 'Second', threshold: '4', lang: 'he' },
+  });
+  assert.equal(second.status, 422);
+  assert.equal(store.campaignsFor(bizOf('free@example.com').id).length, 1);
+  const insights = await owner.req('/admin/insights', { method: 'POST', form: { _csrf: await csrfOf(owner), days: '30' } });
+  assert.equal(insights.status, 403);
+});
+
+test('publish consent and testimonials widget', async () => {
+  const owner = await registeredOwner('widget@example.com');
+  const campaign = await createCampaign(owner);
+  const biz = bizOf('widget@example.com');
+
+  const r = await completeSurvey(campaign.slug, 5, {
+    comment: 'Best hummus in town',
+    customer_name: 'Noa Cohen',
+    publish_consent: '1',
+  });
+  assert.equal(r.publish_consent, 1);
+  assert.equal(r.published, 0, 'needs approval unless auto-publish is on');
+
+  // Free plan: widget disabled.
+  assert.equal((await client().req(`/widget/${biz.widget_key}`)).status, 404);
+
+  store.updateBusiness(biz.id, { plan: 'pro' });
+  await owner.req(`/admin/responses/${r.id}/publish`, { method: 'POST', form: { _csrf: await csrfOf(owner), published: '1' } });
+  const page = await client().req(`/widget/${biz.widget_key}`);
+  assert.equal(page.status, 200);
+  assert.match(page.text, /Best hummus in town/);
+  assert.match(page.text, />Noa</, 'first name only');
+  assert.doesNotMatch(page.text, /Cohen/);
+  assert.match(page.headers.get('content-security-policy'), /frame-ancestors \*/);
+  const js = await client().req(`/widget/${biz.widget_key}.js`);
+  assert.match(js.text, /iframe/);
+
+  // Negative feedback can never be published, even if the field is forged.
+  const bad = await completeSurvey(campaign.slug, 1, { comment: 'awful', publish_consent: '1' });
+  assert.equal(bad.publish_consent, 0);
+});
+
+test('AI reply drafts and insights', async () => {
+  const owner = await registeredOwner('ai@example.com');
+  const campaign = await createCampaign(owner);
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  const r = await completeSurvey(campaign.slug, 2, { comment: 'slow service', customer_name: 'Dana' });
+
+  const draft = await owner.req(`/admin/responses/${r.id}/draft`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
+  assert.equal(draft.status, 303);
+  const detail = await owner.req(`/admin/responses/${r.id}`);
+  assert.match(detail.text, /טיוטה עבור Dana/);
+  const [, input] = fakeAi.calls.find(([k]) => k === 'draft');
+  assert.equal(input.comment, 'slow service');
+
+  const few = await owner.req('/admin/insights', { method: 'POST', form: { _csrf: await csrfOf(owner), days: '30' } });
+  assert.match(few.location, /err=/, 'needs at least 3 responses');
+  await completeSurvey(campaign.slug, 5, { comment: 'great' });
+  await completeSurvey(campaign.slug, 4, { comment: 'nice' });
+  await owner.req('/admin/insights', { method: 'POST', form: { _csrf: await csrfOf(owner), days: '30' } });
+  const page = await owner.req('/admin/insights');
+  assert.match(page.text, /נותחו 3 משובים/);
+  assert.match(page.text, /<b>שירות<\/b>/);
+});
+
+test('jobs: SLA alerts and email reminders are sent once', async () => {
+  const owner = await registeredOwner('jobs@example.com');
+  const campaign = await createCampaign(owner);
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  const { jobs } = createApp(store.db, { ai: null });
+
+  const r = await completeSurvey(campaign.slug, 1, { comment: 'late ticket' });
+  store.db.prepare("UPDATE responses SET created_at = datetime('now', '-25 hours') WHERE id = ?").run(r.id);
+  const list = await owner.req('/admin/responses?overdue=1');
+  assert.match(list.text, /late ticket/);
+  const before = outbox('sla_alert').length;
+  await jobs.slaAlerts();
+  await jobs.slaAlerts();
+  assert.equal(outbox('sla_alert').length, before + 1);
+
+  await owner.req(`/admin/campaigns/${campaign.id}/invites`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(owner), customer_name: 'Rina', email: 'rina@example.com' },
+  });
+  assert.ok(outbox('customer_invite').some((m) => m.to_addr === 'rina@example.com'));
+  store.db.prepare("UPDATE invites SET email_sent_at = datetime('now', '-49 hours') WHERE email = 'rina@example.com'").run();
+  await jobs.inviteReminders();
+  await jobs.inviteReminders();
+  assert.equal(outbox('customer_reminder').filter((m) => m.to_addr === 'rina@example.com').length, 1);
+});
+
+test('superadmin panel is restricted', async () => {
+  const someone = await registeredOwner('plain@example.com');
+  assert.equal((await someone.req('/superadmin')).status, 404);
+  const firstUser = store.allUsers().at(-1);
+  assert.equal(firstUser.is_superadmin, 1, 'first account is the system admin');
+});
+
+test('customer-controlled text never lands inside inline scripts', async () => {
+  const owner = await registeredOwner('xss2@example.com');
+  const campaign = await createCampaign(owner);
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  const r = await completeSurvey(campaign.slug, 1, {
+    comment: 'x',
+    customer_name: "a');alert(1);('",
+    phone: '0501234567',
+    email: "evil'+alert(1)+'@x.co",
+  });
+  assert.equal(r.email, "evil'+alert(1)+'@x.co");
+  const bad = await completeSurvey(campaign.slug, 1, { email: 'not an email' });
+  assert.equal(bad.email, '', 'invalid emails are dropped');
+  await owner.req(`/admin/responses/${r.id}/draft`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
+  const page = await owner.req(`/admin/responses/${r.id}`);
+  for (const [, handler] of page.text.matchAll(/\son\w+="([^"]*)"/g)) {
+    assert.doesNotMatch(handler, /alert|&#39;\)/, `inline handler contains user data: ${handler}`);
+  }
 });

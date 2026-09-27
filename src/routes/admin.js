@@ -1,139 +1,41 @@
 import express from 'express';
 import QRCode from 'qrcode';
 import { EDITABLE_TEXT_KEYS, textsFor } from '../i18n.js';
+import { AiError } from '../ai.js';
+import { limitLabel } from '../plans.js';
 import { DEFAULT_QUESTIONS, normalizeQuestions, STATUSES } from '../store.js';
-import { clampInt, csvEscape, errorPage, googleReviewUrl, hashPassword, safeColor, safeUrl, verifyPassword } from '../util.js';
+import { clampInt, csvEscape, errorPage, googleReviewUrl, isEmail, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
-import { adminPage } from '../views/layout.js';
 import * as V from '../views/admin.js';
+import { BIZ_COOKIE } from './context.js';
 
-const SESSION_COOKIE = 'sid';
-const BIZ_COOKIE = 'biz';
 const PAGE_SIZE = 50;
 
-export function adminRoutes(store, { allowSignup = true, secureCookies = false } = {}) {
-  const router = express.Router();
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', secure: secureCookies };
-
-  const baseUrl = (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`;
-  const signupOpen = () => allowSignup || store.countUsers() === 0;
-
-  // ---------- session loading + CSRF ----------
-  router.use((req, res, next) => {
-    req.user = store.sessionUser(req.cookies[SESSION_COOKIE]);
-    if (req.method === 'POST' && req.user && req.body?._csrf !== req.user.csrf) {
-      return res.status(403).send(errorPage('פג תוקף הטופס. רעננו את הדף ונסו שוב'));
-    }
-    next();
-  });
-
-  const render = (req, res, title, body, extra = {}) =>
-    res.send(
-      adminPage({
-        title,
-        user: req.user,
-        business: req.business,
-        businesses: req.businesses,
-        csrf: req.user?.csrf,
-        flash: req.query.ok ? 'נשמר בהצלחה' : '',
-        body,
-        ...extra,
-      }),
-    );
-
-  function requireAuth(req, res, next) {
-    if (!req.user) return res.redirect(303, '/login');
-    req.businesses = store.businessesFor(req.user.id);
-    const wanted = Number(req.cookies[BIZ_COOKIE]);
-    req.business = req.businesses.find((b) => b.id === wanted) || req.businesses[0];
-    if (!req.business) {
-      const id = store.createBusiness(req.user.id, { name: 'העסק שלי' });
-      req.business = store.business(id, req.user.id);
-      req.businesses = [req.business];
-    }
-    next();
-  }
-
-  // ---------- auth ----------
-  router.get('/', (req, res) => res.redirect(req.user ? '/admin' : '/login'));
-
-  router.get('/login', (req, res) => {
-    if (req.user) return res.redirect('/admin');
-    render(req, res, 'כניסה', V.authView({ mode: 'login', allowSignup: signupOpen() }));
-  });
-
-  const loginAttempts = new Map();
-  router.post('/login', (req, res) => {
-    const email = String(req.body.email ?? '').trim();
-    const key = `${req.ip}|${email.toLowerCase()}`;
-    const attempts = loginAttempts.get(key) || { n: 0, until: 0 };
-    if (attempts.until > Date.now()) {
-      return render(req, res, 'כניסה', V.authView({ mode: 'login', error: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות', values: { email } }));
-    }
-    const user = store.userByEmail(email);
-    if (!user || !verifyPassword(String(req.body.password ?? ''), user.password_hash)) {
-      attempts.n++;
-      if (attempts.n >= 5) Object.assign(attempts, { n: 0, until: Date.now() + 5 * 60e3 });
-      loginAttempts.set(key, attempts);
-      res.status(401);
-      return render(req, res, 'כניסה', V.authView({ mode: 'login', error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: signupOpen() }));
-    }
-    loginAttempts.delete(key);
-    res.cookie(SESSION_COOKIE, store.createSession(user.id), { ...cookieOpts, maxAge: 30 * 864e5 });
-    res.redirect(303, '/admin');
-  });
-
-  router.get('/register', (req, res) => {
-    if (!signupOpen()) return res.redirect('/login');
-    render(req, res, 'הרשמה', V.authView({ mode: 'register' }));
-  });
-
-  router.post('/register', (req, res) => {
-    if (!signupOpen()) return res.redirect(303, '/login');
-    const values = {
-      name: String(req.body.name ?? '').trim().slice(0, 80),
-      email: String(req.body.email ?? '').trim().slice(0, 120),
-      business: String(req.body.business ?? '').trim().slice(0, 100),
-    };
-    const password = String(req.body.password ?? '');
-    let error = '';
-    if (!values.name || !values.business) error = 'יש למלא את כל השדות';
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email)) error = 'אימייל לא תקין';
-    else if (password.length < 8) error = 'סיסמה חייבת להכיל לפחות 8 תווים';
-    else if (store.userByEmail(values.email)) error = 'האימייל כבר רשום';
-    if (error) {
-      res.status(422);
-      return render(req, res, 'הרשמה', V.authView({ mode: 'register', error, values }));
-    }
-    const userId = store.createUser({ email: values.email, name: values.name, passwordHash: hashPassword(password) });
-    store.createBusiness(userId, { name: values.business });
-    res.cookie(SESSION_COOKIE, store.createSession(userId), { ...cookieOpts, maxAge: 30 * 864e5 });
-    res.redirect(303, '/admin');
-  });
-
-  router.post('/logout', (req, res) => {
-    if (req.user) store.deleteSession(req.user.session_id);
-    res.clearCookie(SESSION_COOKIE);
-    res.redirect(303, '/login');
-  });
-
-  // ---------- everything below requires login ----------
+/** Dashboard, responses (tickets), campaigns, QR codes and customer invites. */
+export function adminRoutes(ctx) {
+  const { store, render, requireRole, notFound } = ctx;
   const admin = express.Router();
-  router.use('/admin', requireAuth, admin);
+  const manager = requireRole('manager');
 
   admin.get('/switch', (req, res) => {
     const b = req.businesses.find((x) => x.id === Number(req.query.b));
-    if (b) res.cookie(BIZ_COOKIE, String(b.id), { ...cookieOpts, maxAge: 365 * 864e5 });
+    if (b) res.cookie(BIZ_COOKIE, String(b.id), { ...ctx.cookieOpts, maxAge: 365 * 864e5 });
     res.redirect(303, '/admin');
   });
 
+  // ---------- dashboard ----------
   admin.get('/', (req, res) => {
     const campaigns = store.campaignsFor(req.business.id);
     const campaignId = campaigns.find((c) => c.id === Number(req.query.campaign))?.id ?? null;
     const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     const stats = store.stats(req.business.id, { campaignId, days });
     const recentNegative = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', limit: 8 });
-    render(req, res, 'לוח בקרה', V.dashboardView({ stats, campaigns, campaignId, days, recentNegative }));
+    const monthly = store.monthlyResponseCount(req.business.id);
+    const quotaWarning =
+      monthly > req.plan.monthlyResponses
+        ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
+        : '';
+    render(req, res, 'לוח בקרה', V.dashboardView({ stats, campaigns, campaignId, days, recentNegative, quotaWarning, can: req.can }));
   });
 
   // ---------- responses ----------
@@ -142,6 +44,8 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
       campaign: req.query.campaign ? String(Number(req.query.campaign) || '') : '',
       sentiment: ['positive', 'negative'].includes(req.query.sentiment) ? req.query.sentiment : '',
       status: Object.hasOwn(STATUSES, req.query.status ?? '') ? req.query.status : '',
+      overdue: req.query.overdue === '1' ? '1' : '',
+      consent: req.query.consent === '1' ? '1' : '',
       q: String(req.query.q ?? '').trim().slice(0, 80),
     };
   }
@@ -149,6 +53,8 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
     campaignId: f.campaign ? Number(f.campaign) : null,
     sentiment: f.sentiment,
     status: f.status,
+    overdue: Boolean(f.overdue),
+    consent: Boolean(f.consent),
     search: f.q,
   });
 
@@ -177,7 +83,10 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
   admin.get('/responses.csv', (req, res) => {
     const rows = store.listResponses(req.business.id, { ...toQuery(responseFilters(req)), limit: 100000 });
     const campaigns = Object.fromEntries(store.campaignsFor(req.business.id).map((c) => [c.id, c]));
-    const header = ['id', 'date', 'campaign', 'source', 'rating', 'sentiment', 'completed', 'answers', 'comment', 'name', 'phone', 'email', 'wants_contact', 'review_clicks', 'status', 'notes'];
+    const header = [
+      'id', 'date', 'campaign', 'source', 'rating', 'sentiment', 'completed', 'answers', 'comment', 'name',
+      'phone', 'email', 'wants_contact', 'publish_consent', 'review_clicks', 'status', 'notes', 'resolved_at',
+    ];
     const lines = [header.join(',')];
     for (const r of rows) {
       const labels = Object.fromEntries((campaigns[r.campaign_id]?.questionsList ?? []).map((q) => [q.id, q.label]));
@@ -185,7 +94,11 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
         .map(([k, v]) => `${labels[k] || k}: ${[].concat(v).join('/')}`)
         .join(' | ');
       lines.push(
-        [r.id, r.created_at, r.campaign_name, r.source, r.rating, r.sentiment, r.completed, answers, r.comment, r.customer_name, r.phone, r.email, r.wants_contact, parseJson(r.review_clicks, []).join('/'), r.status, r.notes]
+        [
+          r.id, r.created_at, r.campaign_name, r.source, r.rating, r.sentiment, r.completed, answers, r.comment,
+          r.customer_name, r.phone, r.email, r.wants_contact, r.publish_consent,
+          parseJson(r.review_clicks, []).join('/'), r.status, r.notes, r.resolved_at ?? '',
+        ]
           .map(csvEscape)
           .join(','),
       );
@@ -195,18 +108,66 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
     res.send(`﻿${lines.join('\r\n')}`);
   });
 
-  admin.get('/responses/:id', (req, res) => {
+  function loadResponse(req, res) {
     const r = store.responseForBusiness(Number(req.params.id), req.business.id);
-    if (!r) return res.status(404).send(errorPage('הדף לא נמצא'));
-    render(req, res, 'תגובה', V.responseDetailView({ r, csrf: req.user.csrf, businessName: req.business.name }));
+    if (!r) notFound(res);
+    return r;
+  }
+
+  admin.get('/responses/:id', (req, res) => {
+    const r = loadResponse(req, res);
+    if (!r) return;
+    render(
+      req,
+      res,
+      'תגובה',
+      V.responseDetailView({
+        r,
+        csrf: req.user.csrf,
+        businessName: req.business.name,
+        can: req.can,
+        aiAvailable: Boolean(ctx.ai) && req.plan.ai,
+        widgetAvailable: req.plan.widget,
+        aiError: req.query.aierr ? String(req.query.aierr).slice(0, 200) : '',
+      }),
+    );
   });
 
-  admin.post('/responses/:id', (req, res) => {
-    const r = store.responseForBusiness(Number(req.params.id), req.business.id);
-    if (!r) return res.status(404).send(errorPage('הדף לא נמצא'));
+  admin.post('/responses/:id', manager, (req, res) => {
+    const r = loadResponse(req, res);
+    if (!r) return;
     const status = Object.hasOwn(STATUSES, req.body.status) ? req.body.status : r.status;
     store.updateResponseStatus(r.id, status, String(req.body.notes ?? '').slice(0, 5000));
     res.redirect(303, `/admin/responses/${r.id}?ok=1`);
+  });
+
+  admin.post('/responses/:id/publish', manager, (req, res) => {
+    const r = loadResponse(req, res);
+    if (!r) return;
+    store.setPublished(r.id, req.body.published === '1');
+    res.redirect(303, `/admin/responses/${r.id}?ok=1`);
+  });
+
+  admin.post('/responses/:id/draft', manager, async (req, res, next) => {
+    const r = loadResponse(req, res);
+    if (!r) return;
+    if (!ctx.ai || !req.plan.ai) return res.status(403).send(errorPage('עוזר ה-AI לא זמין בתוכנית הנוכחית'));
+    const labels = Object.fromEntries(normalizeQuestions(parseJson(r.campaign_questions, [])).map((q) => [q.id, q.label]));
+    const answers = Object.entries(parseJson(r.answers, {})).map(([k, v]) => [labels[k] || k, [].concat(v).join(', ')]);
+    try {
+      const text = await ctx.ai.draftReply({
+        businessName: req.business.name,
+        rating: r.rating,
+        answers,
+        comment: r.comment,
+        customerName: r.customer_name,
+      });
+      store.setAiDraft(r.id, text.slice(0, 4000));
+      res.redirect(303, `/admin/responses/${r.id}#draft`);
+    } catch (err) {
+      if (!(err instanceof AiError)) return next(err);
+      res.redirect(303, `/admin/responses/${r.id}?aierr=${encodeURIComponent(err.message)}`);
+    }
   });
 
   // ---------- campaigns ----------
@@ -247,6 +208,8 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
       questionsList: questions,
       texts,
       textsObj: texts,
+      reminder_hours: [0, 24, 48, 72, 168].includes(Number(body.reminder_hours)) ? Number(body.reminder_hours) : 48,
+      ask_consent: body.ask_consent === '1',
       active: existing.id ? body.active === '1' : true,
     };
   }
@@ -257,27 +220,45 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
     return '';
   }
 
+  const campaignLimitReached = (req) => store.campaignsFor(req.business.id).length >= req.plan.campaigns;
+  const limitMessage = (req) =>
+    `בתוכנית ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} קמפיינים. לשדרוג פנו למנהל המערכת.`;
+
   admin.get('/campaigns', (req, res) => {
-    render(req, res, 'קמפיינים', V.campaignsView({ campaigns: store.campaignsFor(req.business.id), baseUrl: baseUrl(req) }));
+    render(
+      req,
+      res,
+      'קמפיינים',
+      V.campaignsView({
+        campaigns: store.campaignsFor(req.business.id),
+        baseUrl: ctx.baseUrl(req),
+        can: req.can,
+        limitReached: campaignLimitReached(req) ? limitMessage(req) : '',
+      }),
+    );
   });
 
-  admin.get('/campaigns/new', (req, res) => {
-    const blank = {
-      name: '',
-      lang: 'he',
-      threshold: 4,
-      google_review_url: '',
-      extraLinks: [],
-      questionsList: normalizeQuestions(DEFAULT_QUESTIONS),
-      textsObj: {},
-      active: 1,
-    };
-    render(req, res, 'קמפיין חדש', V.campaignFormView({ campaign: blank, csrf: req.user.csrf }));
+  const blankCampaign = () => ({
+    name: '',
+    lang: 'he',
+    threshold: 4,
+    google_review_url: '',
+    extraLinks: [],
+    questionsList: normalizeQuestions(DEFAULT_QUESTIONS),
+    textsObj: {},
+    reminder_hours: 48,
+    ask_consent: 1,
+    active: 1,
   });
 
-  admin.post('/campaigns', (req, res) => {
+  admin.get('/campaigns/new', manager, (req, res) => {
+    const error = campaignLimitReached(req) ? limitMessage(req) : '';
+    render(req, res, 'קמפיין חדש', V.campaignFormView({ campaign: blankCampaign(), csrf: req.user.csrf, error }));
+  });
+
+  admin.post('/campaigns', manager, (req, res) => {
     const c = campaignFromForm(req.body);
-    const error = validateCampaign(c);
+    const error = campaignLimitReached(req) ? limitMessage(req) : validateCampaign(c);
     if (error) {
       res.status(422);
       return render(req, res, 'קמפיין חדש', V.campaignFormView({ campaign: c, csrf: req.user.csrf, error }));
@@ -288,16 +269,16 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
 
   function loadCampaign(req, res) {
     const c = store.campaign(Number(req.params.id), req.business.id);
-    if (!c) res.status(404).send(errorPage('הדף לא נמצא'));
+    if (!c) notFound(res);
     return c;
   }
 
-  admin.get('/campaigns/:id', (req, res) => {
+  admin.get('/campaigns/:id', manager, (req, res) => {
     const c = loadCampaign(req, res);
     if (c) render(req, res, c.name, V.campaignFormView({ campaign: c, csrf: req.user.csrf }));
   });
 
-  admin.post('/campaigns/:id', (req, res) => {
+  admin.post('/campaigns/:id', manager, (req, res) => {
     const existing = loadCampaign(req, res);
     if (!existing) return;
     const c = campaignFromForm(req.body, existing);
@@ -310,7 +291,7 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
     res.redirect(303, `/admin/campaigns/${existing.id}?ok=1`);
   });
 
-  admin.post('/campaigns/:id/delete', (req, res) => {
+  admin.post('/campaigns/:id/delete', requireRole('owner'), (req, res) => {
     const c = loadCampaign(req, res);
     if (!c) return;
     store.deleteCampaign(c.id);
@@ -319,7 +300,7 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
 
   const qrTarget = (req, c) => {
     const src = String(req.query.src ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
-    return `${baseUrl(req)}/r/${c.slug}${src ? `?src=${src}` : ''}`;
+    return `${ctx.baseUrl(req)}/r/${c.slug}${src ? `?src=${src}` : ''}`;
   };
   const QR_OPTS = { margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } };
 
@@ -352,49 +333,37 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
       'QR ושליחה',
       V.shareView({
         campaign: c,
-        baseUrl: baseUrl(req),
+        baseUrl: ctx.baseUrl(req),
         csrf: req.user.csrf,
         invites: store.invitesFor(c.id),
         newInvite,
         businessName: req.business.name,
+        can: req.can,
+        emailInvites: req.plan.emailInvites,
+        mailEnabled: ctx.mailer.enabled,
       }),
       { flash: req.query.ok && !newInvite ? 'הקמפיין נוצר! עכשיו אפשר להדפיס QR או לשלוח ללקוחות' : '' },
     );
   });
 
-  admin.post('/campaigns/:id/invites', (req, res) => {
+  admin.post('/campaigns/:id/invites', manager, async (req, res) => {
     const c = loadCampaign(req, res);
     if (!c) return;
+    const email = String(req.body.email ?? '').trim().toLowerCase();
+    const useEmail = req.plan.emailInvites && isEmail(email);
     const t = store.createInvite(c.id, {
       customer_name: String(req.body.customer_name ?? '').trim().slice(0, 80),
       phone: String(req.body.phone ?? '').trim().slice(0, 30),
+      email: useEmail ? email : '',
     });
+    if (useEmail) {
+      const invite = store.inviteByToken(c.id, t);
+      if (await ctx.notifier.customerInvite({ business: req.business, campaign: c, invite })) {
+        store.markInviteEmailed(invite.id);
+      }
+    }
     res.redirect(303, `/admin/campaigns/${c.id}/share?invite=${t}`);
   });
 
-  // ---------- business settings ----------
-  admin.get('/business', (req, res) => {
-    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf }));
-  });
-
-  admin.post('/business', (req, res) => {
-    const b = req.business;
-    store.updateBusiness(b.id, {
-      name: String(req.body.name ?? '').trim().slice(0, 100) || b.name,
-      logo_url: safeUrl(req.body.logo_url),
-      brand_color: safeColor(req.body.brand_color, b.brand_color),
-      webhook_url: safeUrl(req.body.webhook_url),
-    });
-    res.redirect(303, '/admin/business?ok=1');
-  });
-
-  admin.post('/businesses', (req, res) => {
-    const name = String(req.body.name ?? '').trim().slice(0, 100);
-    if (!name) return res.redirect(303, '/admin/business');
-    const id = store.createBusiness(req.user.id, { name });
-    res.cookie(BIZ_COOKIE, String(id), { ...cookieOpts, maxAge: 365 * 864e5 });
-    res.redirect(303, '/admin/campaigns/new');
-  });
-
-  return router;
+  return admin;
 }

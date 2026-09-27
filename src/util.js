@@ -18,6 +18,24 @@ export function errorPage(message) {
 <body class="public"><main class="card public-card"><h1>${h(message)}</h1></main></body></html>`;
 }
 
+export function sha256(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+export function isEmail(value) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value ?? '')) && String(value).length <= 120;
+}
+
+/** Splits a comma/newline separated list of emails and keeps the valid ones. */
+export function emailList(value) {
+  return [...new Set(String(value ?? '').split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(isEmail))];
+}
+
+/** SQLite datetime string for "now + ms". */
+export function sqlTime(offsetMs = 0) {
+  return new Date(Date.now() + offsetMs).toISOString().slice(0, 19).replace('T', ' ');
+}
+
 export function token(bytes = 16) {
   return crypto.randomBytes(bytes).toString('base64url');
 }

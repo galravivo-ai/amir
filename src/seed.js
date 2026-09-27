@@ -11,7 +11,8 @@ if (store.userByEmail(email)) {
 }
 
 const userId = store.createUser({ email, name: 'דמו', passwordHash: hashPassword('demo12345') });
-const bizId = store.createBusiness(userId, { name: 'קפה הדוגמה', brand_color: '#0f766e' });
+const bizId = store.createBusiness(userId, { name: 'קפה הדוגמה', brand_color: '#0f766e', plan: 'business' });
+store.setSuperadmin(userId, true);
 const campaignId = store.createCampaign(bizId, {
   name: 'סניף מרכזי',
   google_review_url: 'https://search.google.com/local/writereview?placeid=ChIJ_demo_place_id',
@@ -19,6 +20,15 @@ const campaignId = store.createCampaign(bizId, {
 });
 
 const goodComments = ['', 'המלצר היה מקסים', 'הכל מושלם!', 'קפה מעולה'];
+const testimonials = [
+  'הקפה הכי טוב באזור, והצוות תמיד מחייך',
+  'מקום נעים לשבת לעבוד, אינטרנט מהיר ועוגות מצוינות',
+  'הזמנו מגש אירוח לאירוע, הכל הגיע בזמן וטעים',
+  'שירות אדיב במיוחד, הרגשנו בבית',
+  'הקרואסון שווה כל שקל',
+  'באנו עם ילדים וקיבלנו יחס מדהים',
+];
+const names = ['נועה', 'יוסי', 'מיכל', 'אבי', 'שירה', 'דני'];
 const badComments = ['חיכינו הרבה זמן', 'הקפה היה קר', '', 'יקר מדי ביחס לכמות'];
 const sources = ['table-1', 'table-2', 'cashier', ''];
 const db = store.db;
@@ -45,7 +55,21 @@ for (let i = 0; i < 160; i++) {
     email: '',
     wants_contact: sentiment === 'negative',
   });
+  if (sentiment === 'positive' && i % 3 === 0) {
+    db.prepare("UPDATE responses SET customer_name = ?, comment = ?, publish_consent = 1, published = ? WHERE id = ?").run(
+      names[(i / 3) % names.length | 0],
+      testimonials[(i / 3) % testimonials.length | 0],
+      i % 6 === 0 ? 1 : 0,
+      r.id,
+    );
+  }
   db.prepare('UPDATE responses SET created_at = ? WHERE id = ?').run(when, r.id);
+  // Older complaints were handled; recent ones are still open (some overdue).
+  if (sentiment === 'negative' && daysAgo > 2) {
+    db.prepare(
+      "UPDATE responses SET status = 'resolved', resolved_at = datetime(?, '+' || ? || ' hours'), notes = 'דיברנו עם הלקוח' WHERE id = ?",
+    ).run(when, 1 + (i % 20), r.id);
+  }
   if (sentiment === 'positive' && Math.random() < 0.6) {
     store.addReviewClick(r.id, 'google');
     db.prepare('INSERT INTO events (campaign_id, type, source, visitor_id, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(campaignId, 'review_click', source, vid, 'google', when);

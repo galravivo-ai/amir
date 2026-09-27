@@ -1,19 +1,24 @@
 {
   "name": "amir-reviews",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "מערכת לניהול ביקורות וחוויית לקוח: QR, סקר, הפניה לביקורת בגוגל וטיפול בפניות",
   "type": "module",
   "main": "src/server.js",
-  "engines": { "node": ">=22.5" },
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning src/server.js",
     "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js",
     "seed": "node --no-warnings=ExperimentalWarning src/seed.js",
-    "test": "node --no-warnings=ExperimentalWarning --test test/*.test.js"
+    "test": "node --no-warnings=ExperimentalWarning --test test/*.test.js",
+    "backup": "node --no-warnings=ExperimentalWarning src/backup.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "express": "^5.2.1",
+    "nodemailer": "^10.0.11",
     "qrcode": "^1.5.4"
   }
 }

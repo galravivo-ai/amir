@@ -71,6 +71,13 @@ export function questionsView({ campaign, business, t, response, questions, valu
         }> ${h(t.wants_contact)}</label>
       </fieldset>`
     : '';
+  const consent =
+    !negative && campaign.ask_consent
+      ? `<fieldset class="q consent">
+          <label>${h(t.first_name_label)}<input name="customer_name" maxlength="40" value="${h(values.customer_name ?? prefill.customer_name ?? '')}" autocomplete="given-name"></label>
+          <label class="check"><input type="checkbox" name="publish_consent" value="1" ${values.publish_consent ? 'checked' : ''}> ${h(t.publish_consent)}</label>
+        </fieldset>`
+      : '';
   return publicPage({
     title: t.title,
     lang: campaign.lang,
@@ -84,6 +91,7 @@ export function questionsView({ campaign, business, t, response, questions, valu
           <textarea name="comment" rows="3" maxlength="3000">${h(values.comment ?? '')}</textarea>
         </fieldset>
         ${contact}
+        ${consent}
         <button class="btn primary big" type="submit">${h(negative ? t.send : t.next)}</button>
       </form>`,
   });

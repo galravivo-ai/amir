@@ -1,0 +1,211 @@
+import express from 'express';
+import { AiError } from '../ai.js';
+import { limitLabel } from '../plans.js';
+import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
+import { clampInt, emailList, errorPage, isEmail, safeColor, safeUrl } from '../util.js';
+import { parseJson } from '../db.js';
+import * as V from '../views/settings.js';
+import { BIZ_COOKIE } from './context.js';
+
+/** Business settings, notifications, team, widget, plan and AI insights. */
+export function settingsRoutes(ctx) {
+  const { store, render, requireRole } = ctx;
+  const router = express.Router();
+  const owner = requireRole('owner');
+  const manager = requireRole('manager');
+
+  // ---------- business ----------
+  router.get('/business', owner, (req, res) => {
+    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf, plan: req.plan }));
+  });
+
+  router.post('/business', owner, (req, res) => {
+    const b = req.business;
+    store.updateBusiness(b.id, {
+      name: String(req.body.name ?? '').trim().slice(0, 100) || b.name,
+      logo_url: safeUrl(req.body.logo_url),
+      brand_color: safeColor(req.body.brand_color, b.brand_color),
+    });
+    res.redirect(303, '/admin/business?ok=1');
+  });
+
+  router.post('/business/notifications', owner, (req, res) => {
+    store.updateBusiness(req.business.id, {
+      alert_negative: req.body.alert_negative === '1',
+      weekly_report: req.body.weekly_report === '1',
+      alert_emails: emailList(req.body.alert_emails).join(', '),
+      sla_hours: clampInt(req.body.sla_hours, 0, 720, 24),
+      webhook_url: safeUrl(req.body.webhook_url),
+    });
+    res.redirect(303, '/admin/business?ok=1#notifications');
+  });
+
+  router.post('/businesses', (req, res) => {
+    const name = String(req.body.name ?? '').trim().slice(0, 100);
+    if (!name) return res.redirect(303, '/admin/business');
+    const id = store.createBusiness(req.user.id, { name });
+    res.cookie(BIZ_COOKIE, String(id), { ...ctx.cookieOpts, maxAge: 365 * 864e5 });
+    res.redirect(303, '/admin/campaigns/new');
+  });
+
+  // ---------- team ----------
+  const seatsUsed = (businessId) => store.membersOf(businessId).length + store.pendingTeamInvites(businessId).length;
+
+  router.get('/team', owner, (req, res) => {
+    render(
+      req,
+      res,
+      'צוות',
+      V.teamView({
+        members: store.membersOf(req.business.id),
+        invites: store.pendingTeamInvites(req.business.id),
+        csrf: req.user.csrf,
+        me: req.user,
+        plan: req.plan,
+        seatsUsed: seatsUsed(req.business.id),
+        inviteLink: req.query.link ? `${ctx.baseUrl(req)}/join/${String(req.query.link)}` : '',
+        error: req.query.err ? String(req.query.err).slice(0, 200) : '',
+      }),
+    );
+  });
+
+  router.post('/team/invite', owner, async (req, res) => {
+    const email = String(req.body.email ?? '').trim().toLowerCase();
+    const role = Object.hasOwn(ROLES, req.body.role) ? req.body.role : 'viewer';
+    const fail = (msg) => res.redirect(303, `/admin/team?err=${encodeURIComponent(msg)}`);
+    if (!isEmail(email)) return fail('אימייל לא תקין');
+    if (seatsUsed(req.business.id) >= req.plan.teamMembers) {
+      return fail(`בתוכנית ${req.plan.label} אפשר עד ${limitLabel(req.plan.teamMembers)} משתמשים`);
+    }
+    if (store.membersOf(req.business.id).some((m) => m.email === email)) return fail('המשתמש כבר בצוות');
+    const raw = store.createTeamInvite(req.business.id, { email, role, invitedBy: req.user.id });
+    await ctx.notifier.teamInvite({
+      business: req.business,
+      inviter: req.user,
+      email,
+      role: ROLES[role],
+      link: `${ctx.baseUrl(req)}/join/${raw}`,
+    });
+    // The link is also shown once, so it can be shared manually (e.g. when SMTP is not configured).
+    res.redirect(303, `/admin/team?link=${raw}`);
+  });
+
+  router.post('/team/invites/:id/delete', owner, (req, res) => {
+    store.deleteTeamInvite(req.business.id, Number(req.params.id));
+    res.redirect(303, '/admin/team');
+  });
+
+  router.post('/team/members/:id', owner, (req, res) => {
+    const userId = Number(req.params.id);
+    const member = store.membersOf(req.business.id).find((m) => m.id === userId);
+    if (!member) return ctx.notFound(res);
+    const fail = (msg) => res.redirect(303, `/admin/team?err=${encodeURIComponent(msg)}`);
+    const lastOwner = member.role === 'owner' && store.countOwners(req.business.id) <= 1;
+    if (req.body.action === 'remove') {
+      if (lastOwner) return fail('אי אפשר להסיר את הבעלים האחרון');
+      store.removeMember(req.business.id, userId);
+    } else {
+      const role = Object.hasOwn(ROLES, req.body.role) ? req.body.role : member.role;
+      if (lastOwner && role !== 'owner') return fail('חייב להישאר לפחות בעלים אחד');
+      store.setMemberRole(req.business.id, userId, role);
+    }
+    res.redirect(303, '/admin/team?ok=1');
+  });
+
+  // ---------- widget ----------
+  router.get('/widget', manager, (req, res) => {
+    store.ensureWidgetKey(req.business.id);
+    const business = store.businessById(req.business.id);
+    render(
+      req,
+      res,
+      'ווידג\'ט לאתר',
+      V.widgetView({
+        business,
+        baseUrl: ctx.baseUrl(req),
+        csrf: req.user.csrf,
+        available: req.plan.widget,
+        published: store.publishedTestimonials(business.id, 50),
+        pending: store
+          .listResponses(business.id, { consent: true, limit: 50 })
+          .filter((r) => !r.published),
+        canEdit: roleAtLeast(req.role, 'owner'),
+      }),
+    );
+  });
+
+  router.post('/widget', owner, (req, res) => {
+    store.updateBusiness(req.business.id, { widget_auto_publish: req.body.widget_auto_publish === '1' });
+    res.redirect(303, '/admin/widget?ok=1');
+  });
+
+  // ---------- plan ----------
+  router.get('/plan', (req, res) => {
+    render(
+      req,
+      res,
+      'התוכנית שלי',
+      V.planView({
+        business: req.business,
+        plan: req.plan,
+        usage: {
+          campaigns: store.campaignsFor(req.business.id).length,
+          members: store.membersOf(req.business.id).length,
+          responses: store.monthlyResponseCount(req.business.id),
+        },
+      }),
+    );
+  });
+
+  // ---------- AI insights ----------
+  router.get('/insights', (req, res) => {
+    render(
+      req,
+      res,
+      'תובנות AI',
+      V.insightsView({
+        insights: store.insightsFor(req.business.id),
+        campaigns: store.campaignsFor(req.business.id),
+        csrf: req.user.csrf,
+        aiConfigured: Boolean(ctx.ai),
+        planAllows: req.plan.ai,
+        canGenerate: req.can('manager'),
+        error: req.query.err ? String(req.query.err).slice(0, 300) : '',
+      }),
+    );
+  });
+
+  router.post('/insights', manager, async (req, res, next) => {
+    if (!ctx.ai || !req.plan.ai) return res.status(403).send(errorPage('עוזר ה-AI לא זמין בתוכנית הנוכחית'));
+    const days = [7, 30, 90].includes(Number(req.body.days)) ? Number(req.body.days) : 30;
+    const campaign = store.campaign(Number(req.body.campaign), req.business.id);
+    const rows = store.responsesForInsights(req.business.id, { campaignId: campaign?.id, days });
+    const fail = (msg) => res.redirect(303, `/admin/insights?err=${encodeURIComponent(msg)}`);
+    if (rows.length < 3) return fail('צריך לפחות 3 משובים בתקופה שנבחרה כדי להפיק תובנות');
+    const prepared = rows.map((r) => {
+      const labels = Object.fromEntries(normalizeQuestions(parseJson(r.questions, [])).map((q) => [q.id, q.label]));
+      return {
+        rating: r.rating,
+        comment: r.comment,
+        answers: Object.entries(parseJson(r.answers, {})).map(([k, v]) => [labels[k] || k, [].concat(v).join(', ')]),
+      };
+    });
+    try {
+      const content = await ctx.ai.summarize({ businessName: req.business.name, days, rows: prepared });
+      store.saveInsight({
+        business_id: req.business.id,
+        campaign_id: campaign?.id,
+        days,
+        response_count: rows.length,
+        content,
+        created_by: req.user.id,
+      });
+      res.redirect(303, '/admin/insights');
+    } catch (err) {
+      if (!(err instanceof AiError)) return next(err);
+      fail(err.message);
+    }
+  });
+
+  return router;
+}

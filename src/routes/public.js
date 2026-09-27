@@ -1,8 +1,7 @@
 import express from 'express';
 import { textsFor } from '../i18n.js';
-import { sendWebhook } from '../notify.js';
 import { parseJson } from '../db.js';
-import { errorPage, safeUrl, token } from '../util.js';
+import { errorPage, isEmail, safeUrl, token } from '../util.js';
 import { messageView, questionsView, ratingView, thanksView } from '../views/public.js';
 
 const VISITOR_COOKIE = 'vid';
@@ -38,7 +37,7 @@ function questionsFor(campaign, sentiment) {
   return campaign.questionsList.filter((q) => q.audience === 'all' || q.audience === sentiment);
 }
 
-export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 30 } } = {}) {
+export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 30 }, notifier } = {}) {
   const router = express.Router();
   const limit = rateLimiter(publicLimit);
 
@@ -145,23 +144,21 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
       comment: String(req.body.comment ?? '').trim().slice(0, 3000),
       customer_name: String(req.body.customer_name ?? '').trim().slice(0, 100),
       phone: String(req.body.phone ?? '').trim().slice(0, 30),
-      email: String(req.body.email ?? '').trim().slice(0, 120),
+      email: isEmail(String(req.body.email ?? '').trim()) ? String(req.body.email).trim() : '',
       wants_contact: req.body.wants_contact === '1',
     };
-    store.completeResponse(response.id, data);
+    // Consent to show the comment publicly is only offered to satisfied customers.
+    const consent =
+      response.sentiment === 'positive' && campaign.ask_consent && req.body.publish_consent === '1' && data.comment !== '';
+    store.completeResponse(response.id, {
+      ...data,
+      publish_consent: consent,
+      published: consent && Boolean(business.widget_auto_publish),
+    });
     store.logEvent(campaign.id, 'complete', { source: response.source, visitorId: response.visitor_id });
 
-    sendWebhook(business, response.sentiment === 'negative' ? 'feedback.negative' : 'feedback.positive', {
-      campaign: { id: campaign.id, name: campaign.name },
-      response: {
-        id: response.id,
-        rating: response.rating,
-        sentiment: response.sentiment,
-        source: response.source,
-        question_labels: Object.fromEntries(questions.map((q) => [q.id, q.label])),
-        ...data,
-        admin_url: `${req.protocol}://${req.get('host')}/admin/responses/${response.id}`,
-      },
+    notifier?.feedbackCompleted({ business, campaign, response, data, questions }).catch((err) => {
+      console.error('[notify] feedbackCompleted failed:', err);
     });
     res.redirect(303, `/t/${response.token}`);
   });

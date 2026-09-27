@@ -28,6 +28,8 @@ export const PUBLIC_TEXTS = {
     required: 'שדה חובה',
     nps_low: 'בכלל לא',
     nps_high: 'בהחלט',
+    first_name_label: 'שם פרטי (לא חובה)',
+    publish_consent: 'אפשר לפרסם את ההערה שלי באתר העסק, עם השם הפרטי בלבד',
   },
   en: {
     dir: 'ltr',
@@ -56,6 +58,8 @@ export const PUBLIC_TEXTS = {
     required: 'Required',
     nps_low: 'Not at all',
     nps_high: 'Definitely',
+    first_name_label: 'First name (optional)',
+    publish_consent: 'You may publish my comment on the business website, with my first name only',
   },
 };
 

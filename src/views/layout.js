@@ -1,7 +1,7 @@
 import { h, safeColor } from '../util.js';
 
 /** Admin shell: RTL Hebrew layout with top navigation. */
-export function adminPage({ title, user, business, businesses = [], body, flash = '', csrf = '' }) {
+export function adminPage({ title, user, business, businesses = [], body, flash = '', csrf = '', isSuperadmin = false }) {
   const bizSwitcher =
     businesses.length > 1
       ? `<form method="get" action="/admin/switch" class="switcher">
@@ -12,14 +12,22 @@ export function adminPage({ title, user, business, businesses = [], body, flash 
           </select>
         </form>`
       : '';
-  const nav = business
-    ? `<nav class="mainnav">
-        <a href="/admin">לוח בקרה</a>
-        <a href="/admin/responses">תגובות</a>
-        <a href="/admin/responses?sentiment=negative&status=new">פניות פתוחות</a>
-        <a href="/admin/campaigns">קמפיינים ו-QR</a>
-        <a href="/admin/business">הגדרות עסק</a>
-      </nav>`
+  const role = business?.role;
+  const links = business
+    ? [
+        ['/admin', 'לוח בקרה'],
+        ['/admin/responses', 'תגובות'],
+        ['/admin/responses?sentiment=negative&status=new', 'פניות פתוחות'],
+        ['/admin/campaigns', 'קמפיינים ו-QR'],
+        ['/admin/insights', 'תובנות AI'],
+        role !== 'viewer' && ['/admin/widget', 'ווידג\'ט'],
+        role === 'owner' && ['/admin/team', 'צוות'],
+        role === 'owner' && ['/admin/business', 'הגדרות'],
+        isSuperadmin && ['/superadmin', 'ניהול מערכת'],
+      ].filter(Boolean)
+    : [];
+  const nav = links.length
+    ? `<nav class="mainnav">${links.map(([href, label]) => `<a href="${href}">${label}</a>`).join('')}</nav>`
     : '';
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -38,7 +46,7 @@ export function adminPage({ title, user, business, businesses = [], body, flash 
     user
       ? `<form method="post" action="/logout" class="logout">
           <input type="hidden" name="_csrf" value="${h(csrf)}">
-          <span class="muted">${h(user.name)}</span>
+          <a class="muted" href="/account">${h(user.name)}</a>
           <button class="btn-link">יציאה</button>
         </form>`
       : ''

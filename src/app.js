@@ -1,9 +1,18 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createAi } from './ai.js';
+import { createJobs } from './jobs.js';
+import { createMailer } from './mailer.js';
+import { createNotifier } from './notifications.js';
 import { createStore } from './store.js';
-import { publicRoutes } from './routes/public.js';
 import { adminRoutes } from './routes/admin.js';
+import { authRoutes } from './routes/auth.js';
+import { createContext } from './routes/context.js';
+import { publicRoutes } from './routes/public.js';
+import { settingsRoutes } from './routes/settings.js';
+import { superadminRoutes } from './routes/superadmin.js';
+import { widgetRoutes } from './routes/widget.js';
 import { errorPage } from './util.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -34,8 +43,16 @@ function securityHeaders(_req, res, next) {
   next();
 }
 
+/**
+ * options: allowSignup, secureCookies, trustProxy, publicLimit,
+ * mailTransport (nodemailer transport, for tests), ai (injected helper or null).
+ */
 export function createApp(db, options = {}) {
   const store = createStore(db);
+  const mailer = createMailer(db, { transport: options.mailTransport });
+  const ai = options.ai !== undefined ? options.ai : createAi();
+  const notifier = createNotifier({ store, mailer, publicUrl: options.publicUrl });
+  const ctx = createContext(store, { ...options, mailer, ai, notifier });
   const app = express();
   app.disable('x-powered-by');
   if (options.trustProxy ?? process.env.TRUST_PROXY) app.set('trust proxy', 1);
@@ -46,13 +63,18 @@ export function createApp(db, options = {}) {
   app.use('/static', express.static(path.join(root, 'public'), { maxAge: '1h' }));
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
-  app.use(publicRoutes(store, options));
-  app.use(adminRoutes(store, options));
+  app.use(publicRoutes(store, { ...options, notifier }));
+  app.use(widgetRoutes(store));
+
+  app.use(ctx.session);
+  app.use(authRoutes(ctx));
+  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx));
+  app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
 
   app.use((_req, res) => res.status(404).send(errorPage('הדף לא נמצא')));
   app.use((err, _req, res, _next) => {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store };
+  return { app, store, mailer, notifier, jobs: createJobs({ store, notifier }) };
 }
