@@ -1,21 +1,26 @@
 import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
-import { formatDate, h } from '../util.js';
+import { formatDate, h, logoSrc } from '../util.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
 
 // ---------------------------------------------------------------- business
 
-export function businessView({ business, csrf, plan }) {
+export function businessView({ business, csrf, plan, error = '' }) {
   return `<h1>הגדרות עסק</h1>
+  ${error ? `<div class="error">${h(error)}</div>` : ''}
   <div class="grid2">
     <form method="post" action="/admin/business" class="stack card">
       ${csrfField(csrf)}
       <h3>מיתוג</h3>
       <label>שם העסק<input name="name" required maxlength="100" value="${h(business.name)}"></label>
-      <label>קישור ללוגו<input name="logo_url" dir="ltr" value="${h(business.logo_url)}" placeholder="https://..."></label>
       <label>צבע מותג<input name="brand_color" type="color" value="${h(business.brand_color)}"></label>
+      ${
+        business.logo_version
+          ? ''
+          : `<label>קישור ללוגו שכבר נמצא באינטרנט (או העלאת קובץ למטה)<input name="logo_url" dir="ltr" value="${h(business.logo_url)}" placeholder="https://..."></label>`
+      }
       <button class="btn primary">שמירה</button>
     </form>
 
@@ -48,6 +53,27 @@ export function businessView({ business, csrf, plan }) {
       <button class="btn primary">שמירה</button>
     </form>
   </div>
+
+  <section class="card stack" id="logo">
+    <h3>לוגו</h3>
+    <div class="logo-row">
+      ${logoSrc(business) ? `<img class="logo-preview" src="${h(logoSrc(business))}" alt="הלוגו הנוכחי">` : '<div class="logo-preview empty">אין לוגו</div>'}
+      <form method="post" action="/admin/business/logo?_csrf=${h(csrf)}" enctype="multipart/form-data" class="stack">
+        <label>העלאת קובץ (PNG, JPG, WebP או GIF, עד 1MB)
+          <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+        </label>
+        <div class="actions">
+          <button class="btn primary">העלאה</button>
+        </div>
+      </form>
+      ${
+        business.logo_version
+          ? `<form method="post" action="/admin/business/logo/delete">${csrfField(csrf)}<button class="btn danger">הסרת הלוגו</button></form>`
+          : ''
+      }
+    </div>
+    <p class="muted small">הלוגו מופיע בראש הסקר ללקוחות ובשלט ה-QR להדפסה. מומלץ תמונה רחבה על רקע שקוף או לבן.</p>
+  </section>
 
   <div class="grid2">
     <section class="card stack">

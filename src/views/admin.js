@@ -1,6 +1,6 @@
 import { EDITABLE_TEXT_KEYS, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
-import { formatDate, h, safeColor, waLink } from '../util.js';
+import { formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
@@ -260,7 +260,15 @@ export function responseDetailView({ r, csrf, businessName, can = () => true, ai
       </section>
     </div>
     ${r.sentiment === 'negative' && can('manager') ? draftSection({ r, csrf, aiAvailable, aiError }) : ''}
-    ${r.publish_consent && widgetAvailable ? publishSection({ r, csrf, canEdit: can('manager') }) : ''}`;
+    ${r.publish_consent && widgetAvailable ? publishSection({ r, csrf, canEdit: can('manager') }) : ''}
+    ${
+      can('owner')
+        ? `<form method="post" action="/admin/responses/${r.id}/delete" class="danger-zone"
+            onsubmit="return confirm('למחוק את התגובה וכל פרטי הלקוח שבה? אי אפשר לבטל.')">
+            ${csrfField(csrf)}<button class="btn danger">מחיקת התגובה ופרטי הלקוח</button>
+            <p class="muted small">למשל כשלקוח מבקש למחוק את המידע עליו.</p></form>`
+        : ''
+    }`;
 }
 
 function draftSection({ r, csrf, aiAvailable, aiError }) {
@@ -515,7 +523,7 @@ export function posterView({ campaign, business, qrSvg, t }) {
   <title>${h(business.name)} · QR</title><link rel="stylesheet" href="/static/style.css">
   <style>:root{--brand:${safeColor(business.brand_color)}}</style></head>
   <body class="poster"><div class="poster-inner">
-    ${business.logo_url ? `<img class="logo" src="${h(business.logo_url)}" alt="">` : ''}
+    ${logoSrc(business) ? `<img class="logo" src="${h(logoSrc(business))}" alt="">` : ''}
     <h1>${h(t.title)}</h1>
     <p>${h(t.subtitle)}</p>
     <div class="poster-qr">${qrSvg}</div>

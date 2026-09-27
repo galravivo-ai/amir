@@ -1,8 +1,9 @@
 import express from 'express';
+import multer from 'multer';
 import { AiError } from '../ai.js';
 import { limitLabel } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
-import { clampInt, emailList, errorPage, isEmail, safeColor, safeUrl } from '../util.js';
+import { clampInt, emailList, errorPage, imageMime, isEmail, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
 import * as V from '../views/settings.js';
 import { BIZ_COOKIE } from './context.js';
@@ -16,7 +17,27 @@ export function settingsRoutes(ctx) {
 
   // ---------- business ----------
   router.get('/business', owner, (req, res) => {
-    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf, plan: req.plan }));
+    const error = req.query.err ? String(req.query.err).slice(0, 200) : '';
+    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf, plan: req.plan, error }));
+  });
+
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024, files: 1, fields: 5 } });
+  router.post('/business/logo', owner, (req, res, next) => {
+    const fail = (msg) => res.redirect(303, `/admin/business?err=${encodeURIComponent(msg)}#logo`);
+    upload.single('logo')(req, res, (err) => {
+      if (err?.code === 'LIMIT_FILE_SIZE') return fail('הקובץ גדול מדי (עד 1MB)');
+      if (err) return next(err);
+      // Trust the file's actual bytes, not its name or the browser's claim.
+      const mime = imageMime(req.file?.buffer);
+      if (!mime) return fail('הקובץ חייב להיות תמונה מסוג PNG, JPG, WebP או GIF');
+      store.setLogo(req.business.id, { mime, data: req.file.buffer });
+      res.redirect(303, '/admin/business?ok=1#logo');
+    });
+  });
+
+  router.post('/business/logo/delete', owner, (req, res) => {
+    store.removeLogo(req.business.id);
+    res.redirect(303, '/admin/business?ok=1#logo');
   });
 
   router.post('/business', owner, (req, res) => {

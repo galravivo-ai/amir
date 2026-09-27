@@ -14,12 +14,14 @@ export function authRoutes(ctx) {
     email: String(body.email ?? '').trim().toLowerCase().slice(0, 120),
     business: String(body.business ?? '').trim().slice(0, 100),
     password: String(body.password ?? ''),
+    terms: body.terms === '1',
   });
 
   function validateNewUser(v, { needBusiness }) {
     if (!v.name || (needBusiness && !v.business)) return 'יש למלא את כל השדות';
     if (!isEmail(v.email)) return 'אימייל לא תקין';
     if (v.password.length < 8) return 'סיסמה חייבת להכיל לפחות 8 תווים';
+    if (!v.terms) return 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
     if (store.userByEmail(v.email)) return 'האימייל כבר רשום. היכנסו לחשבון ופתחו שוב את הקישור';
     return '';
   }
@@ -31,8 +33,6 @@ export function authRoutes(ctx) {
     if (first) store.setSuperadmin(id, true);
     return id;
   }
-
-  router.get('/', (req, res) => res.redirect(req.user ? '/admin' : '/login'));
 
   // ---------- login ----------
   router.get('/login', (req, res) => {

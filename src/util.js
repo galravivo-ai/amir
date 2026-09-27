@@ -90,6 +90,23 @@ export function googleReviewUrl(input) {
   return '';
 }
 
+/** Image src for a business logo: an uploaded file wins over an external URL. */
+export function logoSrc(business) {
+  if (!business) return '';
+  if (business.logo_version) return `/logo/${business.id}?v=${business.logo_version}`;
+  return safeUrl(business.logo_url);
+}
+
+/** Detects PNG / JPEG / WebP / GIF by their magic bytes (SVG is refused: it can carry scripts). */
+export function imageMime(buf) {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0x89 && buf.toString('ascii', 1, 4) === 'PNG') return 'image/png';
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  if (buf.toString('ascii', 0, 4) === 'GIF8') return 'image/gif';
+  return null;
+}
+
 export function safeColor(color, fallback = '#2563eb') {
   return /^#[0-9a-fA-F]{6}$/.test(String(color ?? '')) ? color : fallback;
 }

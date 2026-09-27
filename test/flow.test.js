@@ -54,7 +54,7 @@ after(() => {
 /** Minimal cookie-keeping client. */
 function client() {
   const jar = {};
-  async function req(path, { method = 'GET', form } = {}) {
+  async function req(path, { method = 'GET', form, multipart } = {}) {
     const res = await fetch(base + path, {
       method,
       redirect: 'manual',
@@ -62,7 +62,7 @@ function client() {
         cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '),
         ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}),
       },
-      body: form ? new URLSearchParams(form).toString() : undefined,
+      body: multipart || (form ? new URLSearchParams(form).toString() : undefined),
     });
     for (const c of res.headers.getSetCookie()) {
       const [pair] = c.split(';');
@@ -83,7 +83,7 @@ async function registeredOwner(email) {
   const c = client();
   const r = await c.req('/register', {
     method: 'POST',
-    form: { name: 'Owner', email, password: 'password123', business: 'Test Cafe' },
+    form: { name: 'Owner', email, password: 'password123', business: 'Test Cafe', terms: '1' },
   });
   assert.equal(r.status, 303);
   return c;
@@ -329,7 +329,7 @@ test('team invites and roles', async () => {
   assert.ok(outbox('team_invite').some((m) => m.to_addr === 'staff@example.com'));
 
   const staff = client();
-  const join = await staff.req(`/join/${raw}`, { method: 'POST', form: { name: 'Staff', password: 'password123' } });
+  const join = await staff.req(`/join/${raw}`, { method: 'POST', form: { name: 'Staff', password: 'password123', terms: '1' } });
   assert.equal(join.status, 303);
   assert.equal(store.business(campaign.business_id, store.userByEmail('staff@example.com').id).role, 'viewer');
   assert.equal((await staff.req(`/join/${raw}`)).status, 410, 'invite is single use');
@@ -483,4 +483,82 @@ test('customer-controlled text never lands inside inline scripts', async () => {
   for (const [, handler] of page.text.matchAll(/\son\w+="([^"]*)"/g)) {
     assert.doesNotMatch(handler, /alert|&#39;\)/, `inline handler contains user data: ${handler}`);
   }
+});
+
+test('registration requires accepting the terms', async () => {
+  const r = await client().req('/register', {
+    method: 'POST',
+    form: { name: 'No Terms', email: 'noterms@example.com', password: 'password123', business: 'X' },
+  });
+  assert.equal(r.status, 422);
+  assert.equal(store.userByEmail('noterms@example.com'), undefined);
+  const ok = await registeredOwner('terms@example.com');
+  assert.ok(ok);
+  assert.ok(store.userByEmail('terms@example.com').terms_accepted_at);
+});
+
+test('landing, privacy and terms pages are public', async () => {
+  const anon = client();
+  const landing = await anon.req('/');
+  assert.equal(landing.status, 200);
+  assert.match(landing.text, /יותר ביקורות טובות בגוגל/);
+  assert.match(landing.text, /id="pricing"/);
+  assert.match((await anon.req('/privacy')).text, /מדיניות פרטיות/);
+  assert.match((await anon.req('/terms')).text, /תנאי שימוש/);
+  // Logged-in users skip the landing page.
+  const owner = await registeredOwner('landing@example.com');
+  assert.equal((await owner.req('/')).location, '/admin');
+  // The survey links to the privacy policy.
+  const campaign = await createCampaign(owner);
+  assert.match((await anon.req(`/r/${campaign.slug}`)).text, /href="\/privacy"/);
+});
+
+test('logo upload accepts real images only', async () => {
+  const owner = await registeredOwner('logo@example.com');
+  const campaign = await createCampaign(owner);
+  const csrf = await csrfOf(owner);
+  const upload = (bytes, name) => {
+    const fd = new FormData();
+    fd.append('logo', new Blob([bytes]), name);
+    return owner.req(`/admin/business/logo?_csrf=${encodeURIComponent(csrf)}`, { method: 'POST', multipart: fd });
+  };
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+
+  // CSRF is enforced on multipart too.
+  const fd = new FormData();
+  fd.append('logo', new Blob([png]), 'a.png');
+  assert.equal((await owner.req('/admin/business/logo', { method: 'POST', multipart: fd })).status, 403);
+
+  // An SVG (or anything that is not a real image) is refused, whatever its name.
+  const svg = await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), 'x.png');
+  assert.match(svg.location, /err=/);
+  assert.equal(store.logoOf(campaign.business_id), null);
+
+  const big = await upload(Buffer.concat([png, Buffer.alloc(1024 * 1024 + 1)]), 'big.png');
+  assert.match(big.location, /err=/);
+
+  const ok = await upload(png, 'logo.png');
+  assert.match(ok.location, /ok=1/);
+  const biz = store.businessById(campaign.business_id);
+  assert.ok(biz.logo_version);
+  const img = await client().req(`/logo/${biz.id}?v=${biz.logo_version}`);
+  assert.equal(img.headers.get('content-type'), 'image/png');
+  assert.match(img.headers.get('content-security-policy'), /sandbox/);
+  // Shown on the customer survey.
+  assert.match((await client().req(`/r/${campaign.slug}`)).text, new RegExp(`/logo/${biz.id}\\?v=`));
+
+  await owner.req('/admin/business/logo/delete', { method: 'POST', form: { _csrf: csrf } });
+  assert.equal(store.logoOf(biz.id), null);
+});
+
+test('owner can delete a response and its customer data', async () => {
+  const owner = await registeredOwner('gdpr@example.com');
+  const campaign = await createCampaign(owner);
+  const r = await completeSurvey(campaign.slug, 2, { comment: 'delete me', phone: '0501111111' });
+  const del = await owner.req(`/admin/responses/${r.id}/delete`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
+  assert.equal(del.status, 303);
+  assert.equal(store.responseByToken(r.token), null);
 });

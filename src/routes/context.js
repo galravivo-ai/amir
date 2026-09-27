@@ -38,7 +38,10 @@ export function createContext(
     /** Loads req.user and enforces CSRF on every POST made with a session. */
     session(req, res, next) {
       req.user = store.sessionUser(req.cookies[SESSION_COOKIE]);
-      if (req.method === 'POST' && req.user && req.body?._csrf !== req.user.csrf) {
+      // File uploads (multipart) are parsed later by their route, so their token travels in the query string.
+      const multipart = String(req.headers['content-type'] ?? '').startsWith('multipart/form-data');
+      const sent = multipart ? req.query?._csrf : req.body?._csrf;
+      if (req.method === 'POST' && req.user && sent !== req.user.csrf) {
         return res.status(403).send(errorPage('פג תוקף הטופס. רעננו את הדף ונסו שוב'));
       }
       next();

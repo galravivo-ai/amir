@@ -96,7 +96,7 @@ export function createStore(db) {
 
     // ---------- users & sessions ----------
     createUser({ email, name, passwordHash }) {
-      const r = q('INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)').run(
+      const r = q("INSERT INTO users (email, name, password_hash, terms_accepted_at) VALUES (?, ?, ?, datetime('now'))").run(
         email.toLowerCase(),
         name,
         passwordHash,
@@ -186,6 +186,20 @@ export function createStore(db) {
         id,
       );
     },
+    setLogo(businessId, { mime, data }) {
+      q(`INSERT INTO business_logos (business_id, mime, data, updated_at) VALUES (?, ?, ?, datetime('now'))
+         ON CONFLICT(business_id) DO UPDATE SET mime = excluded.mime, data = excluded.data, updated_at = excluded.updated_at`).run(
+        businessId,
+        mime,
+        data,
+      );
+      q('UPDATE businesses SET logo_version = ? WHERE id = ?').run(token(6), businessId);
+    },
+    removeLogo(businessId) {
+      q('DELETE FROM business_logos WHERE business_id = ?').run(businessId);
+      q('UPDATE businesses SET logo_version = NULL WHERE id = ?').run(businessId);
+    },
+    logoOf: (businessId) => q('SELECT mime, data FROM business_logos WHERE business_id = ?').get(businessId) || null,
     ensureWidgetKey(id) {
       q('UPDATE businesses SET widget_key = ? WHERE id = ? AND widget_key IS NULL').run(token(12), id);
     },
@@ -340,6 +354,7 @@ export function createStore(db) {
       return t;
     },
     responseByToken: (t) => q('SELECT * FROM responses WHERE token = ?').get(t) || null,
+    deleteResponse: (id) => q('DELETE FROM responses WHERE id = ?').run(id),
     completeResponse(id, f) {
       q(
         `UPDATE responses SET answers = ?, comment = ?, customer_name = ?, phone = ?, email = ?,

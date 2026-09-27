@@ -176,6 +176,17 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_outbox_created ON outbox(created_at);
   `,
+  // v2: uploaded logos (kept out of the businesses row so it stays light)
+  `
+  CREATE TABLE business_logos (
+    business_id INTEGER PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+    mime TEXT NOT NULL,
+    data BLOB NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  ALTER TABLE businesses ADD COLUMN logo_version TEXT;
+  ALTER TABLE users ADD COLUMN terms_accepted_at TEXT;
+  `,
 ];
 
 function migrate(db) {

@@ -1,4 +1,4 @@
-import { h, safeColor } from '../util.js';
+import { h, logoSrc, safeColor } from '../util.js';
 
 /** Admin shell: RTL Hebrew layout with top navigation. */
 export function adminPage({ title, user, business, businesses = [], body, flash = '', csrf = '', isSuperadmin = false }) {
@@ -78,12 +78,21 @@ export function publicPage({ title, lang = 'he', dir = 'rtl', business, body }) 
   ${
     business
       ? `<div class="biz-head">
-          ${business.logo_url ? `<img class="logo" src="${h(business.logo_url)}" alt="">` : ''}
+          ${logoSrc(business) ? `<img class="logo" src="${h(logoSrc(business))}" alt="">` : ''}
           <div class="biz-name">${h(business.name)}</div>
         </div>`
       : ''
   }
   ${body}
+  <footer class="public-foot">
+    ${
+      business
+        ? lang === 'en'
+          ? `Your answers are shared with ${h(business.name)} only · <a href="/privacy" target="_blank">Privacy policy</a>`
+          : `התשובות נמסרות ל${h(business.name)} בלבד · <a href="/privacy" target="_blank">מדיניות פרטיות</a>`
+        : ''
+    }
+  </footer>
 </main>
 </body>
 </html>`;

@@ -141,6 +141,13 @@ export function adminRoutes(ctx) {
     res.redirect(303, `/admin/responses/${r.id}?ok=1`);
   });
 
+  admin.post('/responses/:id/delete', requireRole('owner'), (req, res) => {
+    const r = loadResponse(req, res);
+    if (!r) return;
+    store.deleteResponse(r.id);
+    res.redirect(303, '/admin/responses?ok=1');
+  });
+
   admin.post('/responses/:id/publish', manager, (req, res) => {
     const r = loadResponse(req, res);
     if (!r) return;
