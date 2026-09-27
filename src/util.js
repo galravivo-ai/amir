@@ -10,6 +10,14 @@ export function h(value) {
     .replace(/'/g, '&#39;');
 }
 
+/** Small standalone Hebrew error page. */
+export function errorPage(message) {
+  return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(message)}</title>
+<link rel="stylesheet" href="/static/style.css"></head>
+<body class="public"><main class="card public-card"><h1>${h(message)}</h1></main></body></html>`;
+}
+
 export function token(bytes = 16) {
   return crypto.randomBytes(bytes).toString('base64url');
 }

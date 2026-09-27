@@ -2,7 +2,7 @@ import express from 'express';
 import { textsFor } from '../i18n.js';
 import { sendWebhook } from '../notify.js';
 import { parseJson } from '../db.js';
-import { safeUrl, token } from '../util.js';
+import { errorPage, safeUrl, token } from '../util.js';
 import { messageView, questionsView, ratingView, thanksView } from '../views/public.js';
 
 const VISITOR_COOKIE = 'vid';
@@ -29,7 +29,7 @@ export function rateLimiter({ windowMs, max }) {
       return next();
     }
     entry.count++;
-    if (entry.count > max) return res.status(429).send('Too many requests');
+    if (entry.count > max) return res.status(429).send(errorPage('יותר מדי בקשות, נסו שוב בעוד כמה דקות'));
     next();
   };
 }
@@ -58,7 +58,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
   // Step 1: QR scan / link open -> rating screen
   router.get('/r/:slug', (req, res) => {
     const ctx = loadCampaign(req.params.slug);
-    if (!ctx) return res.status(404).send(messageView({ message: 'Not found' }));
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     const { campaign, business, t } = ctx;
     if (!campaign.active) return res.send(messageView({ t, business, campaign, message: t.inactive }));
 
@@ -97,7 +97,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
   // Step 2: follow-up questions (tailored to the rating)
   router.get('/f/:token', (req, res) => {
     const ctx = loadResponse(req.params.token);
-    if (!ctx) return res.status(404).send(messageView({ message: 'Not found' }));
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     if (ctx.response.completed) return res.redirect(303, `/t/${ctx.response.token}`);
     const invite = ctx.response.invite_id
       ? store.db.prepare('SELECT customer_name, phone FROM invites WHERE id = ?').get(ctx.response.invite_id)
@@ -113,7 +113,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
 
   router.post('/f/:token', limit, (req, res) => {
     const ctx = loadResponse(req.params.token);
-    if (!ctx) return res.status(404).send(messageView({ message: 'Not found' }));
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     const { response, campaign, business } = ctx;
     if (response.completed) return res.redirect(303, `/t/${response.token}`);
 
@@ -169,14 +169,14 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
   // Step 3: thank-you + review links
   router.get('/t/:token', (req, res) => {
     const ctx = loadResponse(req.params.token);
-    if (!ctx) return res.status(404).send(messageView({ message: 'Not found' }));
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     res.send(thanksView(ctx));
   });
 
   // Tracked outbound click to a review platform
   router.get('/go/:token/:platform', (req, res) => {
     const ctx = loadResponse(req.params.token);
-    if (!ctx) return res.status(404).send(messageView({ message: 'Not found' }));
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     const { response, campaign } = ctx;
     const key = req.params.platform;
     let url = '';

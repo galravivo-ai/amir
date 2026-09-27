@@ -2,7 +2,7 @@ import express from 'express';
 import QRCode from 'qrcode';
 import { EDITABLE_TEXT_KEYS, textsFor } from '../i18n.js';
 import { DEFAULT_QUESTIONS, normalizeQuestions, STATUSES } from '../store.js';
-import { clampInt, csvEscape, googleReviewUrl, hashPassword, safeColor, safeUrl, verifyPassword } from '../util.js';
+import { clampInt, csvEscape, errorPage, googleReviewUrl, hashPassword, safeColor, safeUrl, verifyPassword } from '../util.js';
 import { parseJson } from '../db.js';
 import { adminPage } from '../views/layout.js';
 import * as V from '../views/admin.js';
@@ -22,7 +22,7 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
   router.use((req, res, next) => {
     req.user = store.sessionUser(req.cookies[SESSION_COOKIE]);
     if (req.method === 'POST' && req.user && req.body?._csrf !== req.user.csrf) {
-      return res.status(403).send('Invalid CSRF token – רעננו את הדף ונסו שוב');
+      return res.status(403).send(errorPage('פג תוקף הטופס. רעננו את הדף ונסו שוב'));
     }
     next();
   });
@@ -197,13 +197,13 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
 
   admin.get('/responses/:id', (req, res) => {
     const r = store.responseForBusiness(Number(req.params.id), req.business.id);
-    if (!r) return res.status(404).send('Not found');
+    if (!r) return res.status(404).send(errorPage('הדף לא נמצא'));
     render(req, res, 'תגובה', V.responseDetailView({ r, csrf: req.user.csrf, businessName: req.business.name }));
   });
 
   admin.post('/responses/:id', (req, res) => {
     const r = store.responseForBusiness(Number(req.params.id), req.business.id);
-    if (!r) return res.status(404).send('Not found');
+    if (!r) return res.status(404).send(errorPage('הדף לא נמצא'));
     const status = Object.hasOwn(STATUSES, req.body.status) ? req.body.status : r.status;
     store.updateResponseStatus(r.id, status, String(req.body.notes ?? '').slice(0, 5000));
     res.redirect(303, `/admin/responses/${r.id}?ok=1`);
@@ -288,7 +288,7 @@ export function adminRoutes(store, { allowSignup = true, secureCookies = false }
 
   function loadCampaign(req, res) {
     const c = store.campaign(Number(req.params.id), req.business.id);
-    if (!c) res.status(404).send('Not found');
+    if (!c) res.status(404).send(errorPage('הדף לא נמצא'));
     return c;
   }
 

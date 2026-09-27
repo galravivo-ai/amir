@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createStore } from './store.js';
 import { publicRoutes } from './routes/public.js';
 import { adminRoutes } from './routes/admin.js';
+import { errorPage } from './util.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -48,10 +49,10 @@ export function createApp(db, options = {}) {
   app.use(publicRoutes(store, options));
   app.use(adminRoutes(store, options));
 
-  app.use((_req, res) => res.status(404).send('Not found'));
+  app.use((_req, res) => res.status(404).send(errorPage('הדף לא נמצא')));
   app.use((err, _req, res, _next) => {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
   return { app, store };
 }
