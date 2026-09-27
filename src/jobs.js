@@ -1,9 +1,11 @@
+import { backupDb, lastBackupAge } from './backup.js';
+
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, now = () => new Date() }) {
+export function createJobs({ store, notifier, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -45,9 +47,17 @@ export function createJobs({ store, notifier, now = () => new Date() }) {
     return sent;
   }
 
+  /** One automatic backup a day (kept next to the database; copy offsite too). */
+  async function dailyBackup() {
+    if (!backups || lastBackupAge() < 23 * 3600e3) return 0;
+    const { file } = backupDb(store.db);
+    console.log(`[jobs] backup written: ${file}`);
+    return 1;
+  }
+
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ inviteReminders, slaAlerts, weeklyReports })) {
+    for (const [name, job] of Object.entries({ inviteReminders, slaAlerts, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -62,6 +72,7 @@ export function createJobs({ store, notifier, now = () => new Date() }) {
     inviteReminders,
     slaAlerts,
     weeklyReports,
+    dailyBackup,
     runAll,
     start(intervalMs = 5 * 60e3) {
       const timer = setInterval(runAll, intervalMs);

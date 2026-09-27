@@ -1,9 +1,37 @@
+# Production on your own server (VPS): the app + Caddy for automatic HTTPS.
+# 1. Point your domain's DNS (A record) to the server's IP.
+# 2. cp .env.example .env  and fill it in (DOMAIN is required).
+# 3. docker compose up -d --build
 services:
   app:
     build: .
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     env_file: .env
+    environment:
+      PORT: 3000
+      PUBLIC_URL: https://${DOMAIN:?Set DOMAIN in .env}
+      TRUST_PROXY: 1
+      SECURE_COOKIES: "true"
     volumes:
       - ./data:/app/data
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

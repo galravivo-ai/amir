@@ -39,6 +39,7 @@ before(async () => {
     publicLimit: { windowMs: 60e3, max: 1000 },
     authLimit: { windowMs: 60e3, max: 1000 },
     ai: fakeAi,
+    backups: false,
   });
   store = created.store;
   server = created.app.listen(0);
@@ -436,7 +437,7 @@ test('jobs: SLA alerts and email reminders are sent once', async () => {
   const owner = await registeredOwner('jobs@example.com');
   const campaign = await createCampaign(owner);
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
-  const { jobs } = createApp(store.db, { ai: null });
+  const { jobs } = createApp(store.db, { ai: null, backups: false });
 
   const r = await completeSurvey(campaign.slug, 1, { comment: 'late ticket' });
   store.db.prepare("UPDATE responses SET created_at = datetime('now', '-25 hours') WHERE id = ?").run(r.id);
@@ -561,4 +562,21 @@ test('owner can delete a response and its customer data', async () => {
   const del = await owner.req(`/admin/responses/${r.id}/delete`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
   assert.equal(del.status, 303);
   assert.equal(store.responseByToken(r.token), null);
+});
+
+test('backups: consistent copy, rotation keeps the newest', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { backupDb } = await import('../src/backup.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bk-'));
+  for (let i = 0; i < 3; i++) fs.writeFileSync(path.join(dir, `reviews-20200101000${i}.db`), 'old');
+  const { file, removed } = backupDb(store.db, { dir, keep: 2 });
+  assert.equal(removed, 2);
+  assert.deepEqual(fs.readdirSync(dir).sort(), ['reviews-202001010002.db', path.basename(file)].sort());
+  const { DatabaseSync } = await import('node:sqlite');
+  const copy = new DatabaseSync(file);
+  assert.ok(copy.prepare('SELECT COUNT(*) AS n FROM users').get().n > 0);
+  copy.close();
+  fs.rmSync(dir, { recursive: true });
 });

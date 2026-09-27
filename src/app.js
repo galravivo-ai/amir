@@ -78,5 +78,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, jobs: createJobs({ store, notifier }) };
+  return { app, store, mailer, notifier, jobs: createJobs({ store, notifier, backups: options.backups ?? true }) };
 }
