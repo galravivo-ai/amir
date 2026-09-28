@@ -31,6 +31,12 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1');
   });
 
+  router.post('/users/:id/reset-2fa', (req, res) => {
+    // For a user who lost both the phone and the backup codes.
+    store.disableTotp(Number(req.params.id));
+    res.redirect(303, '/superadmin?ok=1');
+  });
+
   router.post('/users/:id/superadmin', (req, res) => {
     const id = Number(req.params.id);
     if (id !== req.user.id) store.setSuperadmin(id, req.body.on === '1');

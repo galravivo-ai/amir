@@ -191,6 +191,20 @@ const MIGRATIONS = [
   `
   UPDATE businesses SET brand_color = '#4b2bd6' WHERE lower(brand_color) = '#2563eb';
   `,
+  // v4: two-factor authentication
+  `
+  ALTER TABLE users ADD COLUMN totp_secret TEXT;
+  ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN totp_last_step INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN totp_backup TEXT NOT NULL DEFAULT '[]';
+  CREATE TABLE login_challenges (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    next TEXT NOT NULL DEFAULT '',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT NOT NULL
+  );
+  `,
 ];
 
 function migrate(db) {

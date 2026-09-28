@@ -338,10 +338,15 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
   </section>
   <section class="card">
     <h3>משתמשים</h3>
-    <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>עסקים</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>
+    <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>
     <tbody>${users
       .map(
         (u) => `<tr><td data-l="שם">${h(u.name)}</td><td data-l="אימייל" dir="ltr">${h(u.email)}</td><td data-l="עסקים">${u.businesses}</td>
+          <td data-l="אימות">${
+            u.totp_enabled
+              ? `<form method="post" action="/superadmin/users/${u.id}/reset-2fa" class="inline" data-name="${h(u.name)}" onsubmit="return confirm('לכבות אימות דו-שלבי ל' + this.dataset.name + '? עשו זאת רק אחרי שווידאתם את זהותו.')">${csrfField(csrf)}<button class="btn-link">✓ (איפוס)</button></form>`
+              : '—'
+          }</td>
           <td data-l="מנהל">${
             u.id === meId
               ? '✓'

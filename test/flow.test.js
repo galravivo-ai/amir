@@ -580,3 +580,49 @@ test('backups: consistent copy, rotation keeps the newest', async () => {
   copy.close();
   fs.rmSync(dir, { recursive: true });
 });
+
+test('two-factor authentication', async () => {
+  const { codeAt, currentStep } = await import('../src/totp.js');
+  const owner = await registeredOwner('2fa@example.com');
+  const csrf = await csrfOf(owner);
+  await owner.req('/account/2fa/setup', { method: 'POST', form: { _csrf: csrf } });
+  const setup = await owner.req('/account/2fa');
+  assert.match(setup.text, /data:image\/png;base64/);
+  const { totp_secret: secret } = store.userByEmail('2fa@example.com');
+
+  const wrong = await owner.req('/account/2fa/enable', { method: 'POST', form: { _csrf: csrf, code: '000000' } });
+  assert.equal(wrong.status, 422);
+  const enabled = await owner.req('/account/2fa/enable', {
+    method: 'POST',
+    form: { _csrf: csrf, code: codeAt(secret, currentStep()) },
+  });
+  const backups = [...enabled.text.matchAll(/>([a-z2-9]{4}-[a-z2-9]{4})</g)].map((m) => m[1]);
+  assert.equal(backups.length, 10);
+
+  // Password alone no longer opens a session.
+  const c = client();
+  const step1 = await c.req('/login', { method: 'POST', form: { email: '2fa@example.com', password: 'password123' } });
+  assert.equal(step1.location, '/login/2fa');
+  assert.equal((await c.req('/admin')).location, '/login');
+  assert.equal((await c.req('/login/2fa', { method: 'POST', form: { code: '123456' } })).status, 401);
+  // The code used to enable 2FA can't be replayed; the next step's code works.
+  const next = await c.req('/login/2fa', { method: 'POST', form: { code: codeAt(secret, currentStep() + 1) } });
+  assert.equal(next.location, '/admin');
+  assert.equal((await c.req('/admin')).status, 200);
+
+  // A backup code works once.
+  const c2 = client();
+  await c2.req('/login', { method: 'POST', form: { email: '2fa@example.com', password: 'password123' } });
+  assert.equal((await c2.req('/login/2fa', { method: 'POST', form: { code: backups[0] } })).location, '/admin');
+  const c3 = client();
+  await c3.req('/login', { method: 'POST', form: { email: '2fa@example.com', password: 'password123' } });
+  assert.equal((await c3.req('/login/2fa', { method: 'POST', form: { code: backups[0] } })).status, 401);
+
+  // Turning it off needs the password and a code.
+  const off = await owner.req('/account/2fa/disable', {
+    method: 'POST',
+    form: { _csrf: csrf, password: 'password123', code: backups[1] },
+  });
+  assert.equal(off.location, '/account?ok=1');
+  assert.equal(store.userByEmail('2fa@example.com').totp_enabled, 0);
+});

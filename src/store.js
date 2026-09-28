@@ -113,9 +113,52 @@ export function createStore(db) {
     },
     setSuperadmin: (id, on) => q('UPDATE users SET is_superadmin = ? WHERE id = ?').run(on ? 1 : 0, id),
     allUsers: () =>
-      q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.created_at,
+      q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.totp_enabled, u.created_at,
            (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS businesses
          FROM users u ORDER BY u.id DESC`).all(),
+
+    // ---------- two-factor authentication ----------
+    setPendingTotp: (id, secret) =>
+      q('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?').run(secret, id),
+    enableTotp: (id, backupHashes, step) =>
+      q('UPDATE users SET totp_enabled = 1, totp_backup = ?, totp_last_step = ? WHERE id = ?').run(
+        JSON.stringify(backupHashes),
+        step,
+        id,
+      ),
+    disableTotp: (id) =>
+      q("UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_backup = '[]', totp_last_step = 0 WHERE id = ?").run(id),
+    setTotpLastStep: (id, step) => q('UPDATE users SET totp_last_step = ? WHERE id = ?').run(step, id),
+    /** Consumes a backup code; returns true when it was valid and unused. */
+    useBackupCode(id, code) {
+      const row = q('SELECT totp_backup FROM users WHERE id = ?').get(id);
+      const hashes = parseJson(row?.totp_backup, []);
+      const hash = sha256(String(code ?? '').trim().toLowerCase());
+      const i = hashes.indexOf(hash);
+      if (i < 0) return false;
+      hashes.splice(i, 1);
+      q('UPDATE users SET totp_backup = ? WHERE id = ?').run(JSON.stringify(hashes), id);
+      return true;
+    },
+    backupCodesLeft: (id) => parseJson(q('SELECT totp_backup FROM users WHERE id = ?').get(id)?.totp_backup, []).length,
+    createLoginChallenge(userId, next = '') {
+      const raw = token(24);
+      q('INSERT INTO login_challenges (token_hash, user_id, next, expires_at) VALUES (?, ?, ?, ?)').run(
+        sha256(raw),
+        userId,
+        next,
+        sqlTime(5 * 60e3),
+      );
+      return raw;
+    },
+    loginChallenge: (raw) =>
+      q('SELECT * FROM login_challenges WHERE token_hash = ? AND expires_at > ? AND attempts < 5').get(
+        sha256(String(raw ?? '')),
+        sqlTime(),
+      ) || null,
+    failLoginChallenge: (raw) =>
+      q('UPDATE login_challenges SET attempts = attempts + 1 WHERE token_hash = ?').run(sha256(String(raw ?? ''))),
+    deleteLoginChallenge: (raw) => q('DELETE FROM login_challenges WHERE token_hash = ?').run(sha256(String(raw ?? ''))),
 
     // ---------- password reset ----------
     createPasswordReset(userId) {

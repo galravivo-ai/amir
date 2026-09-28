@@ -77,7 +77,56 @@ export function resetView({ token, error = '' }) {
   </div>`;
 }
 
-export function accountView({ user, csrf, error = '' }) {
+export function twoFactorLoginView({ error = '' }) {
+  return `<div class="auth card">
+    <h1>אימות דו-שלבי</h1>
+    <p class="muted">הקלידו את הקוד בן 6 הספרות מאפליקציית האימות בטלפון.</p>
+    ${errorBox(error)}
+    <form method="post" action="/login/2fa" class="stack">
+      <label>קוד אימות<input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="12" dir="ltr" autofocus
+        style="font-size:1.6rem;letter-spacing:.3em;text-align:center"></label>
+      <button class="btn primary">כניסה</button>
+    </form>
+    <p class="muted small">אין גישה לטלפון? אפשר להקליד במקום זה אחד מקודי הגיבוי שקיבלתם בהפעלה.</p>
+    <p class="muted"><a href="/login">חזרה</a></p>
+  </div>`;
+}
+
+export function twoFactorSetupView({ csrf, qrDataUrl, secret, error = '' }) {
+  return `<h1>הפעלת אימות דו-שלבי</h1>
+  ${errorBox(error)}
+  <div class="grid2">
+    <section class="card stack">
+      <h3>1. סורקים עם אפליקציית אימות</h3>
+      <p class="muted small">Google Authenticator, Microsoft Authenticator, 1Password וכדומה.</p>
+      <img src="${h(qrDataUrl)}" alt="קוד לסריקה באפליקציית האימות" width="220" height="220" style="align-self:center;border-radius:12px;border:1px solid var(--line)">
+      <p class="muted small">לא מצליחים לסרוק? מקלידים ידנית את המפתח:</p>
+      <code dir="ltr" style="font-size:1rem;padding:.5em;text-align:center;word-break:break-all">${h(secret.replace(/(.{4})/g, '$1 ').trim())}</code>
+    </section>
+    <form method="post" action="/account/2fa/enable" class="card stack">
+      ${csrfField(csrf)}
+      <h3>2. מקלידים את הקוד שמופיע באפליקציה</h3>
+      <label>קוד בן 6 ספרות<input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="6" dir="ltr"
+        style="font-size:1.6rem;letter-spacing:.3em;text-align:center"></label>
+      <button class="btn primary">הפעלה</button>
+      <a href="/account" class="small">ביטול</a>
+    </form>
+  </div>`;
+}
+
+export function backupCodesView({ codes }) {
+  return `<h1>אימות דו-שלבי הופעל</h1>
+  <section class="card stack">
+    <h3>קודי גיבוי</h3>
+    <p>שמרו את הקודים האלה במקום בטוח (למשל מנהל סיסמאות). כל קוד עובד פעם אחת, אם הטלפון לא זמין. <b>הם לא יוצגו שוב.</b></p>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;max-width:360px" dir="ltr">
+      ${codes.map((c) => `<code style="font-size:1.05rem;padding:.4em;text-align:center">${h(c)}</code>`).join('')}
+    </div>
+    <a class="btn primary" href="/account" style="align-self:flex-start">שמרתי, אפשר להמשיך</a>
+  </section>`;
+}
+
+export function accountView({ user, csrf, error = '', totpEnabled = false, backupLeft = 0 }) {
   return `<h1>החשבון שלי</h1>
   ${errorBox(error)}
   <div class="grid2">
@@ -96,5 +145,20 @@ export function accountView({ user, csrf, error = '' }) {
       <button class="btn primary">עדכון סיסמה</button>
       <p class="muted small">שינוי הסיסמה ינתק את כל שאר המכשירים.</p>
     </form>
-  </div>`;
+  </div>
+  <section class="card stack" id="2fa">
+    <h3>אימות דו-שלבי ${totpEnabled ? '<span class="badge st-ok">פעיל</span>' : '<span class="badge st-closed">כבוי</span>'}</h3>
+    <p class="muted">מעבר לסיסמה, בכל כניסה צריך גם קוד מאפליקציה בטלפון. מגן על החשבון גם אם הסיסמה דלפה.</p>
+    ${
+      totpEnabled
+        ? `<p class="small">נשארו ${backupLeft} קודי גיבוי.</p>
+          <form method="post" action="/account/2fa/disable" class="row">
+            ${csrfField(csrf)}
+            <label>סיסמה<input name="password" type="password" required dir="ltr" autocomplete="current-password"></label>
+            <label>קוד מהאפליקציה<input name="code" inputmode="numeric" required maxlength="12" dir="ltr"></label>
+            <button class="btn danger">כיבוי</button>
+          </form>`
+        : `<form method="post" action="/account/2fa/setup">${csrfField(csrf)}<button class="btn primary">הפעלת אימות דו-שלבי</button></form>`
+    }
+  </section>`;
 }

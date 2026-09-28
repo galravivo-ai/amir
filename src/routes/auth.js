@@ -1,8 +1,13 @@
 import express from 'express';
-import { errorPage, hashPassword, isEmail, verifyPassword } from '../util.js';
+import QRCode from 'qrcode';
+import { generateBackupCodes, generateSecret, otpauthUri, verifyCode } from '../totp.js';
+import { operatorInfo } from '../views/site.js';
+import { errorPage, hashPassword, isEmail, sha256, verifyPassword } from '../util.js';
 import * as V from '../views/auth.js';
 import { rateLimiter } from './public.js';
 import { SESSION_COOKIE } from './context.js';
+
+const CHALLENGE_COOKIE = 'l2';
 
 export function authRoutes(ctx) {
   const { store, render } = ctx;
@@ -59,9 +64,41 @@ export function authRoutes(ctx) {
       return render(req, res, 'כניסה', V.loginView({ error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: ctx.signupOpen(), next: req.query.next }));
     }
     loginAttempts.delete(key);
-    ctx.startSession(res, user.id);
     const next = String(req.query.next ?? '');
-    res.redirect(303, next.startsWith('/join/') ? next : '/admin');
+    const target = /^\/join\/[\w-]+$/.test(next) ? next : '/admin';
+    if (user.totp_enabled) {
+      // Password is right; the session starts only after the second factor.
+      const challenge = store.createLoginChallenge(user.id, target);
+      res.cookie(CHALLENGE_COOKIE, challenge, { ...ctx.cookieOpts, maxAge: 5 * 60e3 });
+      return res.redirect(303, '/login/2fa');
+    }
+    ctx.startSession(res, user.id);
+    res.redirect(303, target);
+  });
+
+  router.get('/login/2fa', (req, res) => {
+    if (!store.loginChallenge(req.cookies[CHALLENGE_COOKIE])) return res.redirect('/login');
+    render(req, res, 'אימות דו-שלבי', V.twoFactorLoginView({}));
+  });
+
+  router.post('/login/2fa', limit, (req, res) => {
+    const raw = req.cookies[CHALLENGE_COOKIE];
+    const challenge = store.loginChallenge(raw);
+    if (!challenge) return res.redirect(303, '/login');
+    const user = store.userById(challenge.user_id);
+    const code = String(req.body.code ?? '').trim();
+    const step = verifyCode(user.totp_secret, code, { lastStep: user.totp_last_step });
+    const ok = step !== null || (/[a-z]/i.test(code) && store.useBackupCode(user.id, code));
+    if (!ok) {
+      store.failLoginChallenge(raw);
+      res.status(401);
+      return render(req, res, 'אימות דו-שלבי', V.twoFactorLoginView({ error: 'הקוד לא נכון או שפג תוקפו. נסו את הקוד הבא שמופיע באפליקציה.' }));
+    }
+    if (step !== null) store.setTotpLastStep(user.id, step);
+    store.deleteLoginChallenge(raw);
+    res.clearCookie(CHALLENGE_COOKIE);
+    ctx.startSession(res, user.id);
+    res.redirect(303, challenge.next || '/admin');
   });
 
   // ---------- register ----------
@@ -160,8 +197,60 @@ export function authRoutes(ctx) {
   });
 
   // ---------- account ----------
+  const accountPage = (req, extra = {}) => {
+    const full = store.userById(req.user.id);
+    return V.accountView({
+      user: req.user,
+      csrf: req.user.csrf,
+      totpEnabled: Boolean(full.totp_enabled),
+      backupLeft: store.backupCodesLeft(full.id),
+      ...extra,
+    });
+  };
+
   router.get('/account', ctx.requireAuth, (req, res) => {
-    render(req, res, 'החשבון שלי', V.accountView({ user: req.user, csrf: req.user.csrf }));
+    render(req, res, 'החשבון שלי', accountPage(req));
+  });
+
+  // ---------- two-factor setup ----------
+  async function setupPage(req, res, error = '') {
+    const user = store.userById(req.user.id);
+    if (!user.totp_secret || user.totp_enabled) return res.redirect(303, '/account');
+    const uri = otpauthUri({ issuer: operatorInfo().brand, account: user.email, secret: user.totp_secret });
+    const qrDataUrl = await QRCode.toDataURL(uri, { margin: 1, width: 440 });
+    if (error) res.status(422);
+    render(req, res, 'אימות דו-שלבי', V.twoFactorSetupView({ csrf: req.user.csrf, qrDataUrl, secret: user.totp_secret, error }));
+  }
+
+  router.post('/account/2fa/setup', ctx.requireAuth, (req, res) => {
+    const user = store.userById(req.user.id);
+    if (!user.totp_enabled) store.setPendingTotp(user.id, generateSecret());
+    res.redirect(303, '/account/2fa');
+  });
+
+  router.get('/account/2fa', ctx.requireAuth, (req, res, next) => setupPage(req, res).catch(next));
+
+  router.post('/account/2fa/enable', ctx.requireAuth, (req, res, next) => {
+    const user = store.userById(req.user.id);
+    if (!user.totp_secret || user.totp_enabled) return res.redirect(303, '/account');
+    const step = verifyCode(user.totp_secret, req.body.code);
+    if (step === null) return setupPage(req, res, 'הקוד לא תואם. ודאו שהשעה בטלפון נכונה ונסו את הקוד הבא.').catch(next);
+    const codes = generateBackupCodes();
+    store.enableTotp(user.id, codes.map((c) => sha256(c)), step);
+    render(req, res, 'אימות דו-שלבי', V.backupCodesView({ codes }));
+  });
+
+  router.post('/account/2fa/disable', ctx.requireAuth, (req, res) => {
+    const user = store.userById(req.user.id);
+    const code = String(req.body.code ?? '').trim();
+    const codeOk = verifyCode(user.totp_secret, code, { lastStep: user.totp_last_step }) !== null ||
+      (/[a-z]/i.test(code) && store.useBackupCode(user.id, code));
+    if (!verifyPassword(String(req.body.password ?? ''), user.password_hash) || !codeOk) {
+      res.status(422);
+      return render(req, res, 'החשבון שלי', accountPage(req, { error: 'הסיסמה או הקוד לא נכונים' }));
+    }
+    store.disableTotp(user.id);
+    res.redirect(303, '/account?ok=1');
   });
 
   router.post('/account', ctx.requireAuth, (req, res) => {
