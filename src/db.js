@@ -281,6 +281,21 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL;
   CREATE INDEX idx_businesses_agency ON businesses(agency_id);
   `,
+  // v11: staff (employees) for the leaderboard; a campaign can ask "who served you?"
+  `
+  CREATE TABLE staff (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_staff_business ON staff(business_id);
+  ALTER TABLE responses ADD COLUMN staff_id INTEGER REFERENCES staff(id) ON DELETE SET NULL;
+  CREATE INDEX idx_responses_staff ON responses(staff_id);
+  ALTER TABLE campaigns ADD COLUMN ask_staff INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function migrate(db) {

@@ -320,8 +320,8 @@ export function createStore(db) {
     createCampaign(businessId, f) {
       const r = q(
         `INSERT INTO campaigns (business_id, name, slug, lang, google_review_url, extra_links, threshold, questions, texts,
-           reminder_hours, ask_consent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           reminder_hours, ask_consent, ask_staff)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         businessId,
         f.name,
@@ -334,13 +334,14 @@ export function createStore(db) {
         JSON.stringify(f.texts || {}),
         f.reminder_hours ?? 48,
         f.ask_consent === false ? 0 : 1,
+        f.ask_staff ? 1 : 0,
       );
       return Number(r.lastInsertRowid);
     },
     updateCampaign(id, f) {
       q(
         `UPDATE campaigns SET name = ?, lang = ?, google_review_url = ?, extra_links = ?, threshold = ?,
-           questions = ?, texts = ?, active = ?, reminder_hours = ?, ask_consent = ?
+           questions = ?, texts = ?, active = ?, reminder_hours = ?, ask_consent = ?, ask_staff = ?
          WHERE id = ?`,
       ).run(
         f.name,
@@ -353,6 +354,7 @@ export function createStore(db) {
         f.active ? 1 : 0,
         f.reminder_hours ?? 48,
         f.ask_consent ? 1 : 0,
+        f.ask_staff ? 1 : 0,
         id,
       );
     },
@@ -441,6 +443,77 @@ export function createStore(db) {
     markInviteResponded: (id) =>
       q("UPDATE invites SET responded_at = COALESCE(responded_at, datetime('now')) WHERE id = ?").run(id),
 
+    // ---------- staff (leaderboard) ----------
+    staffFor: (businessId, { activeOnly = false } = {}) =>
+      q(`SELECT * FROM staff WHERE business_id = ? ${activeOnly ? 'AND active = 1' : ''} ORDER BY active DESC, name`).all(businessId),
+    staffMember: (id, businessId) => q('SELECT * FROM staff WHERE id = ? AND business_id = ?').get(id, businessId) || null,
+    /** Staff member from a personal link (?e=code); inactive staff no longer collect ratings. */
+    staffByCode: (businessId, code) =>
+      code ? q('SELECT * FROM staff WHERE business_id = ? AND code = ? AND active = 1').get(businessId, String(code)) || null : null,
+    createStaff(businessId, name) {
+      const r = q('INSERT INTO staff (business_id, name, code) VALUES (?, ?, ?)').run(businessId, name, token(6));
+      return Number(r.lastInsertRowid);
+    },
+    updateStaff: (id, { name, active }) =>
+      q('UPDATE staff SET name = ?, active = ? WHERE id = ?').run(name, active ? 1 : 0, id),
+    deleteStaff: (id) => q('DELETE FROM staff WHERE id = ?').run(id),
+    setResponseStaff: (id, staffId) =>
+      q('UPDATE responses SET staff_id = ? WHERE id = ? AND staff_id IS NULL').run(staffId, id),
+
+    /**
+     * Ranking of staff and branches (campaigns) for a period. The score is a
+     * Bayesian average: few ratings are pulled toward the business average, so
+     * one lucky 5★ does not beat thirty solid 4.8★ ratings.
+     */
+    leaderboard(businessId, { days = 30, minRatings = 3 } = {}) {
+      const since = sqlTime(-days * 864e5);
+      const overall = q(
+        `SELECT COUNT(*) AS n, AVG(r.rating) AS avg FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.created_at >= ?`,
+      ).get(businessId, since);
+      const prior = overall.avg || 4;
+      const WEIGHT = 5;
+      const cols = `COUNT(r.id) AS responses, AVG(r.rating) AS avg_rating,
+          SUM(r.sentiment = 'positive') AS positive, SUM(r.sentiment = 'negative') AS negative,
+          SUM(r.review_clicks != '[]') AS reviewed, SUM(r.rating) AS rating_sum`;
+      const rank = (rows) =>
+        rows
+          .map((x) => ({
+            ...x,
+            responses: x.responses || 0,
+            positive: x.positive || 0,
+            negative: x.negative || 0,
+            reviewed: x.reviewed || 0,
+            avg_rating: x.avg_rating || 0,
+            score: x.responses ? ((x.rating_sum || 0) + prior * WEIGHT) / (x.responses + WEIGHT) : 0,
+            ranked: (x.responses || 0) >= minRatings,
+          }))
+          .sort((a, b) => b.ranked - a.ranked || b.score - a.score || b.responses - a.responses);
+      const staff = rank(
+        q(
+          `SELECT s.id, s.name, s.active, ${cols}
+           FROM staff s
+           LEFT JOIN responses r ON r.staff_id = s.id AND r.created_at >= ?
+           WHERE s.business_id = ?
+           GROUP BY s.id`,
+        ).all(since, businessId),
+      ).filter((x) => x.active || x.responses);
+      const branches = rank(
+        q(
+          `SELECT c.id, c.name, c.active, ${cols}
+           FROM campaigns c
+           LEFT JOIN responses r ON r.campaign_id = c.id AND r.created_at >= ?
+           WHERE c.business_id = ?
+           GROUP BY c.id`,
+        ).all(since, businessId),
+      );
+      const unassigned = q(
+        `SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.staff_id IS NULL`,
+      ).get(businessId, since).n;
+      return { days, minRatings, staff, branches, unassigned, total: overall.n || 0, prior: overall.avg || 0 };
+    },
+
     // ---------- events ----------
     logEvent(campaignId, type, { source = '', visitorId = '', meta = '' } = {}) {
       q('INSERT INTO events (campaign_id, type, source, visitor_id, meta) VALUES (?, ?, ?, ?, ?)').run(
@@ -456,9 +529,9 @@ export function createStore(db) {
     createResponse(f) {
       const t = token(12);
       q(
-        `INSERT INTO responses (campaign_id, token, visitor_id, invite_id, source, rating, sentiment)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ).run(f.campaign_id, t, f.visitor_id, f.invite_id ?? null, f.source, f.rating, f.sentiment);
+        `INSERT INTO responses (campaign_id, token, visitor_id, invite_id, source, rating, sentiment, staff_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(f.campaign_id, t, f.visitor_id, f.invite_id ?? null, f.source, f.rating, f.sentiment, f.staff_id ?? null);
       return t;
     },
     responseByToken: (t) => q('SELECT * FROM responses WHERE token = ?').get(t) || null,
@@ -488,8 +561,8 @@ export function createStore(db) {
     },
     responseForBusiness: (id, businessId) =>
       q(
-        `SELECT r.*, c.name AS campaign_name, c.questions AS campaign_questions
-         FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+        `SELECT r.*, c.name AS campaign_name, c.questions AS campaign_questions, s.name AS staff_name
+         FROM responses r JOIN campaigns c ON c.id = r.campaign_id LEFT JOIN staff s ON s.id = r.staff_id
          WHERE r.id = ? AND c.business_id = ?`,
       ).get(id, businessId) || null,
     updateResponseStatus(id, status, notes) {
@@ -648,9 +721,13 @@ export function createStore(db) {
 
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),
-    listResponses(businessId, { campaignId, sentiment, status, search, overdue, consent, tag, limit = 100, offset = 0 } = {}) {
+    listResponses(businessId, { campaignId, staffId, sentiment, status, search, overdue, consent, tag, limit = 100, offset = 0 } = {}) {
       const where = ['c.business_id = ?'];
       const args = [businessId];
+      if (staffId) {
+        where.push('r.staff_id = ?');
+        args.push(staffId);
+      }
       if (tag) {
         where.push('EXISTS (SELECT 1 FROM json_each(r.tags) WHERE value = ?)');
         args.push(tag);
@@ -678,11 +755,12 @@ export function createStore(db) {
         const like = `%${search}%`;
         args.push(like, like, like, like);
       }
-      const sql = `SELECT r.*, c.name AS campaign_name,
+      const sql = `SELECT r.*, c.name AS campaign_name, s.name AS staff_name,
           (r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0
             AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')) AS overdue
         FROM responses r
         JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
+        LEFT JOIN staff s ON s.id = r.staff_id
         WHERE ${where.join(' AND ')}
         ORDER BY r.id DESC LIMIT ? OFFSET ?`;
       return q(sql).all(...args, limit, offset);

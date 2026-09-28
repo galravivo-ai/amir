@@ -4,7 +4,7 @@ import { publicPage } from './layout.js';
 
 const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
 
-export function ratingView({ campaign, business, t, src, invite }) {
+export function ratingView({ campaign, business, t, src, invite, staffCode = '' }) {
   const tiles = [1, 2, 3, 4, 5]
     .map(
       (n) => `<button type="submit" name="rating" value="${n}" class="rate-btn" aria-label="${n} · ${h(t.rate_labels[n - 1])}">
@@ -23,6 +23,7 @@ export function ratingView({ campaign, business, t, src, invite }) {
     body: `<form method="post" action="/r/${h(campaign.slug)}/rate" class="rating-form">
         <input type="hidden" name="src" value="${h(src)}">
         <input type="hidden" name="i" value="${h(invite?.token || '')}">
+        ${staffCode ? `<input type="hidden" name="e" value="${h(staffCode)}">` : ''}
         ${tiles}
       </form>
       <div class="rate-scale"><span>${h(t.rate_labels[0])}</span><span>${h(t.rate_labels[4])}</span></div>
@@ -58,7 +59,20 @@ function questionField(q, t, value, error) {
   return `<fieldset class="q ${error ? 'has-error' : ''}"><legend>${h(q.label)}${req}</legend>${input}${err}</fieldset>`;
 }
 
-export function questionsView({ campaign, business, t, response, questions, values = {}, errors = {}, prefill = {} }) {
+function staffField(staff, t, value) {
+  if (!staff?.length) return '';
+  return `<fieldset class="q"><legend>${h(t.staff_label)}</legend>
+    <div class="chips">${staff
+      .map(
+        (s) => `<label class="chip"><input type="radio" name="staff" value="${s.id}" ${
+          String(value) === String(s.id) ? 'checked' : ''
+        }><span>${h(s.name)}</span></label>`,
+      )
+      .join('')}<label class="chip"><input type="radio" name="staff" value=""><span>${h(t.staff_unknown)}</span></label></div>
+  </fieldset>`;
+}
+
+export function questionsView({ campaign, business, t, response, questions, values = {}, errors = {}, prefill = {}, staff = [] }) {
   const negative = response.sentiment === 'negative';
   const contact = negative
     ? `<fieldset class="q contact">
@@ -86,6 +100,7 @@ export function questionsView({ campaign, business, t, response, questions, valu
     dir: t.dir,
     business,
     body: `<form method="post" action="/f/${h(response.token)}" class="survey">
+        ${staffField(staff, t, values.staff)}
         ${questions.map((q) => questionField(q, t, values[`q_${q.id}`], errors[q.id])).join('')}
         <fieldset class="q"><legend>${h(t.comment_label)}</legend>
           <textarea name="comment" rows="3" maxlength="3000">${h(values.comment ?? '')}</textarea>

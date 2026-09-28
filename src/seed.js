@@ -17,7 +17,14 @@ const campaignId = store.createCampaign(bizId, {
   name: 'סניף מרכזי',
   google_review_url: 'https://search.google.com/local/writereview?placeid=ChIJ_demo_place_id',
   extra_links: [{ label: 'Facebook', url: 'https://facebook.com' }],
+  ask_staff: true,
 });
+const northId = store.createCampaign(bizId, {
+  name: 'סניף הצפון',
+  slug: 'demo-north',
+  google_review_url: 'https://search.google.com/local/writereview?placeid=ChIJ_demo_place_id',
+});
+const staffIds = ['דנה', 'יוסי', 'מיכל', 'עומר'].map((n) => store.createStaff(bizId, n));
 
 const goodComments = ['', 'המלצר היה מקסים', 'הכל מושלם!', 'קפה מעולה'];
 const testimonials = [
@@ -37,11 +44,15 @@ for (let i = 0; i < 160; i++) {
   const when = new Date(Date.now() - daysAgo * 864e5 - Math.random() * 864e5).toISOString().slice(0, 19).replace('T', ' ');
   const source = sources[i % sources.length];
   const vid = `seed-visitor-${i}`;
-  db.prepare('INSERT INTO events (campaign_id, type, source, visitor_id, created_at) VALUES (?, ?, ?, ?, ?)').run(campaignId, 'scan', source, vid, when);
+  const cid = i % 3 === 0 ? northId : campaignId;
+  db.prepare('INSERT INTO events (campaign_id, type, source, visitor_id, created_at) VALUES (?, ?, ?, ?, ?)').run(cid, 'scan', source, vid, when);
   if (Math.random() < 0.3) continue;
-  const rating = [5, 5, 5, 4, 4, 4, 3, 2, 1][Math.floor(Math.random() * 9)];
+  // Each employee has a slightly different rating profile, so the leaderboard has a story.
+  const who = i % 5;
+  const profile = [[5, 5, 5, 5, 4, 4, 3], [5, 5, 4, 4, 4, 3, 2], [5, 4, 4, 4, 3, 2, 1], [5, 5, 5, 4, 4, 4, 2]][who] || [5, 5, 5, 4, 4, 4, 3, 2, 1];
+  const rating = profile[Math.floor(Math.random() * profile.length)];
   const sentiment = rating >= 4 ? 'positive' : 'negative';
-  const tok = store.createResponse({ campaign_id: campaignId, visitor_id: vid, source, rating, sentiment });
+  const tok = store.createResponse({ campaign_id: cid, visitor_id: vid, source, rating, sentiment, staff_id: staffIds[who] ?? null });
   const r = store.responseByToken(tok);
   const answers =
     sentiment === 'positive'
@@ -72,7 +83,7 @@ for (let i = 0; i < 160; i++) {
   }
   if (sentiment === 'positive' && Math.random() < 0.6) {
     store.addReviewClick(r.id, 'google');
-    db.prepare('INSERT INTO events (campaign_id, type, source, visitor_id, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(campaignId, 'review_click', source, vid, 'google', when);
+    db.prepare('INSERT INTO events (campaign_id, type, source, visitor_id, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(cid, 'review_click', source, vid, 'google', when);
   }
 }
 console.log('Seeded demo data. Login: demo@example.com / demo12345');

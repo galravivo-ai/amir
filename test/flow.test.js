@@ -894,3 +894,82 @@ test('agencies with white-label branding', async () => {
   assert.match(login.body, /Rev Agency/);
   assert.doesNotMatch(login.body, /★ ביקורות/);
 });
+
+test('staff and branch leaderboard', async () => {
+  const owner = await registeredOwner('leader@example.com');
+  const campaign = await createCampaign(owner, { ask_staff: '1' });
+  const bizId = campaign.business_id;
+  const csrf = await csrfOf(owner);
+  for (const name of ['Dana', 'Yossi', '<b>Eve</b>']) {
+    await owner.req('/admin/staff', { method: 'POST', form: { _csrf: csrf, name } });
+  }
+  const byName = Object.fromEntries(store.staffFor(bizId).map((s) => [s.name, s]));
+  const { Dana: dana, Yossi: yossi } = byName;
+  const eve = byName['<b>Eve</b>'];
+  assert.ok(dana && yossi && eve);
+
+  // The staff page escapes names and offers a personal link + QR per employee.
+  const page = await owner.req('/admin/staff');
+  assert.ok(!page.text.includes('<b>Eve</b>'));
+  assert.match(page.text, new RegExp(`/r/${campaign.slug}\\?e=${dana.code}`));
+  const qr = await owner.req(`/admin/campaigns/${campaign.id}/qr.svg?e=${dana.code}`);
+  assert.equal(qr.status, 200);
+
+  // Personal link: the rating counts for Dana, and the question is not asked.
+  const viaLink = async (code, rating) => {
+    const customer = client();
+    const scan = await customer.req(`/r/${campaign.slug}?e=${code}`);
+    assert.match(scan.text, new RegExp(`name="e" value="${code}"`));
+    const rate = await customer.req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: String(rating), e: code } });
+    const q = await customer.req(rate.location);
+    assert.doesNotMatch(q.text, /מי נתן לך שירות/);
+    await customer.req(rate.location, { method: 'POST', form: {} });
+  };
+  for (const r of [5, 5, 4]) await viaLink(dana.code, r);
+
+  // No link: the customer picks who served them.
+  const customer = client();
+  const rate = await customer.req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '5' } });
+  const q = await customer.req(rate.location);
+  assert.match(q.text, /מי נתן לך שירות/);
+  assert.ok(!q.text.includes('<b>Eve</b>'));
+  await customer.req(rate.location, { method: 'POST', form: { staff: String(yossi.id) } });
+  // A staff id from another business is ignored.
+  const other = await completeSurvey(campaign.slug, 2, { staff: '999999' });
+  assert.equal(other.staff_id, null);
+  // A fake code is ignored as well.
+  const fake = await client().req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '1', e: 'nope' } });
+  assert.equal(store.responseByToken(fake.location.split('/').pop()).staff_id, null);
+
+  const board = store.leaderboard(bizId, { days: 30 });
+  const top = board.staff[0];
+  assert.equal(top.name, 'Dana');
+  assert.equal(top.responses, 3);
+  assert.ok(top.ranked);
+  assert.equal(board.staff.find((s) => s.name === 'Yossi').ranked, false, 'one rating is not enough for a place');
+  assert.equal(board.unassigned, 2);
+  assert.equal(board.branches[0].responses, 6);
+
+  const html = await owner.req('/admin/leaderboard');
+  assert.equal(html.status, 200);
+  assert.match(html.text, /דירוג עובדים וסניפים/);
+  assert.match(html.text, /Dana/);
+  const filtered = await owner.req(`/admin/responses?staff=${dana.id}`);
+  assert.equal((filtered.text.match(/href="\/admin\/responses\/\d+"/g) || []).length, 3);
+
+  // Deactivated staff stop collecting ratings through their link.
+  await owner.req(`/admin/staff/${dana.id}`, { method: 'POST', form: { _csrf: csrf, name: 'Dana', active: '0' } });
+  const late = await client().req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '5', e: dana.code } });
+  assert.equal(store.responseByToken(late.location.split('/').pop()).staff_id, null);
+
+  // Deleting keeps the ratings, without the employee.
+  await owner.req(`/admin/staff/${yossi.id}/delete`, { method: 'POST', form: { _csrf: csrf } });
+  assert.equal(store.staffMember(yossi.id, bizId), null);
+  assert.equal(store.leaderboard(bizId).branches[0].responses, 7);
+
+  // Other businesses cannot touch these employees.
+  const stranger = await registeredOwner('stranger-staff@example.com');
+  const r = await stranger.req(`/admin/staff/${eve.id}/delete`, { method: 'POST', form: { _csrf: await csrfOf(stranger) } });
+  assert.equal(r.status, 404);
+  assert.ok(store.staffMember(eve.id, bizId));
+});

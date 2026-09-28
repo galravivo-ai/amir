@@ -56,6 +56,7 @@ export function adminRoutes(ctx) {
       overdue: req.query.overdue === '1' ? '1' : '',
       consent: req.query.consent === '1' ? '1' : '',
       tag: TOPICS.includes(req.query.tag) ? req.query.tag : '',
+      staff: req.query.staff ? String(Number(req.query.staff) || '') : '',
       q: String(req.query.q ?? '').trim().slice(0, 80),
     };
   }
@@ -66,6 +67,7 @@ export function adminRoutes(ctx) {
     overdue: Boolean(f.overdue),
     consent: Boolean(f.consent),
     tag: f.tag,
+    staffId: f.staff ? Number(f.staff) : null,
     search: f.q,
   });
 
@@ -87,6 +89,7 @@ export function adminRoutes(ctx) {
         page,
         filters,
         campaigns: store.campaignsFor(req.business.id),
+        staff: store.staffFor(req.business.id),
       }),
     );
   });
@@ -95,7 +98,7 @@ export function adminRoutes(ctx) {
     const rows = store.listResponses(req.business.id, { ...toQuery(responseFilters(req)), limit: 100000 });
     const campaigns = Object.fromEntries(store.campaignsFor(req.business.id).map((c) => [c.id, c]));
     const header = [
-      'id', 'date', 'campaign', 'source', 'rating', 'sentiment', 'completed', 'answers', 'comment', 'name',
+      'id', 'date', 'campaign', 'source', 'staff', 'rating', 'sentiment', 'completed', 'answers', 'comment', 'name',
       'phone', 'email', 'wants_contact', 'publish_consent', 'review_clicks', 'status', 'notes', 'resolved_at',
     ];
     const lines = [header.join(',')];
@@ -106,7 +109,7 @@ export function adminRoutes(ctx) {
         .join(' | ');
       lines.push(
         [
-          r.id, r.created_at, r.campaign_name, r.source, r.rating, r.sentiment, r.completed, answers, r.comment,
+          r.id, r.created_at, r.campaign_name, r.source, r.staff_name ?? '', r.rating, r.sentiment, r.completed, answers, r.comment,
           r.customer_name, r.phone, r.email, r.wants_contact, r.publish_consent,
           parseJson(r.review_clicks, []).join('/'), r.status, r.notes, r.resolved_at ?? '',
         ]
@@ -240,6 +243,7 @@ export function adminRoutes(ctx) {
       textsObj: texts,
       reminder_hours: [0, 24, 48, 72, 168].includes(Number(body.reminder_hours)) ? Number(body.reminder_hours) : 48,
       ask_consent: body.ask_consent === '1',
+      ask_staff: body.ask_staff === '1',
       active: existing.id ? body.active === '1' : true,
     };
   }
@@ -333,8 +337,14 @@ export function adminRoutes(ctx) {
   });
 
   const qrTarget = (req, c) => {
+    const params = new URLSearchParams();
     const src = String(req.query.src ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
-    return `${ctx.baseUrl(req)}/r/${c.slug}${src ? `?src=${src}` : ''}`;
+    if (src) params.set('src', src);
+    // An employee's personal QR: ratings through it count for that employee.
+    const staff = store.staffByCode(req.business.id, req.query.e);
+    if (staff) params.set('e', staff.code);
+    const qs = params.toString();
+    return `${ctx.baseUrl(req)}/r/${c.slug}${qs ? `?${qs}` : ''}`;
   };
   const QR_OPTS = { margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } };
 

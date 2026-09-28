@@ -47,6 +47,11 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
     return { campaign, business: store.businessById(campaign.business_id), t: textsFor(campaign) };
   }
 
+  // "Who served you?" is asked only when the campaign wants it and the
+  // customer did not already come through an employee's personal link.
+  const staffChoices = ({ campaign, business, response }) =>
+    campaign.ask_staff && !response.staff_id ? store.staffFor(business.id, { activeOnly: true }) : [];
+
   function loadResponse(tok) {
     const response = store.responseByToken(tok);
     if (!response) return null;
@@ -66,13 +71,14 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
     const invite = req.query.i ? store.inviteByToken(campaign.id, String(req.query.i)) : null;
     if (invite) store.markInviteOpened(invite.id);
     store.logEvent(campaign.id, 'scan', { source: invite ? 'invite' : src, visitorId: vid });
-    res.send(ratingView({ campaign, business, t, src, invite }));
+    const staff = store.staffByCode(business.id, req.query.e);
+    res.send(ratingView({ campaign, business, t, src, invite, staffCode: staff?.code }));
   });
 
   router.post('/r/:slug/rate', limit, (req, res) => {
     const ctx = loadCampaign(req.params.slug);
     if (!ctx || !ctx.campaign.active) return res.redirect(303, `/r/${encodeURIComponent(req.params.slug)}`);
-    const { campaign } = ctx;
+    const { campaign, business } = ctx;
     const rating = Number.parseInt(req.body.rating, 10);
     if (!(rating >= 1 && rating <= 5)) return res.redirect(303, `/r/${campaign.slug}`);
 
@@ -87,6 +93,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
       source,
       rating,
       sentiment,
+      staff_id: store.staffByCode(business.id, req.body.e)?.id,
     });
     store.logEvent(campaign.id, 'rate', { source, visitorId: vid, meta: String(rating) });
     if (invite) store.markInviteResponded(invite.id);
@@ -106,6 +113,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
         ...ctx,
         questions: questionsFor(ctx.campaign, ctx.response.sentiment),
         prefill: invite || {},
+        staff: staffChoices(ctx),
       }),
     );
   });
@@ -136,7 +144,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
       if (!empty) answers[q.id] = v;
     }
     if (Object.keys(errors).length) {
-      return res.status(422).send(questionsView({ ...ctx, questions, values: req.body, errors }));
+      return res.status(422).send(questionsView({ ...ctx, questions, values: req.body, errors, staff: staffChoices(ctx) }));
     }
 
     const data = {
@@ -150,6 +158,8 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
     // Consent to show the comment publicly is only offered to satisfied customers.
     const consent =
       response.sentiment === 'positive' && campaign.ask_consent && req.body.publish_consent === '1' && data.comment !== '';
+    const picked = staffChoices(ctx).find((s) => String(s.id) === String(req.body.staff ?? ''));
+    if (picked) store.setResponseStaff(response.id, picked.id);
     store.completeResponse(response.id, {
       ...data,
       publish_consent: consent,

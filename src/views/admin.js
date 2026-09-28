@@ -299,7 +299,9 @@ export function responsesTable(rows) {
         const clicks = parseJson(r.review_clicks, []);
         return `<tr class="${r.sentiment}${r.overdue ? ' late' : ''}">
           <td data-l="תאריך"><a href="/admin/responses/${r.id}">${h(formatDate(r.created_at))}</a></td>
-          <td data-l="קמפיין">${h(r.campaign_name)}${r.source ? `<div class="muted small">${h(r.source)}</div>` : ''}</td>
+          <td data-l="קמפיין">${h(r.campaign_name)}${r.source ? `<div class="muted small">${h(r.source)}</div>` : ''}${
+            r.staff_name ? `<div class="muted small">${icon('user', 12)} ${h(r.staff_name)}</div>` : ''
+          }</td>
           <td data-l="דירוג">${stars(r.rating)}</td>
           <td data-l="הערה" class="clip">${h(r.comment) || (r.completed ? '' : '<span class="muted small">לא השלים סקר</span>')}${tagChips(r.tags)}</td>
           <td data-l="לקוח">${h(r.customer_name)} ${r.phone ? `<div class="small" dir="ltr">${h(r.phone)}</div>` : ''}</td>
@@ -314,7 +316,7 @@ export function responsesTable(rows) {
       .join('')}</tbody></table>`;
 }
 
-export function responsesView({ rows, campaigns, filters, page, hasMore }) {
+export function responsesView({ rows, campaigns, filters, page, hasMore, staff = [] }) {
   const opt = (value, label, current) =>
     `<option value="${h(value)}" ${String(current ?? '') === String(value) ? 'selected' : ''}>${h(label)}</option>`;
   const qs = (p) => {
@@ -338,6 +340,13 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
       <select name="status">${opt('', 'כל הסטטוסים', filters.status)}${Object.entries(STATUSES)
         .map(([k, v]) => opt(k, v, filters.status))
         .join('')}</select>
+      ${
+        staff.length
+          ? `<select name="staff" aria-label="עובד">${opt('', 'כל העובדים', filters.staff)}${staff
+              .map((s) => opt(s.id, s.name, filters.staff))
+              .join('')}</select>`
+          : ''
+      }
       <select name="tag" aria-label="נושא">${opt('', 'כל הנושאים', filters.tag)}${TOPICS.map((t) => opt(t, t, filters.tag)).join('')}</select>
       <label class="check"><input type="checkbox" name="overdue" value="1" ${filters.overdue ? 'checked' : ''}> באיחור בלבד</label>
       <label class="check"><input type="checkbox" name="consent" value="1" ${filters.consent ? 'checked' : ''}> אישרו פרסום</label>
@@ -367,6 +376,7 @@ export function responseDetailView({ r, csrf, businessName, followupUrl = '', ca
           <dt>תאריך</dt><dd>${h(formatDate(r.created_at))}</dd>
           <dt>קמפיין</dt><dd>${h(r.campaign_name)}</dd>
           <dt>מקור</dt><dd>${h(r.source || '—')}</dd>
+          <dt>עובד</dt><dd>${h(r.staff_name || '—')}</dd>
           <dt>השלים סקר</dt><dd>${r.completed ? 'כן' : 'לא (רק דירג)'}</dd>
           <dt>לחץ על ביקורת</dt><dd>${clicks.length ? h(clicks.join(', ')) : 'לא'}</dd>
           ${Object.entries(answers)
@@ -591,6 +601,8 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
           .join('')}</select></label>
         <label class="check"><input type="checkbox" name="ask_consent" value="1" ${c.ask_consent ?? 1 ? 'checked' : ''}>
           לבקש מלקוחות מרוצים אישור לפרסם את ההערה באתר</label>
+        <label class="check"><input type="checkbox" name="ask_staff" value="1" ${c.ask_staff ? 'checked' : ''}>
+          לשאול את הלקוח מי נתן לו שירות (לדירוג העובדים). לא נשאל כשהלקוח הגיע מקישור אישי של עובד</label>
       </div>
     </section>
 

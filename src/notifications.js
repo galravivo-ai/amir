@@ -162,6 +162,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
               ${row('NPS', stats.nps ?? '—')}
               ${row('פניות פתוחות', stats.openIssues)}
               ${row('פניות באיחור', stats.overdue)}
+              ${stats.topStaff ? row('העובד/ת המוביל/ה', `${h(stats.topStaff.name)} (${stats.topStaff.avg_rating.toFixed(2)}★, ${stats.topStaff.responses} דירוגים)`) : ''}
             </table>
             ${emailButton(url('/admin?days=7'), 'ללוח הבקרה', color)}`,
           footer: `${h(business.name)} · אפשר לבטל את הדוח השבועי בהגדרות העסק`,

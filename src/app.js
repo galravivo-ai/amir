@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth.js';
 import { createContext } from './routes/context.js';
 import { publicRoutes } from './routes/public.js';
 import { settingsRoutes } from './routes/settings.js';
+import { leaderboardRoutes } from './routes/leaderboard.js';
 import { siteRoutes } from './routes/site.js';
 import { superadminRoutes } from './routes/superadmin.js';
 import { widgetRoutes } from './routes/widget.js';
@@ -84,7 +85,7 @@ export function createApp(db, options = {}) {
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
-  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx));
+  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 

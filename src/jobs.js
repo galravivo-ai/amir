@@ -68,7 +68,8 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
       store.updateBusiness(business.id, { last_weekly_report_at: t.toISOString().slice(0, 19).replace('T', ' ') });
       const stats = store.stats(business.id, { days: 7 });
       if (stats.scans === 0 && stats.responses === 0) continue;
-      await notifier.weeklyReport(business, stats);
+      const topStaff = store.leaderboard(business.id, { days: 7, minRatings: 3 }).staff.find((s) => s.ranked) || null;
+      await notifier.weeklyReport(business, { ...stats, topStaff });
       sent++;
     }
     return sent;

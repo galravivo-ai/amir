@@ -77,6 +77,7 @@ export function adminPage({
     ['/admin/responses', 'תגובות', 'inbox'],
     ['/admin/responses?sentiment=negative&status=new', 'פניות פתוחות', 'alert', openCount],
     ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
+    ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
     ['/admin/insights', 'תובנות AI', 'spark'],
     role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
     role === 'owner' && ['/admin/team', 'צוות', 'team'],

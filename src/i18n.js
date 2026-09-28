@@ -42,6 +42,8 @@ export const PUBLIC_TEXTS = {
     followup_no_title: 'מצטערים לשמוע',
     followup_no_body: 'העברנו את זה שוב להנהלה, וניצור איתך קשר בהקדם.',
     followup_done: 'כבר ענית על השאלה הזו. תודה!',
+    staff_label: 'מי נתן לך שירות?',
+    staff_unknown: 'לא יודע/ת',
   },
   en: {
     dir: 'ltr',
@@ -84,6 +86,8 @@ export const PUBLIC_TEXTS = {
     followup_no_title: 'Sorry to hear that',
     followup_no_body: 'We passed it back to management and will contact you soon.',
     followup_done: 'You already answered this question. Thank you!',
+    staff_label: 'Who served you?',
+    staff_unknown: "I don't know",
   },
   ar: {
     dir: 'rtl',
@@ -126,6 +130,8 @@ export const PUBLIC_TEXTS = {
     followup_no_title: 'نأسف لسماع ذلك',
     followup_no_body: 'أعدنا الأمر إلى الإدارة وسنتواصل معك قريبًا.',
     followup_done: 'لقد أجبت على هذا السؤال من قبل. شكرًا!',
+    staff_label: 'من قدّم لك الخدمة؟',
+    staff_unknown: 'لا أعرف',
   },
   ru: {
     dir: 'ltr',
@@ -168,6 +174,8 @@ export const PUBLIC_TEXTS = {
     followup_no_title: 'Очень жаль',
     followup_no_body: 'Мы снова передали вопрос руководству и скоро свяжемся с вами.',
     followup_done: 'Вы уже ответили на этот вопрос. Спасибо!',
+    staff_label: 'Кто вас обслуживал?',
+    staff_unknown: 'Не знаю',
   },
 };
 
