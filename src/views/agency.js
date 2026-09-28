@@ -65,7 +65,7 @@ export function agencyView({ agency, agencies, clients, members, csrf, error = '
       <label>שם המוצר<input name="brand_name" required maxlength="60" value="${h(agency.brand_name)}"></label>
       <label>צבע ראשי<input name="brand_color" type="color" value="${h(safeColor(agency.brand_color))}"></label>
       <label>קישור ללוגו (לא חובה)<input name="logo_url" dir="ltr" value="${h(agency.logo_url)}" placeholder="https://..."></label>
-      ${agency.custom_domain ? `<p class="small">הדומיין שלכם: <b dir="ltr">${h(agency.custom_domain)}</b></p>` : '<p class="muted small">רוצים דומיין משלכם (למשל reviews.agency.co.il)? פנו למנהל המערכת.</p>'}
+      ${agency.custom_domain ? `<p class="small">הדומיין שלכם: <b dir="ltr">${h(agency.custom_domain)}</b></p>` : '<p class="muted small">רוצים דומיין משלכם (למשל reviews.agency.co.il)? פנו למנהל המערכת. תצטרכו להוסיף אצל ספק הדומיין רשומת CNAME אחת.</p>'}
       <button class="btn">שמירה</button>
     </form>
   </div>
@@ -75,7 +75,15 @@ export function agencyView({ agency, agencies, clients, members, csrf, error = '
   </section>`;
 }
 
-export function agenciesAdminBlock({ agencies, csrf }) {
+function publicHost() {
+  try {
+    return new URL(process.env.PUBLIC_URL).host;
+  } catch {
+    return 'הדומיין הראשי';
+  }
+}
+
+export function agenciesAdminBlock({ agencies, csrf, mainHost = publicHost() }) {
   const planOptions = (cur) =>
     Object.entries(PLANS).map(([k, p]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${h(p.label)}</option>`).join('');
   return `<section class="card stack" id="agencies">
@@ -105,6 +113,7 @@ export function agenciesAdminBlock({ agencies, csrf }) {
             .join('')}</tbody></table>`
         : '<p class="muted">עוד אין סוכנויות.</p>'
     }
+    <p class="muted small">דומיין לסוכנות: הסוכנות מוסיפה אצל ספק הדומיין רשומת CNAME שמצביעה ל-<b dir="ltr">${h(mainHost)}</b>, ואתם רושמים את הדומיין כאן. בשרת משלכם תעודת ה-HTTPS יוצאת לבד בכניסה הראשונה. ב-Railway צריך להוסיף את הדומיין גם ב-Settings → Networking.</p>
     <form method="post" action="/superadmin/agencies" class="row">
       ${csrfField(csrf)}
       <label>שם הסוכנות<input name="name" required maxlength="100"></label>

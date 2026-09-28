@@ -17,6 +17,13 @@ export function siteRoutes(store, { signupOpen = () => true } = {}) {
     if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
     res.send(landingView({ signupOpen: signupOpen() }));
   });
+  // Caddy asks here before issuing an HTTPS certificate on demand, so
+  // certificates are only issued for domains that belong to an agency.
+  router.get('/.well-known/tls-check', (req, res) => {
+    const domain = String(req.query.domain ?? '').toLowerCase();
+    res.status(domain && store.agencyByDomain(domain) ? 200 : 404).type('text/plain').send('');
+  });
+
   // Installable app ("Add to home screen")
   router.get('/manifest.webmanifest', (req, res) => {
     const brand = operatorInfo().brand;
