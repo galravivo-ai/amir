@@ -1,17 +1,19 @@
-import { AGENCY_PRICE, annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, limitLabel, PLANS, TRIAL_DAYS } from '../plans.js';
+import { AGENCY_PRICE, annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PLANS, TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
 
-function planFeatures(p) {
-  return [
-    `${p.campaigns === Infinity ? 'סניפים וקמפיינים ללא הגבלה' : p.campaigns === 1 ? 'סניף אחד (קמפיין ו-QR)' : `עד ${p.campaigns} סניפים וקמפיינים`}`,
-    `${p.teamMembers === Infinity ? 'משתמשים ללא הגבלה' : `עד ${p.teamMembers} משתמשים`}`,
-    `${limitLabel(p.monthlyResponses)} דירוגים בחודש`,
-    'סקר, הפניה לגוגל וטיפול בלקוחות לא מרוצים',
-    'דירוג עובדים, התראות לטלפון ודוח שבועי',
-  ];
-}
+const branchesLabel = (p) =>
+  p.campaigns === Infinity ? 'סניפים ללא הגבלה' : p.campaigns === 1 ? 'סניף אחד' : `עד ${p.campaigns} סניפים`;
+
+// Every plan includes everything; only the number of branches changes.
+const INCLUDED = [
+  'משתמשים ודירוגים ללא הגבלה',
+  'QR, סקר והפניה לביקורת בגוגל',
+  'טיפול בלקוחות לא מרוצים והתראות לטלפון',
+  'דירוג עובדים ודוח שבועי',
+  ...Object.values(FEATURE_LABELS),
+];
 
 /**
  * The three plans with a monthly / yearly switch (pure CSS, no script).
@@ -31,11 +33,9 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
           <span class="when-annual"><span class="price">${ils(yearly)}</span><span class="muted"> לשנה</span>
             <small class="save">חיסכון של ${ils(p.price * 12 - yearly)}</small></span>
         </div>
+        <div class="plan-branches">${h(branchesLabel(p))}</div>
         <ul>
-          ${planFeatures(p).map((f) => `<li>✓ ${h(f)}</li>`).join('')}
-          ${Object.entries(FEATURE_LABELS)
-            .map(([k, label]) => `<li class="${p[k] ? '' : 'off'}">${p[k] ? '✓' : '✗'} ${h(label)}</li>`)
-            .join('')}
+          ${INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
         </ul>
         ${action(key, p)}
       </div>`;
@@ -49,12 +49,12 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
-    <p class="pricing-note">כל המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
+    <p class="pricing-note">כל המסלולים כוללים את כל הפיצ'רים, ההבדל הוא רק במספר הסניפים · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }
 
 export function agencyOffer() {
   return `<div class="agency-offer">
-    <div><b>סוכנות, משווק או יועץ?</b> ${ils(AGENCY_PRICE)} לחודש לכל עסק שאתם מנהלים, כולל מע״מ. כל הפיצ'רים של מסלול מקצועי, מסך אחד לכל הלקוחות, והמיתוג שלכם במקום שלנו.</div>
+    <div><b>סוכנות, משווק או יועץ?</b> ${ils(AGENCY_PRICE)} לחודש לכל עסק שאתם מנהלים, כולל מע״מ. כל הפיצ'רים, מסך אחד לכל הלקוחות, והמיתוג שלכם במקום שלנו.</div>
   </div>`;
 }

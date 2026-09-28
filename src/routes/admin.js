@@ -256,7 +256,7 @@ export function adminRoutes(ctx) {
 
   const campaignLimitReached = (req) => store.campaignsFor(req.business.id).length >= req.plan.campaigns;
   const limitMessage = (req) =>
-    `בתוכנית ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} קמפיינים. לשדרוג פנו למנהל המערכת.`;
+    `במסלול ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} ${req.plan.campaigns === 1 ? 'סניף (קמפיין)' : 'סניפים (קמפיינים)'}. למסלול עם יותר סניפים: "התוכנית שלי" בתפריט.`;
 
   admin.get('/campaigns', (req, res) => {
     render(

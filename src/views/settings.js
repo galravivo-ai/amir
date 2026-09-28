@@ -317,7 +317,7 @@ export function planView({ business, plan, usage, access, request = null, csrf =
   ${pending}
   <section class="card stack">
     ${status}
-    ${meter('סניפים וקמפיינים', usage.campaigns, plan.campaigns)}
+    ${meter('סניפים (קמפיינים)', usage.campaigns, plan.campaigns)}
     ${meter('משתמשים בצוות', usage.members, plan.teamMembers)}
     ${meter('דירוגים החודש', usage.responses, plan.monthlyResponses)}
   </section>

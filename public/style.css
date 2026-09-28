@@ -613,3 +613,5 @@ input.copy { width: 100%; font-size: .85rem; }
 .billing-cell { display: grid; gap: .35rem; min-width: 16rem; }
 .billing-cell .row.compact select { width: auto; min-height: 36px; padding-block: .2rem; }
 .req-flag { color: var(--warn); }
+.plan-branches { margin: -.3rem 0 1rem; padding: .55rem .8rem; border-radius: 12px; background: var(--purple-soft); color: var(--purple); font: 700 1.05rem/1.2 var(--font-head); text-align: center; }
+.plan.featured .plan-branches { background: var(--yellow); color: var(--night); }

@@ -369,7 +369,7 @@ test('team invites and roles', async () => {
   assert.match(demote.location, /err=/);
 });
 
-test('plan limits: basic plan has one campaign and no AI', async () => {
+test('plan limits: basic plan has one branch', async () => {
   const owner = await registeredOwner('free@example.com');
   store.updateBusiness(bizOf('free@example.com').id, { plan: 'basic', billing: 'active' });
   await createCampaign(owner);
@@ -379,8 +379,7 @@ test('plan limits: basic plan has one campaign and no AI', async () => {
   });
   assert.equal(second.status, 422);
   assert.equal(store.campaignsFor(bizOf('free@example.com').id).length, 1);
-  const insights = await owner.req('/admin/insights', { method: 'POST', form: { _csrf: await csrfOf(owner), days: '30' } });
-  assert.equal(insights.status, 403);
+  assert.match(second.text, /במסלול בסיסי אפשר עד 1 סניף/);
 });
 
 test('publish consent and testimonials widget', async () => {
@@ -396,11 +395,11 @@ test('publish consent and testimonials widget', async () => {
   assert.equal(r.publish_consent, 1);
   assert.equal(r.published, 0, 'needs approval unless auto-publish is on');
 
-  // Basic plan: widget disabled.
-  store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
+  // A paused account's widget goes dark.
+  store.updateBusiness(biz.id, { billing: 'paused' });
   assert.equal((await client().req(`/widget/${biz.widget_key}`)).status, 404);
 
-  store.updateBusiness(biz.id, { plan: 'pro' });
+  store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
   await owner.req(`/admin/responses/${r.id}/publish`, { method: 'POST', form: { _csrf: await csrfOf(owner), published: '1' } });
   const page = await client().req(`/widget/${biz.widget_key}`);
   assert.equal(page.status, 200);
@@ -722,14 +721,14 @@ test('public API: automatic survey requests', async () => {
       body: raw ?? (body ? JSON.stringify(body) : undefined),
     }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
-  // Basic plan: no API.
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
   const created = await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } });
   const key = decodeURIComponent(created.location.match(/key=([^&]+)/)[1]);
   assert.match(key, /^rk_/);
-  store.updateBusiness(campaign.business_id, { plan: 'basic' });
-  assert.equal((await api('/ping', { key })).status, 403);
-  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  store.updateBusiness(campaign.business_id, { plan: 'basic', billing: 'paused' });
+  assert.equal((await api('/ping', { key })).status, 402);
+  store.updateBusiness(campaign.business_id, { plan: 'basic', billing: 'active' });
+  assert.equal((await api('/ping', { key })).status, 200, 'every plan includes the API');
 
   assert.equal((await api('/ping', { key: 'rk_wrong' })).status, 401);
   assert.equal((await api('/ping', { key })).json.business.name, 'Test Cafe');
@@ -1036,6 +1035,7 @@ test('trial, plan request and activation', async () => {
   const page = await owner.req(req.location);
   assert.match(page.text, /ביקשת את מסלול <b>עסקי<\/b> \(שנתי\)/);
   assert.match(page.text, /₪3,990/);
+  assert.match(page.text, /₪159/);
 
   // A system admin sees the request and activates it.
   const root = await registeredOwner('billing-admin@example.com');

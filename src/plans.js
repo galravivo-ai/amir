@@ -1,43 +1,38 @@
 // Subscription plans and their limits. Online payment is not wired up yet: a
 // business asks for a plan from /admin/plan and a system admin activates it
 // from /superadmin. `Infinity` = unlimited. Prices are monthly, in ILS,
-// including VAT.
+// including VAT. Plans differ only in the number of branches (campaigns):
+// every feature is included in every plan.
+const ALL_FEATURES = {
+  teamMembers: Infinity,
+  monthlyResponses: Infinity,
+  ai: true,
+  widget: true,
+  emailInvites: true,
+  api: true,
+};
+
 export const PLANS = {
   basic: {
     label: 'בסיסי',
     price: 99,
-    tagline: 'לעסק עם סניף אחד',
+    tagline: 'לעסק עם נקודה אחת',
     campaigns: 1,
-    teamMembers: 2,
-    monthlyResponses: 300,
-    ai: false,
-    widget: false,
-    emailInvites: false,
-    api: false,
+    ...ALL_FEATURES,
   },
   pro: {
     label: 'מקצועי',
-    price: 199,
-    tagline: 'הכי משתלם לרוב העסקים',
-    campaigns: 5,
-    teamMembers: 5,
-    monthlyResponses: 2000,
-    ai: true,
-    widget: true,
-    emailInvites: true,
-    api: true,
+    price: 159,
+    tagline: 'לעסק שגדל',
+    campaigns: 3,
+    ...ALL_FEATURES,
   },
   business: {
     label: 'עסקי',
     price: 399,
-    tagline: 'לרשתות ולכמה סניפים',
-    campaigns: Infinity,
-    teamMembers: Infinity,
-    monthlyResponses: Infinity,
-    ai: true,
-    widget: true,
-    emailInvites: true,
-    api: true,
+    tagline: 'לרשתות וזכיינים',
+    campaigns: 10,
+    ...ALL_FEATURES,
   },
 };
 
