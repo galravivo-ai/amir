@@ -1,3 +1,4 @@
+import { PUBLIC_TEXTS } from '../i18n.js';
 import { limitLabel } from '../plans.js';
 import { h, logoSrc, safeColor } from '../util.js';
 import { icon, starMark } from './icons.js';
@@ -134,6 +135,7 @@ export function adminPage({
 export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = 'rtl', business, body, above = '' }) {
   const color = safeColor(business?.brand_color, '#4b2bd6');
   const initial = h(String(business?.name ?? '').trim().charAt(0) || '★');
+  const ft = PUBLIC_TEXTS[lang] || PUBLIC_TEXTS.he;
   return `<!doctype html>
 <html lang="${h(lang)}" dir="${h(dir)}">
 <head>${HEAD(title)}
@@ -166,9 +168,7 @@ export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = '
   <footer class="public-foot">
     ${
       business
-        ? lang === 'en'
-          ? `Your answers are shared with ${h(business.name)} only · <a href="/privacy" target="_blank">Privacy policy</a>`
-          : `התשובות נמסרות ל${h(business.name)} בלבד · <a href="/privacy" target="_blank">מדיניות פרטיות</a>`
+        ? `${h(ft.footer_shared).replace('{business}', h(business.name))} · <a href="/privacy" target="_blank">${h(ft.privacy)}</a>`
         : ''
     }
   </footer>

@@ -22,9 +22,10 @@ const PATHS = {
   heart: 'M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z',
   handshake: 'M3 11l4-4 5 3 5-3 4 4M7 7v5l5 4 5-4V7M9 14l-2 2M15 14l2 2',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  star: 'M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.4L12 17.4l-5.7 3 1.1-6.4L2.8 9.5l6.4-.9z',
 };
 
-const STAR = 'M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.4L12 17.4l-5.7 3 1.1-6.4L2.8 9.5l6.4-.9z';
+const STAR = PATHS.star;
 
 export function icon(name, size = 20, extra = '') {
   return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${extra}><path d="${PATHS[name]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;

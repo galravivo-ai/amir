@@ -1,4 +1,5 @@
 import { parseJson } from './db.js';
+import { templateQuestions } from './templates.js';
 import { sha256, slugify, sqlTime, token } from './util.js';
 
 export const QUESTION_TYPES = {
@@ -29,32 +30,7 @@ export const STATUSES = {
   closed: 'סגור ללא טיפול',
 };
 
-export const DEFAULT_QUESTIONS = [
-  {
-    id: 'liked',
-    type: 'multi',
-    label: 'מה אהבתם במיוחד?',
-    options: ['שירות', 'איכות', 'מחיר', 'מהירות', 'אווירה'],
-    audience: 'positive',
-    required: false,
-  },
-  {
-    id: 'issues',
-    type: 'multi',
-    label: 'מה לא עבד טוב?',
-    options: ['שירות', 'איכות', 'מחיר', 'זמן המתנה', 'ניקיון'],
-    audience: 'negative',
-    required: false,
-  },
-  {
-    id: 'nps',
-    type: 'nps',
-    label: 'מה הסיכוי שתמליצו עלינו לחבר?',
-    options: [],
-    audience: 'all',
-    required: false,
-  },
-];
+export const DEFAULT_QUESTIONS = templateQuestions('general', 'he');
 
 /** Sanitises a question list coming from the admin form or from JSON. */
 export function normalizeQuestions(list) {

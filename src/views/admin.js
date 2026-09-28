@@ -1,8 +1,9 @@
-import { EDITABLE_TEXT_KEYS, PUBLIC_TEXTS } from '../i18n.js';
+import { EDITABLE_TEXT_KEYS, LANGUAGES, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
 import { formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
+import { TEMPLATES } from '../templates.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -437,6 +438,34 @@ function questionRow(q, i) {
   </div>`;
 }
 
+export function templatePickerView({ error = '' }) {
+  return `<p><a href="/admin/campaigns">→ חזרה לקמפיינים</a></p>
+  <h1>קמפיין חדש</h1>
+  <p class="muted">בחרו את סוג העסק ואת שפת הסקר, ונכין לכם שאלות מתאימות. הכול ניתן לשינוי אחר כך.</p>
+  ${error ? `<div class="error">${h(error)}</div>` : ''}
+  <form method="get" action="/admin/campaigns/new" class="stack">
+    <fieldset class="card template-grid">
+      <legend class="sr-only">סוג העסק</legend>
+      ${Object.entries(TEMPLATES)
+        .map(
+          ([key, t], i) => `<label class="template-card">
+            <input type="radio" name="template" value="${key}" ${i === 0 ? 'checked' : ''}>
+            <span class="t-icon">${icon(t.icon, 24)}</span>
+            <b>${h(t.label)}</b>
+            <small>${h(t.description)}</small>
+          </label>`,
+        )
+        .join('')}
+    </fieldset>
+    <div class="row">
+      <label>שפת הסקר<select name="lang">${Object.entries(LANGUAGES)
+        .map(([k, v]) => `<option value="${k}">${h(v)}</option>`)
+        .join('')}</select></label>
+      <button class="btn accent big-inline">המשך ←</button>
+    </div>
+  </form>`;
+}
+
 export function campaignFormView({ campaign, csrf, error = '' }) {
   const isNew = !campaign.id;
   const c = campaign;
@@ -463,8 +492,9 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
       <label>שם הקמפיין<input name="name" required maxlength="100" value="${h(c.name)}" placeholder="למשל: סניף תל אביב"></label>
       <div class="row">
         <label>שפת הסקר<select name="lang">
-          <option value="he" ${c.lang === 'he' ? 'selected' : ''}>עברית</option>
-          <option value="en" ${c.lang === 'en' ? 'selected' : ''}>English</option>
+          ${Object.entries(LANGUAGES)
+            .map(([k, v]) => `<option value="${k}" ${c.lang === k ? 'selected' : ''}>${h(v)}</option>`)
+            .join('')}
         </select></label>
         <label>לקוח נחשב "מרוצה" מדירוג<select name="threshold">${[2, 3, 4, 5]
           .map((n) => `<option value="${n}" ${c.threshold === n ? 'selected' : ''}>${n}★ ומעלה</option>`)

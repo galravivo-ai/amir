@@ -1,9 +1,10 @@
 import express from 'express';
 import QRCode from 'qrcode';
-import { EDITABLE_TEXT_KEYS, textsFor } from '../i18n.js';
+import { EDITABLE_TEXT_KEYS, LANGUAGES, textsFor } from '../i18n.js';
 import { AiError } from '../ai.js';
 import { limitLabel } from '../plans.js';
-import { DEFAULT_QUESTIONS, normalizeQuestions, STATUSES } from '../store.js';
+import { normalizeQuestions, STATUSES } from '../store.js';
+import { templateQuestions, TEMPLATES } from '../templates.js';
 import { clampInt, csvEscape, errorPage, googleReviewUrl, isEmail, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
 import * as V from '../views/admin.js';
@@ -209,7 +210,7 @@ export function adminRoutes(ctx) {
     return {
       ...existing,
       name: String(body.name ?? '').trim().slice(0, 100),
-      lang: body.lang === 'en' ? 'en' : 'he',
+      lang: Object.hasOwn(LANGUAGES, body.lang) ? body.lang : 'he',
       threshold: clampInt(body.threshold, 2, 5, 4),
       google_review_url: googleReviewUrl(rawGoogle),
       rawGoogle,
@@ -249,13 +250,14 @@ export function adminRoutes(ctx) {
     );
   });
 
-  const blankCampaign = () => ({
+  const blankCampaign = (template = 'general', lang = 'he') => ({
     name: '',
-    lang: 'he',
+    lang,
+    template,
     threshold: 4,
     google_review_url: '',
     extraLinks: [],
-    questionsList: normalizeQuestions(DEFAULT_QUESTIONS),
+    questionsList: normalizeQuestions(templateQuestions(template, lang)),
     textsObj: {},
     reminder_hours: 48,
     ask_consent: 1,
@@ -264,7 +266,10 @@ export function adminRoutes(ctx) {
 
   admin.get('/campaigns/new', manager, (req, res) => {
     const error = campaignLimitReached(req) ? limitMessage(req) : '';
-    render(req, res, 'קמפיין חדש', V.campaignFormView({ campaign: blankCampaign(), csrf: req.user.csrf, error }));
+    const template = Object.hasOwn(TEMPLATES, req.query.template ?? '') ? req.query.template : null;
+    const lang = Object.hasOwn(LANGUAGES, req.query.lang ?? '') ? req.query.lang : 'he';
+    if (!template) return render(req, res, 'קמפיין חדש', V.templatePickerView({ error }));
+    render(req, res, 'קמפיין חדש', V.campaignFormView({ campaign: blankCampaign(template, lang), csrf: req.user.csrf, error }));
   });
 
   admin.post('/campaigns', manager, (req, res) => {

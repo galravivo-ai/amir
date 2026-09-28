@@ -626,3 +626,23 @@ test('two-factor authentication', async () => {
   assert.equal(off.location, '/account?ok=1');
   assert.equal(store.userByEmail('2fa@example.com').totp_enabled, 0);
 });
+
+test('campaign templates and survey languages', async () => {
+  const owner = await registeredOwner('templates@example.com');
+  const picker = await owner.req('/admin/campaigns/new');
+  assert.match(picker.text, /מסעדה ובית קפה/);
+  const form = await owner.req('/admin/campaigns/new?template=restaurant&lang=ar');
+  assert.match(form.text, /ما الذي أعجبك أكثر؟/);
+  assert.match(form.text, /الطعام/);
+
+  const campaign = await createCampaign(owner, { lang: 'ar' });
+  const page = await client().req(`/r/${campaign.slug}`);
+  assert.match(page.text, /<html lang="ar" dir="rtl">/);
+  assert.match(page.text, /كيف كانت تجربتك؟/);
+  assert.match(page.text, /سياسة الخصوصية/);
+
+  store.db.prepare("UPDATE campaigns SET lang = 'ru' WHERE id = ?").run(campaign.id);
+  const ru = await client().req(`/r/${campaign.slug}`);
+  assert.match(ru.text, /<html lang="ru" dir="ltr">/);
+  assert.match(ru.text, /Как вам у нас\?/);
+});
