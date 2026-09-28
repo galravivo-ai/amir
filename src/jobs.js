@@ -18,6 +18,21 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
     return sent;
   }
 
+  /** Emails that the API scheduled for later (e.g. two hours after the visit). */
+  async function scheduledInvites() {
+    let sent = 0;
+    for (const invite of store.invitesDueToSend()) {
+      store.markInviteSendAttempted(invite.id);
+      const business = store.businessById(invite.business_id);
+      const campaign = store.campaignById(invite.campaign_id);
+      if (await notifier.customerInvite({ business, campaign, invite })) {
+        store.markInviteEmailed(invite.id);
+        sent++;
+      }
+    }
+    return sent;
+  }
+
   async function slaAlerts() {
     let sent = 0;
     for (const response of store.overdueUnalerted()) {
@@ -57,7 +72,7 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ inviteReminders, slaAlerts, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -69,6 +84,7 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
   }
 
   return {
+    scheduledInvites,
     inviteReminders,
     slaAlerts,
     weeklyReports,

@@ -11,6 +11,7 @@ export const PLANS = {
     ai: false,
     widget: false,
     emailInvites: false,
+    api: false,
   },
   pro: {
     label: 'מקצועי',
@@ -21,6 +22,7 @@ export const PLANS = {
     ai: true,
     widget: true,
     emailInvites: true,
+    api: true,
   },
   business: {
     label: 'עסקי',
@@ -31,6 +33,7 @@ export const PLANS = {
     ai: true,
     widget: true,
     emailInvites: true,
+    api: true,
   },
 };
 
@@ -42,6 +45,7 @@ export const FEATURE_LABELS = {
   ai: 'עוזר AI',
   widget: 'ווידג\'ט ביקורות לאתר',
   emailInvites: 'בקשות ותזכורות במייל',
+  api: 'שליחה אוטומטית מהקופה ומהמערכות שלכם (API)',
 };
 
 export function limitLabel(n) {

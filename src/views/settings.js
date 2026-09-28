@@ -203,6 +203,74 @@ export function widgetView({ business, baseUrl, csrf, available, published, pend
   </section>`;
 }
 
+// ---------------------------------------------------------------- integrations
+
+export function integrationsView({ keys, newKey, csrf, baseUrl, available, campaign }) {
+  if (!available) {
+    return `<h1>חיבורים</h1>
+      <div class="card empty"><p>שליחה אוטומטית מהקופה, ממערכת התורים או מהחנות זמינה בתוכנית מקצועי ומעלה.</p>
+      <a class="btn" href="/admin/plan">פרטים על התוכניות</a></div>`;
+  }
+  const slug = campaign?.slug || 'my-campaign';
+  const curl = `curl -X POST ${baseUrl}/api/v1/invites \\
+  -H "Authorization: Bearer ${newKey || 'rk_...'}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"campaign": "${slug}", "name": "דנה", "phone": "0501234567", "email": "dana@example.com", "delay_minutes": 120}'`;
+  return `<h1>חיבורים</h1>
+  <p class="muted">כך כל לקוח מקבל בקשת דירוג לבד, בלי שמישהו יצטרך לזכור לשלוח: הקופה, מערכת התורים, החנות באינטרנט או Make / Zapier שולחים לנו את פרטי הלקוח בסוף הביקור.</p>
+  ${
+    newKey
+      ? `<div class="flash stack">
+          <b>המפתח נוצר. העתיקו אותו עכשיו: הוא לא יוצג שוב.</b>
+          <code dir="ltr" style="font-size:1rem;padding:.5em;word-break:break-all">${h(newKey)}</code>
+        </div>`
+      : ''
+  }
+  <div class="grid2">
+    <section class="card stack">
+      <h3>מפתחות</h3>
+      ${
+        keys.length
+          ? `<table class="table"><thead><tr><th>שם</th><th>מתחיל ב</th><th>שימוש אחרון</th><th></th></tr></thead><tbody>${keys
+              .map(
+                (k) => `<tr><td>${h(k.name)}</td><td dir="ltr"><code>${h(k.prefix)}…</code></td>
+                  <td class="small">${k.last_used_at ? h(formatDate(k.last_used_at)) : 'עוד לא'}</td>
+                  <td><form method="post" action="/admin/integrations/keys/${k.id}/revoke" data-name="${h(k.name)}" onsubmit="return confirm('לבטל את המפתח ' + this.dataset.name + '? מערכות שמשתמשות בו יפסיקו לעבוד.')">
+                    <input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link danger-text">ביטול</button></form></td></tr>`,
+              )
+              .join('')}</tbody></table>`
+          : '<p class="muted">עוד אין מפתחות.</p>'
+      }
+      <form method="post" action="/admin/integrations/keys" class="row">
+        <input type="hidden" name="_csrf" value="${h(csrf)}">
+        <label>שם למפתח<input name="name" maxlength="60" placeholder="למשל: הקופה בסניף הראשי" required></label>
+        <button class="btn primary">יצירת מפתח</button>
+      </form>
+    </section>
+    <section class="card stack">
+      <h3>איך מחברים</h3>
+      <ol class="how-list">
+        <li>יוצרים מפתח ומעבירים אותו למי שמתחזק את הקופה או את מערכת התורים (או מדביקים אותו ב-Make / Zapier).</li>
+        <li>בסוף כל ביקור או קנייה המערכת שולחת לנו בקשה עם שם, טלפון או אימייל של הלקוח.</li>
+        <li>יש אימייל? אנחנו שולחים לו את הבקשה לבד, אחרי ההשהיה שבחרתם, עם תזכורת אחת. יש רק טלפון? מקבלים בתשובה קישור אישי לשליחה ב-SMS.</li>
+        <li>לקוח שכבר קיבל בקשה ב-30 הימים האחרונים לא יקבל עוד אחת.</li>
+      </ol>
+    </section>
+  </div>
+  <section class="card stack">
+    <h3>דוגמה</h3>
+    <pre class="code" dir="ltr">${h(curl)}</pre>
+    <dl class="dl small">
+      <dt><code>campaign</code></dt><dd>הקמפיין (ה-slug מהקישור, או המספר). אם לא נשלח: הקמפיין הפעיל הראשון.</dd>
+      <dt><code>name</code>, <code>phone</code>, <code>email</code></dt><dd>פרטי הלקוח. חובה לפחות טלפון או אימייל.</dd>
+      <dt><code>delay_minutes</code></dt><dd>כמה דקות לחכות לפני שליחת המייל (עד שבוע). 0 = מייד.</dd>
+      <dt><code>external_id</code></dt><dd>מספר ההזמנה או התור אצלכם, לא חובה.</dd>
+      <dt><code>dedup_days</code></dt><dd>כמה ימים לא לשלוח שוב לאותו לקוח (ברירת מחדל 30, 0 = תמיד לשלוח).</dd>
+    </dl>
+    <p class="muted small">התשובה כוללת <code>status</code> (<code>sent</code>, <code>scheduled</code>, <code>created</code> או <code>skipped</code>) ואת הקישור האישי <code>invite.link</code>. בדיקת חיבור: <code dir="ltr">GET ${h(baseUrl)}/api/v1/ping</code></p>
+  </section>`;
+}
+
 // ---------------------------------------------------------------- plan
 
 export function planView({ business, plan, usage }) {

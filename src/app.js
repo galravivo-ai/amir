@@ -7,6 +7,7 @@ import { createMailer } from './mailer.js';
 import { createNotifier } from './notifications.js';
 import { createStore } from './store.js';
 import { adminRoutes } from './routes/admin.js';
+import { apiRoutes } from './routes/api.js';
 import { authRoutes } from './routes/auth.js';
 import { createContext } from './routes/context.js';
 import { publicRoutes } from './routes/public.js';
@@ -64,6 +65,14 @@ export function createApp(db, options = {}) {
   app.use('/static', express.static(path.join(root, 'public'), { maxAge: '1h' }));
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
+  app.use(
+    '/api/v1',
+    apiRoutes(store, {
+      notifier,
+      apiLimit: options.apiLimit,
+      baseUrl: (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`,
+    }),
+  );
   app.use(publicRoutes(store, { ...options, notifier }));
   app.use(widgetRoutes(store));
 

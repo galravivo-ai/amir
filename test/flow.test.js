@@ -705,3 +705,55 @@ test('closing the loop with unhappy customers', async () => {
   assert.equal(stats.recoveredYes, 1);
   assert.equal(stats.recoveredAnswered, 2);
 });
+
+test('public API: automatic survey requests', async () => {
+  const owner = await registeredOwner('api@example.com');
+  const campaign = await createCampaign(owner);
+  const api = (path, { method = 'GET', key, body, raw } = {}) =>
+    fetch(`${base}/api/v1${path}`, {
+      method,
+      headers: { ...(key ? { authorization: `Bearer ${key}` } : {}), 'content-type': 'application/json' },
+      body: raw ?? (body ? JSON.stringify(body) : undefined),
+    }).then(async (r) => ({ status: r.status, json: await r.json() }));
+
+  // Free plan: no API.
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  const created = await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } });
+  const key = decodeURIComponent(created.location.match(/key=([^&]+)/)[1]);
+  assert.match(key, /^rk_/);
+  store.updateBusiness(campaign.business_id, { plan: 'free' });
+  assert.equal((await api('/ping', { key })).status, 403);
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+
+  assert.equal((await api('/ping', { key: 'rk_wrong' })).status, 401);
+  assert.equal((await api('/ping', { key })).json.business.name, 'Test Cafe');
+  assert.equal((await api('/invites', { method: 'POST', key, raw: '{not json' })).status, 400);
+  assert.equal((await api('/invites', { method: 'POST', key, body: { name: 'x' } })).status, 422);
+
+  const now = await api('/invites', { method: 'POST', key, body: { campaign: campaign.slug, name: 'Avi', email: 'avi@example.com' } });
+  assert.equal(now.status, 201);
+  assert.equal(now.json.status, 'sent');
+  assert.match(now.json.invite.link, new RegExp(`/r/${campaign.slug}\\?i=`));
+  assert.ok(outbox('customer_invite').some((m) => m.to_addr === 'avi@example.com'));
+
+  const dup = await api('/invites', { method: 'POST', key, body: { campaign: campaign.slug, email: 'avi@example.com' } });
+  assert.equal(dup.json.status, 'skipped');
+
+  const phoneOnly = await api('/invites', { method: 'POST', key, body: { phone: '0501112233' } });
+  assert.equal(phoneOnly.json.status, 'created', 'no email: the caller gets the link to send');
+
+  const later = await api('/invites', { method: 'POST', key, body: { email: 'later@example.com', delay_minutes: 120 } });
+  assert.equal(later.json.status, 'scheduled');
+  const { jobs } = createApp(store.db, { ai: null, backups: false });
+  await jobs.scheduledInvites();
+  assert.ok(!outbox('customer_invite').some((m) => m.to_addr === 'later@example.com'), 'not before its time');
+  store.db.prepare("UPDATE invites SET send_at = datetime('now', '-1 minute') WHERE email = 'later@example.com'").run();
+  await jobs.scheduledInvites();
+  await jobs.scheduledInvites();
+  assert.equal(outbox('customer_invite').filter((m) => m.to_addr === 'later@example.com').length, 1);
+
+  // Revoked keys stop working.
+  const [k] = store.apiKeysFor(campaign.business_id);
+  await owner.req(`/admin/integrations/keys/${k.id}/revoke`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
+  assert.equal((await api('/ping', { key })).status, 401);
+});

@@ -664,7 +664,8 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
           ? `<table class="table"><thead><tr><th>לקוח</th><th>נשלח</th><th>נפתח</th><th>דירג</th><th></th></tr></thead><tbody>${invites
               .map(
                 (inv) => `<tr><td>${h(inv.customer_name)}<div class="small" dir="ltr">${h(inv.phone)} ${h(inv.email)}</div>
-                  ${inv.email_sent_at ? `<div class="small muted">✉ נשלח במייל${inv.reminder_sent_at ? ' + תזכורת' : ''}</div>` : ''}</td>
+                  ${inv.email_sent_at ? `<div class="small muted">✉ נשלח במייל${inv.reminder_sent_at ? ' + תזכורת' : ''}</div>` : inv.send_at ? `<div class="small muted">✉ יישלח ב-${h(formatDate(inv.send_at))}</div>` : ''}
+                  ${inv.origin === 'api' ? '<span class="badge st-pub">אוטומטי</span>' : ''}</td>
                   <td class="small">${h(formatDate(inv.created_at))}</td>
                   <td>${inv.opened_at ? '✓' : '—'}</td><td>${inv.responded_at ? '✓' : '—'}</td>
                   <td><a class="btn-link" target="_blank" rel="noopener" href="${h(waLink(inv.phone, inviteMsg(inv)))}">שליחה שוב</a></td></tr>`,

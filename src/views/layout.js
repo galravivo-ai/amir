@@ -63,6 +63,7 @@ export function adminPage({
     ['/admin/insights', 'תובנות AI', 'spark'],
     role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
     role === 'owner' && ['/admin/team', 'צוות', 'team'],
+    role === 'owner' && ['/admin/integrations', 'חיבורים', 'plug'],
     role === 'owner' && ['/admin/business', 'הגדרות', 'gear'],
     isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
   ].filter(Boolean);

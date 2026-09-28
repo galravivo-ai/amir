@@ -459,3 +459,7 @@ body.site { background: #fff; }
 /* close the loop */
 .followup { display: flex; flex-direction: column; gap: 10px; }
 .followup-box { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--purple-soft); border-radius: 12px; padding: 12px 14px; margin-top: .6rem; }
+
+/* integrations */
+pre.code { background: var(--night); color: #e9e5ff; padding: 14px 16px; border-radius: 12px; overflow-x: auto; font-size: .85rem; line-height: 1.55; margin: 0; }
+.how-list { margin: 0; padding-inline-start: 1.2rem; display: grid; gap: .5rem; }

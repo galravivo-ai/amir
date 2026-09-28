@@ -370,6 +370,58 @@ export function createStore(db) {
       );
       return t;
     },
+    /** Invite created by the API; `send_at` delays the email. */
+    createApiInvite(campaignId, { customer_name, phone, email, send_at, external_id }) {
+      const t = token(9);
+      q(`INSERT INTO invites (campaign_id, token, customer_name, phone, email, send_at, external_id, origin)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'api')`).run(campaignId, t, customer_name, phone, email, send_at, external_id);
+      return t;
+    },
+    /** A request to the same customer (email or phone) in the last `days` days, if any. */
+    recentInviteFor(campaignId, { email, phone, days = 30 }) {
+      if (!email && !phone) return null;
+      return (
+        q(`SELECT * FROM invites WHERE campaign_id = ? AND created_at >= ?
+             AND ((? != '' AND email = ?) OR (? != '' AND phone = ?)) ORDER BY id DESC LIMIT 1`).get(
+          campaignId,
+          sqlTime(-days * 864e5),
+          email,
+          email,
+          phone,
+          phone,
+        ) || null
+      );
+    },
+    /** Email invites whose scheduled time has come. */
+    invitesDueToSend: () =>
+      q(`SELECT i.*, c.business_id FROM invites i JOIN campaigns c ON c.id = i.campaign_id
+         WHERE i.email != '' AND i.email_sent_at IS NULL AND i.send_at IS NOT NULL AND i.send_at <= ?
+           AND i.send_at >= ? AND c.active = 1`).all(sqlTime(), sqlTime(-3 * 864e5)),
+    markInviteSendAttempted: (id) => q('UPDATE invites SET send_at = NULL WHERE id = ?').run(id),
+
+    // ---------- API keys ----------
+    createApiKey(businessId, { name, createdBy }) {
+      const raw = `rk_${token(24)}`;
+      q('INSERT INTO api_keys (business_id, name, prefix, key_hash, created_by) VALUES (?, ?, ?, ?, ?)').run(
+        businessId,
+        name,
+        raw.slice(0, 10),
+        sha256(raw),
+        createdBy,
+      );
+      return raw;
+    },
+    apiKeysFor: (businessId) =>
+      q('SELECT id, name, prefix, created_at, last_used_at FROM api_keys WHERE business_id = ? AND revoked_at IS NULL ORDER BY id DESC').all(businessId),
+    revokeApiKey: (businessId, id) =>
+      q("UPDATE api_keys SET revoked_at = datetime('now') WHERE business_id = ? AND id = ?").run(businessId, id),
+    businessByApiKey(raw) {
+      const key = q('SELECT * FROM api_keys WHERE key_hash = ? AND revoked_at IS NULL').get(sha256(String(raw ?? '')));
+      if (!key) return null;
+      q("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?").run(key.id);
+      return { key, business: q('SELECT * FROM businesses WHERE id = ?').get(key.business_id) };
+    },
+
     markInviteEmailed: (id) => q("UPDATE invites SET email_sent_at = datetime('now') WHERE id = ?").run(id),
     markInviteReminded: (id) => q("UPDATE invites SET reminder_sent_at = datetime('now') WHERE id = ?").run(id),
     /** Email invites that were sent, not answered, and are due for their single reminder. */

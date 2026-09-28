@@ -161,6 +161,37 @@ export function settingsRoutes(ctx) {
     res.redirect(303, '/admin/widget?ok=1');
   });
 
+  // ---------- integrations (API keys) ----------
+  router.get('/integrations', owner, (req, res) => {
+    const campaigns = store.campaignsFor(req.business.id);
+    render(
+      req,
+      res,
+      'חיבורים',
+      V.integrationsView({
+        keys: store.apiKeysFor(req.business.id),
+        newKey: req.query.key ? String(req.query.key).slice(0, 80) : '',
+        csrf: req.user.csrf,
+        baseUrl: ctx.baseUrl(req),
+        available: req.plan.api,
+        campaign: campaigns.find((c) => c.active) || campaigns[0] || null,
+      }),
+    );
+  });
+
+  router.post('/integrations/keys', owner, (req, res) => {
+    if (!req.plan.api) return res.status(403).send(errorPage('החיבורים זמינים בתוכנית מקצועי ומעלה'));
+    const name = String(req.body.name ?? '').trim().slice(0, 60) || 'מפתח';
+    const raw = store.createApiKey(req.business.id, { name, createdBy: req.user.id });
+    // Shown exactly once, right after creation.
+    res.redirect(303, `/admin/integrations?key=${encodeURIComponent(raw)}`);
+  });
+
+  router.post('/integrations/keys/:id/revoke', owner, (req, res) => {
+    store.revokeApiKey(req.business.id, Number(req.params.id));
+    res.redirect(303, '/admin/integrations?ok=1');
+  });
+
   // ---------- plan ----------
   router.get('/plan', (req, res) => {
     render(

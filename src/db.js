@@ -218,6 +218,26 @@ const MIGRATIONS = [
   CREATE UNIQUE INDEX idx_responses_followup ON responses(followup_token);
   ALTER TABLE businesses ADD COLUMN followup_auto INTEGER NOT NULL DEFAULT 1;
   `,
+  // v7: public API for automatic survey requests
+  `
+  CREATE TABLE api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    prefix TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT,
+    revoked_at TEXT
+  );
+  ALTER TABLE invites ADD COLUMN send_at TEXT;
+  ALTER TABLE invites ADD COLUMN external_id TEXT NOT NULL DEFAULT '';
+  ALTER TABLE invites ADD COLUMN origin TEXT NOT NULL DEFAULT 'manual';
+  CREATE INDEX idx_invites_campaign_email ON invites(campaign_id, email);
+  CREATE INDEX idx_invites_campaign_phone ON invites(campaign_id, phone);
+  CREATE INDEX idx_invites_send_at ON invites(send_at);
+  `,
 ];
 
 function migrate(db) {
