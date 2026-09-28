@@ -244,6 +244,20 @@ const MIGRATIONS = [
   ALTER TABLE responses ADD COLUMN tagged_at TEXT;
   CREATE INDEX idx_responses_untagged ON responses(tagged_at, completed);
   `,
+  // v9: installable app + push notifications
+  `
+  CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  CREATE TABLE push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_push_user ON push_subscriptions(user_id);
+  `,
 ];
 
 function migrate(db) {

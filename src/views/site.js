@@ -21,6 +21,8 @@ function sitePage({ title, description = '', body, signupOpen = true }) {
 <title>${h(title)}</title>
 ${description ? `<meta name="description" content="${h(description)}">` : ''}
 <link rel="stylesheet" href="/static/style.css">
+<link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
+<link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body class="site">
 <header class="site-head">

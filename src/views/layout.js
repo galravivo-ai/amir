@@ -7,7 +7,14 @@ import { operatorInfo } from './site.js';
 const HEAD = (title) => `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${h(title)}</title>
-<link rel="stylesheet" href="/static/style.css">`;
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" type="image/png" href="/static/icons/favicon-32.png">`;
+
+const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1d1650">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>`;
 
 export function brandMark(size = 34) {
   return `<span class="brand-mark" style="width:${size}px;height:${size}px">${starMark(Math.round(size * 0.56))}</span>`;
@@ -43,7 +50,7 @@ export function adminPage({
   if (!user || !business) {
     return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}</head>
 <body class="auth-page">
 <a class="auth-brand" href="/">${brandMark(40)}<span>${h(brand)}</span></a>
 <main class="auth-main">
@@ -99,7 +106,7 @@ export function adminPage({
 
   return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}</head>
 <body class="app">
 <aside class="sidebar">
   <a class="side-brand" href="/admin">${brandMark(34)}<span>${h(brand)}</span></a>

@@ -575,6 +575,27 @@ export function createStore(db) {
          LEFT JOIN campaigns c ON c.id = i.campaign_id LEFT JOIN users u ON u.id = i.created_by
          WHERE i.business_id = ? ORDER BY i.id DESC LIMIT ?`).all(businessId, limit),
 
+    // ---------- app settings & push subscriptions ----------
+    setting: (key) => q('SELECT value FROM app_settings WHERE key = ?').get(key)?.value ?? null,
+    setSetting: (key, value) =>
+      q('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value),
+    savePushSubscription(userId, { endpoint, p256dh, auth, userAgent = '' }) {
+      q(`INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth`).run(
+        userId,
+        endpoint,
+        p256dh,
+        auth,
+        userAgent,
+      );
+    },
+    deletePushSubscription: (endpoint) => q('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint),
+    pushSubscriptionsForUser: (userId) => q('SELECT * FROM push_subscriptions WHERE user_id = ?').all(userId),
+    /** Devices of the owners and managers of a business. */
+    pushSubscriptionsForBusiness: (businessId) =>
+      q(`SELECT p.* FROM push_subscriptions p JOIN memberships m ON m.user_id = p.user_id
+         WHERE m.business_id = ? AND m.role IN ('owner', 'manager')`).all(businessId),
+
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),
     listResponses(businessId, { campaignId, sentiment, status, search, overdue, consent, tag, limit = 100, offset = 0 } = {}) {

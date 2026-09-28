@@ -8,7 +8,7 @@ const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
  * Every outgoing message (email + webhook) is composed here so the texts
  * stay consistent. `publicUrl` is used when there is no request (jobs).
  */
-export function createNotifier({ store, mailer, publicUrl = () => process.env.PUBLIC_URL || 'http://localhost:3000' }) {
+export function createNotifier({ store, mailer, pusher = null, publicUrl = () => process.env.PUBLIC_URL || 'http://localhost:3000' }) {
   const url = (path) => `${publicUrl().replace(/\/$/, '')}${path}`;
 
   function recipients(business) {
@@ -34,6 +34,14 @@ export function createNotifier({ store, mailer, publicUrl = () => process.env.PU
         },
       });
       if (!negative || !business.alert_negative) return;
+      pusher
+        ?.sendToBusiness(business.id, {
+          title: `לקוח לא מרוצה (${response.rating}★) · ${campaign.name}`,
+          body: data.comment ? data.comment.slice(0, 140) : 'לחצו לפרטים ולטיפול',
+          url: `/admin/responses/${response.id}`,
+          tag: `resp-${response.id}`,
+        })
+        .catch((err) => console.warn('[push]', err.message));
 
       const labels = Object.fromEntries(questions.map((q) => [q.id, q.label]));
       const answers = Object.entries(data.answers)
@@ -62,6 +70,14 @@ export function createNotifier({ store, mailer, publicUrl = () => process.env.PU
 
     async slaOverdue(business, response) {
       const color = safeColor(business.brand_color);
+      pusher
+        ?.sendToBusiness(business.id, {
+          title: `פנייה ממתינה יותר מ-${business.sla_hours} שעות`,
+          body: `${response.customer_name || 'לקוח'}: ${response.comment || response.campaign_name}`.slice(0, 140),
+          url: `/admin/responses/${response.id}`,
+          tag: `sla-${response.id}`,
+        })
+        .catch((err) => console.warn('[push]', err.message));
       await mailer.send({
         kind: 'sla_alert',
         businessId: business.id,
@@ -100,6 +116,14 @@ export function createNotifier({ store, mailer, publicUrl = () => process.env.PU
     /** The customer said the fix did not help: the ticket is open again. */
     async recoveryFailed(business, response) {
       const color = safeColor(business.brand_color);
+      pusher
+        ?.sendToBusiness(business.id, {
+          title: 'הלקוח ענה שהטיפול לא עזר',
+          body: `${response.customer_name || 'לקוח'} · הפנייה נפתחה מחדש`,
+          url: `/admin/responses/${response.id}`,
+          tag: `resp-${response.id}`,
+        })
+        .catch((err) => console.warn('[push]', err.message));
       await mailer.send({
         kind: 'followup_no',
         businessId: business.id,

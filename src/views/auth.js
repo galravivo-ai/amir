@@ -77,6 +77,55 @@ export function resetView({ token, error = '' }) {
   </div>`;
 }
 
+// Client side of push registration (runs on the account page only).
+const PUSH_SCRIPT = `(function () {
+  var status = document.getElementById('push-status');
+  var on = document.getElementById('push-on'), off = document.getElementById('push-off'), test = document.getElementById('push-test');
+  var csrf = document.getElementById('push-csrf').value;
+  function say(t) { status.textContent = t; }
+  function post(url, data) {
+    var body = new URLSearchParams(Object.assign({ _csrf: csrf }, data || {}));
+    return fetch(url, { method: 'POST', body: body, credentials: 'same-origin' }).then(function (r) { return r.json(); });
+  }
+  function toKey(b64) {
+    var pad = '='.repeat((4 - b64.length % 4) % 4), raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, function (c) { return c.charCodeAt(0); });
+  }
+  function b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, ''); }
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    say('הדפדפן הזה לא תומך בהתראות. באייפון צריך קודם להוסיף את האתר למסך הבית.');
+    return;
+  }
+  function refresh() {
+    navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      on.hidden = !!sub; off.hidden = !sub; test.hidden = !sub;
+      say(sub ? 'ההתראות פעילות במכשיר הזה.' : Notification.permission === 'denied' ? 'ההתראות חסומות בהגדרות הדפדפן עבור האתר הזה.' : 'ההתראות כבויות במכשיר הזה.');
+    });
+  }
+  navigator.serviceWorker.register('/sw.js').then(refresh);
+  on.addEventListener('click', function () {
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') { say('לא התקבל אישור להתראות.'); return; }
+      return fetch('/push/key', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (k) {
+        return navigator.serviceWorker.ready.then(function (reg) {
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(k.key) });
+        });
+      }).then(function (sub) {
+        return post('/push/subscribe', { endpoint: sub.endpoint, p256dh: b64(sub.getKey('p256dh')), auth: b64(sub.getKey('auth')) });
+      }).then(refresh);
+    }).catch(function () { say('לא הצלחנו להפעיל התראות. נסו לרענן את הדף.'); });
+  });
+  off.addEventListener('click', function () {
+    navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (!sub) return;
+      return post('/push/unsubscribe', { endpoint: sub.endpoint }).then(function () { return sub.unsubscribe(); });
+    }).then(refresh);
+  });
+  test.addEventListener('click', function () {
+    post('/push/test').then(function (r) { say(r.sent ? 'נשלחה התראת בדיקה.' : 'לא נמצא מכשיר רשום. נסו לכבות ולהפעיל מחדש.'); });
+  });
+})();`;
+
 export function twoFactorLoginView({ error = '' }) {
   return `<div class="auth card">
     <h1>אימות דו-שלבי</h1>
@@ -146,6 +195,19 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
       <p class="muted small">שינוי הסיסמה ינתק את כל שאר המכשירים.</p>
     </form>
   </div>
+  <section class="card stack" id="push">
+    <h3>התראות לטלפון ולמחשב</h3>
+    <p class="muted">התראה קופצת על כל לקוח לא מרוצה, על פנייה שמחכה יותר מדי זמן, ועל לקוח שענה שהטיפול לא עזר.</p>
+    <p class="muted small">באייפון: קודם פותחים את האתר ב-Safari, לוחצים "שיתוף" ואז "הוספה למסך הבית", ומפעילים את ההתראות מתוך האפליקציה שנוספה.</p>
+    <p id="push-status" class="small" role="status"></p>
+    <div class="actions">
+      <button type="button" class="btn primary" id="push-on" hidden>הפעלת התראות במכשיר הזה</button>
+      <button type="button" class="btn" id="push-test" hidden>שליחת התראת בדיקה</button>
+      <button type="button" class="btn danger" id="push-off" hidden>כיבוי במכשיר הזה</button>
+    </div>
+    <input type="hidden" id="push-csrf" value="${h(csrf)}">
+  </section>
+  <script>${PUSH_SCRIPT}</script>
   <section class="card stack" id="2fa">
     <h3>אימות דו-שלבי ${totpEnabled ? '<span class="badge st-ok">פעיל</span>' : '<span class="badge st-closed">כבוי</span>'}</h3>
     <p class="muted">מעבר לסיסמה, בכל כניסה צריך גם קוד מאפליקציה בטלפון. מגן על החשבון גם אם הסיסמה דלפה.</p>

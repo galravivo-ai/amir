@@ -5,6 +5,8 @@ import { createAi } from './ai.js';
 import { createJobs } from './jobs.js';
 import { createMailer } from './mailer.js';
 import { createNotifier } from './notifications.js';
+import { createPusher } from './push.js';
+import { pushRoutes } from './routes/push.js';
 import { createStore } from './store.js';
 import { adminRoutes } from './routes/admin.js';
 import { apiRoutes } from './routes/api.js';
@@ -53,7 +55,8 @@ export function createApp(db, options = {}) {
   const store = createStore(db);
   const mailer = createMailer(db, { transport: options.mailTransport });
   const ai = options.ai !== undefined ? options.ai : createAi();
-  const notifier = createNotifier({ store, mailer, publicUrl: options.publicUrl });
+  const pusher = createPusher(store, { webpush: options.webpush });
+  const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl });
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   const app = express();
   app.disable('x-powered-by');
@@ -79,6 +82,7 @@ export function createApp(db, options = {}) {
   app.use(ctx.session);
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen }));
   app.use(authRoutes(ctx));
+  app.use(pushRoutes(ctx, pusher));
   app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
 
@@ -87,5 +91,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, jobs: createJobs({ store, notifier, ai, backups: options.backups ?? true }) };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, backups: options.backups ?? true }) };
 }

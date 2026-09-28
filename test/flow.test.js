@@ -782,3 +782,54 @@ test('AI topic tagging', async () => {
   const dash = await owner.req('/admin');
   assert.match(dash.text, /נושאים חוזרים/);
 });
+
+test('installable app and push notifications', async () => {
+  const anon = client();
+  const manifest = JSON.parse((await anon.req('/manifest.webmanifest')).text);
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.icons.length, 2);
+  const sw = await anon.req('/sw.js');
+  assert.match(sw.headers.get('content-type'), /javascript/);
+  assert.match(sw.text, /showNotification/);
+
+  const owner = await registeredOwner('push@example.com');
+  const campaign = await createCampaign(owner);
+  const key = JSON.parse((await owner.req('/push/key')).text).key;
+  assert.ok(key.length > 40);
+  const bad = await owner.req('/push/subscribe', { method: 'POST', form: { _csrf: await csrfOf(owner), endpoint: 'http://insecure', p256dh: 'x', auth: 'y' } });
+  assert.equal(bad.status, 422);
+  const sub = { endpoint: 'https://push.example.com/send/abc123', p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) };
+  const ok = await owner.req('/push/subscribe', { method: 'POST', form: { _csrf: await csrfOf(owner), ...sub } });
+  assert.equal(ok.status, 200);
+
+  const sent = [];
+  let fail = null;
+  const fakeWebpush = {
+    generateVAPIDKeys: () => ({ publicKey: 'pub', privateKey: 'priv' }),
+    setVapidDetails() {},
+    async sendNotification(target, body) {
+      if (fail) throw fail;
+      sent.push({ endpoint: target.endpoint, payload: JSON.parse(body) });
+    },
+  };
+  const { notifier } = createApp(store.db, { ai: null, backups: false, webpush: fakeWebpush });
+  const business = store.businessById(campaign.business_id);
+  const push = () =>
+    notifier.feedbackCompleted({
+      business,
+      campaign,
+      response: { id: 1, rating: 1, sentiment: 'negative', source: '' },
+      data: { answers: {}, comment: 'cold food', customer_name: '', phone: '', email: '' },
+      questions: [],
+    });
+  await push();
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].endpoint, sub.endpoint);
+  assert.match(sent[0].payload.title, /לקוח לא מרוצה/);
+  assert.equal(sent[0].payload.body, 'cold food');
+
+  // An expired subscription is forgotten.
+  fail = Object.assign(new Error('gone'), { statusCode: 410 });
+  await push();
+  assert.equal(store.pushSubscriptionsForBusiness(business.id).length, 0);
+});
