@@ -13,6 +13,8 @@ export function siteRoutes(store, { signupOpen = () => true } = {}) {
 
   router.get('/', (req, res) => {
     if (req.user) return res.redirect('/admin');
+    // An agency's own domain is for its clients: no platform marketing page there.
+    if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
     res.send(landingView({ signupOpen: signupOpen() }));
   });
   // Installable app ("Add to home screen")

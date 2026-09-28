@@ -1,6 +1,7 @@
 import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { formatDate, h, logoSrc } from '../util.js';
+import { agenciesAdminBlock } from './agency.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -379,13 +380,19 @@ const MAIL_KINDS = {
   password_reset: 'איפוס סיסמה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId, agencies = [], error = '' }) {
   const planSelect = (b) => `<form method="post" action="/superadmin/businesses/${b.id}/plan" class="inline">
       ${csrfField(csrf)}
       <select name="plan" onchange="this.form.submit()" aria-label="תוכנית">${Object.entries(PLANS)
         .map(([k, p]) => `<option value="${k}" ${b.plan === k ? 'selected' : ''}>${h(p.label)}</option>`)
         .join('')}</select></form>`;
+  const agencySelect = (b) => `<form method="post" action="/superadmin/businesses/${b.id}/agency" class="inline">
+      ${csrfField(csrf)}
+      <select name="agency" onchange="this.form.submit()" aria-label="סוכנות"><option value="">—</option>${agencies
+        .map((a) => `<option value="${a.id}" ${b.agency_id === a.id ? 'selected' : ''}>${h(a.name)}</option>`)
+        .join('')}</select></form>`;
   return `<h1>ניהול מערכת</h1>
+  ${error ? `<div class="error">${h(error)}</div>` : ''}
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">עסקים</div><div class="kpi-value">${businesses.length}</div></div>
     <div class="kpi"><div class="kpi-label">משתמשים</div><div class="kpi-value">${users.length}</div></div>
@@ -396,15 +403,16 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
   </div>
   <section class="card">
     <h3>עסקים</h3>
-    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>תוכנית</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
+    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>תוכנית</th><th>סוכנות</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
     <tbody>${businesses
       .map(
         (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}</td>
-          <td data-l="תוכנית">${planSelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
+          <td data-l="תוכנית">${planSelect(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )
       .join('')}</tbody></table>
   </section>
+  ${agenciesAdminBlock({ agencies, csrf })}
   <section class="card">
     <h3>משתמשים</h3>
     <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>

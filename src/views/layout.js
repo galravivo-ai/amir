@@ -45,14 +45,23 @@ export function adminPage({
   current = '',
   openCount = 0,
   usage = null,
+  brand: brandInfo = null,
+  isAgency = false,
 }) {
-  const brand = operatorInfo().brand;
+  const b0 = brandInfo || { name: operatorInfo().brand, color: '', logo: '' };
+  const brand = b0.name;
+  // An agency's color replaces the platform purple everywhere in the admin.
+  const brandStyle = b0.color
+    ? `<style>:root{--purple:${b0.color};--purple-deep:color-mix(in srgb,${b0.color} 80%,#000);--purple-soft:color-mix(in srgb,${b0.color} 10%,#fff)}</style>`
+    : '';
+  const mark = (size) =>
+    b0.logo ? `<img class="brand-logo" src="${h(b0.logo)}" alt="" style="height:${size}px">` : brandMark(size);
   if (!user || !business) {
     return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="auth-page">
-<a class="auth-brand" href="/">${brandMark(40)}<span>${h(brand)}</span></a>
+<a class="auth-brand" href="/">${mark(40)}<span>${h(brand)}</span></a>
 <main class="auth-main">
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
@@ -63,6 +72,7 @@ export function adminPage({
 
   const role = business.role;
   const links = [
+    isAgency && ['/agency', 'הלקוחות שלי', 'chart'],
     ['/admin', 'לוח בקרה', 'home'],
     ['/admin/responses', 'תגובות', 'inbox'],
     ['/admin/responses?sentiment=negative&status=new', 'פניות פתוחות', 'alert', openCount],
@@ -106,10 +116,10 @@ export function adminPage({
 
   return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="app">
 <aside class="sidebar">
-  <a class="side-brand" href="/admin">${brandMark(34)}<span>${h(brand)}</span></a>
+  <a class="side-brand" href="/admin">${mark(34)}<span>${h(brand)}</span></a>
   ${bizBlock}
   <nav class="side-nav" aria-label="ניווט ראשי">
     ${links

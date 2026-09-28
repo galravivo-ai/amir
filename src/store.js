@@ -575,6 +575,56 @@ export function createStore(db) {
          LEFT JOIN campaigns c ON c.id = i.campaign_id LEFT JOIN users u ON u.id = i.created_by
          WHERE i.business_id = ? ORDER BY i.id DESC LIMIT ?`).all(businessId, limit),
 
+    // ---------- agencies ----------
+    createAgency(f) {
+      const r = q(
+        `INSERT INTO agencies (name, brand_name, brand_color, logo_url, custom_domain, default_plan, max_clients)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(f.name, f.brand_name || f.name, f.brand_color || '#4b2bd6', f.logo_url || '', f.custom_domain || null, f.default_plan || 'pro', f.max_clients ?? 25);
+      return Number(r.lastInsertRowid);
+    },
+    updateAgency(id, f) {
+      const allowed = ['name', 'brand_name', 'brand_color', 'logo_url', 'custom_domain', 'default_plan', 'max_clients'];
+      const keys = allowed.filter((k) => f[k] !== undefined);
+      if (!keys.length) return;
+      q(`UPDATE agencies SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => f[k]), id);
+    },
+    agencyById: (id) => q('SELECT * FROM agencies WHERE id = ?').get(id) || null,
+    agencyByDomain: (host) =>
+      host ? q('SELECT * FROM agencies WHERE custom_domain = ?').get(String(host).toLowerCase()) || null : null,
+    allAgencies: () =>
+      q(`SELECT a.*, (SELECT COUNT(*) FROM businesses b WHERE b.agency_id = a.id) AS clients,
+           (SELECT COUNT(*) FROM agency_members m WHERE m.agency_id = a.id) AS members
+         FROM agencies a ORDER BY a.id DESC`).all(),
+    agenciesForUser: (userId) =>
+      q(`SELECT a.* FROM agencies a JOIN agency_members m ON m.agency_id = a.id WHERE m.user_id = ? ORDER BY a.id`).all(userId),
+    isAgencyMember: (agencyId, userId) =>
+      Boolean(q('SELECT 1 FROM agency_members WHERE agency_id = ? AND user_id = ?').get(agencyId, userId)),
+    addAgencyMember: (agencyId, userId) =>
+      q('INSERT OR IGNORE INTO agency_members (agency_id, user_id) VALUES (?, ?)').run(agencyId, userId),
+    removeAgencyMember: (agencyId, userId) =>
+      q('DELETE FROM agency_members WHERE agency_id = ? AND user_id = ?').run(agencyId, userId),
+    agencyMembers: (agencyId) =>
+      q(`SELECT u.id, u.name, u.email FROM agency_members m JOIN users u ON u.id = m.user_id WHERE m.agency_id = ?`).all(agencyId),
+    setBusinessAgency: (businessId, agencyId) =>
+      q('UPDATE businesses SET agency_id = ? WHERE id = ?').run(agencyId || null, businessId),
+    /** Client businesses with the numbers an agency checks every morning. */
+    agencyClients(agencyId) {
+      return q(
+        `SELECT b.id, b.name, b.plan, b.created_at,
+           (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+              WHERE c.business_id = b.id AND r.created_at >= datetime('now', 'start of month')) AS month_responses,
+           (SELECT AVG(r.rating) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+              WHERE c.business_id = b.id AND r.created_at >= datetime('now', '-30 days')) AS avg_rating,
+           (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+              WHERE c.business_id = b.id AND r.sentiment = 'negative' AND r.status = 'new') AS open_issues,
+           (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+              WHERE c.business_id = b.id AND r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0
+                AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')) AS overdue
+         FROM businesses b WHERE b.agency_id = ? ORDER BY b.name`,
+      ).all(agencyId);
+    },
+
     // ---------- app settings & push subscriptions ----------
     setting: (key) => q('SELECT value FROM app_settings WHERE key = ?').get(key)?.value ?? null,
     setSetting: (key, value) =>

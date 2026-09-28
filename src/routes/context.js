@@ -1,6 +1,7 @@
 import { planOf } from '../plans.js';
 import { roleAtLeast } from '../store.js';
-import { errorPage, isEmail } from '../util.js';
+import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
+import { operatorInfo } from '../views/site.js';
 import { adminPage } from '../views/layout.js';
 
 export const SESSION_COOKIE = 'sid';
@@ -47,6 +48,17 @@ export function createContext(
       next();
     },
 
+    /**
+     * White-label: an agency's own domain, or the agency the current business
+     * belongs to, replaces the platform brand in the admin.
+     */
+    brandFor(req) {
+      const agency =
+        store.agencyByDomain(req.hostname) || (req.business?.agency_id ? store.agencyById(req.business.agency_id) : null);
+      if (!agency) return { name: operatorInfo().brand, color: '', logo: '' };
+      return { name: agency.brand_name || agency.name, color: safeColor(agency.brand_color, ''), logo: safeUrl(agency.logo_url) };
+    },
+
     render(req, res, title, body, extra = {}) {
       const b = req.business;
       res.send(
@@ -59,6 +71,8 @@ export function createContext(
           flash: req.query?.ok ? 'נשמר בהצלחה' : '',
           isSuperadmin: ctx.isSuperadmin(req.user),
           current: req.originalUrl,
+          brand: ctx.brandFor(req),
+          isAgency: req.user ? store.agenciesForUser(req.user.id).length > 0 : false,
           openCount: b ? store.openIssuesCount(b.id) : 0,
           usage: b
             ? { used: store.monthlyResponseCount(b.id), limit: req.plan.monthlyResponses, planLabel: req.plan.label }

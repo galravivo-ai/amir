@@ -833,3 +833,64 @@ test('installable app and push notifications', async () => {
   await push();
   assert.equal(store.pushSubscriptionsForBusiness(business.id).length, 0);
 });
+
+test('agencies with white-label branding', async () => {
+  const root = await registeredOwner('root@example.com');
+  store.setSuperadmin(store.userByEmail('root@example.com').id, true);
+  const agencyUser = await registeredOwner('agency@example.com');
+  const outsider = await registeredOwner('outsider@example.com');
+  assert.equal((await agencyUser.req('/agency')).status, 404);
+
+  await root.req('/superadmin/agencies', { method: 'POST', form: { _csrf: await csrfOf(root), name: 'Stars Agency', email: 'agency@example.com' } });
+  const agency = store.agenciesForUser(store.userByEmail('agency@example.com').id)[0];
+  assert.equal(agency.name, 'Stars Agency');
+  assert.equal((await outsider.req('/agency')).status, 404);
+  assert.match((await agencyUser.req('/admin')).text, /href="\/agency"/, 'agency link in the menu');
+
+  const created = await agencyUser.req(`/agency/${agency.id}/clients`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(agencyUser), name: 'Client Bakery', owner_email: 'baker@example.com' },
+  });
+  assert.match(created.location, /link=/);
+  const client1 = store.agencyClients(agency.id)[0];
+  assert.equal(client1.name, 'Client Bakery');
+  assert.equal(client1.plan, 'pro');
+  assert.ok(outbox('team_invite').some((m) => m.to_addr === 'baker@example.com'));
+
+  await agencyUser.req(`/agency/${agency.id}/branding`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(agencyUser), brand_name: 'Rev Agency', brand_color: '#e0452b', logo_url: '' },
+  });
+  const enter = await agencyUser.req(`/agency/${agency.id}/enter/${client1.id}`, { method: 'POST', form: { _csrf: await csrfOf(agencyUser) } });
+  assert.equal(enter.location, '/admin');
+  const dash = await agencyUser.req('/admin');
+  assert.match(dash.text, /Client Bakery/);
+  assert.match(dash.text, /Rev Agency/, 'client screens carry the agency brand');
+  assert.match(dash.text, /--purple:#e0452b/);
+
+  // Outsiders can't enter someone else's client.
+  assert.equal((await outsider.req(`/agency/${agency.id}/enter/${client1.id}`, { method: 'POST', form: { _csrf: await csrfOf(outsider) } })).status, 404);
+
+  // Client limit.
+  await root.req(`/superadmin/agencies/${agency.id}`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(root), custom_domain: 'reviews.agency.test', max_clients: '1', default_plan: 'pro' },
+  });
+  const over = await agencyUser.req(`/agency/${agency.id}/clients`, { method: 'POST', form: { _csrf: await csrfOf(agencyUser), name: 'Second' } });
+  assert.match(decodeURIComponent(over.location), /הגעתם למספר הלקוחות/);
+
+  // The agency's own domain shows its brand and skips the platform landing page.
+  const http = await import('node:http');
+  const viaHost = (path) =>
+    new Promise((resolve) => {
+      http.get({ host: '127.0.0.1', port: server.address().port, path, headers: { host: 'reviews.agency.test' } }, (res) => {
+        let body = '';
+        res.on('data', (c) => (body += c));
+        res.on('end', () => resolve({ status: res.statusCode, location: res.headers.location, body }));
+      });
+    });
+  assert.equal((await viaHost('/')).location, '/login');
+  const login = await viaHost('/login');
+  assert.match(login.body, /Rev Agency/);
+  assert.doesNotMatch(login.body, /★ ביקורות/);
+});

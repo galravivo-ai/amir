@@ -258,6 +258,29 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_push_user ON push_subscriptions(user_id);
   `,
+  // v10: agencies (resellers managing many client businesses) with white-label branding
+  `
+  CREATE TABLE agencies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    brand_name TEXT NOT NULL DEFAULT '',
+    brand_color TEXT NOT NULL DEFAULT '#4b2bd6',
+    logo_url TEXT NOT NULL DEFAULT '',
+    custom_domain TEXT,
+    default_plan TEXT NOT NULL DEFAULT 'pro',
+    max_clients INTEGER NOT NULL DEFAULT 25,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX idx_agencies_domain ON agencies(custom_domain);
+  CREATE TABLE agency_members (
+    agency_id INTEGER NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (agency_id, user_id)
+  );
+  ALTER TABLE businesses ADD COLUMN agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL;
+  CREATE INDEX idx_businesses_agency ON businesses(agency_id);
+  `,
 ];
 
 function migrate(db) {

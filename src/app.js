@@ -9,6 +9,7 @@ import { createPusher } from './push.js';
 import { pushRoutes } from './routes/push.js';
 import { createStore } from './store.js';
 import { adminRoutes } from './routes/admin.js';
+import { agencyRoutes } from './routes/agency.js';
 import { apiRoutes } from './routes/api.js';
 import { authRoutes } from './routes/auth.js';
 import { createContext } from './routes/context.js';
@@ -85,6 +86,7 @@ export function createApp(db, options = {}) {
   app.use(pushRoutes(ctx, pusher));
   app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
+  app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 
   app.use((_req, res) => res.status(404).send(errorPage('הדף לא נמצא')));
   app.use((err, _req, res, _next) => {

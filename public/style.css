@@ -473,3 +473,6 @@ pre.code { background: var(--night); color: #e9e5ff; padding: 14px 16px; border-
 .dist-bar.stacked > span:first-child { border-radius: 0 5px 5px 0; }
 .topic-row { color: inherit; text-decoration: none; border-radius: 8px; padding: 2px 4px; }
 .topic-row:hover { background: var(--purple-soft); }
+
+/* white-label logo */
+.brand-logo { max-width: 150px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px 4px; }
