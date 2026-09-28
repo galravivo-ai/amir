@@ -7,7 +7,7 @@ export function operatorInfo() {
   return {
     name: process.env.OPERATOR_NAME || 'מפעיל המערכת',
     email: process.env.CONTACT_EMAIL || '',
-    brand: process.env.BRAND_NAME || 'ביקורות',
+    brand: process.env.BRAND_NAME || 'GoFive',
   };
 }
 
@@ -110,13 +110,13 @@ export function landingView({ signupOpen }) {
   ];
   const cta = signupOpen ? '<a class="btn accent big-inline" href="/register">להתחיל בחינם</a>' : '<a class="btn accent big-inline" href="/login">כניסה</a>';
   return sitePage({
-    title: `${operatorInfo().brand} · יותר ביקורות טובות, פחות לקוחות כועסים`,
+    title: `${operatorInfo().brand} · קדימה ל-5 כוכבים`,
     description: 'מערכת לאיסוף משוב מלקוחות, הגדלת ביקורות בגוגל וטיפול בלקוחות לא מרוצים. QR, סקר קצר, התראות ו-AI.',
     signupOpen,
     body: `
 <section class="hero">
   <div class="hero-text">
-    <span class="hero-pill"><b>חדש</b>עוזר AI שמנסח תשובות ללקוחות</span>
+    <span class="hero-pill"><b>גו פייב</b>קדימה ל-5 כוכבים</span>
     <h1>מערכת לניהול ביקורות ושביעות רצון, <em>לעסקים בישראל</em></h1>
     <p class="lead">QR לכל סניף, סקר קצר ללקוח, הפניה של מרוצים לגוגל, וטיפול מסודר בכל לקוח שלא היה מרוצה. הכול במקום אחד, בעברית.</p>
     <div class="actions">${cta}<a class="btn big-inline" href="#how">איך זה עובד</a></div>

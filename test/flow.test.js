@@ -892,7 +892,7 @@ test('agencies with white-label branding', async () => {
   assert.equal((await viaHost('/')).location, '/login');
   const login = await viaHost('/login');
   assert.match(login.body, /Rev Agency/);
-  assert.doesNotMatch(login.body, /★ ביקורות/);
+  assert.doesNotMatch(login.body, /GoFive/);
 
   // HTTPS certificates are issued on demand only for agency domains.
   const check = async (d) => (await client().req(`/.well-known/tls-check?domain=${d}`)).status;
