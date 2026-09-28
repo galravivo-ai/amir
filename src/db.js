@@ -205,6 +205,10 @@ const MIGRATIONS = [
     expires_at TEXT NOT NULL
   );
   `,
+  // v5: onboarding checklist flags
+  `
+  ALTER TABLE businesses ADD COLUMN onboarding TEXT NOT NULL DEFAULT '{}';
+  `,
 ];
 
 function migrate(db) {

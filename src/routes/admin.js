@@ -25,8 +25,14 @@ export function adminRoutes(ctx) {
   });
 
   // ---------- dashboard ----------
+  admin.post('/onboarding/dismiss', manager, (req, res) => {
+    store.setOnboardingFlag(req.business.id, 'dismissed');
+    res.redirect(303, '/admin');
+  });
+
   admin.get('/', (req, res) => {
     const campaigns = store.campaignsFor(req.business.id);
+    const onboarding = store.onboarding(req.business);
     const campaignId = campaigns.find((c) => c.id === Number(req.query.campaign))?.id ?? null;
     const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     const stats = store.stats(req.business.id, { campaignId, days });
@@ -37,7 +43,7 @@ export function adminRoutes(ctx) {
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, userName: req.user.name, quotaWarning, can: req.can }));
+    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, userName: req.user.name, quotaWarning, can: req.can, onboarding, csrf: req.user.csrf }));
   });
 
   // ---------- responses ----------
@@ -336,6 +342,7 @@ export function adminRoutes(ctx) {
     const c = loadCampaign(req, res);
     if (!c) return;
     const qrSvg = await QRCode.toString(qrTarget(req, c), { type: 'svg', ...QR_OPTS });
+    store.setOnboardingFlag(req.business.id, 'poster');
     res.send(V.posterView({ campaign: c, business: req.business, qrSvg, t: textsFor(c) }));
   });
 

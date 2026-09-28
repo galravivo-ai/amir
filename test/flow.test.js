@@ -646,3 +646,20 @@ test('campaign templates and survey languages', async () => {
   assert.match(ru.text, /<html lang="ru" dir="ltr">/);
   assert.match(ru.text, /Как вам у нас\?/);
 });
+
+test('onboarding checklist tracks real progress', async () => {
+  const owner = await registeredOwner('onboard@example.com');
+  let dash = await owner.req('/admin');
+  assert.match(dash.text, /צעדים ראשונים/);
+  assert.match(dash.text, /0 מתוך 5/);
+
+  const campaign = await createCampaign(owner);
+  await owner.req(`/admin/campaigns/${campaign.id}/poster`);
+  await completeSurvey(campaign.slug, 5, {});
+  dash = await owner.req('/admin');
+  assert.match(dash.text, /4 מתוך 5/, 'campaign, google link, poster and test response are done; logo is not');
+
+  await owner.req('/admin/onboarding/dismiss', { method: 'POST', form: { _csrf: await csrfOf(owner) } });
+  dash = await owner.req('/admin');
+  assert.doesNotMatch(dash.text, /צעדים ראשונים/);
+});

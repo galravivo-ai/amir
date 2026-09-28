@@ -84,6 +84,32 @@ function optionBreakdown(optionCounts) {
     .join('');
 }
 
+function onboardingCard(o, csrf) {
+  const pctDone = Math.round((o.done / o.total) * 100);
+  const next = o.steps.find((s) => !s.done && !s.optional);
+  return `<section class="card onboarding">
+    <div class="card-head">
+      <h3>צעדים ראשונים <span class="muted small">${o.done} מתוך ${o.total}</span></h3>
+      <form method="post" action="/admin/onboarding/dismiss">
+        <input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link small">הסתרה</button>
+      </form>
+    </div>
+    <div class="usage-bar ob-bar"><span style="width:${pctDone}%"></span></div>
+    <ol class="ob-steps">
+      ${o.steps
+        .map(
+          (s) => `<li class="${s.done ? 'done' : ''} ${s === next ? 'next' : ''}">
+            <span class="ob-check">${s.done ? icon('check', 16) : ''}</span>
+            ${s.done ? `<span>${h(s.label)}</span>` : `<a href="${h(s.href)}">${h(s.label)}</a>`}
+            ${s.optional ? '<span class="muted small">(לא חובה)</span>' : ''}
+            ${s === next ? `<a class="btn accent" href="${h(s.href)}">להתחיל</a>` : ''}
+          </li>`,
+        )
+        .join('')}
+    </ol>
+  </section>`;
+}
+
 function greeting(name) {
   const hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hour12: false }));
   const part = hour >= 5 && hour < 12 ? 'בוקר טוב' : hour < 17 && hour >= 12 ? 'צהריים טובים' : hour >= 17 && hour < 22 ? 'ערב טוב' : 'לילה טוב';
@@ -133,7 +159,11 @@ export function dashboardView({
   userName,
   quotaWarning = '',
   can = () => true,
+  onboarding = null,
+  csrf = '',
 }) {
+  const checklist =
+    onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
   const filter = `<form method="get" class="filters">
       <select name="campaign" aria-label="קמפיין" onchange="this.form.submit()"><option value="">כל הקמפיינים</option>${campaigns
         .map((c) => `<option value="${c.id}" ${c.id === campaignId ? 'selected' : ''}>${h(c.name)}</option>`)
@@ -147,11 +177,7 @@ export function dashboardView({
 
   if (!campaigns.length) {
     return `<div class="dash-head"><div class="titles"><h1>${h(greeting(userName))}</h1></div></div>
-      <div class="card empty">
-        <h2>מתחילים כאן</h2>
-        <p>השלב הראשון: ליצור קמפיין (למשל "סניף ראשי" או "קופה"). כל קמפיין מקבל QR וקישור משלו.</p>
-        ${can('manager') ? '<a class="btn accent big-inline" href="/admin/campaigns/new">+ יצירת קמפיין ראשון</a>' : '<p class="muted">מנהל העסק עוד לא יצר קמפיין.</p>'}
-      </div>`;
+      ${checklist || `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`}`;
   }
 
   const resolve =
@@ -170,6 +196,7 @@ export function dashboardView({
       ${filter}
     </div>
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
+    ${checklist}
     ${
       stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${

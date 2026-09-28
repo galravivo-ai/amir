@@ -219,6 +219,40 @@ export function createStore(db) {
       q('UPDATE businesses SET logo_version = NULL WHERE id = ?').run(businessId);
     },
     logoOf: (businessId) => q('SELECT mime, data FROM business_logos WHERE business_id = ?').get(businessId) || null,
+    setOnboardingFlag(id, flag) {
+      const row = q('SELECT onboarding FROM businesses WHERE id = ?').get(id);
+      const flags = parseJson(row?.onboarding, {});
+      if (flags[flag]) return;
+      flags[flag] = true;
+      q('UPDATE businesses SET onboarding = ? WHERE id = ?').run(JSON.stringify(flags), id);
+    },
+    /** First-run checklist, computed from what the business has actually done. */
+    onboarding(business) {
+      const flags = parseJson(business.onboarding, {});
+      const c = q(
+        `SELECT COUNT(*) AS campaigns, SUM(google_review_url != '') AS google FROM campaigns WHERE business_id = ?`,
+      ).get(business.id);
+      const responses = q(
+        'SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id WHERE c.business_id = ?',
+      ).get(business.id).n;
+      const members = q('SELECT COUNT(*) AS n FROM memberships WHERE business_id = ?').get(business.id).n;
+      const steps = [
+        { key: 'brand', label: 'מעלים לוגו ובוחרים צבע', href: '/admin/business#logo', done: Boolean(business.logo_version || business.logo_url) },
+        { key: 'campaign', label: 'יוצרים קמפיין ראשון', href: '/admin/campaigns/new', done: c.campaigns > 0 },
+        { key: 'google', label: 'מחברים את הקישור לביקורות בגוגל', href: '/admin/campaigns', done: (c.google || 0) > 0 },
+        { key: 'poster', label: 'מדפיסים שלט QR', href: '/admin/campaigns', done: Boolean(flags.poster) },
+        { key: 'test', label: 'סורקים ומדרגים בעצמכם, לבדיקה', href: '/admin/campaigns', done: responses > 0 },
+        { key: 'team', label: 'מזמינים עובד לצוות', href: '/admin/team', done: members > 1, optional: true },
+      ];
+      const required = steps.filter((s) => !s.optional);
+      return {
+        steps,
+        done: required.filter((s) => s.done).length,
+        total: required.length,
+        complete: required.every((s) => s.done),
+        dismissed: Boolean(flags.dismissed),
+      };
+    },
     ensureWidgetKey(id) {
       q('UPDATE businesses SET widget_key = ? WHERE id = ? AND widget_key IS NULL').run(token(12), id);
     },

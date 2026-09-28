@@ -442,3 +442,16 @@ body.site { background: #fff; }
 .template-card:has(input:checked) { border-color: var(--purple); background: #fbfaff; box-shadow: 0 0 0 3px var(--purple-soft); }
 .template-card:has(input:checked) .t-icon { background: var(--yellow); color: var(--ink); }
 .template-card:has(input:focus-visible) { outline: 3px solid var(--purple-soft); }
+
+/* onboarding checklist */
+.onboarding { border: 2px solid var(--purple-soft); }
+.ob-bar { background: var(--line-2); height: 8px; margin: .2rem 0 .8rem; }
+.ob-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ob-steps li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; }
+.ob-steps li.next { background: var(--purple-soft); }
+.ob-steps li.done span:not(.ob-check) { color: var(--muted); text-decoration: line-through; }
+.ob-steps li a:not(.btn) { color: var(--ink); font-weight: 600; text-decoration: none; }
+.ob-steps li a:not(.btn):hover { color: var(--purple); }
+.ob-steps li .btn { margin-inline-start: auto; min-height: 36px; padding: .3em .9em; }
+.ob-check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; }
+.ob-steps li.done .ob-check { background: var(--good); border-color: var(--good); color: #fff; }
