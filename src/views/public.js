@@ -151,6 +151,47 @@ export function thanksView({ campaign, business, t, response }) {
   return publicPage({ title: heading, heading, lang: campaign.lang, dir: t.dir, business, body });
 }
 
+export function followupView({ campaign, business, t, response }) {
+  return publicPage({
+    title: t.followup_title,
+    heading: t.followup_title,
+    sub: t.followup_sub,
+    lang: campaign.lang,
+    dir: t.dir,
+    business,
+    body: `<form method="post" action="/c/${h(response.followup_token)}" class="followup">
+        <button class="btn big dark" name="answer" value="yes">${icon('check', 22)} ${h(t.followup_yes)}</button>
+        <button class="btn big" name="answer" value="no">${h(t.followup_no)}</button>
+      </form>`,
+  });
+}
+
+export function followupResultView({ campaign, business, t, response, yes, already = false }) {
+  const links = [];
+  if (campaign.google_review_url) links.push({ key: 'google', label: t.google_button });
+  campaign.extraLinks.forEach((l, i) => links.push({ key: String(i), label: l.label }));
+  const heading = already ? t.followup_done : yes ? t.followup_yes_title : t.followup_no_title;
+  // Every customer can reach the public review links; nothing is gated on the answer.
+  const reviewLinks = links.length
+    ? `<div class="public-note"><p class="muted">${h(t.public_review_note)}</p>
+        <div class="alt-links">${links
+          .map((l) => `<a class="btn" href="/go/${h(response.token)}/${h(l.key)}" rel="noopener">${h(l.label)}</a>`)
+          .join('')}</div></div>`
+    : '';
+  return publicPage({
+    title: heading,
+    heading,
+    lang: campaign.lang,
+    dir: t.dir,
+    business,
+    body: `<div class="thanks">
+        <div class="thanks-icon">${icon(yes ? 'heart' : 'handshake', 34)}</div>
+        ${already ? '' : `<p>${h(yes ? t.followup_yes_body : t.followup_no_body)}</p>`}
+        ${reviewLinks}
+      </div>`,
+  });
+}
+
 export function messageView({ t, business, campaign, message }) {
   return publicPage({
     title: message,

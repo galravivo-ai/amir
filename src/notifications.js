@@ -78,6 +78,44 @@ export function createNotifier({ store, mailer, publicUrl = () => process.env.PU
       });
     },
 
+    /** "Did we solve it?" email to the customer after a ticket is resolved. */
+    async followUp({ business, response, link }) {
+      const color = safeColor(business.brand_color);
+      return mailer.send({
+        kind: 'followup',
+        businessId: business.id,
+        to: response.email,
+        subject: `${business.name}: האם הטיפול עזר?`,
+        html: emailLayout({
+          color,
+          title: 'האם הטיפול בפנייה שלך עזר?',
+          body: `<p>${response.customer_name ? `היי ${h(response.customer_name)},` : 'היי,'}</p>
+            <p>פנית ל${h(business.name)} לאחרונה, וטיפלנו בזה. חשוב לנו לדעת אם הצלחנו.</p>
+            ${emailButton(link, 'לתשובה בלחיצה אחת', color)}`,
+          footer: h(business.name),
+        }),
+      });
+    },
+
+    /** The customer said the fix did not help: the ticket is open again. */
+    async recoveryFailed(business, response) {
+      const color = safeColor(business.brand_color);
+      await mailer.send({
+        kind: 'followup_no',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `הלקוח ענה שהטיפול לא עזר · הפנייה נפתחה מחדש`,
+        html: emailLayout({
+          color,
+          title: 'פנייה נפתחה מחדש',
+          body: `<p>${h(response.customer_name || 'לקוח')} ענה שהטיפול בפנייה שלו לא עזר.</p>
+            ${response.comment ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(response.comment)}</blockquote>` : ''}
+            ${emailButton(url(`/admin/responses/${response.id}`), 'לפנייה', color)}`,
+          footer: h(business.name),
+        }),
+      });
+    },
+
     async weeklyReport(business, stats) {
       const color = safeColor(business.brand_color);
       const row = (label, value) =>

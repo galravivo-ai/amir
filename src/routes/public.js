@@ -2,7 +2,7 @@ import express from 'express';
 import { textsFor } from '../i18n.js';
 import { parseJson } from '../db.js';
 import { errorPage, isEmail, safeUrl, token } from '../util.js';
-import { messageView, questionsView, ratingView, thanksView } from '../views/public.js';
+import { followupResultView, followupView, messageView, questionsView, ratingView, thanksView } from '../views/public.js';
 
 const VISITOR_COOKIE = 'vid';
 
@@ -168,6 +168,36 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
     const ctx = loadResponse(req.params.token);
     if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     res.send(thanksView(ctx));
+  });
+
+  // "Did we solve it?" after a complaint was resolved
+  function loadFollowup(tok) {
+    const response = store.responseByFollowupToken(tok);
+    if (!response) return null;
+    const campaign = store.campaignById(response.campaign_id);
+    return { response, campaign, business: store.businessById(campaign.business_id), t: textsFor(campaign) };
+  }
+
+  router.get('/c/:token', (req, res) => {
+    const ctx = loadFollowup(req.params.token);
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
+    if (ctx.response.recovered !== null) {
+      return res.send(followupResultView({ ...ctx, yes: ctx.response.recovered === 1, already: true }));
+    }
+    res.send(followupView(ctx));
+  });
+
+  router.post('/c/:token', limit, (req, res) => {
+    const ctx = loadFollowup(req.params.token);
+    if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
+    const yes = req.body.answer === 'yes';
+    const recorded = store.recordRecovery(ctx.response.id, yes);
+    if (recorded) {
+      store.logEvent(ctx.campaign.id, yes ? 'recovered' : 'not_recovered', { visitorId: ctx.response.visitor_id });
+      if (!yes) notifier?.recoveryFailed(ctx.business, ctx.response).catch((err) => console.error('[notify]', err));
+    }
+    const fresh = store.responseByFollowupToken(req.params.token);
+    res.send(followupResultView({ ...ctx, response: fresh, yes: fresh.recovered === 1, already: !recorded }));
   });
 
   // Tracked outbound click to a review platform

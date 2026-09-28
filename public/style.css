@@ -455,3 +455,7 @@ body.site { background: #fff; }
 .ob-steps li .btn { margin-inline-start: auto; min-height: 36px; padding: .3em .9em; }
 .ob-check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; }
 .ob-steps li.done .ob-check { background: var(--good); border-color: var(--good); color: #fff; }
+
+/* close the loop */
+.followup { display: flex; flex-direction: column; gap: 10px; }
+.followup-box { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--purple-soft); border-radius: 12px; padding: 12px 14px; margin-top: .6rem; }

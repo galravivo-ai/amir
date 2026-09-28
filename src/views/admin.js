@@ -233,6 +233,11 @@ export function dashboardView({
           <dt>סריקות וכניסות</dt><dd>${stats.scans.toLocaleString('he-IL')} (${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים)</dd>
           <dt>NPS</dt><dd>${stats.nps ?? '—'}${stats.npsCount ? ` <span class="muted small">(${stats.npsCount} עונים)</span>` : ''}</dd>
           <dt>זמן טיפול ממוצע</dt><dd>${resolve}</dd>
+          <dt>לקוחות כועסים שהוחזרו</dt><dd>${
+            stats.recoveredAnswered
+              ? `${Math.round((stats.recoveredYes / stats.recoveredAnswered) * 100)}% <span class="muted small">(${stats.recoveredYes} מתוך ${stats.recoveredAnswered} שענו)</span>`
+              : '<span class="muted">עוד אין תשובות</span>'
+          }</dd>
           <dt>מרוצים / לא מרוצים</dt><dd>${stats.positive} / ${stats.negative}</dd>
         </dl>
       </section>
@@ -314,7 +319,7 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
     </div>`;
 }
 
-export function responseDetailView({ r, csrf, businessName, can = () => true, aiAvailable = false, aiReason = '', widgetAvailable = false, aiError = '' }) {
+export function responseDetailView({ r, csrf, businessName, followupUrl = '', can = () => true, aiAvailable = false, aiReason = '', widgetAvailable = false, aiError = '' }) {
   const questions = parseJson(r.campaign_questions, []);
   const answers = parseJson(r.answers, {});
   const labelOf = Object.fromEntries(questions.map((q) => [q.id, q.label]));
@@ -367,6 +372,7 @@ export function responseDetailView({ r, csrf, businessName, can = () => true, ai
               : ''
         }
         ${r.resolved_at ? `<p class="muted small">טופל ב-${h(formatDate(r.resolved_at))}</p>` : ''}
+        ${followupBlock(r, followupUrl, businessName)}
       </section>
     </div>
     ${r.sentiment === 'negative' && can('manager') ? draftSection({ r, csrf, aiAvailable, aiReason, aiError }) : ''}
@@ -379,6 +385,19 @@ export function responseDetailView({ r, csrf, businessName, can = () => true, ai
             <p class="muted small">למשל כשלקוח מבקש למחוק את המידע עליו.</p></form>`
         : ''
     }`;
+}
+
+function followupBlock(r, followupUrl, businessName) {
+  if (r.sentiment !== 'negative') return '';
+  if (r.recovered === 1) return '<p><span class="badge st-ok">הלקוח אישר שהטיפול עזר</span></p>';
+  if (r.recovered === 0) return '<p><span class="badge st-late">הלקוח ענה שהטיפול לא עזר</span></p>';
+  if (!followupUrl) return '';
+  const text = `היי ${r.customer_name || ''}, כאן ${businessName}. רצינו לוודא שהטיפול בפנייה שלך עזר: ${followupUrl}`;
+  return `<div class="followup-box">
+    <b>שאלת המשך ללקוח</b>
+    <span class="small muted">${r.followup_sent_at ? `נשלחה במייל ב-${h(formatDate(r.followup_sent_at))}. עוד לא התקבלה תשובה.` : 'עוד לא נשלחה. אפשר לשלוח בוואטסאפ:'}</span>
+    ${r.phone ? `<a class="btn wa" target="_blank" rel="noopener" href="${h(waLink(r.phone, text))}">שליחה בוואטסאפ</a>` : ''}
+  </div>`;
 }
 
 function draftSection({ r, csrf, aiAvailable, aiReason, aiError }) {

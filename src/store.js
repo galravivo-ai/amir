@@ -196,7 +196,7 @@ export function createStore(db) {
     updateBusiness(id, f) {
       const allowed = [
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
-        'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at',
+        'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -445,6 +445,27 @@ export function createStore(db) {
            resolved_at = CASE WHEN ? IN ('resolved', 'closed') THEN COALESCE(resolved_at, datetime('now')) ELSE NULL END
          WHERE id = ?`).run(status, notes, status, id);
     },
+    /** Gives a resolved ticket its follow-up link token (once). */
+    ensureFollowupToken(id) {
+      const row = q('SELECT followup_token FROM responses WHERE id = ?').get(id);
+      if (row?.followup_token) return row.followup_token;
+      const t = token(12);
+      q('UPDATE responses SET followup_token = ? WHERE id = ?').run(t, id);
+      return t;
+    },
+    markFollowupSent: (id) => q("UPDATE responses SET followup_sent_at = datetime('now') WHERE id = ?").run(id),
+    responseByFollowupToken: (t) => q('SELECT * FROM responses WHERE followup_token = ?').get(String(t)) || null,
+    /** Records the customer's answer once; a "no" reopens the ticket. */
+    recordRecovery(id, yes) {
+      const r = q(
+        `UPDATE responses SET recovered = ?, recovered_at = datetime('now'), updated_at = datetime('now'),
+           status = CASE WHEN ? = 0 THEN 'in_progress' ELSE status END,
+           resolved_at = CASE WHEN ? = 0 THEN NULL ELSE resolved_at END,
+           notes = CASE WHEN ? = 0 THEN trim(notes || char(10) || '[הלקוח ענה שהטיפול לא עזר, הפנייה נפתחה מחדש]') ELSE notes END
+         WHERE id = ? AND recovered IS NULL`,
+      ).run(yes ? 1 : 0, yes ? 1 : 0, yes ? 1 : 0, yes ? 1 : 0, id);
+      return r.changes > 0;
+    },
     setPublished: (id, on) => q('UPDATE responses SET published = ? WHERE id = ? AND publish_consent = 1').run(on ? 1 : 0, id),
     setAiDraft: (id, text) => q('UPDATE responses SET ai_draft = ? WHERE id = ?').run(text, id),
     /** Testimonials approved for the public widget. */
@@ -556,6 +577,8 @@ export function createStore(db) {
                 SUM(r.sentiment = 'negative') AS negative,
                 SUM(r.sentiment = 'negative' AND r.status IN ('new','in_progress')) AS open_issues,
                 SUM(r.review_clicks != '[]') AS reviewed,
+                SUM(r.recovered = 1) AS recovered_yes,
+                SUM(r.recovered IS NOT NULL) AS recovered_answered,
                 AVG(CASE WHEN r.resolved_at IS NOT NULL
                     THEN (julianday(r.resolved_at) - julianday(r.created_at)) * 24 END) AS avg_resolve_hours
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
@@ -646,6 +669,8 @@ export function createStore(db) {
         openIssues: agg.open_issues || 0,
         overdue,
         avgResolveHours: agg.avg_resolve_hours ?? null,
+        recoveredYes: agg.recovered_yes || 0,
+        recoveredAnswered: agg.recovered_answered || 0,
         reviewClicks: evMap.review_click?.n || 0,
         reviewedResponses: agg.reviewed || 0,
         reviewConversion: responses ? (agg.reviewed || 0) / responses : 0,

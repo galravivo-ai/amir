@@ -209,6 +209,15 @@ const MIGRATIONS = [
   `
   ALTER TABLE businesses ADD COLUMN onboarding TEXT NOT NULL DEFAULT '{}';
   `,
+  // v6: close the loop with unhappy customers
+  `
+  ALTER TABLE responses ADD COLUMN followup_token TEXT;
+  ALTER TABLE responses ADD COLUMN followup_sent_at TEXT;
+  ALTER TABLE responses ADD COLUMN recovered INTEGER;
+  ALTER TABLE responses ADD COLUMN recovered_at TEXT;
+  CREATE UNIQUE INDEX idx_responses_followup ON responses(followup_token);
+  ALTER TABLE businesses ADD COLUMN followup_auto INTEGER NOT NULL DEFAULT 1;
+  `,
 ];
 
 function migrate(db) {

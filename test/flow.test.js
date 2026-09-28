@@ -663,3 +663,45 @@ test('onboarding checklist tracks real progress', async () => {
   dash = await owner.req('/admin');
   assert.doesNotMatch(dash.text, /צעדים ראשונים/);
 });
+
+test('closing the loop with unhappy customers', async () => {
+  const owner = await registeredOwner('loop@example.com');
+  const campaign = await createCampaign(owner);
+  const resolve = async (r) =>
+    owner.req(`/admin/responses/${r.id}`, { method: 'POST', form: { _csrf: await csrfOf(owner), status: 'resolved', notes: 'called' } });
+
+  // With an email: the question goes out automatically.
+  const a = await completeSurvey(campaign.slug, 1, { comment: 'cold soup', email: 'dana@example.com', customer_name: 'Dana' });
+  await resolve(a);
+  const mail = outbox('followup').find((m) => m.to_addr === 'dana@example.com');
+  assert.ok(mail, 'follow-up email sent');
+  const link = mail.body.match(/\/c\/[\w-]+/)[0];
+  const page = await client().req(link);
+  assert.match(page.text, /האם הטיפול בפנייה שלך עזר\?/);
+
+  const no = await client().req(link, { method: 'POST', form: { answer: 'no' } });
+  assert.match(no.text, /מצטערים לשמוע/);
+  const reopened = store.responseForBusiness(a.id, campaign.business_id);
+  assert.equal(reopened.status, 'in_progress');
+  assert.equal(reopened.recovered, 0);
+  assert.match(reopened.notes, /נפתחה מחדש/);
+  assert.ok(outbox('followup_no').some((m) => m.to_addr === 'loop@example.com'));
+  // Answering again changes nothing.
+  const again = await client().req(link, { method: 'POST', form: { answer: 'yes' } });
+  assert.match(again.text, /כבר ענית/);
+  assert.equal(store.responseForBusiness(a.id, campaign.business_id).recovered, 0);
+
+  // Phone only: the ticket offers the link to send on WhatsApp.
+  const b = await completeSurvey(campaign.slug, 2, { comment: 'slow', phone: '0507654321' });
+  await resolve(b);
+  const detail = await owner.req(`/admin/responses/${b.id}`);
+  assert.match(detail.text, /שאלת המשך ללקוח/);
+  const bLink = store.responseForBusiness(b.id, campaign.business_id).followup_token;
+  const yes = await client().req(`/c/${bLink}`, { method: 'POST', form: { answer: 'yes' } });
+  assert.match(yes.text, /שמחים שהסתדר/);
+  assert.match(yes.text, /\/go\/[^"]+\/google/, 'public review links stay available');
+
+  const stats = store.stats(campaign.business_id, { campaignId: campaign.id });
+  assert.equal(stats.recoveredYes, 1);
+  assert.equal(stats.recoveredAnswered, 2);
+});

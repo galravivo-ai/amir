@@ -133,6 +133,7 @@ export function adminRoutes(ctx) {
         r,
         csrf: req.user.csrf,
         businessName: req.business.name,
+        followupUrl: r.followup_token ? `${ctx.baseUrl(req)}/c/${r.followup_token}` : '',
         can: req.can,
         aiAvailable: Boolean(ctx.ai) && req.plan.ai,
         aiReason: !req.plan.ai
@@ -144,11 +145,19 @@ export function adminRoutes(ctx) {
     );
   });
 
-  admin.post('/responses/:id', manager, (req, res) => {
+  admin.post('/responses/:id', manager, async (req, res) => {
     const r = loadResponse(req, res);
     if (!r) return;
     const status = Object.hasOwn(STATUSES, req.body.status) ? req.body.status : r.status;
     store.updateResponseStatus(r.id, status, String(req.body.notes ?? '').slice(0, 5000));
+    // Closing a complaint: ask the customer whether it helped (once).
+    if (status === 'resolved' && r.sentiment === 'negative' && r.recovered === null) {
+      const t = store.ensureFollowupToken(r.id);
+      if (r.email && !r.followup_sent_at && req.business.followup_auto) {
+        const sent = await ctx.notifier.followUp({ business: req.business, response: r, link: `${ctx.baseUrl(req)}/c/${t}` });
+        if (sent) store.markFollowupSent(r.id);
+      }
+    }
     res.redirect(303, `/admin/responses/${r.id}?ok=1`);
   });
 
