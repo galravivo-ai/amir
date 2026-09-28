@@ -1,7 +1,7 @@
 import express from 'express';
 import QRCode from 'qrcode';
 import { EDITABLE_TEXT_KEYS, LANGUAGES, textsFor } from '../i18n.js';
-import { AiError } from '../ai.js';
+import { AiError, TOPICS } from '../ai.js';
 import { limitLabel } from '../plans.js';
 import { normalizeQuestions, STATUSES } from '../store.js';
 import { templateQuestions, TEMPLATES } from '../templates.js';
@@ -37,13 +37,14 @@ export function adminRoutes(ctx) {
     const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     const stats = store.stats(req.business.id, { campaignId, days });
     const prev = store.periodSummary(req.business.id, { campaignId, fromDays: days * 2, toDays: days });
+    const topics = store.topicCounts(req.business.id, { campaignId, days });
     const waiting = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', status: 'new', limit: 5 });
     const monthly = store.monthlyResponseCount(req.business.id);
     const quotaWarning =
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, userName: req.user.name, quotaWarning, can: req.can, onboarding, csrf: req.user.csrf }));
+    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, topics, userName: req.user.name, quotaWarning, can: req.can, onboarding, csrf: req.user.csrf }));
   });
 
   // ---------- responses ----------
@@ -54,6 +55,7 @@ export function adminRoutes(ctx) {
       status: Object.hasOwn(STATUSES, req.query.status ?? '') ? req.query.status : '',
       overdue: req.query.overdue === '1' ? '1' : '',
       consent: req.query.consent === '1' ? '1' : '',
+      tag: TOPICS.includes(req.query.tag) ? req.query.tag : '',
       q: String(req.query.q ?? '').trim().slice(0, 80),
     };
   }
@@ -63,6 +65,7 @@ export function adminRoutes(ctx) {
     status: f.status,
     overdue: Boolean(f.overdue),
     consent: Boolean(f.consent),
+    tag: f.tag,
     search: f.q,
   });
 

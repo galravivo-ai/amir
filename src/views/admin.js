@@ -4,6 +4,7 @@ import { formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
+import { TOPICS } from '../ai.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -156,6 +157,7 @@ export function dashboardView({
   campaignId,
   days,
   waiting,
+  topics = [],
   userName,
   quotaWarning = '',
   can = () => true,
@@ -224,8 +226,9 @@ export function dashboardView({
     </div>
     <div class="grid2">
       <section class="card"><h3>התפלגות דירוגים</h3>${distribution(stats.distribution)}</section>
-      <section class="card"><h3>מה הלקוחות אומרים</h3>${optionBreakdown(stats.optionCounts)}</section>
+      ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3>${optionBreakdown(stats.optionCounts)}</section>`}
     </div>
+    ${topics?.length ? `<section class="card"><h3>מה הלקוחות סימנו בשאלות</h3>${optionBreakdown(stats.optionCounts)}</section>` : ''}
     <div class="grid2">
       <section class="card">
         <h3>מדדים נוספים</h3>
@@ -255,6 +258,34 @@ export function dashboardView({
 
 // ---------------------------------------------------------------- responses
 
+function tagChips(tags) {
+  const list = parseJson(tags, []);
+  if (!list.length) return '';
+  return `<div class="tags">${list
+    .map((t) => `<a class="tag" href="/admin/responses?tag=${encodeURIComponent(t)}">${h(t)}</a>`)
+    .join('')}</div>`;
+}
+
+function topicsCard(topics) {
+  if (!topics?.length) return '';
+  const max = Math.max(...topics.map((t) => t.total));
+  return `<section class="card">
+    <div class="card-head"><h3>נושאים חוזרים</h3>
+      <div class="legend"><span><i class="sw pos"></i>מרוצים</span><span><i class="sw neg"></i>לא מרוצים</span></div>
+    </div>
+    ${topics
+      .map(
+        (t) => `<a class="dist-row topic-row" href="/admin/responses?tag=${encodeURIComponent(t.topic)}">
+          <span class="dist-label wide">${h(t.topic)}</span>
+          <span class="dist-bar stacked"><span class="good" style="width:${(t.positive / max) * 100}%"></span><span class="bad" style="width:${(t.negative / max) * 100}%"></span></span>
+          <span class="dist-n">${t.total}</span>
+        </a>`,
+      )
+      .join('')}
+    <p class="muted small">מתויג אוטומטית על ידי ה-AI לפי מה שהלקוחות כתבו.</p>
+  </section>`;
+}
+
 function statusBadge(status) {
   return `<span class="badge st-${h(status)}">${h(STATUSES[status] || status)}</span>`;
 }
@@ -270,7 +301,7 @@ export function responsesTable(rows) {
           <td data-l="תאריך"><a href="/admin/responses/${r.id}">${h(formatDate(r.created_at))}</a></td>
           <td data-l="קמפיין">${h(r.campaign_name)}${r.source ? `<div class="muted small">${h(r.source)}</div>` : ''}</td>
           <td data-l="דירוג">${stars(r.rating)}</td>
-          <td data-l="הערה" class="clip">${h(r.comment) || (r.completed ? '' : '<span class="muted small">לא השלים סקר</span>')}</td>
+          <td data-l="הערה" class="clip">${h(r.comment) || (r.completed ? '' : '<span class="muted small">לא השלים סקר</span>')}${tagChips(r.tags)}</td>
           <td data-l="לקוח">${h(r.customer_name)} ${r.phone ? `<div class="small" dir="ltr">${h(r.phone)}</div>` : ''}</td>
           <td data-l="ביקורת">${clicks.length ? h(clicks.join(', ')) : '—'}</td>
           <td data-l="סטטוס">${
@@ -307,6 +338,7 @@ export function responsesView({ rows, campaigns, filters, page, hasMore }) {
       <select name="status">${opt('', 'כל הסטטוסים', filters.status)}${Object.entries(STATUSES)
         .map(([k, v]) => opt(k, v, filters.status))
         .join('')}</select>
+      <select name="tag" aria-label="נושא">${opt('', 'כל הנושאים', filters.tag)}${TOPICS.map((t) => opt(t, t, filters.tag)).join('')}</select>
       <label class="check"><input type="checkbox" name="overdue" value="1" ${filters.overdue ? 'checked' : ''}> באיחור בלבד</label>
       <label class="check"><input type="checkbox" name="consent" value="1" ${filters.consent ? 'checked' : ''}> אישרו פרסום</label>
       <input name="q" placeholder="חיפוש בשם / טלפון / הערה" value="${h(filters.q)}">
@@ -340,7 +372,7 @@ export function responseDetailView({ r, csrf, businessName, followupUrl = '', ca
           ${Object.entries(answers)
             .map(([k, v]) => `<dt>${h(labelOf[k] || k)}</dt><dd>${h([].concat(v).join(', '))}</dd>`)
             .join('')}
-          <dt>הערה</dt><dd class="pre">${h(r.comment) || '—'}</dd>
+          <dt>הערה</dt><dd class="pre">${h(r.comment) || '—'}${tagChips(r.tags)}</dd>
         </dl>
       </section>
       <section class="card">

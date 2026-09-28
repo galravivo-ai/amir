@@ -1,11 +1,12 @@
 import { backupDb, lastBackupAge } from './backup.js';
+import { PLANS } from './plans.js';
 
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -31,6 +32,17 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
       }
     }
     return sent;
+  }
+
+  /** Tags new comments by topic with AI, a small batch each run. */
+  async function aiTagging() {
+    if (!ai?.tagComments) return 0;
+    const plans = Object.entries(PLANS).filter(([, p]) => p.ai).map(([k]) => k);
+    const batch = store.untaggedResponses(plans, 20);
+    if (!batch.length) return 0;
+    const tags = await ai.tagComments(batch.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
+    for (const r of batch) store.setTags(r.id, tags.get(r.id) ?? []);
+    return batch.length;
   }
 
   async function slaAlerts() {
@@ -72,7 +84,7 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -85,6 +97,7 @@ export function createJobs({ store, notifier, now = () => new Date(), backups = 
 
   return {
     scheduledInvites,
+    aiTagging,
     inviteReminders,
     slaAlerts,
     weeklyReports,

@@ -518,6 +518,25 @@ export function createStore(db) {
       ).run(yes ? 1 : 0, yes ? 1 : 0, yes ? 1 : 0, yes ? 1 : 0, id);
       return r.changes > 0;
     },
+    /** Completed comments not tagged yet, only for businesses whose plan includes AI. */
+    untaggedResponses: (plans, limit = 20) =>
+      q(`SELECT r.id, r.comment, r.rating FROM responses r
+         JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
+         WHERE r.completed = 1 AND r.comment != '' AND r.tagged_at IS NULL AND r.created_at >= ?
+           AND b.plan IN (${plans.map(() => '?').join(',') || "''"})
+         ORDER BY r.id LIMIT ?`).all(sqlTime(-30 * 864e5), ...plans, limit),
+    setTags: (id, tags) =>
+      q("UPDATE responses SET tags = ?, tagged_at = datetime('now') WHERE id = ?").run(JSON.stringify(tags), id),
+    /** How often each topic came up, split by satisfied / unsatisfied. */
+    topicCounts(businessId, { campaignId = null, days = 30 } = {}) {
+      return q(
+        `SELECT t.value AS topic, SUM(r.sentiment = 'positive') AS positive, SUM(r.sentiment = 'negative') AS negative,
+                COUNT(*) AS total
+         FROM responses r JOIN campaigns c ON c.id = r.campaign_id, json_each(r.tags) t
+         WHERE c.business_id = ? AND r.created_at >= ? ${campaignId ? 'AND c.id = ?' : ''}
+         GROUP BY t.value ORDER BY total DESC LIMIT 10`,
+      ).all(...[businessId, sqlTime(-days * 864e5), ...(campaignId ? [campaignId] : [])]);
+    },
     setPublished: (id, on) => q('UPDATE responses SET published = ? WHERE id = ? AND publish_consent = 1').run(on ? 1 : 0, id),
     setAiDraft: (id, text) => q('UPDATE responses SET ai_draft = ? WHERE id = ?').run(text, id),
     /** Testimonials approved for the public widget. */
@@ -558,9 +577,13 @@ export function createStore(db) {
 
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),
-    listResponses(businessId, { campaignId, sentiment, status, search, overdue, consent, limit = 100, offset = 0 } = {}) {
+    listResponses(businessId, { campaignId, sentiment, status, search, overdue, consent, tag, limit = 100, offset = 0 } = {}) {
       const where = ['c.business_id = ?'];
       const args = [businessId];
+      if (tag) {
+        where.push('EXISTS (SELECT 1 FROM json_each(r.tags) WHERE value = ?)');
+        args.push(tag);
+      }
       if (overdue) {
         where.push(
           "r.sentiment = 'negative' AND r.status = 'new' AND b.sla_hours > 0 AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')",

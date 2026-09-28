@@ -238,6 +238,12 @@ const MIGRATIONS = [
   CREATE INDEX idx_invites_campaign_phone ON invites(campaign_id, phone);
   CREATE INDEX idx_invites_send_at ON invites(send_at);
   `,
+  // v8: AI topic tags on comments
+  `
+  ALTER TABLE responses ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';
+  ALTER TABLE responses ADD COLUMN tagged_at TEXT;
+  CREATE INDEX idx_responses_untagged ON responses(tagged_at, completed);
+  `,
 ];
 
 function migrate(db) {

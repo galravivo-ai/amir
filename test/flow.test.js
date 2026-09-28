@@ -12,6 +12,10 @@ const fakeAi = {
     this.calls.push(['draft', input]);
     return `טיוטה עבור ${input.customerName}`;
   },
+  async tagComments(items) {
+    this.calls.push(['tag', items]);
+    return new Map(items.map((i) => [i.id, /slow|wait/i.test(i.text) ? ['זמן המתנה'] : ['שירות']]));
+  },
   async summarize(input) {
     this.calls.push(['summary', input]);
     return `## בשורה התחתונה\nנותחו ${input.rows.length} משובים\n- **שירות** טוב`;
@@ -756,4 +760,25 @@ test('public API: automatic survey requests', async () => {
   const [k] = store.apiKeysFor(campaign.business_id);
   await owner.req(`/admin/integrations/keys/${k.id}/revoke`, { method: 'POST', form: { _csrf: await csrfOf(owner) } });
   assert.equal((await api('/ping', { key })).status, 401);
+});
+
+test('AI topic tagging', async () => {
+  const owner = await registeredOwner('tags@example.com');
+  const campaign = await createCampaign(owner);
+  const free = await completeSurvey(campaign.slug, 2, { comment: 'slow service before upgrade' });
+  store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  const a = await completeSurvey(campaign.slug, 1, { comment: 'we had to wait an hour' });
+  const b = await completeSurvey(campaign.slug, 5, { comment: 'lovely staff' });
+  const { jobs } = createApp(store.db, { ai: fakeAi, backups: false });
+  // Everything pending across businesses gets tagged in small batches.
+  while ((await jobs.aiTagging()) > 0);
+  assert.deepEqual(JSON.parse(store.responseByToken(a.token).tags), ['זמן המתנה']);
+  assert.deepEqual(JSON.parse(store.responseByToken(b.token).tags), ['שירות']);
+  assert.ok(store.responseByToken(free.token).tagged_at, 'plan checked at tagging time');
+
+  const filtered = await owner.req(`/admin/responses?tag=${encodeURIComponent('זמן המתנה')}`);
+  assert.match(filtered.text, /wait an hour/);
+  assert.doesNotMatch(filtered.text, /lovely staff/);
+  const dash = await owner.req('/admin');
+  assert.match(dash.text, /נושאים חוזרים/);
 });
