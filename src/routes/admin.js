@@ -265,6 +265,9 @@ export function adminRoutes(ctx) {
       'קמפיינים',
       V.campaignsView({
         campaigns: store.campaignsFor(req.business.id),
+        summaries: Object.fromEntries(
+          store.campaignsFor(req.business.id).map((c) => [c.id, store.periodSummary(req.business.id, { campaignId: c.id, fromDays: 30 })]),
+        ),
         baseUrl: ctx.baseUrl(req),
         can: req.can,
         limitReached: campaignLimitReached(req) ? limitMessage(req) : '',
@@ -365,7 +368,8 @@ export function adminRoutes(ctx) {
     if (!c) return;
     const qrSvg = await QRCode.toString(qrTarget(req, c), { type: 'svg', ...QR_OPTS });
     store.setOnboardingFlag(req.business.id, 'poster');
-    res.send(V.posterView({ campaign: c, business: req.business, qrSvg, t: textsFor(c) }));
+    const staff = store.staffByCode(req.business.id, req.query.e);
+    res.send(V.posterView({ campaign: c, business: req.business, qrSvg, t: textsFor(c), staff }));
   });
 
   admin.get('/campaigns/:id/share', (req, res) => {

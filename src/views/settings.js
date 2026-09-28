@@ -2,6 +2,7 @@ import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { formatDate, h, logoSrc } from '../util.js';
 import { agenciesAdminBlock } from './agency.js';
+import { icon } from './icons.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -61,9 +62,13 @@ export function businessView({ business, csrf, plan, error = '' }) {
     <div class="logo-row">
       ${logoSrc(business) ? `<img class="logo-preview" src="${h(logoSrc(business))}" alt="הלוגו הנוכחי">` : '<div class="logo-preview empty">אין לוגו</div>'}
       <form method="post" action="/admin/business/logo?_csrf=${h(csrf)}" enctype="multipart/form-data" class="stack">
-        <label>העלאת קובץ (PNG, JPG, WebP או GIF, עד 1MB)
-          <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+        <label class="file-pick">
+          <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required
+            onchange="this.parentNode.querySelector('.file-name').textContent = this.files[0] ? this.files[0].name : 'לא נבחר קובץ'">
+          <span class="btn">${icon('inbox', 18)} בחירת קובץ</span>
+          <span class="file-name">לא נבחר קובץ</span>
         </label>
+        <small class="muted">PNG, JPG, WebP או GIF, עד 1MB</small>
         <div class="actions">
           <button class="btn primary">העלאה</button>
         </div>
@@ -110,7 +115,7 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
   }
   <div class="grid2">
     <section class="card">
-      <h3>חברי צוות (${seatsUsed} מתוך ${limitLabel(plan.teamMembers)})</h3>
+      <h3>חברי צוות (${plan.teamMembers === Infinity ? seatsUsed : `${seatsUsed} מתוך ${limitLabel(plan.teamMembers)}`})</h3>
       <table class="table">
         <thead><tr><th>שם</th><th>תפקיד</th><th></th></tr></thead>
         <tbody>${members
@@ -276,7 +281,10 @@ export function integrationsView({ keys, newKey, csrf, baseUrl, available, campa
 
 export function planView({ business, plan, usage }) {
   const meter = (label, used, max) => {
-    const pct = max === Infinity ? 0 : Math.min(100, (used / max) * 100);
+    if (max === Infinity) {
+      return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} · ללא הגבלה</span></div></div>`;
+    }
+    const pct = Math.min(100, (used / max) * 100);
     return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} / ${limitLabel(max)}</span></div>
       <div class="dist-bar"><span class="${pct >= 100 ? 'bad' : pct >= 80 ? 'mid' : 'good'}" style="width:${pct}%"></span></div></div>`;
   };
@@ -294,6 +302,9 @@ export function planView({ business, plan, usage }) {
         .map(([k, p]) => `<th>${h(p.label)}${k === business.plan ? ' ✓' : ''}</th>`)
         .join('')}</tr></thead>
       <tbody>
+        <tr><td><b>מחיר לחודש</b></td>${Object.values(PLANS)
+          .map((p) => `<td><b>${p.price == null ? 'לפי הצעה' : p.price === 0 ? 'חינם' : `₪${p.price}`}</b></td>`)
+          .join('')}</tr>
         <tr><td>קמפיינים</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.campaigns)}</td>`).join('')}</tr>
         <tr><td>משתמשים</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.teamMembers)}</td>`).join('')}</tr>
         <tr><td>דירוגים בחודש</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.monthlyResponses)}</td>`).join('')}</tr>
@@ -337,7 +348,7 @@ export function renderInsight(text) {
 export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllows, canGenerate, error }) {
   let form = '';
   if (!aiConfigured) {
-    form = `<p class="muted">עוזר ה-AI לא מוגדר בשרת. כדי להפעיל אותו צריך להגדיר את משתנה הסביבה <code>ANTHROPIC_API_KEY</code>.</p>`;
+    form = `<p class="muted">עוזר ה-AI עוד לא הופעל במערכת. מנהל המערכת יכול להפעיל אותו, ואז יופיע כאן כפתור לסיכום המשובים.</p>`;
   } else if (!planAllows) {
     form = `<p class="muted">תובנות AI זמינות בתוכנית מקצועי ומעלה. <a href="/admin/plan">פרטים</a></p>`;
   } else if (canGenerate) {

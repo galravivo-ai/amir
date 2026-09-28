@@ -118,15 +118,20 @@ function greeting(name) {
   return first ? `${part}, ${first}` : part;
 }
 
+const platformLabel = (p) => (p === 'google' ? 'גוגל' : p);
+
+// Comparing against a handful of ratings is noise ("+1200%"), so trends need a real base.
+const MIN_TREND_BASE = 5;
+
 function trendPct(now, before) {
-  if (!before) return ['', ''];
+  if (before < MIN_TREND_BASE) return ['', ''];
   const change = Math.round(((now - before) / before) * 100);
   if (change === 0) return ['ללא שינוי מהתקופה הקודמת', ''];
   return [`${change > 0 ? '▲' : '▼'} ${Math.abs(change)}% מהתקופה הקודמת`, change > 0 ? 'up' : 'down'];
 }
 
-function trendDiff(now, before) {
-  if (!before || !now) return ['', ''];
+function trendDiff(now, before, baseCount) {
+  if (!before || !now || baseCount < MIN_TREND_BASE) return ['', ''];
   const diff = Math.round((now - before) * 10) / 10;
   if (diff === 0) return ['ללא שינוי מהתקופה הקודמת', ''];
   return [`${diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)} מהתקופה הקודמת`, diff > 0 ? 'up' : 'down'];
@@ -191,7 +196,7 @@ export function dashboardView({
           ? `${stats.avgResolveHours.toFixed(1)} שע׳`
           : `${(stats.avgResolveHours / 24).toFixed(1)} ימים`;
   const [respHint, respTrend] = trendPct(stats.responses, prev.responses);
-  const [avgHint, avgTrend] = trendDiff(stats.avgRating, prev.avgRating);
+  const [avgHint, avgTrend] = trendDiff(stats.avgRating, prev.avgRating, prev.responses);
 
   return `<div class="dash-head">
       <div class="titles"><h1>${h(greeting(userName))}</h1><p class="muted" style="margin:0">מה קרה ב-${days} הימים האחרונים</p></div>
@@ -305,7 +310,7 @@ export function responsesTable(rows) {
           <td data-l="דירוג">${stars(r.rating)}</td>
           <td data-l="הערה" class="clip">${h(r.comment) || (r.completed ? '' : '<span class="muted small">לא השלים סקר</span>')}${tagChips(r.tags)}</td>
           <td data-l="לקוח">${h(r.customer_name)} ${r.phone ? `<div class="small" dir="ltr">${h(r.phone)}</div>` : ''}</td>
-          <td data-l="ביקורת">${clicks.length ? h(clicks.join(', ')) : '—'}</td>
+          <td data-l="ביקורת">${clicks.length ? h(clicks.map(platformLabel).join(', ')) : '—'}</td>
           <td data-l="סטטוס">${
             r.sentiment === 'negative'
               ? `${statusBadge(r.status)}${r.overdue ? ' <span class="badge st-late">באיחור</span>' : ''}`
@@ -378,7 +383,7 @@ export function responseDetailView({ r, csrf, businessName, followupUrl = '', ca
           <dt>מקור</dt><dd>${h(r.source || '—')}</dd>
           <dt>עובד</dt><dd>${h(r.staff_name || '—')}</dd>
           <dt>השלים סקר</dt><dd>${r.completed ? 'כן' : 'לא (רק דירג)'}</dd>
-          <dt>לחץ על ביקורת</dt><dd>${clicks.length ? h(clicks.join(', ')) : 'לא'}</dd>
+          <dt>לחץ על ביקורת</dt><dd>${clicks.length ? h(clicks.map(platformLabel).join(', ')) : 'לא'}</dd>
           ${Object.entries(answers)
             .map(([k, v]) => `<dt>${h(labelOf[k] || k)}</dt><dd>${h([].concat(v).join(', '))}</dd>`)
             .join('')}
@@ -481,7 +486,7 @@ function publishSection({ r, csrf, canEdit }) {
 
 // ---------------------------------------------------------------- campaigns
 
-export function campaignsView({ campaigns, baseUrl, can = () => true, limitReached = '' }) {
+export function campaignsView({ campaigns, baseUrl, can = () => true, limitReached = '', summaries = {} }) {
   const newButton = can('manager') && !limitReached ? '<a class="btn primary" href="/admin/campaigns/new">+ קמפיין חדש</a>' : '';
   return `<div class="page-head"><h1>קמפיינים ו-QR</h1>${newButton}</div>
     ${limitReached && can('manager') ? `<div class="warn">${h(limitReached)}</div>` : ''}
@@ -491,6 +496,14 @@ export function campaignsView({ campaigns, baseUrl, can = () => true, limitReach
         ? `<div class="cards">${campaigns
             .map((c) => {
               const url = `${baseUrl}/r/${c.slug}`;
+              const s = summaries[c.id];
+              const mini = s
+                ? `<div class="camp-stats" aria-label="30 הימים האחרונים">
+                    <span><b>${s.responses}</b>דירוגים</span>
+                    <span><b>${s.responses ? s.avgRating.toFixed(1) : '—'}</b>ממוצע</span>
+                    <span><b>${s.reviewed}</b>לגוגל</span>
+                  </div>`
+                : '';
               return `<div class="card camp">
                 <img class="qr-thumb" src="/admin/campaigns/${c.id}/qr.svg" alt="QR">
                 <div>
@@ -503,6 +516,7 @@ export function campaignsView({ campaigns, baseUrl, can = () => true, limitReach
                     <a class="btn" href="/admin?campaign=${c.id}">נתונים</a>
                   </div>
                 </div>
+                ${mini}
               </div>`;
             })
             .join('')}</div>`
@@ -721,17 +735,34 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
   </div>`;
 }
 
-export function posterView({ campaign, business, qrSvg, t }) {
+export function posterView({ campaign, business, qrSvg, t, staff = null }) {
+  const logo = logoSrc(business);
+  const mark = logo
+    ? `<img class="poster-logo" src="${h(logo)}" alt="">`
+    : `<span class="poster-initial">${h(String(business.name).trim().charAt(0) || '★')}</span>`;
+  const heading = staff ? t.poster_staff.replace('{name}', staff.name) : t.title;
+  const steps = [t.poster_step1, t.poster_step2, t.poster_step3];
   return `<!doctype html><html lang="${h(campaign.lang)}" dir="${h(t.dir)}"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${h(business.name)} · QR</title><link rel="stylesheet" href="/static/style.css">
   <style>:root{--brand:${safeColor(business.brand_color)}}</style></head>
-  <body class="poster"><div class="poster-inner">
-    ${logoSrc(business) ? `<img class="logo" src="${h(logoSrc(business))}" alt="">` : ''}
-    <h1>${h(t.title)}</h1>
-    <p>${h(t.subtitle)}</p>
-    <div class="poster-qr">${qrSvg}</div>
-    <div class="poster-stars">★★★★★</div>
-    <p class="poster-biz">${h(business.name)}</p>
-    <button class="btn primary noprint" onclick="print()">הדפסה</button>
-  </div></body></html>`;
+  <body class="poster">
+    <div class="poster-toolbar noprint">
+      <span>שלט מוכן להדפסה על דף A4. אפשר גם לשמור כ-PDF מחלון ההדפסה.</span>
+      <button class="btn accent" onclick="print()">הדפסה</button>
+    </div>
+    <article class="poster-sheet">
+      <header class="poster-band">${mark}<span class="poster-biz">${h(business.name)}</span></header>
+      <div class="poster-body">
+        <h1>${h(heading)}</h1>
+        <p class="poster-sub">${h(t.subtitle)}</p>
+        <div class="poster-qr-wrap">
+          <span class="poster-badge">${h(t.poster_badge)}</span>
+          <div class="poster-qr">${qrSvg}</div>
+        </div>
+        <ol class="poster-steps">${steps.map((s, i) => `<li><span>${i + 1}</span>${h(s)}</li>`).join('')}</ol>
+        <div class="poster-stars" aria-hidden="true">★★★★★</div>
+      </div>
+    </article>
+  </body></html>`;
 }

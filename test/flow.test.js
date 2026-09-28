@@ -980,3 +980,22 @@ test('staff and branch leaderboard', async () => {
   assert.equal(r.status, 404);
   assert.ok(store.staffMember(eve.id, bizId));
 });
+
+test('every admin screen renders for an owner', async () => {
+  const owner = await registeredOwner('screens@example.com');
+  const campaign = await createCampaign(owner);
+  const pages = [
+    '/admin', '/admin/responses', '/admin/campaigns', '/admin/campaigns/new', '/admin/campaigns/new?template=clinic&lang=ar',
+    `/admin/campaigns/${campaign.id}`, `/admin/campaigns/${campaign.id}/share`, `/admin/campaigns/${campaign.id}/poster`,
+    '/admin/leaderboard', '/admin/staff', '/admin/insights', '/admin/widget', '/admin/team', '/admin/integrations',
+    '/admin/business', '/admin/plan', '/account',
+  ];
+  for (const p of pages) {
+    const r = await owner.req(p);
+    assert.ok([200, 403].includes(r.status), `${p} -> ${r.status}`);
+    assert.doesNotMatch(r.text, /undefined|NaN|\[object Object\]/, `${p} has a rendering leak`);
+  }
+  const missing = await owner.req('/admin/nope');
+  assert.equal(missing.status, 404);
+  assert.match(missing.text, /לדף הראשי/);
+});

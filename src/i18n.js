@@ -44,6 +44,11 @@ export const PUBLIC_TEXTS = {
     followup_done: 'כבר ענית על השאלה הזו. תודה!',
     staff_label: 'מי נתן לך שירות?',
     staff_unknown: 'לא יודע/ת',
+    poster_badge: 'סרקו אותי',
+    poster_step1: 'סורקים את הקוד במצלמה',
+    poster_step2: 'מדרגים מ-1 עד 5',
+    poster_step3: 'זהו! תודה רבה',
+    poster_staff: 'איך היה השירות של {name}?',
   },
   en: {
     dir: 'ltr',
@@ -88,6 +93,11 @@ export const PUBLIC_TEXTS = {
     followup_done: 'You already answered this question. Thank you!',
     staff_label: 'Who served you?',
     staff_unknown: "I don't know",
+    poster_badge: 'Scan me',
+    poster_step1: 'Scan the code with your camera',
+    poster_step2: 'Rate us from 1 to 5',
+    poster_step3: "That's it! Thank you",
+    poster_staff: 'How was your service with {name}?',
   },
   ar: {
     dir: 'rtl',
@@ -132,6 +142,11 @@ export const PUBLIC_TEXTS = {
     followup_done: 'لقد أجبت على هذا السؤال من قبل. شكرًا!',
     staff_label: 'من قدّم لك الخدمة؟',
     staff_unknown: 'لا أعرف',
+    poster_badge: 'امسحني',
+    poster_step1: 'امسح الرمز بالكاميرا',
+    poster_step2: 'قيّمنا من 1 إلى 5',
+    poster_step3: 'هذا كل شيء! شكرًا',
+    poster_staff: 'كيف كانت الخدمة مع {name}؟',
   },
   ru: {
     dir: 'ltr',
@@ -176,6 +191,11 @@ export const PUBLIC_TEXTS = {
     followup_done: 'Вы уже ответили на этот вопрос. Спасибо!',
     staff_label: 'Кто вас обслуживал?',
     staff_unknown: 'Не знаю',
+    poster_badge: 'Сканируйте',
+    poster_step1: 'Наведите камеру на код',
+    poster_step2: 'Оцените нас от 1 до 5',
+    poster_step3: 'Готово! Спасибо',
+    poster_staff: 'Как вас обслужил(а) {name}?',
   },
 };
 
