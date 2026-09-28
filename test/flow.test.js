@@ -369,8 +369,9 @@ test('team invites and roles', async () => {
   assert.match(demote.location, /err=/);
 });
 
-test('plan limits: free plan has one campaign and no AI', async () => {
+test('plan limits: basic plan has one campaign and no AI', async () => {
   const owner = await registeredOwner('free@example.com');
+  store.updateBusiness(bizOf('free@example.com').id, { plan: 'basic', billing: 'active' });
   await createCampaign(owner);
   const second = await owner.req('/admin/campaigns', {
     method: 'POST',
@@ -395,7 +396,8 @@ test('publish consent and testimonials widget', async () => {
   assert.equal(r.publish_consent, 1);
   assert.equal(r.published, 0, 'needs approval unless auto-publish is on');
 
-  // Free plan: widget disabled.
+  // Basic plan: widget disabled.
+  store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
   assert.equal((await client().req(`/widget/${biz.widget_key}`)).status, 404);
 
   store.updateBusiness(biz.id, { plan: 'pro' });
@@ -720,12 +722,12 @@ test('public API: automatic survey requests', async () => {
       body: raw ?? (body ? JSON.stringify(body) : undefined),
     }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
-  // Free plan: no API.
+  // Basic plan: no API.
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
   const created = await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } });
   const key = decodeURIComponent(created.location.match(/key=([^&]+)/)[1]);
   assert.match(key, /^rk_/);
-  store.updateBusiness(campaign.business_id, { plan: 'free' });
+  store.updateBusiness(campaign.business_id, { plan: 'basic' });
   assert.equal((await api('/ping', { key })).status, 403);
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
 
@@ -998,4 +1000,65 @@ test('every admin screen renders for an owner', async () => {
   const missing = await owner.req('/admin/nope');
   assert.equal(missing.status, 404);
   assert.match(missing.text, /לדף הראשי/);
+});
+
+test('trial, plan request and activation', async () => {
+  const owner = await registeredOwner('trial@example.com');
+  const biz = () => bizOf('trial@example.com');
+  assert.equal(biz().billing, 'trial');
+  assert.equal(biz().plan, 'pro', 'the trial opens every feature');
+
+  const dash = await owner.req('/admin');
+  assert.match(dash.text, /תקופת ניסיון: עוד 7 ימים/);
+  const campaign = await createCampaign(owner);
+  assert.equal((await client().req(`/r/${campaign.slug}`)).status, 200);
+
+  // The day before the end: one reminder, then silence.
+  store.updateBusiness(biz().id, { trial_ends_at: new Date(Date.now() + 12 * 3600e3).toISOString().slice(0, 19).replace('T', ' ') });
+  const { jobs } = createApp(store.db, { ai: null, backups: false });
+  await jobs.trialNotices();
+  await jobs.trialNotices();
+  assert.equal(outbox('trial_ending').filter((m) => m.to_addr === 'trial@example.com').length, 1);
+
+  // Trial over: surveys, API and widget stop; the data stays visible.
+  store.updateBusiness(biz().id, { trial_ends_at: '2000-01-01 00:00:00' });
+  await jobs.trialNotices();
+  assert.equal(outbox('trial_ended').filter((m) => m.to_addr === 'trial@example.com').length, 1);
+  const scan = await client().req(`/r/${campaign.slug}`);
+  assert.match(scan.text, /לא פעיל כרגע/);
+  const rate = await client().req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '5' } });
+  assert.equal(rate.location, `/r/${campaign.slug}`, 'no rating is recorded');
+  assert.match((await owner.req('/admin')).text, /תקופת הניסיון הסתיימה/);
+
+  // The owner asks for a plan; admins are told.
+  const req = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'business', cycle: 'annual' } });
+  assert.equal(req.location, '/admin/plan?requested=1');
+  const page = await owner.req(req.location);
+  assert.match(page.text, /ביקשת את מסלול <b>עסקי<\/b> \(שנתי\)/);
+  assert.match(page.text, /₪3,990/);
+
+  // A system admin sees the request and activates it.
+  const root = await registeredOwner('billing-admin@example.com');
+  store.setSuperadmin(store.userByEmail('billing-admin@example.com').id, true);
+  assert.match((await root.req('/superadmin')).text, /ביקש: עסקי שנתי/);
+  await root.req(`/superadmin/businesses/${biz().id}/plan`, {
+    method: 'POST',
+    form: { _csrf: await csrfOf(root), plan: 'business', cycle: 'annual', do: 'activate' },
+  });
+  assert.equal(biz().billing, 'active');
+  assert.equal(biz().plan, 'business');
+  assert.equal(biz().plan_request, null);
+  assert.equal((await client().req(`/r/${campaign.slug}`)).status, 200);
+  assert.doesNotMatch((await client().req(`/r/${campaign.slug}`)).text, /לא פעיל כרגע/);
+
+  // Extending a trial and pausing work from the same form.
+  await root.req(`/superadmin/businesses/${biz().id}/plan`, { method: 'POST', form: { _csrf: await csrfOf(root), do: 'pause' } });
+  assert.match((await client().req(`/r/${campaign.slug}`)).text, /לא פעיל כרגע/);
+  await root.req(`/superadmin/businesses/${biz().id}/plan`, { method: 'POST', form: { _csrf: await csrfOf(root), do: 'extend' } });
+  assert.equal(biz().billing, 'trial');
+  assert.doesNotMatch((await client().req(`/r/${campaign.slug}`)).text, /לא פעיל כרגע/);
+
+  // An unknown plan is ignored.
+  const bad = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'nope' } });
+  assert.equal(bad.location, '/admin/plan');
 });

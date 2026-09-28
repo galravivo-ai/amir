@@ -140,6 +140,53 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    async trialEnding(business) {
+      return mailer.send({
+        kind: 'trial_ending',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `תקופת הניסיון של ${business.name} מסתיימת מחר`,
+        html: emailLayout({
+          title: 'תקופת הניסיון מסתיימת מחר',
+          body: `<p>מחר מסתיימים 7 ימי הניסיון של <b>${h(business.name)}</b>.</p>
+            <p>כדי שהסקרים ימשיכו לעבוד בלי הפסקה, בחרו מסלול. הנתונים וההגדרות נשמרים כמו שהם.</p>
+            ${emailButton(url('/admin/plan'), 'בחירת מסלול')}`,
+        }),
+      });
+    },
+
+    async trialEnded(business) {
+      return mailer.send({
+        kind: 'trial_ended',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `תקופת הניסיון של ${business.name} הסתיימה`,
+        html: emailLayout({
+          title: 'תקופת הניסיון הסתיימה',
+          body: `<p>הסקרים של <b>${h(business.name)}</b> מושהים עד שתבחרו מסלול. לקוח שסורק את ה-QR יראה שהסקר לא פעיל כרגע.</p>
+            <p>כל הנתונים שמורים, ואפשר להמשיך להיכנס ולצפות בהם.</p>
+            ${emailButton(url('/admin/plan'), 'בחירת מסלול')}`,
+        }),
+      });
+    },
+
+    /** A business asked for a plan: tell the people who activate plans. */
+    async planRequested({ business, plan, cycle, user, admins }) {
+      if (!admins.length) return false;
+      return mailer.send({
+        kind: 'plan_request',
+        businessId: business.id,
+        to: admins,
+        subject: `בקשה למסלול ${plan.label} (${cycle}) · ${business.name}`,
+        html: emailLayout({
+          title: 'עסק ביקש מסלול',
+          body: `<p><b>${h(business.name)}</b> ביקש את מסלול <b>${h(plan.label)}</b>, תשלום ${h(cycle)}.</p>
+            <p>מבקש: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
+            ${emailButton(url('/superadmin#businesses'), 'להפעלה בניהול המערכת')}`,
+        }),
+      });
+    },
+
     async weeklyReport(business, stats) {
       const color = safeColor(business.brand_color);
       const row = (label, value) =>

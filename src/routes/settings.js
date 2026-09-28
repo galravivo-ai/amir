@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { limitLabel } from '../plans.js';
+import { CYCLES, limitLabel, PLANS, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -65,7 +65,7 @@ export function settingsRoutes(ctx) {
   router.post('/businesses', (req, res) => {
     const name = String(req.body.name ?? '').trim().slice(0, 100);
     if (!name) return res.redirect(303, '/admin/business');
-    const id = store.createBusiness(req.user.id, { name });
+    const id = store.createBusiness(req.user.id, { name: name, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
     res.cookie(BIZ_COOKIE, String(id), { ...ctx.cookieOpts, maxAge: 365 * 864e5 });
     res.redirect(303, '/admin/campaigns/new');
   });
@@ -193,6 +193,20 @@ export function settingsRoutes(ctx) {
   });
 
   // ---------- plan ----------
+  // No online payment yet: the owner asks for a plan and the operator activates it.
+  router.post('/plan/request', owner, async (req, res) => {
+    const plan = Object.hasOwn(PLANS, req.body.plan) ? req.body.plan : null;
+    const cycle = Object.hasOwn(CYCLES, req.body.cycle) ? req.body.cycle : 'monthly';
+    if (!plan) return res.redirect(303, '/admin/plan');
+    store.updateBusiness(req.business.id, {
+      plan_request: JSON.stringify({ plan, cycle, by: req.user.email, at: new Date().toISOString() }),
+    });
+    await ctx.notifier
+      ?.planRequested({ business: req.business, plan: PLANS[plan], cycle: CYCLES[cycle], user: req.user, admins: ctx.adminEmails() })
+      .catch((err) => console.error('[notify] planRequested failed:', err));
+    res.redirect(303, '/admin/plan?requested=1');
+  });
+
   router.get('/plan', (req, res) => {
     render(
       req,
@@ -201,6 +215,11 @@ export function settingsRoutes(ctx) {
       V.planView({
         business: req.business,
         plan: req.plan,
+        access: req.access,
+        request: parseJson(req.business.plan_request, null),
+        requested: req.query.requested === '1',
+        csrf: req.user.csrf,
+        can: req.can,
         usage: {
           campaigns: store.campaignsFor(req.business.id).length,
           members: store.membersOf(req.business.id).length,

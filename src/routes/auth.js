@@ -1,4 +1,5 @@
 import express from 'express';
+import { TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import QRCode from 'qrcode';
 import { generateBackupCodes, generateSecret, otpauthUri, verifyCode } from '../totp.js';
 import { operatorInfo } from '../views/site.js';
@@ -116,7 +117,7 @@ export function authRoutes(ctx) {
       return render(req, res, 'הרשמה', V.registerView({ error, values: v }));
     }
     const userId = createUser(v);
-    store.createBusiness(userId, { name: v.business });
+    store.createBusiness(userId, { name: v.business, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
     ctx.startSession(res, userId);
     res.redirect(303, '/admin');
   });

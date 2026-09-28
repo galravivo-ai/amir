@@ -574,3 +574,41 @@ input.copy { width: 100%; font-size: .85rem; }
 .file-name { color: var(--muted); font-size: .92rem; overflow-wrap: anywhere; }
 .poster-qr-wrap { margin-top: 14px; }
 @media screen and (max-width: 640px) { .poster-sheet { aspect-ratio: auto; } .poster-body { gap: 18px; padding-block: 24px 28px; } }
+
+/* ---------- trial / paused bar ---------- */
+.trial-bar { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .75rem 1rem; border-radius: 14px; background: var(--yellow-soft); color: var(--ink); text-decoration: none; border: 1px solid #f5dd8a; }
+.trial-bar > span:first-of-type { flex: 1; min-width: 12rem; }
+.trial-bar .trial-cta { font-weight: 700; color: var(--purple); white-space: nowrap; }
+.trial-bar.paused { background: var(--bad-soft); border-color: #f6c3b5; }
+.trial-bar.paused .icon { color: var(--bad); }
+
+/* ---------- pricing (landing + plan page) ---------- */
+.pricing { display: grid; gap: 1.4rem; justify-items: center; }
+.pricing .plans { width: 100%; }
+.cycle-switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+.cycle-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.cycle-switch label { flex-direction: row; align-items: center; gap: .4rem; padding: .55rem 1.2rem; border-radius: 999px; cursor: pointer; font-weight: 600; color: var(--ink-2); }
+.cycle-switch input:checked + label { background: var(--night); color: #fff; }
+.cycle-switch input:focus-visible + label { outline: 3px solid var(--purple-soft); }
+.save-chip { font-size: .72rem; font-weight: 700; background: var(--yellow); color: var(--night); padding: .15em .55em; border-radius: 999px; }
+.pricing .when-annual { display: none; }
+.pricing:has(input[value="annual"]:checked) .when-annual { display: block; }
+.pricing:has(input[value="annual"]:checked) .when-monthly { display: none; }
+.plan { display: flex; flex-direction: column; }
+.plan ul { flex: 1; margin-bottom: 1.2rem; }
+.plan-tagline { margin: .2rem 0 0; color: var(--muted); font-size: .92rem; }
+.plan .save { display: block; color: var(--good); font-weight: 700; font-size: .85rem; }
+.plan-cta { width: 100%; justify-content: center; }
+.plan.current { outline: 3px solid var(--good-soft); }
+.plan.current::after { content: 'המסלול שלכם'; position: absolute; top: -.85rem; inset-inline-end: 1rem; background: var(--good); color: #fff; font-size: .8rem; font-weight: 700; padding: .15em .8em; border-radius: 999px; }
+.pricing-note { margin: 0; text-align: center; color: var(--muted); font-size: .92rem; }
+.band-sub { text-align: center; color: var(--ink-2); margin: -.4rem auto 1.4rem; max-width: 60ch; }
+.agency-offer { max-width: 940px; margin: 1.4rem auto 0; padding: 1rem 1.3rem; border-radius: 16px; background: var(--night); color: var(--night-text); }
+.agency-offer b { color: var(--yellow); }
+.plan-status { display: grid; gap: .2rem; padding: .9rem 1.1rem; border-radius: 14px; background: var(--good-soft); }
+.plan-status.trial { background: var(--yellow-soft); }
+.plan-status.paused { background: var(--bad-soft); }
+.plan-status span { color: var(--ink-2); }
+.billing-cell { display: grid; gap: .35rem; min-width: 16rem; }
+.billing-cell .row.compact select { width: auto; min-height: 36px; padding-block: .2rem; }
+.req-flag { color: var(--warn); }

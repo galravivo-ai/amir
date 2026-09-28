@@ -1,4 +1,4 @@
-import { planOf } from '../plans.js';
+import { accessOf, planOf, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import { roleAtLeast } from '../store.js';
 import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
 import { operatorInfo } from '../views/site.js';
@@ -31,6 +31,8 @@ export function createContext(
     signupOpen: () => allowSignup || store.countUsers() === 0,
     baseUrl: (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`,
     isSuperadmin: (user) => Boolean(user && (user.is_superadmin || superEmails.includes(user.email))),
+    /** Who gets operator emails such as plan requests. */
+    adminEmails: () => [...new Set([...store.superadminEmails(), ...superEmails])],
 
     startSession(res, userId) {
       res.cookie(SESSION_COOKIE, store.createSession(userId), { ...cookieOpts, maxAge: 30 * 864e5 });
@@ -75,8 +77,13 @@ export function createContext(
           isAgency: req.user ? store.agenciesForUser(req.user.id).length > 0 : false,
           openCount: b ? store.openIssuesCount(b.id) : 0,
           usage: b
-            ? { used: store.monthlyResponseCount(b.id), limit: req.plan.monthlyResponses, planLabel: req.plan.label }
+            ? {
+                used: store.monthlyResponseCount(b.id),
+                limit: req.plan.monthlyResponses,
+                planLabel: req.access?.state === 'trial' ? `${req.plan.label} · ניסיון` : req.access?.state === 'paused' ? `${req.plan.label} · מושהה` : req.plan.label,
+              }
             : null,
+          access: req.access,
           body,
           ...extra,
         }),
@@ -91,12 +98,13 @@ export function createContext(
       req.business = req.businesses.find((b) => b.id === wanted) || req.businesses[0];
       if (!req.business) {
         // A user whose last business was removed gets a fresh one.
-        const id = store.createBusiness(req.user.id, { name: 'העסק שלי' });
+        const id = store.createBusiness(req.user.id, { name: 'העסק שלי', plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
         req.business = store.business(id, req.user.id);
         req.businesses = [req.business];
       }
       req.role = req.business.role;
       req.plan = planOf(req.business);
+      req.access = accessOf(req.business);
       req.can = (min) => roleAtLeast(req.role, min);
       res.locals.can = req.can;
       next();

@@ -1,6 +1,7 @@
-import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
+import { TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 import { icon, starMark } from './icons.js';
+import { agencyOffer, pricingCards } from './pricing.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 export function operatorInfo() {
@@ -91,24 +92,22 @@ export function landingView({ signupOpen }) {
     ['chat', 'המלצות באתר שלכם', 'לקוחות מרוצים מאשרים פרסום, ואתם מציגים את ההמלצות באתר בשתי שורות קוד.'],
     ['team', 'צוות וסניפים', 'כמה סניפים ועסקים בחשבון אחד, עם הרשאות לכל עובד.'],
   ];
-  const plans = Object.entries(PLANS);
-  const price = (p) =>
-    p.price == null
-      ? '<span class="price-contact">צרו קשר</span>'
-      : p.price === 0
-        ? '<span class="price">חינם</span>'
-        : `<span class="price">₪${p.price}</span><span class="muted"> / חודש</span>`;
   const faq = [
     [
       'זה מותר לפי הכללים של גוגל?',
       'כן. גוגל אוסרת להסתיר את האפשרות לכתוב ביקורת מלקוחות לא מרוצים ("Review gating"). אצלנו כל לקוח יכול לכתוב ביקורת בגוגל. ההבדל הוא שללקוח לא מרוצה אנחנו מציעים קודם ערוץ ישיר אליכם, כדי שתוכלו לתקן.',
     ],
     ['הלקוח צריך להוריד אפליקציה?', 'לא. סורקים QR או לוחצים על קישור, והסקר נפתח בדפדפן. זה לוקח פחות מדקה.'],
+    [
+      `מה קורה אחרי ${TRIAL_DAYS} ימי הניסיון?`,
+      'בוחרים מסלול וממשיכים בלי הפסקה. אם לא בוחרים, הסקרים ללקוחות מושהים, אבל כל הנתונים וההגדרות נשמרים ואפשר לחזור בכל רגע. אף אחד לא מחייב אתכם בלי שביקשתם.',
+    ],
+    ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],
     ['כמה זמן לוקח להתחיל?', 'כמה דקות: נרשמים, מדביקים את הקישור לביקורות בגוגל, ומדפיסים את שלט ה-QR.'],
     ['אפשר לשנות את השאלות?', 'כן. בוחרים שאלות, סוגי תשובות, ולמי כל שאלה מוצגת: לכולם, רק למרוצים או רק ללא מרוצים.'],
     ['מה עם פרטיות הלקוחות שלי?', 'המידע שייך לכם, לא מוצג לאף אחד אחר ולא נמכר. פרטים מלאים ב<a href="/privacy">מדיניות הפרטיות</a>.'],
   ];
-  const cta = signupOpen ? '<a class="btn accent big-inline" href="/register">להתחיל בחינם</a>' : '<a class="btn accent big-inline" href="/login">כניסה</a>';
+  const cta = signupOpen ? `<a class="btn accent big-inline" href="/register">להתחיל ${TRIAL_DAYS} ימים חינם</a>` : '<a class="btn accent big-inline" href="/login">כניסה</a>';
   return sitePage({
     title: `${operatorInfo().brand} · קדימה ל-5 כוכבים`,
     description: 'מערכת לאיסוף משוב מלקוחות, הגדלת ביקורות בגוגל וטיפול בלקוחות לא מרוצים. QR, סקר קצר, התראות ו-AI.',
@@ -146,26 +145,16 @@ export function landingView({ signupOpen }) {
 </section>
 
 <section class="band" id="pricing">
-  <h2>מחירים</h2>
-  <div class="plans">
-    ${plans
-      .map(
-        ([key, p]) => `<div class="plan ${key === 'pro' ? 'featured' : ''}">
-          ${key === 'pro' ? '<div class="plan-tag">הכי פופולרי</div>' : ''}
-          <h3>${h(p.label)}</h3>
-          <div class="plan-price">${price(p)}</div>
-          <ul>
-            <li>${limitLabel(p.campaigns)} ${p.campaigns === 1 ? 'קמפיין (סניף / QR)' : 'קמפיינים'}</li>
-            <li>${limitLabel(p.teamMembers)} ${p.teamMembers === 1 ? 'משתמש' : 'משתמשים'}</li>
-            <li>${limitLabel(p.monthlyResponses)} דירוגים בחודש</li>
-            ${Object.entries(FEATURE_LABELS)
-              .map(([k, label]) => `<li class="${p[k] ? '' : 'off'}">${p[k] ? '✓' : '✗'} ${h(label)}</li>`)
-              .join('')}
-          </ul>
-        </div>`,
-      )
-      .join('')}
-  </div>
+  <h2>מחירים פשוטים, בלי הפתעות</h2>
+  <p class="band-sub">מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p>
+  ${pricingCards({
+    idPrefix: 'lp',
+    action: () =>
+      signupOpen
+        ? `<a class="btn primary plan-cta" href="/register">${TRIAL_DAYS} ימים חינם</a>`
+        : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
+  })}
+  ${agencyOffer()}
 </section>
 
 <section class="band alt" id="faq">
@@ -296,7 +285,8 @@ export function termsView({ signupOpen }) {
       ],
       [
         'תוכניות ותשלום',
-        '<p>לכל תוכנית יש מגבלות ופיצ\'רים כפי שמפורט בעמוד המחירים. נוכל לעדכן מחירים ותוכניות בהודעה מראש. תוכנית בתשלום מתחדשת עד שתבטלו אותה, וביטול נכנס לתוקף בסוף תקופת החיוב.</p>',
+        `<p>לכל מסלול יש מגבלות ופיצ'רים כפי שמפורט בעמוד המחירים. המחירים כוללים מע״מ. חשבון חדש מקבל ${TRIAL_DAYS} ימי ניסיון בלי תשלום ובלי פרטי אשראי; בסופם, אם לא נבחר מסלול, הסקרים מושהים והנתונים נשמרים.</p>
+        <p>מסלול בתשלום מתחדש עד שתבטלו אותו, וביטול נכנס לתוקף בסוף תקופת החיוב. בתשלום שנתי משלמים מראש על 10 חודשים ומקבלים 12. נוכל לעדכן מחירים ומסלולים בהודעה מראש.</p>`,
       ],
       [
         'זמינות ושינויים בשירות',

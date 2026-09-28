@@ -33,6 +33,17 @@ function isActive(href, current) {
  * Admin shell. With a business: dark sidebar on the right (RTL) and the page
  * beside it. Without one (login, register, reset): a centered single column.
  */
+/** Trial countdown, or the notice that surveys are paused until a plan is chosen. */
+function accessBanner(access, current) {
+  if (!access || access.state === 'active' || current.startsWith('/admin/plan')) return '';
+  if (access.state === 'trial') {
+    const left = access.daysLeft === 1 ? 'יום אחרון' : `עוד ${access.daysLeft} ימים`;
+    return `<a class="trial-bar" href="/admin/plan">${icon('clock', 18)}<span><b>תקופת ניסיון: ${left}.</b> כל הפיצ'רים פתוחים.</span><span class="trial-cta">בחירת מסלול ←</span></a>`;
+  }
+  const why = access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה';
+  return `<a class="trial-bar paused" href="/admin/plan">${icon('alert', 18)}<span><b>${why}.</b> הסקרים ללקוחות לא פעילים עד שתבחרו מסלול. כל הנתונים שמורים.</span><span class="trial-cta">בחירת מסלול ←</span></a>`;
+}
+
 export function adminPage({
   title,
   user,
@@ -47,6 +58,7 @@ export function adminPage({
   usage = null,
   brand: brandInfo = null,
   isAgency = false,
+  access = null,
 }) {
   const b0 = brandInfo || { name: operatorInfo().brand, color: '', logo: '' };
   const brand = b0.name;
@@ -140,6 +152,7 @@ export function adminPage({
   </form>
 </aside>
 <main class="app-main">
+  ${accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
 </main>

@@ -1,5 +1,5 @@
 import express from 'express';
-import { PLANS } from '../plans.js';
+import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
 
 /** System-wide administration: businesses, plans, users and the email outbox. */
@@ -68,10 +68,26 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1');
   });
 
+  // Billing is manual until online payment is added: activate after payment,
+  // extend a trial, or pause an account (surveys stop, data stays).
   router.post('/businesses/:id/plan', (req, res) => {
-    const plan = Object.hasOwn(PLANS, req.body.plan) ? req.body.plan : null;
-    if (plan && store.businessById(Number(req.params.id))) store.updateBusiness(Number(req.params.id), { plan });
-    res.redirect(303, '/superadmin?ok=1');
+    const business = store.businessById(Number(req.params.id));
+    if (!business) return res.redirect(303, '/superadmin');
+    const plan = Object.hasOwn(PLANS, req.body.plan) ? req.body.plan : business.plan;
+    const cycle = Object.hasOwn(CYCLES, req.body.cycle) ? req.body.cycle : business.billing_cycle;
+    if (req.body.do === 'extend') {
+      const from = Math.max(Date.now(), Date.parse(`${String(business.trial_ends_at ?? '').replace(' ', 'T')}Z`) || 0);
+      store.updateBusiness(business.id, {
+        billing: 'trial',
+        trial_ends_at: new Date(from + TRIAL_DAYS * 864e5).toISOString().slice(0, 19).replace('T', ' '),
+        trial_notice: null,
+      });
+    } else if (req.body.do === 'pause') {
+      store.updateBusiness(business.id, { billing: 'paused' });
+    } else {
+      store.updateBusiness(business.id, { plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null });
+    }
+    res.redirect(303, '/superadmin?ok=1#businesses');
   });
 
   router.post('/users/:id/reset-2fa', (req, res) => {

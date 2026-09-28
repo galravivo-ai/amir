@@ -1,5 +1,5 @@
 import { backupDb, lastBackupAge } from './backup.js';
-import { PLANS } from './plans.js';
+import { accessOf, PLANS } from './plans.js';
 
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
@@ -14,6 +14,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
       const campaign = store.campaignById(invite.campaign_id);
       // Mark first so a slow or failing mail server can't cause repeats.
       store.markInviteReminded(invite.id);
+      if (accessOf(business).state === 'paused') continue;
       if (await notifier.customerInvite({ business, campaign, invite, reminder: true })) sent++;
     }
     return sent;
@@ -26,6 +27,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
       store.markInviteSendAttempted(invite.id);
       const business = store.businessById(invite.business_id);
       const campaign = store.campaignById(invite.campaign_id);
+      if (accessOf(business).state === 'paused') continue;
       if (await notifier.customerInvite({ business, campaign, invite })) {
         store.markInviteEmailed(invite.id);
         sent++;
@@ -51,6 +53,26 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
       store.markSlaAlerted(response.id);
       await notifier.slaOverdue(store.businessById(response.business_id), response);
       sent++;
+    }
+    return sent;
+  }
+
+  /** One email the day before a trial ends, and one when it has ended. */
+  async function trialNotices() {
+    let sent = 0;
+    const t = now().getTime();
+    for (const business of store.allBusinesses()) {
+      if (business.billing !== 'trial') continue;
+      const access = accessOf(business, t);
+      if (access.state === 'paused' && business.trial_notice !== 'ended') {
+        store.updateBusiness(business.id, { trial_notice: 'ended' });
+        await notifier.trialEnded(business);
+        sent++;
+      } else if (access.state === 'trial' && access.daysLeft <= 1 && !business.trial_notice) {
+        store.updateBusiness(business.id, { trial_notice: 'ending' });
+        await notifier.trialEnding(business);
+        sent++;
+      }
     }
     return sent;
   }
@@ -85,7 +107,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -102,6 +124,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
     inviteReminders,
     slaAlerts,
     weeklyReports,
+    trialNotices,
     dailyBackup,
     runAll,
     start(intervalMs = 5 * 60e3) {

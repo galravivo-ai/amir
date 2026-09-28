@@ -87,6 +87,7 @@ export function createStore(db) {
       // Changing the password signs out every other session.
       q('DELETE FROM sessions WHERE user_id = ? AND id IS NOT ?').run(id, keepSessionId);
     },
+    superadminEmails: () => q('SELECT email FROM users WHERE is_superadmin = 1').all().map((u) => u.email),
     setSuperadmin: (id, on) => q('UPDATE users SET is_superadmin = ? WHERE id = ?').run(on ? 1 : 0, id),
     allUsers: () =>
       q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.totp_enabled, u.created_at,
@@ -184,10 +185,12 @@ export function createStore(db) {
          WHERE b.id = ? AND m.user_id = ?`).get(id, userId) || null,
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
     businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
-    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'free' }) {
+    /** `trialDays` starts a free trial; without it the business is active right away. */
+    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'basic', trialDays = 0 }) {
       const r = q(
-        'INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(userId, name, logo_url, brand_color, plan, token(12));
+        `INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key, billing, trial_ends_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(userId, name, logo_url, brand_color, plan, token(12), trialDays ? 'trial' : 'active', trialDays ? sqlTime(trialDays * 864e5) : null);
       const id = Number(r.lastInsertRowid);
       q("INSERT INTO memberships (business_id, user_id, role) VALUES (?, ?, 'owner')").run(id, userId);
       return id;
@@ -197,6 +200,7 @@ export function createStore(db) {
       const allowed = [
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
+        'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;

@@ -296,6 +296,15 @@ const MIGRATIONS = [
   CREATE INDEX idx_responses_staff ON responses(staff_id);
   ALTER TABLE campaigns ADD COLUMN ask_staff INTEGER NOT NULL DEFAULT 0;
   `,
+  // v12: paid plans with a free trial; businesses can ask for a plan
+  `
+  ALTER TABLE businesses ADD COLUMN billing TEXT NOT NULL DEFAULT 'active';
+  ALTER TABLE businesses ADD COLUMN trial_ends_at TEXT;
+  ALTER TABLE businesses ADD COLUMN trial_notice TEXT;
+  ALTER TABLE businesses ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'monthly';
+  ALTER TABLE businesses ADD COLUMN plan_request TEXT;
+  UPDATE businesses SET plan = 'basic' WHERE plan NOT IN ('basic', 'pro', 'business');
+  `,
 ];
 
 function migrate(db) {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { planOf } from '../plans.js';
+import { accessOf, planOf } from '../plans.js';
 import { errorPage } from '../util.js';
 import { widgetPage, widgetScript } from '../views/widget.js';
 
@@ -22,7 +22,7 @@ export function widgetRoutes(store) {
 
   function load(key) {
     const business = store.businessByWidgetKey(key);
-    return business && planOf(business).widget ? business : null;
+    return business && planOf(business).widget && accessOf(business).state !== 'paused' ? business : null;
   }
 
   router.get('/widget/:key.js', (req, res) => {

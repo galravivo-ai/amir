@@ -1,5 +1,6 @@
 import express from 'express';
 import { textsFor } from '../i18n.js';
+import { accessOf } from '../plans.js';
 import { parseJson } from '../db.js';
 import { errorPage, isEmail, safeUrl, token } from '../util.js';
 import { followupResultView, followupView, messageView, questionsView, ratingView, thanksView } from '../views/public.js';
@@ -33,6 +34,9 @@ export function rateLimiter({ windowMs, max }) {
   };
 }
 
+/** A campaign takes ratings only while it is on and its business is not paused. */
+const surveyOpen = ({ campaign, business }) => Boolean(campaign.active) && accessOf(business).state !== 'paused';
+
 function questionsFor(campaign, sentiment) {
   return campaign.questionsList.filter((q) => q.audience === 'all' || q.audience === sentiment);
 }
@@ -64,7 +68,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
     const ctx = loadCampaign(req.params.slug);
     if (!ctx) return res.status(404).send(messageView({ message: 'הקישור לא נמצא' }));
     const { campaign, business, t } = ctx;
-    if (!campaign.active) return res.send(messageView({ t, business, campaign, message: t.inactive }));
+    if (!surveyOpen(ctx)) return res.send(messageView({ t, business, campaign, message: t.inactive }));
 
     const vid = visitorId(req, res);
     const src = String(req.query.src ?? '').slice(0, 60);
@@ -77,7 +81,7 @@ export function publicRoutes(store, { publicLimit = { windowMs: 10 * 60e3, max: 
 
   router.post('/r/:slug/rate', limit, (req, res) => {
     const ctx = loadCampaign(req.params.slug);
-    if (!ctx || !ctx.campaign.active) return res.redirect(303, `/r/${encodeURIComponent(req.params.slug)}`);
+    if (!ctx || !surveyOpen(ctx)) return res.redirect(303, `/r/${encodeURIComponent(req.params.slug)}`);
     const { campaign, business } = ctx;
     const rating = Number.parseInt(req.body.rating, 10);
     if (!(rating >= 1 && rating <= 5)) return res.redirect(303, `/r/${campaign.slug}`);

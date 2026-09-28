@@ -1,8 +1,11 @@
-import { FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
+import { accessOf, CYCLES, FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { formatDate, h, logoSrc } from '../util.js';
+import { parseJson } from '../db.js';
 import { agenciesAdminBlock } from './agency.js';
 import { icon } from './icons.js';
+import { pricingCards } from './pricing.js';
+import { operatorInfo } from './site.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -279,7 +282,7 @@ export function integrationsView({ keys, newKey, csrf, baseUrl, available, campa
 
 // ---------------------------------------------------------------- plan
 
-export function planView({ business, plan, usage }) {
+export function planView({ business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false }) {
   const meter = (label, used, max) => {
     if (max === Infinity) {
       return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} · ללא הגבלה</span></div></div>`;
@@ -288,32 +291,46 @@ export function planView({ business, plan, usage }) {
     return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} / ${limitLabel(max)}</span></div>
       <div class="dist-bar"><span class="${pct >= 100 ? 'bad' : pct >= 80 ? 'mid' : 'good'}" style="width:${pct}%"></span></div></div>`;
   };
+  const cycle = CYCLES[business.billing_cycle] || CYCLES.monthly;
+  let status;
+  if (access?.state === 'trial') {
+    status = `<div class="plan-status trial"><b>תקופת ניסיון במסלול ${h(plan.label)}</b>
+      <span>${access.daysLeft === 1 ? 'היום האחרון' : `נשארו ${access.daysLeft} ימים`}, עד ${h(formatDate(access.endsAt).split(',')[0])}. אחרי זה הסקרים יושהו עד שתבחרו מסלול.</span></div>`;
+  } else if (access?.state === 'paused') {
+    status = `<div class="plan-status paused"><b>${access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה'}</b>
+      <span>הסקרים ללקוחות לא פעילים. כל הנתונים שמורים, ואחרי בחירת מסלול הכול חוזר לעבוד כמו קודם.</span></div>`;
+  } else {
+    status = `<div class="plan-status active"><b>מסלול ${h(plan.label)} · ${h(cycle)}</b><span>החשבון פעיל.</span></div>`;
+  }
+  const pending =
+    request && PLANS[request.plan]
+      ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}ביקשת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). ניצור איתך קשר כדי להשלים את התשלום ולהפעיל את המסלול.</div>`
+      : '';
+  const op = operatorInfo();
+  const action = (key) =>
+    can('owner')
+      ? `<button class="btn ${key === 'pro' ? 'accent' : 'primary'} plan-cta" name="plan" value="${key}">${
+          access?.state === 'active' && key === business.plan ? 'להחליף תדירות תשלום' : `בחירה ב${h(PLANS[key].label)}`
+        }</button>`
+      : '';
   return `<h1>התוכנית שלי</h1>
+  ${pending}
   <section class="card stack">
-    <h3>${h(business.name)}: תוכנית ${h(plan.label)}</h3>
-    ${meter('קמפיינים', usage.campaigns, plan.campaigns)}
+    ${status}
+    ${meter('סניפים וקמפיינים', usage.campaigns, plan.campaigns)}
     ${meter('משתמשים בצוות', usage.members, plan.teamMembers)}
     ${meter('דירוגים החודש', usage.responses, plan.monthlyResponses)}
   </section>
-  <section class="card">
-    <h3>השוואת תוכניות</h3>
-    <table class="table">
-      <thead><tr><th></th>${Object.entries(PLANS)
-        .map(([k, p]) => `<th>${h(p.label)}${k === business.plan ? ' ✓' : ''}</th>`)
-        .join('')}</tr></thead>
-      <tbody>
-        <tr><td><b>מחיר לחודש</b></td>${Object.values(PLANS)
-          .map((p) => `<td><b>${p.price == null ? 'לפי הצעה' : p.price === 0 ? 'חינם' : `₪${p.price}`}</b></td>`)
-          .join('')}</tr>
-        <tr><td>קמפיינים</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.campaigns)}</td>`).join('')}</tr>
-        <tr><td>משתמשים</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.teamMembers)}</td>`).join('')}</tr>
-        <tr><td>דירוגים בחודש</td>${Object.values(PLANS).map((p) => `<td>${limitLabel(p.monthlyResponses)}</td>`).join('')}</tr>
-        ${Object.entries(FEATURE_LABELS)
-          .map(([k, label]) => `<tr><td>${h(label)}</td>${Object.values(PLANS).map((p) => `<td>${p[k] ? '✓' : '—'}</td>`).join('')}</tr>`)
-          .join('')}
-      </tbody>
-    </table>
-    <p class="muted small">לשינוי תוכנית פנו למנהל המערכת. תשלום אונליין יתווסף בהמשך.</p>
+  <section class="card stack">
+    <h3>המסלולים</h3>
+    ${can('owner') ? '' : '<p class="muted">רק בעלי העסק יכולים לבחור מסלול.</p>'}
+    <form method="post" action="/admin/plan/request">
+      <input type="hidden" name="_csrf" value="${h(csrf)}">
+      ${pricingCards({ action, current: access?.state === 'active' ? business.plan : '' })}
+    </form>
+    <p class="muted small">התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.${
+      op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''
+    }</p>
   </section>`;
 }
 
@@ -392,11 +409,36 @@ const MAIL_KINDS = {
 };
 
 export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId, agencies = [], error = '' }) {
-  const planSelect = (b) => `<form method="post" action="/superadmin/businesses/${b.id}/plan" class="inline">
-      ${csrfField(csrf)}
-      <select name="plan" onchange="this.form.submit()" aria-label="תוכנית">${Object.entries(PLANS)
-        .map(([k, p]) => `<option value="${k}" ${b.plan === k ? 'selected' : ''}>${h(p.label)}</option>`)
-        .join('')}</select></form>`;
+  const statusBadge = (b) => {
+    const a = accessOf(b);
+    if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
+    if (a.state === 'paused') return `<span class="badge st-new">${a.reason === 'trial' ? 'הניסיון נגמר' : 'מושהה'}</span>`;
+    return `<span class="badge st-resolved">פעיל · ${h(CYCLES[b.billing_cycle] || '')}</span>`;
+  };
+  const planSelect = (b) => {
+    const req = parseJson(b.plan_request, null);
+    const wanted = req && PLANS[req.plan] ? req : null;
+    return `<div class="billing-cell">
+      ${statusBadge(b)} <b>${h(PLANS[b.plan]?.label || b.plan)}</b>
+      ${wanted ? `<div class="small"><b class="req-flag">ביקש: ${h(PLANS[wanted.plan].label)} ${h(CYCLES[wanted.cycle] || '')}</b></div>` : ''}
+      <form method="post" action="/superadmin/businesses/${b.id}/plan" class="row compact">
+        ${csrfField(csrf)}
+        <select name="plan" aria-label="מסלול">${Object.entries(PLANS)
+          .map(([k, p]) => `<option value="${k}" ${(wanted?.plan || b.plan) === k ? 'selected' : ''}>${h(p.label)}</option>`)
+          .join('')}</select>
+        <select name="cycle" aria-label="תדירות">${Object.entries(CYCLES)
+          .map(([k, l]) => `<option value="${k}" ${(wanted?.cycle || b.billing_cycle) === k ? 'selected' : ''}>${h(l)}</option>`)
+          .join('')}</select>
+        <button class="btn" name="do" value="activate">הפעלה</button>
+        <button class="btn-link" name="do" value="extend">+7 ימי ניסיון</button>
+        ${accessOf(b).state === 'paused' ? '' : '<button class="btn-link danger-text" name="do" value="pause">השהיה</button>'}
+      </form>
+    </div>`;
+  };
+  const requests = businesses.filter((b) => {
+    const r = parseJson(b.plan_request, null);
+    return r && PLANS[r.plan];
+  });
   const agencySelect = (b) => `<form method="post" action="/superadmin/businesses/${b.id}/agency" class="inline">
       ${csrfField(csrf)}
       <select name="agency" onchange="this.form.submit()" aria-label="סוכנות"><option value="">—</option>${agencies
@@ -412,13 +454,20 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     <div class="kpi"><div class="kpi-label">עוזר AI</div><div class="kpi-value small-value">${aiEnabled ? 'פעיל' : 'כבוי'}</div>
       <div class="kpi-hint">${aiEnabled ? '' : 'הגדירו ANTHROPIC_API_KEY'}</div></div>
   </div>
-  <section class="card">
+  ${
+    requests.length
+      ? `<div class="warn">${requests.length === 1 ? 'עסק אחד ביקש מסלול' : `${requests.length} עסקים ביקשו מסלול`}: ${requests
+          .map((b) => h(b.name))
+          .join(', ')}. אחרי שהתשלום הוסדר, לוחצים "הפעלה" בשורה של העסק.</div>`
+      : ''
+  }
+  <section class="card" id="businesses">
     <h3>עסקים</h3>
-    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>תוכנית</th><th>סוכנות</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
+    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>מסלול ותשלום</th><th>סוכנות</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
     <tbody>${businesses
       .map(
         (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}</td>
-          <td data-l="תוכנית">${planSelect(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
+          <td data-l="מסלול">${planSelect(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )
       .join('')}</tbody></table>
