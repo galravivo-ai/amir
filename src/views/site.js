@@ -36,7 +36,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
   </nav>
   <div class="site-cta">
     <a href="/login">כניסה לחשבון</a>
-    ${signupOpen ? '<a class="btn primary" href="/register">הרשמה חינם</a>' : ''}
+    ${signupOpen ? '<a class="btn primary" href="/register">ניסיון חינם</a>' : ''}
   </div>
 </header>
 ${body}

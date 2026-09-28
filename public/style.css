@@ -583,10 +583,11 @@ input.copy { width: 100%; font-size: .85rem; }
 .trial-bar.paused .icon { color: var(--bad); }
 
 /* ---------- pricing (landing + plan page) ---------- */
-.pricing { display: grid; gap: 1.4rem; justify-items: center; }
+.pricing { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4rem; justify-items: center; }
 .pricing .plans { width: 100%; }
 .cycle-switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
-.cycle-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.cycle-switch { position: relative; }
+.cycle-switch input { position: absolute; inset-inline-start: 0; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .cycle-switch label { flex-direction: row; align-items: center; gap: .4rem; padding: .55rem 1.2rem; border-radius: 999px; cursor: pointer; font-weight: 600; color: var(--ink-2); }
 .cycle-switch input:checked + label { background: var(--night); color: #fff; }
 .cycle-switch input:focus-visible + label { outline: 3px solid var(--purple-soft); }
