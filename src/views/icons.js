@@ -33,6 +33,20 @@ export function icon(name, size = 20, extra = '') {
   return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${extra}><path d="${PATHS[name]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
+// The GoFive mark (public/brand/gofive-mark.svg): a star whose right arm is
+// a forward arrow, on a rounded purple tile.
+const MARK_GLYPH = `<g stroke-linejoin="round" stroke-width="34"><path d="M446 146 L537 332 L372 330 Z" fill="#fff" stroke="#fff"/><path d="M386 350 L756 404 L420 676 L546 458 Z" fill="#FFCF3A" stroke="#FFCF3A"/><path d="M132 410 L282 382 L460 478 L246 740 L272 548 Z" fill="#fff" stroke="#fff"/></g>`;
+
+export function logoMark(size = 34) {
+  return `<svg class="logo-mark" width="${size}" height="${size}" viewBox="25 22 850 850" aria-hidden="true"><rect x="25" y="22" width="850" height="850" rx="150" fill="#4E2EF6"/>${MARK_GLYPH}</svg>`;
+}
+
+/** The product name as a wordmark: "Go" in ink, "Five" in purple. Other names stay plain. */
+export function wordmark(name) {
+  const safe = String(name).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  return name === 'GoFive' ? '<span class="wordmark"><span class="wm-go">Go</span><span class="wm-five">Five</span></span>' : safe;
+}
+
 /** Filled star in the brand mark (square) style. */
 export function starMark(size = 20, fill = 'currentColor') {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR}" fill="${fill}"/></svg>`;

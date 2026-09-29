@@ -627,3 +627,12 @@ input.copy { width: 100%; font-size: .85rem; }
 .contact-form .grid2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: .9rem; margin: 0; }
 .contact-done { max-width: 720px; margin: 0 auto; text-align: center; }
 .hp { position: absolute !important; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+
+/* ---------- GoFive logo ---------- */
+.logo-mark { flex: none; display: block; border-radius: 22%; }
+.wordmark { font-family: var(--font-head); font-weight: 700; letter-spacing: -.02em; }
+.wm-go { color: var(--night); }
+.wm-five { color: #4E2EF6; }
+.side-brand .wm-go { color: #fff; }
+.side-brand .wm-five { color: #9d8bff; }
+.site-foot .wm-go, .poster-foot .wm-go { color: inherit; }

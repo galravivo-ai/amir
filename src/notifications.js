@@ -148,6 +148,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         subject: `תקופת הניסיון של ${business.name} מסתיימת מחר`,
         html: emailLayout({
           title: 'תקופת הניסיון מסתיימת מחר',
+          brand: true,
           body: `<p>מחר מסתיימים 7 ימי הניסיון של <b>${h(business.name)}</b>.</p>
             <p>כדי שהסקרים ימשיכו לעבוד בלי הפסקה, בחרו מסלול. הנתונים וההגדרות נשמרים כמו שהם.</p>
             ${emailButton(url('/admin/plan'), 'בחירת מסלול')}`,
@@ -163,6 +164,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         subject: `תקופת הניסיון של ${business.name} הסתיימה`,
         html: emailLayout({
           title: 'תקופת הניסיון הסתיימה',
+          brand: true,
           body: `<p>הסקרים של <b>${h(business.name)}</b> מושהים עד שתבחרו מסלול. לקוח שסורק את ה-QR יראה שהסקר לא פעיל כרגע.</p>
             <p>כל הנתונים שמורים, ואפשר להמשיך להיכנס ולצפות בהם.</p>
             ${emailButton(url('/admin/plan'), 'בחירת מסלול')}`,
@@ -179,6 +181,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         subject: `פנייה חדשה מהאתר: ${kindLabel} · ${lead.company || lead.name}`,
         html: emailLayout({
           title: 'בקשה להצעת מחיר',
+          brand: true,
           body: `<p><b>${h(kindLabel)}</b>${lead.size ? ` · ${h(lead.size)} סניפים / לקוחות` : ''}</p>
             <p>${h(lead.name)}${lead.company ? ` · ${h(lead.company)}` : ''}<br>
             <span dir="ltr">${h(lead.phone)}</span> ${h(lead.email)}</p>
@@ -198,6 +201,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         subject: `בקשה למסלול ${plan.label} (${cycle}) · ${business.name}`,
         html: emailLayout({
           title: 'עסק ביקש מסלול',
+          brand: true,
           body: `<p><b>${h(business.name)}</b> ביקש את מסלול <b>${h(plan.label)}</b>, תשלום ${h(cycle)}.</p>
             <p>מבקש: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
             ${emailButton(url('/superadmin#businesses'), 'להפעלה בניהול המערכת')}`,
@@ -279,6 +283,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         subject: 'איפוס סיסמה',
         html: emailLayout({
           title: 'איפוס סיסמה',
+          brand: true,
           body: `<p>היי ${h(user.name)}, ביקשת לאפס את הסיסמה.</p>
             ${emailButton(link, 'בחירת סיסמה חדשה')}
             <p style="color:#6b7280;font-size:13px">הקישור בתוקף לשעה. אם לא ביקשת, אפשר להתעלם מההודעה.</p>`,

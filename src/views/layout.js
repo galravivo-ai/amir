@@ -1,13 +1,14 @@
 import { PUBLIC_TEXTS } from '../i18n.js';
 import { limitLabel } from '../plans.js';
 import { h, logoSrc, safeColor } from '../util.js';
-import { icon, starMark } from './icons.js';
+import { icon, logoMark, wordmark } from './icons.js';
 import { operatorInfo } from './site.js';
 
 const HEAD = (title) => `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${h(title)}</title>
 <link rel="stylesheet" href="/static/style.css">
+<link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">`;
 
 const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
@@ -17,7 +18,12 @@ const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>`;
 
 export function brandMark(size = 34) {
-  return `<span class="brand-mark" style="width:${size}px;height:${size}px">${starMark(Math.round(size * 0.56))}</span>`;
+  return logoMark(size);
+}
+
+/** An agency without a logo gets a tile with its initial, never the platform mark. */
+function initialMark(name, size) {
+  return `<span class="brand-mark" style="width:${size}px;height:${size}px;font:700 ${Math.round(size * 0.5)}px/1 var(--font-head)">${h(String(name).trim().charAt(0) || '★')}</span>`;
 }
 
 /** Whether a nav link points at the current page (query strings must match when the link has one). */
@@ -66,14 +72,19 @@ export function adminPage({
   const brandStyle = b0.color
     ? `<style>:root{--purple:${b0.color};--purple-deep:color-mix(in srgb,${b0.color} 80%,#000);--purple-soft:color-mix(in srgb,${b0.color} 10%,#fff)}</style>`
     : '';
+  const whiteLabel = Boolean(brandInfo) && brand !== operatorInfo().brand;
   const mark = (size) =>
-    b0.logo ? `<img class="brand-logo" src="${h(b0.logo)}" alt="" style="height:${size}px">` : brandMark(size);
+    b0.logo
+      ? `<img class="brand-logo" src="${h(b0.logo)}" alt="" style="height:${size}px">`
+      : whiteLabel
+        ? initialMark(brand, size)
+        : brandMark(size);
   if (!user || !business) {
     return `<!doctype html>
 <html lang="he" dir="rtl">
 <head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="auth-page">
-<a class="auth-brand" href="/">${mark(40)}<span>${h(brand)}</span></a>
+<a class="auth-brand" href="/">${mark(40)}<span>${wordmark(brand)}</span></a>
 <main class="auth-main">
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
@@ -132,7 +143,7 @@ export function adminPage({
 <head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="app">
 <aside class="sidebar">
-  <a class="side-brand" href="/admin">${mark(34)}<span>${h(brand)}</span></a>
+  <a class="side-brand" href="/admin">${mark(34)}<span>${wordmark(brand)}</span></a>
   ${bizBlock}
   <nav class="side-nav" aria-label="ניווט ראשי">
     ${links

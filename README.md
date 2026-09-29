@@ -1,5 +1,7 @@
 # GoFive (גו פייב)
 
+<img src="public/brand/gofive-logo-email.png" width="180" alt="GoFive">
+
 קדימה ל-5 כוכבים: מערכת ביקורות וחוויית לקוח לעסקים בישראל.
 
 מערכת עצמאית (לא וורדפרס) לאיסוף משוב מלקוחות, טיפול בלקוחות לא מרוצים והגדלת הביקורות בגוגל.
@@ -213,3 +215,7 @@ curl -X POST https://your-site/api/v1/invites \
 
 שדות: `campaign` (slug או מספר; ברירת מחדל: הקמפיין הפעיל הראשון), `name`, `phone`, `email` (חובה אחד מהם), `delay_minutes` (עד 10080), `external_id`, `dedup_days` (ברירת מחדל 30).
 תשובה: `status` = `sent` / `scheduled` / `created` / `skipped`, ו-`invite.link` לשליחה ב-SMS. בדיקה: `GET /api/v1/ping`, רשימת קמפיינים: `GET /api/v1/campaigns`.
+
+## לוגו
+
+הלוגו המקורי: `docs/brand/gofive-logo-original.png`. הגרסה הווקטורית (`public/brand/gofive-mark.svg`) משמשת בכל המערכת, ומממנה נוצרו אייקון האפליקציה, ה-favicon ולוגו המיילים. אם המעצב שולח SVG רשמי, מחליפים את הקבצים ב-`public/brand` ואת `MARK_GLYPH` ב-`src/views/icons.js`.

@@ -1,6 +1,6 @@
 import { TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
-import { icon, starMark } from './icons.js';
+import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
@@ -22,12 +22,13 @@ function sitePage({ title, description = '', body, signupOpen = true }) {
 <title>${h(title)}</title>
 ${description ? `<meta name="description" content="${h(description)}">` : ''}
 <link rel="stylesheet" href="/static/style.css">
+<link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body class="site">
 <header class="site-head">
-  <a class="brand" href="/"><span class="brand-mark" style="width:36px;height:36px">${starMark(20)}</span>${h(op.brand)}</a>
+  <a class="brand" href="/">${logoMark(38)}${wordmark(op.brand)}</a>
   <nav>
     <a href="/#how">איך זה עובד</a>
     <a href="/#features">פיצ'רים</a>

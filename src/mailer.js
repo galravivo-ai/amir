@@ -38,9 +38,19 @@ export function createMailer(db, { smtpUrl = process.env.SMTP_URL, from = proces
 }
 
 /** Wraps email content in a simple RTL Hebrew layout. */
-export function emailLayout({ title, body, color = '#4b2bd6', footer = '' }) {
+/**
+ * `brand: true` puts the product logo on top. Only for emails from the
+ * platform itself; emails about a business carry that business's colors.
+ */
+export function emailLayout({ title, body, color = '#4b2bd6', footer = '', brand = false }) {
+  const base = String(process.env.PUBLIC_URL ?? '').replace(/\/$/, '');
+  const logo =
+    brand && base && (process.env.BRAND_NAME || 'GoFive') === 'GoFive'
+      ? `<div style="text-align:right;margin:0 0 14px"><img src="${h(base)}/static/brand/gofive-logo-email.png" width="180" height="44" alt="GoFive" style="display:inline-block;border:0"></div>`
+      : '';
   return `<!doctype html><html lang="he" dir="rtl"><body style="margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#1f2330">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px">
+${logo}
 <div style="background:#fff;border-radius:12px;padding:24px;border-top:4px solid ${color};text-align:right">
 <h2 style="margin:0 0 12px">${h(title)}</h2>
 ${body}
