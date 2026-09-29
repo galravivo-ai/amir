@@ -158,7 +158,7 @@ npm run backup
 | `SMTP_URL` | ריק | שרת מייל, למשל `smtps://user:pass@smtp.gmail.com:465`. בלעדיו המיילים רק נרשמים ביומן |
 | `MAIL_FROM` | `no-reply@localhost` | כתובת השולח |
 | `ANTHROPIC_API_KEY` | ריק | מפעיל את עוזר ה-AI (Claude). בלעדיו המערכת עובדת בלי AI |
-| `AI_MODEL` | `claude-opus-5` | מודל ה-AI |
+| `AI_MODEL` | `claude-opus-5-5` | מודל ה-AI |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | נוצרים לבד | מפתחות להתראות לטלפון. אם לא מוגדרים, נוצרים פעם אחת ונשמרים במסד |
 | `DISABLE_JOBS` | `false` | מכבה משימות רקע (תזכורות, התראות, דוח שבועי, גיבוי) |
 | `DISABLE_BACKUPS` | `false` | מכבה רק את הגיבוי היומי האוטומטי |

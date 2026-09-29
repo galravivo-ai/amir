@@ -9,7 +9,10 @@ const HEAD = (title) => `<meta charset="utf-8">
 <title>${h(title)}</title>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
-<link rel="icon" type="image/png" href="/static/icons/favicon-32.png">`;
+<link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
+<script src="/static/assist.js"></script>`;
+
+const SKIP = (label = 'דלג לתוכן') => `<a class="skip-link" href="#main">${h(label)}</a>`;
 
 const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1d1650">
@@ -85,8 +88,9 @@ export function adminPage({
 <html lang="he" dir="rtl">
 <head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="auth-page">
+${SKIP()}
 <a class="auth-brand" href="/">${mark(40)}<span>${wordmark(brand)}</span></a>
-<main class="auth-main">
+<main class="auth-main" id="main">
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
 </main>
@@ -144,6 +148,7 @@ export function adminPage({
 <html lang="he" dir="rtl">
 <head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="app">
+${SKIP()}
 <aside class="sidebar">
   <a class="side-brand" href="/admin">${mark(34)}<span>${wordmark(brand)}</span></a>
   ${bizBlock}
@@ -164,7 +169,7 @@ export function adminPage({
     <button class="icon-btn" aria-label="יציאה" title="יציאה">${icon('logout', 18)}</button>
   </form>
 </aside>
-<main class="app-main">
+<main class="app-main" id="main">
   ${accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
@@ -189,7 +194,8 @@ export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = '
 <style>:root{--brand:${color}}</style>
 </head>
 <body class="public">
-<main class="survey-shell">
+${SKIP(ft.skipToContent)}
+<main class="survey-shell" id="main">
   <header class="survey-head">
     ${
       business
@@ -213,7 +219,7 @@ export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = '
   <footer class="public-foot">
     ${
       business
-        ? `${h(ft.footer_shared).replace('{business}', h(business.name))} · <a href="/privacy" target="_blank">${h(ft.privacy)}</a>`
+        ? `${h(ft.footer_shared).replace('{business}', h(business.name))} · <a href="/privacy" target="_blank">${h(ft.privacy)}</a> · <a href="/accessibility" target="_blank">${h(ft.accessibility)}</a>`
         : ''
     }
   </footer>

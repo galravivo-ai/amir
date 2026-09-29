@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { errorPage, isEmail } from '../util.js';
-import { landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
+import { accessibilityView, cookiesView, landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
 
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
@@ -80,6 +80,8 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
 
   router.get('/privacy', (req, res) => res.send(privacyView({ signupOpen: signupOpen() })));
   router.get('/terms', (req, res) => res.send(termsView({ signupOpen: signupOpen() })));
+  router.get('/cookies', (req, res) => res.send(cookiesView({ signupOpen: signupOpen() })));
+  router.get('/accessibility', (req, res) => res.send(accessibilityView({ signupOpen: signupOpen() })));
 
   router.get('/logo/:id', (req, res) => {
     const logo = store.logoOf(Number(req.params.id));

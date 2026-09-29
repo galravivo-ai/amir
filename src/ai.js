@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5';
+export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5-5';
 
 /** Fixed topic list, so tags can be counted and compared over time. */
 export const TOPICS = ['שירות', 'זמן המתנה', 'איכות', 'מחיר', 'ניקיון', 'אווירה', 'צוות', 'זמינות', 'מקצועיות', 'אחר'];

@@ -14,9 +14,10 @@ export function h(value) {
 export function errorPage(message) {
   return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(message)}</title>
-<link rel="stylesheet" href="/static/style.css"></head>
-<link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg"></head>
-<body class="auth-page"><main class="auth-main"><section class="card error-card">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
+<script src="/static/assist.js"></script></head>
+<body class="auth-page"><main class="auth-main" id="main"><section class="card error-card">
   <span class="error-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <h1>${h(message)}</h1>
   <div class="error-actions"><a class="btn primary" href="/">לדף הראשי</a><a class="btn" href="javascript:history.back()">חזרה</a></div>

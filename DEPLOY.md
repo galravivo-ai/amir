@@ -64,6 +64,8 @@ cd amir && git pull && docker compose up -d --build
 | `SECURE_COOKIES` | כן (ב-Railway) | `true` |
 | `OPERATOR_NAME` | מומלץ | השם שלכם או של החברה, מופיע בתנאי השימוש ובמדיניות הפרטיות |
 | `CONTACT_EMAIL` | מומלץ | מייל ליצירת קשר ולבקשות פרטיות |
+| `CONTACT_PHONE` | מומלץ | טלפון לפניות נגישות, מופיע בהצהרת הנגישות |
+| `ACCESSIBILITY_COORDINATOR` | לא חובה | שם רכז הנגישות (ברירת מחדל: `OPERATOR_NAME`) |
 | `BRAND_NAME` | לא | שם המוצר בדף הנחיתה |
 | `SMTP_URL` | מומלץ מאוד | שרת מייל (ראו בהמשך). בלעדיו לא יוצאים מיילים |
 | `MAIL_FROM` | עם SMTP | למשל `ביקורות <no-reply@reviews.co.il>` |
