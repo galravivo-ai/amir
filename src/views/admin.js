@@ -5,6 +5,7 @@ import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
+import { googleDashCard } from './google.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -168,6 +169,7 @@ export function dashboardView({
   can = () => true,
   onboarding = null,
   csrf = '',
+  google = null,
 }) {
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
@@ -211,6 +213,7 @@ export function dashboardView({
           } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
+    ${googleDashCard(google)}
     <div class="kpis">
       ${kpi('דירוג ממוצע', stats.avgRating ? stats.avgRating.toFixed(1) : '—', avgHint || `${stats.positive} מרוצים · ${stats.negative} לא מרוצים`, avgTrend)}
       ${kpi('דירוגים', stats.responses.toLocaleString('he-IL'), respHint || `${pct(stats.responseRate)} מהסריקות`, respTrend)}

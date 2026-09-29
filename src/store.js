@@ -87,6 +87,82 @@ export function createStore(db) {
       // Changing the password signs out every other session.
       q('DELETE FROM sessions WHERE user_id = ? AND id IS NOT ?').run(id, keepSessionId);
     },
+    // ---------- Google Business Profile ----------
+    googleConnection: (businessId) => q('SELECT * FROM google_connections WHERE business_id = ?').get(businessId) || null,
+    saveGoogleConnection(businessId, f) {
+      q(`INSERT INTO google_connections (business_id, email, refresh_token, access_token, expires_at, connected_by)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(business_id) DO UPDATE SET email = excluded.email, refresh_token = excluded.refresh_token,
+           access_token = excluded.access_token, expires_at = excluded.expires_at, connected_by = excluded.connected_by,
+           last_error = NULL`).run(businessId, f.email, f.refreshToken, f.accessToken, f.expiresAt, f.connectedBy ?? null);
+    },
+    updateGoogleToken: (businessId, accessToken, expiresAt) =>
+      q('UPDATE google_connections SET access_token = ?, expires_at = ? WHERE business_id = ?').run(accessToken, expiresAt, businessId),
+    googleSyncResult: (businessId, error) =>
+      q(`UPDATE google_connections SET last_sync_at = datetime('now'), last_error = ? WHERE business_id = ?`).run(error || null, businessId),
+    deleteGoogleConnection(businessId) {
+      q('DELETE FROM google_locations WHERE business_id = ?').run(businessId);
+      q('DELETE FROM google_connections WHERE business_id = ?').run(businessId);
+    },
+    googleConnections: () => q('SELECT * FROM google_connections').all(),
+    /** Keeps the list in step with Google; a new location starts disabled until the owner picks it. */
+    upsertGoogleLocations(businessId, locations) {
+      for (const l of locations) {
+        q(`INSERT INTO google_locations (business_id, name, title, address, place_id, review_url, enabled)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(business_id, name) DO UPDATE SET title = excluded.title, address = excluded.address,
+             place_id = excluded.place_id, review_url = excluded.review_url`).run(
+          businessId, l.name, l.title, l.address, l.placeId, l.reviewUrl, locations.length === 1 ? 1 : 0,
+        );
+      }
+    },
+    googleLocations: (businessId) =>
+      q(`SELECT l.*, c.name AS campaign_name,
+           (SELECT COUNT(*) FROM google_reviews r WHERE r.location_id = l.id AND r.reply = '') AS unanswered
+         FROM google_locations l LEFT JOIN campaigns c ON c.id = l.campaign_id
+         WHERE l.business_id = ? ORDER BY l.title`).all(businessId),
+    googleLocation: (id, businessId) => q('SELECT * FROM google_locations WHERE id = ? AND business_id = ?').get(id, businessId) || null,
+    updateGoogleLocation: (id, { enabled, campaignId }) =>
+      q('UPDATE google_locations SET enabled = ?, campaign_id = ? WHERE id = ?').run(enabled ? 1 : 0, campaignId ?? null, id),
+    googleLocationStats: (id, avg, total) =>
+      q(`UPDATE google_locations SET avg_rating = ?, total_reviews = ?, synced_at = datetime('now') WHERE id = ?`).run(avg, total, id),
+    /** Returns true when the review is new to us. */
+    upsertGoogleReview(locationId, r) {
+      const existing = q('SELECT id FROM google_reviews WHERE name = ?').get(r.name);
+      q(`INSERT INTO google_reviews (location_id, name, reviewer, photo, rating, comment, create_time, update_time, reply, reply_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(name) DO UPDATE SET reviewer = excluded.reviewer, photo = excluded.photo, rating = excluded.rating,
+           comment = excluded.comment, update_time = excluded.update_time, reply = excluded.reply, reply_time = excluded.reply_time`).run(
+        locationId, r.name, r.reviewer, r.photo, r.rating, r.comment, r.createTime, r.updateTime, r.reply, r.replyTime,
+      );
+      return !existing;
+    },
+    googleReviews(businessId, { locationId = null, filter = '', limit = 100 } = {}) {
+      const where = ['l.business_id = ?', 'l.enabled = 1'];
+      const args = [businessId];
+      if (locationId) {
+        where.push('l.id = ?');
+        args.push(locationId);
+      }
+      if (filter === 'unanswered') where.push("r.reply = ''");
+      if (filter === 'negative') where.push('r.rating <= 3');
+      return q(`SELECT r.*, l.title AS location_title FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
+                WHERE ${where.join(' AND ')} ORDER BY r.create_time DESC LIMIT ?`).all(...args, limit);
+    },
+    googleReview: (id, businessId) =>
+      q(`SELECT r.*, l.title AS location_title, l.business_id FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
+         WHERE r.id = ? AND l.business_id = ?`).get(id, businessId) || null,
+    setGoogleReply: (id, reply) => q(`UPDATE google_reviews SET reply = ?, reply_time = ? WHERE id = ?`).run(reply, new Date().toISOString(), id),
+    markGoogleAlerted: (id) => q('UPDATE google_reviews SET alerted = 1 WHERE id = ?').run(id),
+    /** Overall Google rating across the business's chosen locations. */
+    googleSummary(businessId) {
+      const r = q(`SELECT SUM(total_reviews) AS total, SUM(avg_rating * total_reviews) AS weighted
+                   FROM google_locations WHERE business_id = ? AND enabled = 1 AND total_reviews > 0`).get(businessId);
+      const unanswered = q(`SELECT COUNT(*) AS n FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
+                            WHERE l.business_id = ? AND l.enabled = 1 AND r.reply = ''`).get(businessId).n;
+      return r.total ? { total: r.total, avg: r.weighted / r.total, unanswered } : { total: 0, avg: 0, unanswered };
+    },
+
     // ---------- leads (quote requests) ----------
     createLead(f) {
       const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
@@ -372,6 +448,7 @@ export function createStore(db) {
         id,
       );
     },
+    setCampaignGoogleUrl: (id, url) => q('UPDATE campaigns SET google_review_url = ? WHERE id = ?').run(url, id),
     deleteCampaign: (id) => q('DELETE FROM campaigns WHERE id = ?').run(id),
 
     // ---------- invites ----------

@@ -86,6 +86,24 @@ cd amir && git pull && docker compose up -d --build
 
 אחרי ההגדרה: בפאנל **ניהול מערכת** יש יומן מיילים עם סטטוס "נשלח" או "נכשל" לכל מייל. דרך קלה לבדוק: "שכחתי סיסמה" עם המייל שלכם.
 
+## חיבור לגוגל (ביקורות מ-Google Business Profile)
+
+פעם אחת, בחשבון גוגל של מפעיל המערכת:
+
+1. **פרויקט:** ב-[console.cloud.google.com](https://console.cloud.google.com) יוצרים פרויקט חדש (למשל `GoFive`).
+2. **הפעלת ה-APIs:** ב-APIs & Services, בוחרים Library ומפעילים שלושה:
+   - My Business Account Management API
+   - My Business Business Information API
+   - Google My Business API
+3. **מסך הסכמה:** ב-OAuth consent screen בוחרים External, ממלאים שם (GoFive), מייל ולוגו, ומוסיפים את ה-scope `https://www.googleapis.com/auth/business.manage`. כל עוד האפליקציה במצב Testing, רק משתמשים שמוסיפים תחת Test users יכולים להתחבר (עד 100).
+4. **OAuth Client:** ב-Credentials, בוחרים Create credentials ואז OAuth client ID מסוג Web application. ב-Authorized redirect URIs מוסיפים:
+   `https://gofive.co.il/admin/google/callback`
+5. **Railway:** מעתיקים את Client ID ו-Client Secret ל-Variables, בשמות `GOOGLE_CLIENT_ID` ו-`GOOGLE_CLIENT_SECRET`.
+6. **בקשת גישה ל-API:** גוגל פותחת את ה-API של פרופיל העסק רק אחרי בקשה בטופס "GBP API access request", עם מספר הפרויקט. עד שהבקשה מאושרת, המכסה היא 0 והחיבור יחזיר שגיאה. האישור לוקח בדרך כלל כמה ימים.
+7. **לפני שעסקים חיצוניים מתחברים:** שולחים את האפליקציה לאימות של גוגל (Publish app, ואחריו Verification). זה הכרחי כי ההרשאה לניהול ביקורות נחשבת רגישה.
+
+בכל עסק: בתפריט בוחרים **ביקורות גוגל**, לוחצים "התחברות עם חשבון גוגל של העסק", ובוחרים אילו סניפים לעקוב אחריהם. הביקורות מתעדכנות כל חצי שעה. על כל ביקורת חדשה נשלחת התראה לטלפון, ועל ביקורת של 3 כוכבים ומטה גם מייל. עונים מתוך המערכת, עם טיוטה מה-AI.
+
 ## AI
 
 נרשמים ב-[console.anthropic.com](https://console.anthropic.com), טוענים קרדיט, יוצרים API Key ומדביקים ב-`ANTHROPIC_API_KEY`.

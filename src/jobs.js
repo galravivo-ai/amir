@@ -6,7 +6,7 @@ import { accessOf, PLANS } from './plans.js';
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -97,6 +97,11 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
     return sent;
   }
 
+  /** New Google reviews for connected businesses (each at most every 30 minutes). */
+  async function googleReviews() {
+    return googleSync ? googleSync.syncAll() : 0;
+  }
+
   /** One automatic backup a day (kept next to the database; copy offsite too). */
   async function dailyBackup() {
     if (!backups || lastBackupAge() < 23 * 3600e3) return 0;
@@ -107,7 +112,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -125,6 +130,7 @@ export function createJobs({ store, notifier, ai = null, now = () => new Date(),
     slaAlerts,
     weeklyReports,
     trialNotices,
+    googleReviews,
     dailyBackup,
     runAll,
     start(intervalMs = 5 * 60e3) {

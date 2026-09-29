@@ -145,6 +145,9 @@ export function clampInt(value, min, max, fallback) {
 
 export function formatDate(iso) {
   if (!iso) return '';
-  const d = new Date(`${iso.replace(' ', 'T')}Z`);
+  // SQLite gives "2026-09-28 10:00:00" (UTC, no zone); Google gives full ISO with a zone.
+  const text = String(iso);
+  const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(text) ? text : `${text.replace(' ', 'T')}Z`);
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' });
 }

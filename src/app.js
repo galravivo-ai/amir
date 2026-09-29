@@ -2,6 +2,9 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAi } from './ai.js';
+import { createGoogle } from './google.js';
+import { createGoogleSync } from './googleSync.js';
+import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
 import { createMailer } from './mailer.js';
 import { createNotifier } from './notifications.js';
@@ -59,6 +62,8 @@ export function createApp(db, options = {}) {
   const ai = options.ai !== undefined ? options.ai : createAi();
   const pusher = createPusher(store, { webpush: options.webpush });
   const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl });
+  const google = options.google !== undefined ? options.google : createGoogle();
+  const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   const app = express();
   app.disable('x-powered-by');
@@ -85,7 +90,7 @@ export function createApp(db, options = {}) {
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
-  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx));
+  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 
@@ -94,5 +99,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, backups: options.backups ?? true }) };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, backups: options.backups ?? true }), googleSync };
 }

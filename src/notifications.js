@@ -114,6 +114,37 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     /** The customer said the fix did not help: the ticket is open again. */
+    /** A new Google review: a push for every one, an email when it is 3 stars or less. */
+    async googleReview({ business, review }) {
+      const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+      pusher
+        ?.sendToBusiness(business.id, {
+          title: `ביקורת חדשה בגוגל ${stars}`,
+          body: `${review.reviewer || 'לקוח'}: ${review.comment || 'בלי טקסט'}`.slice(0, 140),
+          url: `/admin/google/reviews/${review.id}`,
+          tag: `g-${review.id}`,
+        })
+        .catch((err) => console.warn('[push]', err.message));
+      if (review.rating > 3) return false;
+      const color = safeColor(business.brand_color);
+      return mailer.send({
+        kind: 'google_review',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `ביקורת ${review.rating}★ בגוגל · ${review.location_title || business.name}`,
+        html: emailLayout({
+          color,
+          title: 'ביקורת חדשה בגוגל שכדאי לענות עליה',
+          body: `<p style="font-size:20px;color:#f5a300">${stars}</p>
+            <p><b>${h(review.reviewer || 'לקוח')}</b> · ${h(review.location_title || '')}</p>
+            ${review.comment ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(review.comment)}</blockquote>` : ''}
+            <p>תשובה מהירה ומכבדת מראה לכל מי שקורא שאכפת לכם.</p>
+            ${emailButton(url(`/admin/google/reviews/${review.id}`), 'לכתיבת תשובה', color)}`,
+          footer: h(business.name),
+        }),
+      });
+    },
+
     async recoveryFailed(business, response) {
       const color = safeColor(business.brand_color);
       pusher

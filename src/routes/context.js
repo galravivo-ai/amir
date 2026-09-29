@@ -76,6 +76,7 @@ export function createContext(
           brand: ctx.brandFor(req),
           isAgency: req.user ? store.agenciesForUser(req.user.id).length > 0 : false,
           openCount: b ? store.openIssuesCount(b.id) : 0,
+          googlePending: b ? store.googleSummary(b.id).unanswered : 0,
           usage: b
             ? {
                 used: store.monthlyResponseCount(b.id),

@@ -44,7 +44,7 @@ export function adminRoutes(ctx) {
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, topics, userName: req.user.name, quotaWarning, can: req.can, onboarding, csrf: req.user.csrf }));
+    render(req, res, 'לוח בקרה', V.dashboardView({ stats, prev, campaigns, campaignId, days, waiting, topics, userName: req.user.name, quotaWarning, can: req.can, onboarding, csrf: req.user.csrf, google: store.googleSummary(req.business.id) }));
   });
 
   // ---------- responses ----------

@@ -1,0 +1,197 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { openDb } from '../src/db.js';
+import { createApp } from '../src/app.js';
+import { createGoogle } from '../src/google.js';
+
+// A stand-in for Google's OAuth and Business Profile APIs.
+const fakeGoogle = {
+  calls: [],
+  reviews: [
+    { name: 'accounts/1/locations/9/reviews/a', reviewer: { displayName: 'דנה' }, starRating: 'FIVE', comment: 'מעולה', createTime: '2026-09-01T10:00:00Z', updateTime: '2026-09-01T10:00:00Z' },
+  ],
+  async fetch(url, init = {}) {
+    fakeGoogle.calls.push([init.method || 'GET', url, init.body || '']);
+    const json = (status, body) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) });
+    if (url === 'https://oauth2.googleapis.com/token') {
+      const p = new URLSearchParams(init.body);
+      if (p.get('grant_type') === 'authorization_code') {
+        const idToken = `x.${Buffer.from(JSON.stringify({ email: 'owner@biz.test' })).toString('base64url')}.y`;
+        return json(200, { access_token: 'AT1', refresh_token: 'RT1', expires_in: 3600, id_token: idToken });
+      }
+      return json(200, { access_token: 'AT2', expires_in: 3600 });
+    }
+    if (url.startsWith('https://mybusinessaccountmanagement.googleapis.com/v1/accounts')) {
+      return json(200, { accounts: [{ name: 'accounts/1' }] });
+    }
+    if (url.startsWith('https://mybusinessbusinessinformation.googleapis.com/v1/accounts/1/locations')) {
+      return json(200, {
+        locations: [
+          { name: 'locations/9', title: 'קפה במרכז', storefrontAddress: { addressLines: ['הרצל 1'], locality: 'תל אביב' }, metadata: { placeId: 'P9', newReviewUri: 'https://g.page/r/abc/review' } },
+        ],
+      });
+    }
+    if (url.startsWith('https://mybusiness.googleapis.com/v4/accounts/1/locations/9/reviews?')) {
+      return json(200, { reviews: fakeGoogle.reviews, averageRating: 4.5, totalReviewCount: 12 });
+    }
+    if (url.endsWith('/reply') && init.method === 'PUT') return json(200, JSON.parse(init.body));
+    return json(404, { error: { message: `unexpected ${url}` } });
+  },
+};
+
+const fakeAi = {
+  async draftGoogleReply(input) {
+    return `תודה ${input.reviewer}!`;
+  },
+};
+
+let server;
+let base;
+let created;
+
+before(async () => {
+  created = createApp(openDb(':memory:'), {
+    authLimit: { windowMs: 60e3, max: 1000 },
+    ai: fakeAi,
+    backups: false,
+    google: createGoogle({ clientId: 'cid', clientSecret: 'secret', fetchImpl: fakeGoogle.fetch }),
+  });
+  server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  base = `http://127.0.0.1:${server.address().port}`;
+});
+after(() => server.close());
+
+function client() {
+  const jar = {};
+  return async function req(path, { method = 'GET', form } = {}) {
+    const res = await fetch(base + path, {
+      method,
+      redirect: 'manual',
+      headers: {
+        cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '),
+        ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}),
+      },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+    });
+    for (const c of res.headers.getSetCookie()) {
+      const [pair] = c.split(';');
+      const i = pair.indexOf('=');
+      jar[pair.slice(0, i)] = pair.slice(i + 1);
+    }
+    return { status: res.status, location: res.headers.get('location'), text: await res.text() };
+  };
+}
+const csrf = async (req) => (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+
+async function owner(email) {
+  const req = client();
+  await req('/register', { method: 'POST', form: { name: 'Owner', email, password: 'password123', business: 'Cafe', terms: '1' } });
+  return req;
+}
+
+test('connect Google, follow a location, get alerts and answer reviews', async () => {
+  const { store, googleSync } = created;
+  const req = await owner('g-owner@example.com');
+  const token = await csrf(req);
+  const biz = store.businessesFor(store.userByEmail('g-owner@example.com').id)[0];
+  await req('/admin/campaigns', { method: 'POST', form: { _csrf: token, name: 'Main', lang: 'he', threshold: '4' } });
+  const campaign = store.campaignsFor(biz.id)[0];
+
+  // Not connected yet: the page offers to connect.
+  assert.match((await req('/admin/google')).text, /התחברות עם חשבון גוגל/);
+
+  // Start OAuth: redirected to Google with our state.
+  const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  const auth = new URL(start.location);
+  assert.equal(auth.host, 'accounts.google.com');
+  assert.match(auth.searchParams.get('scope'), /business\.manage/);
+  assert.equal(auth.searchParams.get('access_type'), 'offline');
+  const state = auth.searchParams.get('state');
+
+  // A forged state is refused.
+  const forged = await req('/admin/google/callback?code=zzz&state=wrong');
+  assert.match(decodeURIComponent(forged.location), /פג תוקף/);
+
+  // The real callback stores the connection (tokens sealed) and the location.
+  const again = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  const state2 = new URL(again.location).searchParams.get('state');
+  assert.notEqual(state, state2);
+  const cb = await req(`/admin/google/callback?code=abc&state=${state2}`);
+  assert.equal(cb.location, '/admin/google?connected=1');
+  const conn = store.googleConnection(biz.id);
+  assert.equal(conn.email, 'owner@biz.test');
+  assert.ok(!conn.refresh_token.includes('RT1'), 'refresh token is encrypted at rest');
+  const [loc] = store.googleLocations(biz.id);
+  assert.equal(loc.title, 'קפה במרכז');
+  assert.equal(loc.enabled, 1, 'a single location is followed automatically');
+  assert.equal(loc.name, 'accounts/1/locations/9');
+
+  // First sync imported history without alerts.
+  assert.equal(store.googleReviews(biz.id).length, 1);
+  assert.equal(store.googleSummary(biz.id).total, 12);
+
+  // Link the location to the campaign: the empty review link is filled from Google.
+  await req(`/admin/google/locations/${loc.id}`, { method: 'POST', form: { _csrf: token, enabled: '1', campaign: String(campaign.id) } });
+  assert.equal(store.campaignById(campaign.id).google_review_url, 'https://g.page/r/abc/review');
+
+  // A new 2-star review arrives: it is stored and triggers an email alert.
+  fakeGoogle.reviews.unshift({ name: 'accounts/1/locations/9/reviews/b', reviewer: { displayName: 'אבי' }, starRating: 'TWO', comment: 'חיכינו המון', createTime: '2026-09-28T10:00:00Z', updateTime: '2026-09-28T10:00:00Z' });
+  assert.equal(await googleSync.syncBusiness(store.businessById(biz.id)), 1);
+  const alert = store.db.prepare("SELECT * FROM outbox WHERE kind = 'google_review'").all();
+  assert.equal(alert.length, 1);
+  assert.match(alert[0].body, /חיכינו המון/);
+  // Syncing again changes nothing.
+  assert.equal(await googleSync.syncBusiness(store.businessById(biz.id)), 0);
+
+  // Dashboard and list show the Google rating and the unanswered review.
+  assert.match((await req('/admin')).text, /4\.5 ★<\/b> בגוגל/);
+  const list = await req('/admin/google/reviews?filter=unanswered');
+  assert.match(list.text, /חיכינו המון/);
+  assert.doesNotMatch(list.text, /Invalid Date/);
+  assert.match(list.text, /28\.9\.2026/);
+  const review = store.googleReviews(biz.id, { filter: 'negative' })[0];
+
+  // AI draft, then publish the reply to Google.
+  const draft = await req(`/admin/google/reviews/${review.id}/draft`, { method: 'POST', form: { _csrf: token } });
+  assert.match(draft.text, /תודה אבי!/);
+  const replied = await req(`/admin/google/reviews/${review.id}/reply`, { method: 'POST', form: { _csrf: token, reply: 'מצטערים, נשמח לדבר' } });
+  assert.equal(replied.location, `/admin/google/reviews/${review.id}?saved=1`);
+  const put = fakeGoogle.calls.find(([m, u]) => m === 'PUT' && u.includes('/reviews/b/reply'));
+  assert.ok(put, 'reply sent to Google');
+  assert.equal(JSON.parse(put[2]).comment, 'מצטערים, נשמח לדבר');
+  assert.equal(store.googleReview(review.id, biz.id).reply, 'מצטערים, נשמח לדבר');
+
+  // Another business cannot see or answer these reviews.
+  const other = await owner('g-other@example.com');
+  assert.equal((await other(`/admin/google/reviews/${review.id}`)).status, 404);
+  const t2 = await csrf(other);
+  assert.equal((await other(`/admin/google/reviews/${review.id}/reply`, { method: 'POST', form: { _csrf: t2, reply: 'x' } })).status, 404);
+
+  // An expired access token is refreshed before calling Google.
+  store.updateGoogleToken(biz.id, conn.access_token, Date.now() - 1000);
+  await googleSync.syncBusiness(store.businessById(biz.id));
+  assert.ok(fakeGoogle.calls.some(([, u, b]) => u.includes('oauth2') && String(b).includes('refresh_token')));
+
+  // Disconnect removes the connection and the stored reviews.
+  await req('/admin/google/disconnect', { method: 'POST', form: { _csrf: token } });
+  assert.equal(store.googleConnection(biz.id), null);
+  assert.equal(store.googleReviews(biz.id).length, 0);
+});
+
+test('without Google credentials the page explains the setup to the system admin', async () => {
+  const plain = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, ai: null, backups: false, google: null });
+  const srv = plain.app.listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const old = base;
+  base = `http://127.0.0.1:${srv.address().port}`;
+  try {
+    const req = await owner('first@example.com'); // first user: system admin
+    const page = await req('/admin/google');
+    assert.match(page.text, /GOOGLE_CLIENT_ID/);
+    assert.match(page.text, /\/admin\/google\/callback/);
+  } finally {
+    base = old;
+    srv.close();
+  }
+});

@@ -320,6 +320,51 @@ const MIGRATIONS = [
     handled_at TEXT
   );
   `,
+  // v14: Google Business Profile connection, locations and reviews
+  `
+  CREATE TABLE google_connections (
+    business_id INTEGER PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
+    email TEXT NOT NULL DEFAULT '',
+    refresh_token TEXT NOT NULL,
+    access_token TEXT,
+    expires_at INTEGER NOT NULL DEFAULT 0,
+    connected_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    last_sync_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE google_locations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    place_id TEXT NOT NULL DEFAULT '',
+    review_url TEXT NOT NULL DEFAULT '',
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    avg_rating REAL,
+    total_reviews INTEGER,
+    synced_at TEXT,
+    UNIQUE (business_id, name)
+  );
+  CREATE TABLE google_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    name TEXT NOT NULL UNIQUE,
+    reviewer TEXT NOT NULL DEFAULT '',
+    photo TEXT NOT NULL DEFAULT '',
+    rating INTEGER NOT NULL,
+    comment TEXT NOT NULL DEFAULT '',
+    create_time TEXT NOT NULL DEFAULT '',
+    update_time TEXT NOT NULL DEFAULT '',
+    reply TEXT NOT NULL DEFAULT '',
+    reply_time TEXT NOT NULL DEFAULT '',
+    first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    alerted INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX idx_google_reviews_location ON google_reviews(location_id, create_time);
+  `,
 ];
 
 function migrate(db) {

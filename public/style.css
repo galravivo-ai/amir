@@ -637,3 +637,24 @@ input.copy { width: 100%; font-size: .85rem; }
 .side-brand .wm-five { color: #9d8bff; }
 .site-foot .wm-go, .poster-foot .wm-go { color: inherit; }
 .role-chip { display: block; font-size: .72rem; font-weight: 700; color: var(--yellow); }
+
+/* ---------- Google reviews ---------- */
+h1 .g-logo { vertical-align: -3px; margin-inline-end: .2rem; }
+.g-hero { padding: 1.6rem; }
+.g-hero h2 { margin: 0; font-size: 1.3rem; }
+.g-btn { background: #fff; color: var(--ink); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: .6rem; font-weight: 700; }
+.g-btn:hover { background: var(--purple-soft); }
+.g-stars { color: var(--star); letter-spacing: 2px; white-space: nowrap; }
+.g-stars .off { color: var(--line); }
+.g-list { display: grid; gap: .8rem; }
+.g-item { display: grid; gap: .45rem; color: var(--ink); text-decoration: none; }
+.g-item:hover { border-color: var(--purple); }
+.g-item.pending { border-inline-start: 4px solid var(--yellow); }
+.g-item p { margin: 0; }
+.g-head { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+.g-reply { background: var(--purple-soft); border-radius: 10px; padding: .5rem .7rem; color: var(--ink-2); }
+.g-comment { font-size: 1.1rem; margin: 0; white-space: pre-wrap; }
+.g-dash { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .8rem 1rem; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.g-dash b { font-family: var(--font-head); font-size: 1.1rem; }
+.row.between { justify-content: space-between; align-items: center; }
+.g-item .badge { justify-self: start; }
