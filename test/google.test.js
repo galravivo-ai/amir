@@ -104,6 +104,9 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   // Start OAuth: redirected to Google with our state.
   const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
   const auth = new URL(start.location);
+  // The browser only follows the form's redirect if the CSP allows Google.
+  const csp = (await fetch(base + '/admin/google')).headers.get('content-security-policy');
+  assert.match(csp, /form-action 'self' https:\/\/accounts\.google\.com/);
   assert.equal(auth.host, 'accounts.google.com');
   assert.match(auth.searchParams.get('scope'), /business\.manage/);
   assert.equal(auth.searchParams.get('access_type'), 'offline');
