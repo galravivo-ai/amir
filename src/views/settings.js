@@ -457,6 +457,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
         .map((a) => `<option value="${a.id}" ${b.agency_id === a.id ? 'selected' : ''}>${h(a.name)}</option>`)
         .join('')}</select></form>`;
   return `<h1>ניהול מערכת</h1>
+  <p class="muted">כאן מנהלים את GoFive כולה: כל העסקים שנרשמו, המסלולים והתשלומים, בקשות למסלול, פניות מהאתר, סוכנויות ומשתמשים. העסק שלך עצמו נמצא בתפריט תחת "לוח בקרה".</p>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">עסקים</div><div class="kpi-value">${businesses.length}</div></div>

@@ -102,6 +102,11 @@ export function createContext(
         req.business = store.business(id, req.user.id);
         req.businesses = [req.business];
       }
+      // A system admin's own businesses are never on a trial (fixes accounts made before this rule).
+      if (req.business.billing === 'trial' && req.business.user_id === req.user.id && ctx.isSuperadmin(req.user)) {
+        store.updateBusiness(req.business.id, { billing: 'active', plan: 'business', trial_ends_at: null });
+        req.business = { ...req.business, billing: 'active', plan: 'business', trial_ends_at: null };
+      }
       req.role = req.business.role;
       req.plan = planOf(req.business);
       req.access = accessOf(req.business);

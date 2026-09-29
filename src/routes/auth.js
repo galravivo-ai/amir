@@ -66,7 +66,8 @@ export function authRoutes(ctx) {
     }
     loginAttempts.delete(key);
     const next = String(req.query.next ?? '');
-    const target = /^\/join\/[\w-]+$/.test(next) ? next : '/admin';
+    // The system admin lands on the system panel, everyone else on their business.
+    const target = /^\/join\/[\w-]+$/.test(next) ? next : ctx.isSuperadmin(user) ? '/superadmin' : '/admin';
     if (user.totp_enabled) {
       // Password is right; the session starts only after the second factor.
       const challenge = store.createLoginChallenge(user.id, target);
@@ -117,9 +118,11 @@ export function authRoutes(ctx) {
       return render(req, res, 'הרשמה', V.registerView({ error, values: v }));
     }
     const userId = createUser(v);
-    store.createBusiness(userId, { name: v.business, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+    // The system admin's own business is never on a trial.
+    const admin = ctx.isSuperadmin(store.userById(userId));
+    store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : { name: v.business, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
     ctx.startSession(res, userId);
-    res.redirect(303, '/admin');
+    res.redirect(303, admin ? '/superadmin' : '/admin');
   });
 
   router.post('/logout', (req, res) => {

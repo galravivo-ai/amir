@@ -1103,3 +1103,25 @@ test('quote requests from agencies and large chains', async () => {
   assert.match((await admin.req('/admin/plan')).text, /ביקשת הצעת מחיר לרשת/);
   assert.ok(outbox('plan_request').some((m) => m.to_addr.includes('leads-admin@example.com')));
 });
+
+test('the system admin is not treated like a trial customer', async () => {
+  const c = await registeredOwner('sysadmin@example.com');
+  const boss = store.userByEmail('sysadmin@example.com');
+  assert.equal(bizOf('sysadmin@example.com').billing, 'trial', 'a regular signup starts on a trial');
+  store.setSuperadmin(boss.id, true);
+
+  // Their own business is switched to active on the next visit.
+  const dash = await c.req('/admin');
+  assert.doesNotMatch(dash.text, /תקופת ניסיון/);
+  assert.match(dash.text, /מנהל מערכת/);
+  assert.equal(bizOf('sysadmin@example.com').billing, 'active');
+
+  // Logging in lands on the system panel.
+  const fresh = client();
+  const login = await fresh.req('/login', { method: 'POST', form: { email: 'sysadmin@example.com', password: 'password123' } });
+  assert.equal(login.location, '/superadmin');
+  const plain = client();
+  await registeredOwner('plain-owner@example.com');
+  const r = await plain.req('/login', { method: 'POST', form: { email: 'plain-owner@example.com', password: 'password123' } });
+  assert.equal(r.location, '/admin');
+});

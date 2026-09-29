@@ -95,6 +95,7 @@ export function adminPage({
 
   const role = business.role;
   const links = [
+    isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
     isAgency && ['/agency', 'הלקוחות שלי', 'chart'],
     ['/admin', 'לוח בקרה', 'home'],
     ['/admin/responses', 'תגובות', 'inbox'],
@@ -106,7 +107,6 @@ export function adminPage({
     role === 'owner' && ['/admin/team', 'צוות', 'team'],
     role === 'owner' && ['/admin/integrations', 'חיבורים', 'plug'],
     role === 'owner' && ['/admin/business', 'הגדרות', 'gear'],
-    isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
   ].filter(Boolean);
 
   const bizInitial = h(String(business.name).trim().charAt(0) || '·');
@@ -158,7 +158,7 @@ export function adminPage({
   ${usageBlock}
   <form method="post" action="/logout" class="side-user">
     <input type="hidden" name="_csrf" value="${h(csrf)}">
-    <a href="/account" title="החשבון שלי">${icon('user', 18)}<span>${h(user.name)}</span></a>
+    <a href="/account" title="החשבון שלי">${icon('user', 18)}<span>${h(user.name)}${isSuperadmin ? '<small class="role-chip">מנהל מערכת</small>' : ''}</span></a>
     <button class="icon-btn" aria-label="יציאה" title="יציאה">${icon('logout', 18)}</button>
   </form>
 </aside>

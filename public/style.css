@@ -636,3 +636,4 @@ input.copy { width: 100%; font-size: .85rem; }
 .side-brand .wm-go { color: #fff; }
 .side-brand .wm-five { color: #9d8bff; }
 .site-foot .wm-go, .poster-foot .wm-go { color: inherit; }
+.role-chip { display: block; font-size: .72rem; font-weight: 700; color: var(--yellow); }
