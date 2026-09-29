@@ -2,15 +2,59 @@ import nodemailer from 'nodemailer';
 import { h } from './util.js';
 
 /**
- * Email delivery. With SMTP_URL set (e.g. smtps://user:pass@smtp.gmail.com:465)
- * mail is sent for real; otherwise it is only recorded in the outbox table so
- * everything can be inspected from /superadmin during development.
+ * Sends through Resend's HTTPS API. Many hosts (Railway on its Trial and
+ * Hobby plans among them) block outbound SMTP, so HTTPS is the safe default.
  */
-export function createMailer(db, { smtpUrl = process.env.SMTP_URL, from = process.env.MAIL_FROM, transport } = {}) {
+export function resendTransport(apiKey, fetchImpl = globalThis.fetch) {
+  return {
+    async sendMail({ from, to, subject, html, text }) {
+      const res = await fetchImpl('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ from, to: String(to).split(','), subject, html, text }),
+        signal: AbortSignal.timeout(20e3),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        let msg = body;
+        try {
+          msg = JSON.parse(body).message || body;
+        } catch {
+          /* not JSON */
+        }
+        throw new Error(`Resend ${res.status}: ${msg}`.slice(0, 400));
+      }
+    },
+  };
+}
+
+/** Picks the transport: RESEND_API_KEY, or SMTP_URL (Resend SMTP URLs go over HTTPS too). */
+function transportFor(smtpUrl, resendKey) {
+  if (resendKey) return resendTransport(resendKey);
+  if (!smtpUrl) return null;
+  try {
+    const u = new URL(smtpUrl);
+    if (u.hostname === 'smtp.resend.com' && u.password) return resendTransport(decodeURIComponent(u.password));
+  } catch {
+    /* let nodemailer report a malformed URL */
+  }
+  // Fail fast instead of leaving a request hanging when the port is blocked.
+  return nodemailer.createTransport(smtpUrl, { connectionTimeout: 10e3, greetingTimeout: 10e3, socketTimeout: 20e3 });
+}
+
+/**
+ * Email delivery. With RESEND_API_KEY or SMTP_URL set (e.g.
+ * smtps://user:pass@smtp.gmail.com:465) mail is sent for real; otherwise it is
+ * only recorded in the outbox table so everything can be inspected from
+ * /superadmin during development.
+ */
+export function createMailer(
+  db,
+  { smtpUrl = process.env.SMTP_URL, resendKey = process.env.RESEND_API_KEY, from = process.env.MAIL_FROM, transport } = {},
+) {
   // Values pasted into a hosting dashboard often carry stray spaces or quotes.
   const clean = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '').trim();
-  smtpUrl = clean(smtpUrl);
-  const transporter = transport || (smtpUrl ? nodemailer.createTransport(smtpUrl) : null);
+  const transporter = transport || transportFor(clean(smtpUrl), clean(resendKey));
   const sender = clean(from) || 'Reviews <no-reply@localhost>';
   const log = db.prepare(
     'INSERT INTO outbox (business_id, kind, to_addr, subject, body, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
