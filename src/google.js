@@ -88,6 +88,7 @@ export function createGoogle({
   return {
     seal,
     open,
+    setupCheck: () => ({ clientId, secretLooksRight: clientSecret.startsWith('GOCSPX-'), secretLength: clientSecret.length }),
 
     authUrl({ redirectUri, state }) {
       const q = new URLSearchParams({

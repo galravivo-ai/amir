@@ -99,7 +99,11 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   const campaign = store.campaignsFor(biz.id)[0];
 
   // Not connected yet: the page offers to connect.
-  assert.match((await req('/admin/google')).text, /התחברות עם חשבון גוגל/);
+  const page = (await req('/admin/google')).text;
+  assert.match(page, /התחברות עם חשבון גוגל/);
+  // The first user is the system admin and sees what the server read from the environment.
+  assert.match(page, /בדיקת הגדרות/);
+  assert.match(page, /❌ GOOGLE_CLIENT_ID: <code dir="ltr">cid</);
 
   // Start OAuth: redirected to Google with our state.
   const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
@@ -167,6 +171,7 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
 
   // Another business cannot see or answer these reviews.
   const other = await owner('g-other@example.com');
+  assert.doesNotMatch((await other('/admin/google')).text, /בדיקת הגדרות/, 'only the system admin sees the setup check');
   assert.equal((await other(`/admin/google/reviews/${review.id}`)).status, 404);
   const t2 = await csrf(other);
   assert.equal((await other(`/admin/google/reviews/${review.id}/reply`, { method: 'POST', form: { _csrf: t2, reply: 'x' } })).status, 404);

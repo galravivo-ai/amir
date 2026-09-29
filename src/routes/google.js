@@ -41,6 +41,7 @@ export function googleRoutes(ctx, { google, sync }) {
         can: req.can,
         notice,
         error: req.query.err ? String(req.query.err).slice(0, 300) : '',
+        setupCheck: ctx.isSuperadmin(req.user) ? { ...google.setupCheck(), redirectUri: redirectUri(req) } : null,
       }),
     );
   });

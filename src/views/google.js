@@ -20,10 +20,22 @@ export function googleSetupView({ configured, isSuperadmin, redirectUri }) {
   </section>`;
 }
 
-export function googleConnectView({ conn, locations, campaigns, csrf, can, notice = '', error = '' }) {
+/** For the system admin: what the server actually read from the environment. */
+function googleSetupCheck({ clientId, secretLooksRight, secretLength, redirectUri }) {
+  const idOk = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId);
+  const row = (ok, label, value) => `<li>${ok ? '✅' : '❌'} ${label}: <code dir="ltr">${h(value)}</code></li>`;
+  return `<section class="card"><h3>בדיקת הגדרות (רק מנהל המערכת רואה את זה)</h3><ul class="how-list">
+    ${row(idOk, 'GOOGLE_CLIENT_ID', clientId)}
+    ${row(secretLooksRight, 'GOOGLE_CLIENT_SECRET', `${secretLength} תווים${secretLooksRight ? '' : ', אמור להתחיל ב-GOCSPX-'}`)}
+    ${row(true, 'כתובת חזרה שצריכה להופיע ב-Authorized redirect URIs', redirectUri)}
+  </ul></section>`;
+}
+
+export function googleConnectView({ conn, locations, campaigns, csrf, can, notice = '', error = '', setupCheck = null }) {
   if (!conn) {
     return `<h1>${GOOGLE_G} ביקורות גוגל</h1>
     ${error ? `<div class="error">${h(error)}</div>` : ''}
+    ${setupCheck ? googleSetupCheck(setupCheck) : ''}
     <section class="card g-hero">
       <div class="stack">
         <h2>כל הביקורות מגוגל, במקום אחד</h2>
