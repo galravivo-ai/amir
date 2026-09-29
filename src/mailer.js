@@ -7,8 +7,11 @@ import { h } from './util.js';
  * everything can be inspected from /superadmin during development.
  */
 export function createMailer(db, { smtpUrl = process.env.SMTP_URL, from = process.env.MAIL_FROM, transport } = {}) {
+  // Values pasted into a hosting dashboard often carry stray spaces or quotes.
+  const clean = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '').trim();
+  smtpUrl = clean(smtpUrl);
   const transporter = transport || (smtpUrl ? nodemailer.createTransport(smtpUrl) : null);
-  const sender = from || 'Reviews <no-reply@localhost>';
+  const sender = clean(from) || 'Reviews <no-reply@localhost>';
   const log = db.prepare(
     'INSERT INTO outbox (business_id, kind, to_addr, subject, body, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
   );
