@@ -4,8 +4,8 @@ import { formatDate, h, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
 import { agenciesAdminBlock } from './agency.js';
 import { icon } from './icons.js';
-import { pricingCards } from './pricing.js';
-import { operatorInfo } from './site.js';
+import { customOffer, pricingCards } from './pricing.js';
+import { LEAD_KINDS, operatorInfo } from './site.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -304,7 +304,11 @@ export function planView({ business, plan, usage, access, request = null, csrf =
   }
   const pending =
     request && PLANS[request.plan]
-      ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}ביקשת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). ניצור איתך קשר כדי להשלים את התשלום ולהפעיל את המסלול.</div>`
+      ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}${
+          request.plan === 'enterprise'
+            ? 'ביקשת הצעת מחיר לרשת. ניצור איתך קשר בקרוב.'
+            : `ביקשת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). ניצור איתך קשר כדי להשלים את התשלום ולהפעיל את המסלול.`
+        }</div>`
       : '';
   const op = operatorInfo();
   const action = (key) =>
@@ -328,6 +332,14 @@ export function planView({ business, plan, usage, access, request = null, csrf =
       <input type="hidden" name="_csrf" value="${h(csrf)}">
       ${pricingCards({ action, current: access?.state === 'active' ? business.plan : '' })}
     </form>
+    ${
+      can('owner')
+        ? customOffer(`<form method="post" action="/admin/plan/request">
+            <input type="hidden" name="_csrf" value="${h(csrf)}">
+            <button class="btn accent" name="plan" value="enterprise">בקשת הצעת מחיר</button>
+          </form>`)
+        : ''
+    }
     <p class="muted small">התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.${
       op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''
     }</p>
@@ -408,7 +420,7 @@ const MAIL_KINDS = {
   password_reset: 'איפוס סיסמה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId, agencies = [], error = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId, agencies = [], leads = [], error = '' }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
@@ -473,6 +485,25 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
       .join('')}</tbody></table>
   </section>
   ${agenciesAdminBlock({ agencies, csrf })}
+  <section class="card" id="leads">
+    <h3>פניות מהאתר (הצעות מחיר)</h3>
+    ${
+      leads.length
+        ? `<table class="table responsive"><thead><tr><th>מתי</th><th>סוג</th><th>פרטים</th><th>היקף</th><th>הודעה</th><th></th></tr></thead><tbody>${leads
+            .map(
+              (l) => `<tr class="${l.handled_at ? 'unranked' : ''}"><td data-l="מתי" class="small">${h(formatDate(l.created_at))}</td>
+                <td data-l="סוג">${h(LEAD_KINDS[l.kind] || l.kind)}</td>
+                <td data-l="פרטים"><b>${h(l.name)}</b>${l.company ? ` · ${h(l.company)}` : ''}<div class="small" dir="ltr">${h(l.phone)} ${h(l.email)}</div></td>
+                <td data-l="היקף">${h(l.size || '—')}</td>
+                <td data-l="הודעה" class="clip">${h(l.message || '')}</td>
+                <td><form method="post" action="/superadmin/leads/${l.id}" class="inline">${csrfField(csrf)}
+                  <input type="hidden" name="handled" value="${l.handled_at ? 0 : 1}">
+                  <button class="btn-link">${l.handled_at ? 'טופל ✓ (ביטול)' : 'סימון כטופל'}</button></form></td></tr>`,
+            )
+            .join('')}</tbody></table>`
+        : '<p class="muted">עוד אין פניות. הן מגיעות מהטופס "הצעת מחיר" בדף הנחיתה.</p>'
+    }
+  </section>
   <section class="card">
     <h3>משתמשים</h3>
     <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>

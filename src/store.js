@@ -87,6 +87,16 @@ export function createStore(db) {
       // Changing the password signs out every other session.
       q('DELETE FROM sessions WHERE user_id = ? AND id IS NOT ?').run(id, keepSessionId);
     },
+    // ---------- leads (quote requests) ----------
+    createLead(f) {
+      const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+        f.kind, f.name, f.phone, f.email, f.company, f.size, f.message,
+      );
+      return Number(r.lastInsertRowid);
+    },
+    recentLeads: (limit = 50) => q('SELECT * FROM leads ORDER BY handled_at IS NOT NULL, id DESC LIMIT ?').all(limit),
+    markLeadHandled: (id, handled) =>
+      q(`UPDATE leads SET handled_at = ${handled ? "datetime('now')" : 'NULL'} WHERE id = ?`).run(id),
     superadminEmails: () => q('SELECT email FROM users WHERE is_superadmin = 1').all().map((u) => u.email),
     setSuperadmin: (id, on) => q('UPDATE users SET is_superadmin = ? WHERE id = ?').run(on ? 1 : 0, id),
     allUsers: () =>

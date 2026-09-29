@@ -615,3 +615,15 @@ input.copy { width: 100%; font-size: .85rem; }
 .req-flag { color: var(--warn); }
 .plan-branches { margin: -.3rem 0 1rem; padding: .55rem .8rem; border-radius: 12px; background: var(--purple-soft); color: var(--purple); font: 700 1.05rem/1.2 var(--font-head); text-align: center; }
 .plan.featured .plan-branches { background: var(--yellow); color: var(--night); }
+
+/* ---------- quote offer + contact form ---------- */
+.custom-offer { max-width: 940px; margin: 1.4rem auto 0; padding: 1.3rem 1.5rem; border-radius: 20px; background: var(--night); color: var(--night-text); display: flex; gap: 1.2rem 2rem; align-items: center; flex-wrap: wrap; }
+.custom-items { flex: 1 1 22rem; display: grid; gap: .8rem; }
+.custom-items div { display: grid; gap: .15rem; }
+.custom-items b { color: #fff; font-family: var(--font-head); font-size: 1.05rem; }
+.custom-cta { display: grid; gap: .5rem; justify-items: center; }
+.custom-cta span { color: var(--yellow); font-weight: 700; }
+.contact-form { max-width: 720px; margin: 0 auto; display: grid; gap: .9rem; }
+.contact-form .grid2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: .9rem; margin: 0; }
+.contact-done { max-width: 720px; margin: 0 auto; text-align: center; }
+.hp { position: absolute !important; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }

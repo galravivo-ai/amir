@@ -1,4 +1,4 @@
-import { AGENCY_PRICE, annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PLANS, TRIAL_DAYS } from '../plans.js';
+import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
@@ -21,7 +21,7 @@ const INCLUDED = [
  * page, a submit button inside the plan page's form.
  */
 export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
-  const cards = Object.entries(PLANS)
+  const cards = Object.entries(PUBLIC_PLANS)
     .map(([key, p]) => {
       const yearly = annualPrice(p);
       return `<div class="plan ${key === FEATURED ? 'featured' : ''} ${key === current ? 'current' : ''}">
@@ -53,8 +53,13 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
   </div>`;
 }
 
-export function agencyOffer() {
-  return `<div class="agency-offer">
-    <div><b>סוכנות, משווק או יועץ?</b> ${ils(AGENCY_PRICE)} לחודש לכל עסק שאתם מנהלים, כולל מע״מ. כל הפיצ'רים, מסך אחד לכל הלקוחות, והמיתוג שלכם במקום שלנו.</div>
+/** Agencies and large chains get a personal quote; `cta` is the button. */
+export function customOffer(cta) {
+  return `<div class="custom-offer">
+    <div class="custom-items">
+      <div><b>סוכנות, משווק או יועץ?</b><span>מנהלים את כל העסקים של הלקוחות ממסך אחד, עם המיתוג שלכם במקום שלנו.</span></div>
+      <div><b>רשת עם יותר מ-10 סניפים?</b><span>כל הסניפים בחשבון אחד, עם השוואה ודירוג בין הסניפים.</span></div>
+    </div>
+    <div class="custom-cta"><span>מחיר בהצעה אישית</span>${cta}</div>
   </div>`;
 }

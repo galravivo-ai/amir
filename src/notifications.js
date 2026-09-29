@@ -170,6 +170,24 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** Someone asked for a quote on the website. */
+    async leadReceived({ lead, kindLabel, admins }) {
+      if (!admins.length) return false;
+      return mailer.send({
+        kind: 'lead',
+        to: admins,
+        subject: `פנייה חדשה מהאתר: ${kindLabel} · ${lead.company || lead.name}`,
+        html: emailLayout({
+          title: 'בקשה להצעת מחיר',
+          body: `<p><b>${h(kindLabel)}</b>${lead.size ? ` · ${h(lead.size)} סניפים / לקוחות` : ''}</p>
+            <p>${h(lead.name)}${lead.company ? ` · ${h(lead.company)}` : ''}<br>
+            <span dir="ltr">${h(lead.phone)}</span> ${h(lead.email)}</p>
+            ${lead.message ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(lead.message)}</blockquote>` : ''}
+            ${emailButton(url('/superadmin#leads'), 'לכל הפניות')}`,
+        }),
+      });
+    },
+
     /** A business asked for a plan: tell the people who activate plans. */
     async planRequested({ business, plan, cycle, user, admins }) {
       if (!admins.length) return false;

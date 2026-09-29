@@ -1062,3 +1062,44 @@ test('trial, plan request and activation', async () => {
   const bad = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'nope' } });
   assert.equal(bad.location, '/admin/plan');
 });
+
+test('quote requests from agencies and large chains', async () => {
+  const home = await client().req('/');
+  assert.match(home.text, /רשת עם יותר מ-10 סניפים/);
+  assert.doesNotMatch(home.text, /₪79 /);
+  assert.doesNotMatch(home.text, /לכל עסק שאתם מנהלים/);
+
+  const missing = await client().req('/contact', { method: 'POST', form: { name: 'Avi', kind: 'chain' } });
+  assert.equal(missing.status, 422);
+  assert.match(missing.text, /טלפון או אימייל/);
+
+  const before = store.recentLeads().length;
+  const bot = await client().req('/contact', { method: 'POST', form: { name: 'Bot', phone: '1', website: 'spam.example' } });
+  assert.equal(bot.location, '/?sent=1#contact');
+  assert.equal(store.recentLeads().length, before, 'honeypot submissions are dropped');
+
+  const ok = await client().req('/contact', {
+    method: 'POST',
+    form: { name: 'דנה', phone: '050-1234567', company: 'רשת הקפה', kind: 'chain', size: '24', message: '<b>hi</b>' },
+  });
+  assert.equal(ok.location, '/?sent=1#contact');
+  const lead = store.recentLeads()[0];
+  assert.equal(lead.kind, 'chain');
+  assert.equal(lead.size, '24');
+  assert.match((await client().req(ok.location)).text, /קיבלנו את הפרטים/);
+
+  const admin = await registeredOwner('leads-admin@example.com');
+  store.setSuperadmin(store.userByEmail('leads-admin@example.com').id, true);
+  const panel = await admin.req('/superadmin');
+  assert.match(panel.text, /רשת הקפה/);
+  assert.ok(!panel.text.includes('<b>hi</b>'));
+  await admin.req(`/superadmin/leads/${lead.id}`, { method: 'POST', form: { _csrf: await csrfOf(admin), handled: '1' } });
+  assert.ok(store.recentLeads().find((l) => l.id === lead.id).handled_at);
+
+  // A business asks for a chain quote from its plan page; the chain plan is off the price list.
+  const plan = await admin.req('/admin/plan');
+  assert.doesNotMatch(plan.text, /בחירה ברשת/);
+  await admin.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(admin), plan: 'enterprise' } });
+  assert.match((await admin.req('/admin/plan')).text, /ביקשת הצעת מחיר לרשת/);
+  assert.ok(outbox('plan_request').some((m) => m.to_addr.includes('leads-admin@example.com')));
+});

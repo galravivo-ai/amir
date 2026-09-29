@@ -1,7 +1,7 @@
 import { TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 import { icon, starMark } from './icons.js';
-import { agencyOffer, pricingCards } from './pricing.js';
+import { customOffer, pricingCards } from './pricing.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 export function operatorInfo() {
@@ -81,7 +81,30 @@ function heroVisual() {
   </div>`;
 }
 
-export function landingView({ signupOpen }) {
+export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר' };
+
+function contactForm(error = '', v = {}) {
+  const val = (k) => h(v[k] ?? '');
+  return `<form method="post" action="/contact#contact" class="card contact-form">
+    ${error ? `<div class="error">${h(error)}</div>` : ''}
+    <div class="grid2">
+      <label>שם<input name="name" required maxlength="80" value="${val('name')}" autocomplete="name"></label>
+      <label>טלפון<input name="phone" type="tel" maxlength="30" value="${val('phone')}" autocomplete="tel" dir="ltr"></label>
+      <label>אימייל<input name="email" type="email" maxlength="120" value="${val('email')}" autocomplete="email" dir="ltr"></label>
+      <label>שם העסק או הסוכנות<input name="company" maxlength="100" value="${val('company')}" autocomplete="organization"></label>
+      <label>מי אתם?<select name="kind">${Object.entries(LEAD_KINDS)
+        .map(([k, l]) => `<option value="${k}" ${v.kind === k ? 'selected' : ''}>${h(l)}</option>`)
+        .join('')}</select></label>
+      <label>כמה סניפים או לקוחות?<input name="size" maxlength="40" value="${val('size')}" placeholder="למשל: 25"></label>
+    </div>
+    <label>משהו נוסף? (לא חובה)<textarea name="message" rows="3" maxlength="1000">${val('message')}</textarea></label>
+    <label class="hp" aria-hidden="true">אתר<input name="website" tabindex="-1" autocomplete="off"></label>
+    <button class="btn primary">שליחה</button>
+    <p class="muted small">צריך טלפון או אימייל כדי שנוכל לחזור אליכם.</p>
+  </form>`;
+}
+
+export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {} }) {
   const features = [
     ['qr', 'QR וקישור אישי', 'שלט להדפסה לכל שולחן או קופה, או קישור אישי ללקוח בוואטסאפ, SMS או מייל, עם תזכורת אוטומטית.'],
     ['chart', 'יותר ביקורות בגוגל', 'לקוחות מרוצים מקבלים כפתור גדול לכתיבת ביקורת בגוגל, ברגע שהחוויה עוד טרייה.'],
@@ -154,7 +177,13 @@ export function landingView({ signupOpen }) {
         ? `<a class="btn primary plan-cta" href="/register">${TRIAL_DAYS} ימים חינם</a>`
         : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
   })}
-  ${agencyOffer()}
+  ${customOffer('<a class="btn accent" href="#contact">לקבלת הצעת מחיר</a>')}
+</section>
+
+<section class="band alt" id="contact">
+  <h2>הצעת מחיר לסוכנויות ורשתות</h2>
+  <p class="band-sub">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
+  ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
 </section>
 
 <section class="band alt" id="faq">

@@ -82,7 +82,7 @@ export function createApp(db, options = {}) {
   app.use(widgetRoutes(store));
 
   app.use(ctx.session);
-  app.use(siteRoutes(store, { signupOpen: ctx.signupOpen }));
+  app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
   app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx));

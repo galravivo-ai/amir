@@ -14,6 +14,7 @@ export function superadminRoutes(ctx) {
       res,
       'ניהול מערכת',
       V.superadminView({
+        leads: store.recentLeads(),
         businesses: store.allBusinesses(),
         users: store.allUsers(),
         outbox: store.recentOutbox(50),
@@ -88,6 +89,11 @@ export function superadminRoutes(ctx) {
       store.updateBusiness(business.id, { plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null });
     }
     res.redirect(303, '/superadmin?ok=1#businesses');
+  });
+
+  router.post('/leads/:id', (req, res) => {
+    store.markLeadHandled(Number(req.params.id), req.body.handled === '1');
+    res.redirect(303, '/superadmin#leads');
   });
 
   router.post('/users/:id/reset-2fa', (req, res) => {

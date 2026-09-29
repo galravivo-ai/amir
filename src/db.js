@@ -305,6 +305,21 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN plan_request TEXT;
   UPDATE businesses SET plan = 'basic' WHERE plan NOT IN ('basic', 'pro', 'business');
   `,
+  // v13: quote requests from the website (agencies, chains above 10 branches)
+  `
+  CREATE TABLE leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    company TEXT NOT NULL DEFAULT '',
+    size TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    handled_at TEXT
+  );
+  `,
 ];
 
 function migrate(db) {

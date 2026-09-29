@@ -34,15 +34,26 @@ export const PLANS = {
     campaigns: 10,
     ...ALL_FEATURES,
   },
+  // Not on the price list: chains above 10 branches get a personal quote and
+  // a system admin assigns this plan.
+  enterprise: {
+    label: 'רשת',
+    price: null,
+    hidden: true,
+    tagline: 'יותר מ-10 סניפים, בהצעת מחיר',
+    campaigns: Infinity,
+    ...ALL_FEATURES,
+  },
 };
+
+/** Plans shown on the price list. */
+export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));
 
 /** New businesses try this plan for TRIAL_DAYS, then pick a plan or pause. */
 export const TRIAL_PLAN = 'pro';
 export const TRIAL_DAYS = 7;
 /** Yearly billing: pay for this many months, get twelve. */
 export const ANNUAL_MONTHS = 10;
-/** Agencies pay per client business, per month, including VAT. */
-export const AGENCY_PRICE = 79;
 
 export const CYCLES = { monthly: 'חודשי', annual: 'שנתי' };
 
@@ -50,7 +61,7 @@ export function planOf(business) {
   return PLANS[business?.plan] || PLANS.basic;
 }
 
-export const annualPrice = (p) => p.price * ANNUAL_MONTHS;
+export const annualPrice = (p) => (p.price == null ? null : p.price * ANNUAL_MONTHS);
 export const ils = (n) => `₪${Number(n).toLocaleString('he-IL')}`;
 
 /**
