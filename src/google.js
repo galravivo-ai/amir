@@ -54,6 +54,10 @@ export function createGoogle({
   clientSecret = process.env.GOOGLE_CLIENT_SECRET,
   fetchImpl = globalThis.fetch,
 } = {}) {
+  // Values pasted into a hosting dashboard often carry stray spaces or quotes.
+  const clean = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '').trim();
+  clientId = clean(clientId);
+  clientSecret = clean(clientSecret);
   if (!clientId || !clientSecret) return null;
   const { seal, open } = sealer(clientSecret);
 
