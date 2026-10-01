@@ -365,6 +365,13 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_google_reviews_location ON google_reviews(location_id, create_time);
   `,
+  // v15: Google places followed by link (through SerpApi), next to the Business Profile connection
+  `
+  ALTER TABLE google_locations ADD COLUMN source TEXT NOT NULL DEFAULT 'gbp';
+  ALTER TABLE google_locations ADD COLUMN data_id TEXT NOT NULL DEFAULT '';
+  ALTER TABLE google_locations ADD COLUMN sync_error TEXT;
+  ALTER TABLE google_reviews ADD COLUMN link TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

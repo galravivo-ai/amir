@@ -101,7 +101,7 @@ export function createStore(db) {
     googleSyncResult: (businessId, error) =>
       q(`UPDATE google_connections SET last_sync_at = datetime('now'), last_error = ? WHERE business_id = ?`).run(error || null, businessId),
     deleteGoogleConnection(businessId) {
-      q('DELETE FROM google_locations WHERE business_id = ?').run(businessId);
+      q("DELETE FROM google_locations WHERE business_id = ? AND source = 'gbp'").run(businessId);
       q('DELETE FROM google_connections WHERE business_id = ?').run(businessId);
     },
     googleConnections: () => q('SELECT * FROM google_connections').all(),
@@ -129,11 +129,12 @@ export function createStore(db) {
     /** Returns true when the review is new to us. */
     upsertGoogleReview(locationId, r) {
       const existing = q('SELECT id FROM google_reviews WHERE name = ?').get(r.name);
-      q(`INSERT INTO google_reviews (location_id, name, reviewer, photo, rating, comment, create_time, update_time, reply, reply_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      q(`INSERT INTO google_reviews (location_id, name, reviewer, photo, rating, comment, create_time, update_time, reply, reply_time, link)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(name) DO UPDATE SET reviewer = excluded.reviewer, photo = excluded.photo, rating = excluded.rating,
-           comment = excluded.comment, update_time = excluded.update_time, reply = excluded.reply, reply_time = excluded.reply_time`).run(
-        locationId, r.name, r.reviewer, r.photo, r.rating, r.comment, r.createTime, r.updateTime, r.reply, r.replyTime,
+           comment = excluded.comment, update_time = excluded.update_time, reply = excluded.reply, reply_time = excluded.reply_time,
+           link = excluded.link`).run(
+        locationId, r.name, r.reviewer, r.photo, r.rating, r.comment, r.createTime, r.updateTime, r.reply, r.replyTime, r.link || '',
       );
       return !existing;
     },
@@ -149,10 +150,32 @@ export function createStore(db) {
       return q(`SELECT r.*, l.title AS location_title FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
                 WHERE ${where.join(' AND ')} ORDER BY r.create_time DESC LIMIT ?`).all(...args, limit);
     },
+    googleReviewByName: (name) =>
+      q(`SELECT r.*, l.title AS location_title FROM google_reviews r JOIN google_locations l ON l.id = r.location_id WHERE r.name = ?`).get(name) || null,
     googleReview: (id, businessId) =>
-      q(`SELECT r.*, l.title AS location_title, l.business_id FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
+      q(`SELECT r.*, l.title AS location_title, l.business_id, l.source, l.place_id, l.data_id FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
          WHERE r.id = ? AND l.business_id = ?`).get(id, businessId) || null,
     setGoogleReply: (id, reply) => q(`UPDATE google_reviews SET reply = ?, reply_time = ? WHERE id = ?`).run(reply, new Date().toISOString(), id),
+    /** A place followed by its link (SerpApi). Returns the location row. */
+    addSerpLocation(businessId, p) {
+      const name = `serp:${p.dataId || p.placeId}`;
+      q(`INSERT INTO google_locations (business_id, name, title, address, place_id, data_id, review_url, source, enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'serp', 1)
+         ON CONFLICT(business_id, name) DO UPDATE SET enabled = 1`).run(
+        businessId, name, p.title || '', p.address || '', p.placeId || '', p.dataId || '', p.reviewUrl || '',
+      );
+      return q('SELECT * FROM google_locations WHERE business_id = ? AND name = ?').get(businessId, name);
+    },
+    updateSerpPlace: (id, p) =>
+      q(`UPDATE google_locations SET title = CASE WHEN ? != '' THEN ? ELSE title END,
+           address = CASE WHEN ? != '' THEN ? ELSE address END WHERE id = ?`).run(p.title, p.title, p.address, p.address, id),
+    serpLocationsDue: (hours) =>
+      q(`SELECT * FROM google_locations WHERE source = 'serp' AND enabled = 1
+           AND (synced_at IS NULL OR synced_at < datetime('now', ?)) ORDER BY synced_at`).all(`-${Number(hours) || 6} hours`),
+    serpLocationCount: (businessId) =>
+      q("SELECT COUNT(*) AS n FROM google_locations WHERE business_id = ? AND source = 'serp'").get(businessId).n,
+    setLocationSyncError: (id, error) => q('UPDATE google_locations SET sync_error = ? WHERE id = ?').run(error ? String(error).slice(0, 300) : null, id),
+    deleteGoogleLocation: (id, businessId) => q('DELETE FROM google_locations WHERE id = ? AND business_id = ?').run(id, businessId),
     markGoogleAlerted: (id) => q('UPDATE google_reviews SET alerted = 1 WHERE id = ?').run(id),
     /** Overall Google rating across the business's chosen locations. */
     googleSummary(businessId) {

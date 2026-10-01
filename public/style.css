@@ -713,3 +713,7 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .legal h2 { scroll-margin-top: 90px; }
 .legal .table-wrap { overflow-x: auto; }
 @media (max-width: 640px) { .legal-toc ol { columns: 1; } }
+.g-find input[name="q"] { flex: 1 1 320px; min-width: 0; }
+.g-matches { display: grid; gap: 8px; }
+.g-match { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.g-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

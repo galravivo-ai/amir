@@ -6,7 +6,7 @@ import { accessOf, PLANS } from './plans.js';
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, googleSync = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -97,9 +97,11 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, now 
     return sent;
   }
 
-  /** New Google reviews for connected businesses (each at most every 30 minutes). */
+  /** New Google reviews: connected businesses every 30 minutes, places followed by link every few hours. */
   async function googleReviews() {
-    return googleSync ? googleSync.syncAll() : 0;
+    const connected = googleSync ? await googleSync.syncAll() : 0;
+    const byLink = serpSync ? await serpSync.syncAll() : 0;
+    return connected + byLink;
   }
 
   /** One automatic backup a day (kept next to the database; copy offsite too). */

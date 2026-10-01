@@ -26,7 +26,7 @@ export function createGoogleSync({ store, google, notifier }) {
     let added = 0;
     try {
       const token = await tokenFor(business.id);
-      for (const loc of store.googleLocations(business.id).filter((l) => l.enabled)) {
+      for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled)) {
         const firstSync = !loc.synced_at;
         const page = await google.listReviews(token, loc.name);
         store.googleLocationStats(loc.id, page.averageRating, page.totalReviewCount);
