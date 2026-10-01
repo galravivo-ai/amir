@@ -22,10 +22,12 @@ export function createSerpSync({ store, serp, notifier, intervalHours = Number(p
         place ||= r.place;
         if (page === 0 && !r.reviews.length && r.place.total > 0) {
           // A rating with no reviews means SerpApi's answer didn't parse; keep it visible.
-          throw new Error(`התקבל דירוג (${r.place.total} ביקורות) אבל בלי רשימת ביקורות`);
+          throw new Error(`התקבל דירוג (${r.place.total} ביקורות) אבל בלי רשימת ביקורות. שדות: ${(r.keys || []).join(', ')}`);
         }
         let reachedKnown = false;
-        for (const review of r.reviews) {
+        for (const found of r.reviews) {
+          // Several businesses may follow the same place: keep each one's copy apart.
+          const review = { ...found, name: `${found.name}@${loc.id}` };
           if (!store.upsertGoogleReview(loc.id, review)) {
             reachedKnown = true;
             continue;

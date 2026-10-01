@@ -76,6 +76,15 @@ function review(r) {
   };
 }
 
+/** The reviews array, wherever this version of the answer keeps it. */
+function findReviews(r) {
+  if (Array.isArray(r.reviews)) return r.reviews;
+  for (const v of Object.values(r)) {
+    if (Array.isArray(v) && v.length && typeof v[0] === 'object' && 'rating' in v[0] && ('snippet' in v[0] || 'user' in v[0])) return v;
+  }
+  return [];
+}
+
 /** Returns null when no SerpApi key is configured. */
 export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch } = {}) {
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
@@ -148,16 +157,25 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
 
     /** Newest reviews first, plus the place's overall rating. */
     async reviews({ dataId, placeId }, { nextPageToken = '' } = {}) {
-      const params = { engine: 'google_maps_reviews', sort_by: 'newestFirst', hl: 'iw' };
-      if (dataId) params.data_id = dataId;
-      else params.place_id = placeId;
-      if (nextPageToken) Object.assign(params, { next_page_token: nextPageToken, num: '20' });
-      const r = await call(params);
+      const base = { engine: 'google_maps_reviews' };
+      if (dataId) base.data_id = dataId;
+      else base.place_id = placeId;
+      // Hebrew and newest-first are what we want; if Google answers with a
+      // rating but no reviews, fall back step by step to plainer requests.
+      const attempts = nextPageToken
+        ? [{ sort_by: 'newestFirst', hl: 'iw', next_page_token: nextPageToken, num: '20' }]
+        : [{ sort_by: 'newestFirst', hl: 'iw' }, { sort_by: 'newestFirst' }, {}];
+      let r = {};
+      for (const extra of attempts) {
+        r = await call({ ...base, ...extra });
+        if (findReviews(r).length || !num(r.place_info?.reviews)) break;
+      }
       const info = r.place_info || {};
       return {
         place: { title: info.title || '', address: info.address || '', rating: num(info.rating), total: Math.round(num(info.reviews)) },
-        reviews: (r.reviews || []).map(review),
+        reviews: findReviews(r).map(review),
         next: r.serpapi_pagination?.next_page_token || '',
+        keys: Object.keys(r).filter((k) => k !== 'search_metadata' && k !== 'search_parameters'),
       };
     },
   };

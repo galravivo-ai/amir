@@ -8,6 +8,7 @@ const DATA_ID = '0x151d4b7a1a1a1a1a:0x9f9f9f9f9f9f9f9f';
 // A stand-in for SerpApi (and for Google's short-link redirect).
 const fake = {
   calls: [],
+  hebrewEmpty: false,
   reviews: [
     { review_id: 'r1', rating: 5, iso_date: '2026-09-20T10:00:00Z', snippet: 'מקום מעולה', user: { name: 'נועה' }, link: 'https://maps.google.com/r1' },
     { review_id: 'r2', rating: 4, iso_date: '2026-09-10T10:00:00Z', snippet: 'טוב', user: { name: 'יוסי' }, response: { snippet: 'תודה!', iso_date: '2026-09-11T10:00:00Z' } },
@@ -29,8 +30,10 @@ const fake = {
       ] });
     }
     if (u.searchParams.get('engine') === 'google_maps_reviews') {
-      assert.equal(u.searchParams.get('sort_by'), 'newestFirst');
-      return json({ place_info: { title: 'קפה לנדוור', address: 'ביאליק 1, רמת גן', rating: 4.4, reviews: 812 }, reviews: fake.reviews });
+      const info = { title: 'קפה לנדוור', address: 'ביאליק 1, רמת גן', rating: 4.4, reviews: 812 };
+      // Some answers carry the rating but no reviews in Hebrew.
+      if (fake.hebrewEmpty && u.searchParams.get('hl') === 'iw') return json({ place_info: info, topics: [] });
+      return json({ place_info: info, reviews: fake.reviews });
     }
     return json({ error: 'unexpected' }, 400);
   },
@@ -156,9 +159,27 @@ test('a rating with no reviews is reported, and the admin can see the raw answer
   try {
     const biz = store.businessesFor(store.userByEmail('serp-admin@example.com').id)[0];
     const loc = store.addSerpLocation(biz.id, { dataId: '0x9:0x9', title: 'x' });
-    await assert.rejects(serpSync.syncLocation(biz, loc), /בלי רשימת ביקורות/);
+    const before = fake.calls.length;
+    await assert.rejects(serpSync.syncLocation(biz, loc), /בלי רשימת ביקורות\. שדות: place_info, reviews/);
+    assert.equal(fake.calls.length - before, 3, 'retried without Hebrew, then without sorting');
     assert.match(store.googleLocation(loc.id, biz.id).sync_error, /בלי רשימת ביקורות/);
   } finally {
     fake.reviews.push(...saved);
+  }
+});
+
+test('when Hebrew answers have no reviews, a plainer request is used', async () => {
+  const { store, serpSync } = created;
+  fake.hebrewEmpty = true;
+  try {
+    const biz = store.businessesFor(store.userByEmail('serp-admin@example.com').id)[0];
+    const loc = store.addSerpLocation(biz.id, { dataId: '0x7:0x7', title: 'y' });
+    assert.ok((await serpSync.syncLocation(biz, loc)) > 0);
+    assert.equal(store.googleLocation(loc.id, biz.id).sync_error, null);
+    const last = new URL(fake.calls.at(-1));
+    assert.equal(last.searchParams.get('hl'), null);
+    assert.equal(last.searchParams.get('sort_by'), 'newestFirst');
+  } finally {
+    fake.hebrewEmpty = false;
   }
 });
