@@ -20,6 +20,10 @@ export function createSerpSync({ store, serp, notifier, intervalHours = Number(p
       for (let page = 0; page < (firstSync ? FIRST_SYNC_PAGES : LATER_SYNC_PAGES); page++) {
         const r = await serp.reviews({ dataId: loc.data_id, placeId: loc.place_id }, { nextPageToken: token });
         place ||= r.place;
+        if (page === 0 && !r.reviews.length && r.place.total > 0) {
+          // A rating with no reviews means SerpApi's answer didn't parse; keep it visible.
+          throw new Error(`התקבל דירוג (${r.place.total} ביקורות) אבל בלי רשימת ביקורות`);
+        }
         let reachedKnown = false;
         for (const review of r.reviews) {
           if (!store.upsertGoogleReview(loc.id, review)) {

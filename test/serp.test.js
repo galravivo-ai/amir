@@ -149,3 +149,16 @@ test('follow a place by link or by name, get alerts, answer on Google', async ()
   assert.match((await req('/admin/google/reviews')).text, /חיכינו שעה/);
   assert.match((await req('/admin')).text, /בגוגל/);
 });
+
+test('a rating with no reviews is reported, and the admin can see the raw answer', async () => {
+  const { store, serpSync } = created;
+  const saved = fake.reviews.splice(0);
+  try {
+    const biz = store.businessesFor(store.userByEmail('serp-admin@example.com').id)[0];
+    const loc = store.addSerpLocation(biz.id, { dataId: '0x9:0x9', title: 'x' });
+    await assert.rejects(serpSync.syncLocation(biz, loc), /בלי רשימת ביקורות/);
+    assert.match(store.googleLocation(loc.id, biz.id).sync_error, /בלי רשימת ביקורות/);
+  } finally {
+    fake.reviews.push(...saved);
+  }
+});

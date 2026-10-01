@@ -3,7 +3,7 @@ import express from 'express';
 import { AiError } from '../ai.js';
 import { GoogleError } from '../google.js';
 import { SerpError, writeReviewUrl } from '../serp.js';
-import { safeUrl } from '../util.js';
+import { h, safeUrl } from '../util.js';
 import * as V from '../views/google.js';
 
 const STATE_COOKIE = 'gstate';
@@ -65,6 +65,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         error: res.locals.error || (req.query.err ? String(req.query.err).slice(0, 300) : ''),
         setupCheck: ctx.isSuperadmin(req.user) && google ? { ...google.setupCheck(), redirectUri: redirectUri(req) } : null,
         serpMissing: !serp && ctx.isSuperadmin(req.user),
+        debug: ctx.isSuperadmin(req.user),
       }),
     );
   }
@@ -159,6 +160,24 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res.redirect(303, `/admin/google?err=${encodeURIComponent(humanError(err))}`);
     }
   }
+
+  // System admin only: what SerpApi actually returns for a place, to diagnose parsing.
+  router.get('/google/locations/:id/debug', async (req, res) => {
+    const loc = store.googleLocation(Number(req.params.id), req.business.id);
+    if (!serp || !loc || loc.source !== 'serp' || !ctx.isSuperadmin(req.user)) return notFound(res);
+    let out;
+    try {
+      const raw = await serp.rawReviews({ dataId: loc.data_id, placeId: loc.place_id });
+      delete raw.search_metadata;
+      if (raw.search_parameters) delete raw.search_parameters.api_key;
+      out = { keys: Object.keys(raw), reviewsCount: Array.isArray(raw.reviews) ? raw.reviews.length : null, raw };
+    } catch (err) {
+      out = { error: err.message };
+    }
+    const json = JSON.stringify({ location: { id: loc.id, data_id: loc.data_id, place_id: loc.place_id, sync_error: loc.sync_error }, ...out }, null, 2);
+    render(req, res, 'בדיקת SerpApi', `<h1>בדיקת SerpApi</h1><p class="muted">התשובה הגולמית (בלי המפתח). צלמו או העתיקו את החלק העליון.</p>
+      <textarea readonly dir="ltr" rows="30" style="width:100%;font:12px monospace" onclick="this.select()">${h(json.slice(0, 20000))}</textarea>`);
+  });
 
   router.post('/google/locations/:id/delete', manager, (req, res) => {
     const loc = store.googleLocation(Number(req.params.id), req.business.id);

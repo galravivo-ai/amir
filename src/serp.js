@@ -142,6 +142,10 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
       return { matches: await this.search(text) };
     },
 
+    /** The untouched SerpApi answer for a place, for the system admin's diagnosis page. */
+    rawReviews: ({ dataId, placeId }) =>
+      call({ engine: 'google_maps_reviews', sort_by: 'newestFirst', hl: 'iw', ...(dataId ? { data_id: dataId } : { place_id: placeId }) }),
+
     /** Newest reviews first, plus the place's overall rating. */
     async reviews({ dataId, placeId }, { nextPageToken = '' } = {}) {
       const params = { engine: 'google_maps_reviews', sort_by: 'newestFirst', hl: 'iw' };

@@ -31,7 +31,7 @@ function googleSetupCheck({ clientId, secretLooksRight, secretLength, redirectUr
   </ul></section>`;
 }
 
-function locationsTable(locations, { campaigns, csrf, can, deletable }) {
+function locationsTable(locations, { campaigns, csrf, can, deletable, debug = false }) {
   const campaignOptions = (cur) =>
     `<option value="">— בלי שיוך —</option>${campaigns
       .map((c) => `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${h(c.name)}</option>`)
@@ -39,7 +39,8 @@ function locationsTable(locations, { campaigns, csrf, can, deletable }) {
   return `<table class="table responsive"><thead><tr><th>סניף בגוגל</th><th>דירוג</th><th>מעקב וקמפיין</th></tr></thead><tbody>${locations
     .map(
       (l) => `<tr><td data-l="סניף"><b>${h(l.title || 'טוען פרטים…')}</b><div class="muted small">${h(l.address)}</div>
-          ${l.sync_error ? `<div class="danger-text small">הבדיקה האחרונה נכשלה: ${h(l.sync_error)}</div>` : ''}</td>
+          ${l.sync_error ? `<div class="danger-text small">הבדיקה האחרונה נכשלה: ${h(l.sync_error)}</div>` : ''}
+          ${debug && l.source === 'serp' ? `<a class="small" href="/admin/google/locations/${l.id}/debug">בדיקת SerpApi</a>` : ''}</td>
         <td data-l="דירוג">${l.total_reviews ? `${Number(l.avg_rating).toFixed(1)} ★ <span class="muted small">(${Number(l.total_reviews).toLocaleString('he-IL')})</span>` : '—'}
           <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : ''}</div></td>
         <td data-l="מעקב">${
@@ -61,7 +62,7 @@ function locationsTable(locations, { campaigns, csrf, can, deletable }) {
     .join('')}</tbody></table>`;
 }
 
-function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit }) {
+function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug }) {
   const full = places.length >= branchLimit;
   return `<section class="card stack">
     <h2>מעקב אחרי הביקורות בגוגל</h2>
@@ -97,7 +98,7 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
           : ''
         : ''
     }
-    ${places.length ? locationsTable(places, { campaigns, csrf, can, deletable: true }) : ''}
+    ${places.length ? locationsTable(places, { campaigns, csrf, can, deletable: true, debug }) : ''}
     <p class="muted small">כדי לענות לביקורת, לוחצים עליה ואז "מענה בגוגל". ה-AI יכול לנסח לכם טיוטה להעתקה.</p>
   </section>`;
 }
@@ -118,6 +119,7 @@ export function googleConnectView({
   notice = '',
   error = '',
   setupCheck = null,
+  debug = false,
 }) {
   const places = locations.filter((l) => l.source === 'serp');
   const gbpLocations = locations.filter((l) => l.source !== 'serp');
@@ -137,7 +139,7 @@ export function googleConnectView({
   ${serpMissing ? '<div class="warn">כדי לעקוב אחרי ביקורות לפי קישור, הוסיפו ב-Railway את המשתנה <code>SERPAPI_KEY</code> (רק מנהל המערכת רואה את זה).</div>' : ''}
   ${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
 
-  const serpPart = serpAvailable ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit }) : '';
+  const serpPart = serpAvailable ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug }) : '';
 
   let gbpPart = '';
   if (gbpAvailable && !conn) {
