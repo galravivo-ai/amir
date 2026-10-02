@@ -270,7 +270,7 @@ export function dashboardView({
   const dist = [0, 1, 2, 3, 4].map((i) => stats.distribution[i] + g.distribution[i]);
   const toHandle = stats.openIssues + g.unanswered;
 
-  const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 6);
+  const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 4);
 
   const handleLink = g.unanswered && !stats.openIssues ? '/admin/google/reviews?filter=unanswered' : '/admin/responses?sentiment=negative&status=new';
 
@@ -334,6 +334,7 @@ export function dashboardView({
       ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} לקוחות לא מרוצים מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
     </div>
     <div class="dash-grid">
+      <div class="dash-col">
       <section class="card">
         <div class="card-head"><h3>ביקורות ודירוגים לפי יום</h3>
           <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
@@ -341,15 +342,16 @@ export function dashboardView({
         ${dailyChart(daily)}
         <p class="muted small chart-note">גוגל וסקרים יחד. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
       </section>
+      <section class="card"><h3>התפלגות כוכבים</h3>${distribution(dist)}
+        <p class="muted small">${sources ? `${sources} ${h(period.label)}` : 'אין בתקופה הזו'}</p></section>
+      </div>
+      <div class="dash-col">
       <section class="card">
         <div class="card-head"><h3>מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
         ${feed(waitingItems, 'אין ביקורות שליליות או לקוחות לא מרוצים שמחכים. כל הכבוד!')}
       </section>
-    </div>
-    <div class="grid2">
-      <section class="card"><h3>התפלגות כוכבים</h3>${distribution(dist)}
-        <p class="muted small">${sources ? `${sources} ${h(period.label)}` : 'אין בתקופה הזו'}</p></section>
       ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3><p class="muted">כשעוזר ה-AI פעיל, הוא מסווג כל ביקורת והערה לנושאים (שירות, המתנה, מחיר...) ותראו כאן מה חוזר הכי הרבה.</p></section>`}
+      </div>
     </div>
     ${surveySection}`;
 }
