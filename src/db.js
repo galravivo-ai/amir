@@ -377,6 +377,10 @@ const MIGRATIONS = [
   ALTER TABLE google_reviews ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';
   ALTER TABLE google_reviews ADD COLUMN tagged_at TEXT;
   `,
+  // v17: the QR poster design chosen for each campaign
+  `
+  ALTER TABLE campaigns ADD COLUMN poster_design TEXT NOT NULL DEFAULT '{}';
+  `,
 ];
 
 function migrate(db) {

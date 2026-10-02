@@ -118,7 +118,7 @@ export function staffView({ staff, campaigns, campaignId, baseUrl, csrf, can = (
             ? `<input class="copy" readonly dir="ltr" value="${h(link)}" onclick="this.select()" aria-label="קישור אישי">
                <div class="link-row small">
                  <a href="/admin/campaigns/${campaign.id}/qr.png${qs}" download="qr-${h(campaign.slug)}-${h(s.code)}.png">הורדת QR</a> ·
-                 <a href="/admin/campaigns/${campaign.id}/poster${qs}" target="_blank">שלט להדפסה</a> ·
+                 <a href="/admin/campaigns/${campaign.id}/poster${qs}" >עיצוב שלט</a> ·
                  <a href="/admin/responses?staff=${s.id}">הדירוגים שלו/ה</a>
                </div>`
             : '<span class="muted">—</span>'

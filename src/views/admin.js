@@ -6,6 +6,7 @@ import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
+import { inkOn, POSTER_SIZES, POSTER_STYLES } from '../poster.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -805,7 +806,7 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
       <div class="actions">
         <a class="btn" href="/admin/campaigns/${campaign.id}/qr.png" download="qr-${h(campaign.slug)}.png">הורדת PNG</a>
         <a class="btn" href="/admin/campaigns/${campaign.id}/qr.svg" download="qr-${h(campaign.slug)}.svg">הורדת SVG</a>
-        <a class="btn" href="/admin/campaigns/${campaign.id}/poster" target="_blank">שלט להדפסה</a>
+        <a class="btn accent" href="/admin/campaigns/${campaign.id}/poster">עיצוב והדפסת שלט QR</a>
       </div>
       <h4>QR לפי מקור</h4>
       <p class="muted small">צרו QR נפרד לכל שולחן / קופה / עובד וראו בלוח הבקרה מאיפה מגיעים הדירוגים.</p>
@@ -860,34 +861,126 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
   </div>`;
 }
 
-export function posterView({ campaign, business, qrSvg, t, staff = null }) {
+/** The poster sheet itself; the designer's script updates it live. */
+function posterSheet({ business, qrSvg, t, design: d }) {
   const logo = logoSrc(business);
   const mark = logo
-    ? `<img class="poster-logo" src="${h(logo)}" alt="">`
-    : `<span class="poster-initial">${h(String(business.name).trim().charAt(0) || '★')}</span>`;
-  const heading = staff ? t.poster_staff.replace('{name}', staff.name) : t.title;
+    ? `<img class="ps-logo" src="${h(logo)}" alt="">`
+    : `<span class="ps-initial">${h(String(business.name).trim().charAt(0) || '★')}</span>`;
   const steps = [t.poster_step1, t.poster_step2, t.poster_step3];
-  return `<!doctype html><html lang="${h(campaign.lang)}" dir="${h(t.dir)}"><head><meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${h(business.name)} · QR</title><link rel="stylesheet" href="${asset('style.css')}">
-  <style>:root{--brand:${safeColor(business.brand_color)}}</style></head>
-  <body class="poster">
-    <div class="poster-toolbar noprint">
-      <span>שלט מוכן להדפסה על דף A4. אפשר גם לשמור כ-PDF מחלון ההדפסה.</span>
-      <button class="btn accent" onclick="print()">הדפסה</button>
-    </div>
-    <article class="poster-sheet">
-      <header class="poster-band">${mark}<span class="poster-biz">${h(business.name)}</span></header>
-      <div class="poster-body">
-        <h1>${h(heading)}</h1>
-        <p class="poster-sub">${h(t.subtitle)}</p>
-        <div class="poster-qr-wrap">
-          <span class="poster-badge">${h(t.poster_badge)}</span>
-          <div class="poster-qr">${qrSvg}</div>
-        </div>
-        <ol class="poster-steps">${steps.map((s, i) => `<li><span>${i + 1}</span>${h(s)}</li>`).join('')}</ol>
-        <div class="poster-stars" aria-hidden="true">★★★★★</div>
+  return `<article id="sheet" class="poster-sheet style-${h(d.style)} size-${h(d.size)}" dir="${h(t.dir)}"
+      style="--c:${h(d.color)};--on-c:${inkOn(d.color)};--a:${h(d.accent)};--on-a:${inkOn(d.accent)}">
+    <header class="ps-head">
+      <span data-show="showLogo" ${d.showLogo ? '' : 'hidden'}>${mark}</span>
+      <span class="ps-biz" data-show="showName" ${d.showName ? '' : 'hidden'}>${h(business.name)}</span>
+    </header>
+    <div class="ps-body">
+      <h1 data-text="title">${h(d.title)}</h1>
+      <p class="ps-sub" data-text="subtitle">${h(d.subtitle)}</p>
+      <div class="ps-qr-wrap">
+        <span class="ps-badge" data-text="badge">${h(d.badge)}</span>
+        <div class="ps-qr">${qrSvg}</div>
       </div>
-    </article>
+      <ol class="ps-steps" data-show="showSteps" ${d.showSteps ? '' : 'hidden'}>${steps.map((x, i) => `<li><span>${i + 1}</span>${h(x)}</li>`).join('')}</ol>
+      <div class="ps-stars" data-show="showStars" ${d.showStars ? '' : 'hidden'} aria-hidden="true">★★★★★</div>
+      <p class="ps-footer" data-text="footer" ${d.footer ? '' : 'hidden'}>${h(d.footer)}</p>
+    </div>
+  </article>`;
+}
+
+export function posterView({ campaign, business, qrSvg, t, staff = null, design, csrf = '', canEdit = true, src = '', saved = false }) {
+  const d = design;
+  const sizes = Object.fromEntries(Object.entries(POSTER_SIZES).map(([k, v]) => [k, { w: v.w, h: v.h }]));
+  const opt = (map, cur) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${h(typeof v === 'string' ? v : v.label)}</option>`).join('');
+  const check = (name, label) => `<label class="check"><input type="checkbox" name="${name}" value="1" ${d[name] ? 'checked' : ''}> ${label}</label>`;
+  return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>עיצוב שלט · ${h(business.name)}</title><link rel="stylesheet" href="${asset('style.css')}">
+  <style id="page-size">@page { size: ${sizes[d.size].w}mm ${sizes[d.size].h}mm; margin: 0 }</style>
+  <script src="${asset('vendor/html-to-image.js')}" defer></script>
+  </head>
+  <body class="poster-app">
+    <header class="pd-top noprint">
+      <a href="/admin/campaigns/${campaign.id}/share" class="pd-back">→ חזרה</a>
+      <h1>עיצוב שלט QR <span class="muted">· ${h(campaign.name)}${staff ? ` · ${h(staff.name)}` : ''}</span></h1>
+      <div class="pd-actions">
+        <button type="button" class="btn" id="pd-png">הורדה כתמונה (PNG)</button>
+        <button type="button" class="btn accent" onclick="print()">הדפסה / שמירה כ-PDF</button>
+      </div>
+    </header>
+    ${saved ? '<div class="flash noprint pd-flash">העיצוב נשמר.</div>' : ''}
+    <div class="pd-main">
+      <form id="pd-form" class="pd-panel noprint" method="post" action="/admin/campaigns/${campaign.id}/poster">
+        <input type="hidden" name="_csrf" value="${h(csrf)}">
+        ${staff ? `<input type="hidden" name="e" value="${h(staff.code)}">` : ''}
+        ${src ? `<input type="hidden" name="src" value="${h(src)}">` : ''}
+        <fieldset><legend>גודל ותבנית</legend>
+          <label>גודל<select name="size">${opt(POSTER_SIZES, d.size)}</select></label>
+          <div class="pd-styles" role="radiogroup" aria-label="תבנית">${Object.entries(POSTER_STYLES)
+            .map(([k, l]) => `<label class="pd-style s-${k}"><input type="radio" name="style" value="${k}" ${k === d.style ? 'checked' : ''}><span class="pd-swatch"></span>${h(l)}</label>`)
+            .join('')}</div>
+        </fieldset>
+        <fieldset><legend>צבעים</legend>
+          <div class="pd-colors">
+            <label>צבע ראשי<input type="color" name="color" value="${h(d.color)}"></label>
+            <label>צבע הדגשה<input type="color" name="accent" value="${h(d.accent)}"></label>
+          </div>
+        </fieldset>
+        <fieldset><legend>טקסטים</legend>
+          <label>כותרת<input name="title" value="${h(d.title)}" maxlength="80"></label>
+          <label>שורה מתחת לכותרת<input name="subtitle" value="${h(d.subtitle)}" maxlength="120"></label>
+          <label>תווית מעל הקוד<input name="badge" value="${h(d.badge)}" maxlength="30"></label>
+          <label>שורה בתחתית (לא חובה)<input name="footer" value="${h(d.footer)}" maxlength="80" placeholder="למשל: תודה שבחרתם בנו"></label>
+        </fieldset>
+        <fieldset><legend>מה מופיע בשלט</legend>
+          <div class="pd-checks">${check('showLogo', 'לוגו')}${check('showName', 'שם העסק')}${check('showSteps', '3 שלבים')}${check('showStars', 'כוכבים')}</div>
+        </fieldset>
+        ${canEdit ? '<button class="btn primary pd-save">שמירת העיצוב</button>' : ''}
+        <p class="muted small">הקוד מוביל לסקר של הקמפיין "${h(campaign.name)}". אפשר להדפיס כמה שלטים ולשמור כל אחד כ-PDF או כתמונה לשליחה לבית דפוס.</p>
+      </form>
+      <div class="pd-stage">${posterSheet({ business, qrSvg, t, design: d })}</div>
+    </div>
+    <script>
+    (function () {
+      var SIZES = ${JSON.stringify(sizes)};
+      var form = document.getElementById('pd-form');
+      var sheet = document.getElementById('sheet');
+      function ink(hex) {
+        var n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.45 ? '#17123a' : '#ffffff';
+      }
+      function apply() {
+        var f = form.elements;
+        var style = form.querySelector('input[name=style]:checked').value;
+        sheet.className = 'poster-sheet style-' + style + ' size-' + f.size.value;
+        sheet.style.setProperty('--c', f.color.value); sheet.style.setProperty('--on-c', ink(f.color.value));
+        sheet.style.setProperty('--a', f.accent.value); sheet.style.setProperty('--on-a', ink(f.accent.value));
+        sheet.querySelectorAll('[data-text]').forEach(function (el) {
+          var v = f[el.dataset.text].value.trim();
+          el.textContent = v || f[el.dataset.text].defaultValue;
+          if (el.dataset.text === 'footer') el.hidden = !v;
+        });
+        sheet.querySelectorAll('[data-show]').forEach(function (el) { el.hidden = !f[el.dataset.show].checked; });
+        var s = SIZES[f.size.value];
+        document.getElementById('page-size').textContent = '@page { size: ' + s.w + 'mm ' + s.h + 'mm; margin: 0 }';
+      }
+      form.addEventListener('input', apply);
+      form.addEventListener('change', apply);
+      document.getElementById('pd-png').addEventListener('click', function () {
+        var btn = this, s = SIZES[form.elements.size.value];
+        if (!window.htmlToImage) return;
+        btn.disabled = true; btn.textContent = 'מכין תמונה…';
+        // 300 DPI at the printed width, good enough for a print shop.
+        var ratio = (s.w / 25.4 * 300) / sheet.offsetWidth;
+        window.htmlToImage.toBlob(sheet, { pixelRatio: ratio, style: { borderRadius: '0', boxShadow: 'none', margin: '0' } }).then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a'); a.href = url; a.download = 'qr-sign-' + form.elements.size.value + '.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        }).catch(function () { alert('לא הצלחנו ליצור תמונה. אפשר להשתמש בהדפסה ושמירה כ-PDF.'); })
+          .then(function () { btn.disabled = false; btn.textContent = 'הורדה כתמונה (PNG)'; });
+      });
+    })();
+    </script>
   </body></html>`;
 }

@@ -471,6 +471,7 @@ export function createStore(db) {
         id,
       );
     },
+    setPosterDesign: (id, design) => q('UPDATE campaigns SET poster_design = ? WHERE id = ?').run(JSON.stringify(design), id),
     setCampaignGoogleUrl: (id, url) => q('UPDATE campaigns SET google_review_url = ? WHERE id = ?').run(url, id),
     deleteCampaign: (id) => q('DELETE FROM campaigns WHERE id = ?').run(id),
 

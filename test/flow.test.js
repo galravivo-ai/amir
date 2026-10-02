@@ -1125,3 +1125,36 @@ test('the system admin is not treated like a trial customer', async () => {
   const r = await plain.req('/login', { method: 'POST', form: { email: 'plain-owner@example.com', password: 'password123' } });
   assert.equal(r.location, '/admin');
 });
+
+test('poster designer: choose a look, save it, it comes back', async () => {
+  const owner = await registeredOwner('poster@example.com');
+  const campaign = await createCampaign(owner);
+  const page = await owner.req(`/admin/campaigns/${campaign.id}/poster`);
+  assert.equal(page.status, 200);
+  assert.match(page.text, /עיצוב שלט QR/);
+  assert.match(page.text, /class="poster-sheet style-classic size-a4"/);
+  assert.match(page.text, /@page \{ size: 210mm 297mm/);
+  assert.match(page.text, /<svg[^>]*>/, 'the QR code is inline');
+  assert.match(page.text, /vendor\/html-to-image\.js\?v=/);
+
+  const saved = await owner.req(`/admin/campaigns/${campaign.id}/poster`, {
+    method: 'POST',
+    form: {
+      _csrf: await csrfOf(owner), size: 'a6', style: 'dark', color: '#0f7a4a', accent: 'red;}</style>',
+      title: 'דרגו אותנו!', subtitle: '', badge: 'סרקו', footer: 'תודה שבאתם', showLogo: '1', showStars: '1', src: 'table4',
+    },
+  });
+  assert.equal(saved.location, `/admin/campaigns/${campaign.id}/poster?saved=1&src=table4`);
+  const again = await owner.req(saved.location);
+  assert.match(again.text, /class="poster-sheet style-dark size-a6"/);
+  assert.match(again.text, /--c:#0f7a4a/);
+  assert.match(again.text, /--a:#ffd23f/, 'a bad color falls back to the default');
+  assert.match(again.text, /דרגו אותנו!/);
+  assert.match(again.text, /תודה שבאתם/);
+  assert.match(again.text, /@page \{ size: 105mm 148mm/);
+  assert.match(again.text, /class="ps-steps" data-show="showSteps" hidden/, 'unticked parts stay hidden');
+  assert.match(again.text, /העיצוב נשמר/);
+
+  const lib = await fetch(`${base}/static/vendor/html-to-image.js`);
+  assert.equal(lib.status, 200);
+});

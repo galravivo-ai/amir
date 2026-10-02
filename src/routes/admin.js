@@ -1,5 +1,6 @@
 import express from 'express';
 import { resolvePeriod } from '../period.js';
+import { designToSave, posterDesign } from '../poster.js';
 import QRCode from 'qrcode';
 import { EDITABLE_TEXT_KEYS, LANGUAGES, textsFor } from '../i18n.js';
 import { AiError, TOPICS } from '../ai.js';
@@ -387,13 +388,39 @@ export function adminRoutes(ctx) {
     res.type('image/png').send(await QRCode.toBuffer(qrTarget(req, c), { width: 1024, ...QR_OPTS }));
   });
 
+  // The poster designer: size, look, colors and texts, with a live preview,
+  // print / PDF and PNG download. The design is saved per campaign.
   admin.get('/campaigns/:id/poster', async (req, res) => {
     const c = loadCampaign(req, res);
     if (!c) return;
     const qrSvg = await QRCode.toString(qrTarget(req, c), { type: 'svg', ...QR_OPTS });
     store.setOnboardingFlag(req.business.id, 'poster');
     const staff = store.staffByCode(req.business.id, req.query.e);
-    res.send(V.posterView({ campaign: c, business: req.business, qrSvg, t: textsFor(c), staff }));
+    const t = textsFor(c);
+    res.send(
+      V.posterView({
+        campaign: c,
+        business: req.business,
+        qrSvg,
+        t,
+        staff,
+        design: posterDesign(c.poster_design, { business: req.business, t, staff }),
+        csrf: req.user.csrf,
+        canEdit: req.can('manager'),
+        src: String(req.query.src ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40),
+        saved: req.query.saved === '1',
+      }),
+    );
+  });
+
+  admin.post('/campaigns/:id/poster', manager, (req, res) => {
+    const c = loadCampaign(req, res);
+    if (!c) return;
+    const staff = store.staffByCode(req.business.id, req.body.e);
+    store.setPosterDesign(c.id, designToSave(req.body, { business: req.business, t: textsFor(c), staff }));
+    const back = new URLSearchParams({ saved: '1' });
+    for (const k of ['e', 'src']) if (req.body[k]) back.set(k, String(req.body[k]).slice(0, 40));
+    res.redirect(303, `/admin/campaigns/${c.id}/poster?${back}`);
   });
 
   admin.get('/campaigns/:id/share', (req, res) => {
