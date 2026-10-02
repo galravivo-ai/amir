@@ -143,6 +143,11 @@ export function waNumber(phone) {
   return d;
 }
 
+/** The WhatsApp / SMS text that invites a customer to rate. */
+export function inviteMessage({ name = '', businessName, link }) {
+  return `היי${name ? ` ${name}` : ''}! תודה שבחרת ב${businessName}. נשמח לשמוע איך היה (פחות מדקה): ${link}`;
+}
+
 export function waLink(phone, text) {
   const n = waNumber(phone);
   const q = text ? `?text=${encodeURIComponent(text)}` : '';

@@ -7,7 +7,7 @@ import { AiError, TOPICS } from '../ai.js';
 import { limitLabel } from '../plans.js';
 import { normalizeQuestions, STATUSES } from '../store.js';
 import { templateQuestions, TEMPLATES } from '../templates.js';
-import { clampInt, csvEscape, errorPage, googleReviewUrl, isEmail, safeUrl } from '../util.js';
+import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, safeUrl, waLink, waNumber } from '../util.js';
 import { parseJson } from '../db.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
@@ -68,6 +68,7 @@ export function adminRoutes(ctx) {
         can: req.can,
         onboarding,
         csrf: req.user.csrf,
+        sendError: req.query.send === 'bad',
       }),
     );
   });
@@ -463,6 +464,19 @@ export function adminRoutes(ctx) {
       }
     }
     res.redirect(303, `/admin/campaigns/${c.id}/share?invite=${t}`);
+  });
+
+  // Quick send from anywhere: a personal survey link, opened straight in WhatsApp
+  // with the message ready, so sending takes two taps.
+  admin.post('/send', manager, (req, res) => {
+    const campaigns = store.campaignsFor(req.business.id);
+    const c = campaigns.find((x) => x.id === Number(req.body.campaign)) || campaigns[0];
+    const phone = String(req.body.phone ?? '').trim().slice(0, 30);
+    if (!c || waNumber(phone).length < 9) return res.redirect(303, '/admin?send=bad');
+    const name = String(req.body.customer_name ?? '').trim().slice(0, 80);
+    const t = store.createInvite(c.id, { customer_name: name, phone });
+    const link = `${ctx.baseUrl(req)}/r/${c.slug}?i=${t}`;
+    res.redirect(303, waLink(phone, inviteMessage({ name, businessName: req.business.name, link })));
   });
 
   return admin;

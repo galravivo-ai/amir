@@ -1158,3 +1158,26 @@ test('poster designer: choose a look, save it, it comes back', async () => {
   const lib = await fetch(`${base}/static/vendor/html-to-image.js`);
   assert.equal(lib.status, 200);
 });
+
+test('quick WhatsApp send from the dashboard', async () => {
+  const owner = await registeredOwner('wa-send@example.com');
+  const campaign = await createCampaign(owner);
+  const dash = await owner.req('/admin');
+  assert.match(dash.text, /שליחה בוואטסאפ/);
+  assert.match(dash.text, /<dialog id="wa-send"/);
+  const csp = (await fetch(`${base}/admin`)).headers.get('content-security-policy');
+  assert.match(csp, /form-action [^;]*https:\/\/wa\.me/, 'the browser may follow the redirect to WhatsApp');
+  const token = await csrfOf(owner);
+  const sent = await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '050-123 4567', customer_name: 'דנה', campaign: String(campaign.id) } });
+  assert.equal(sent.status, 303);
+  const wa = new URL(sent.location);
+  assert.equal(wa.host, 'wa.me');
+  assert.equal(wa.pathname, '/972501234567');
+  const text = wa.searchParams.get('text');
+  assert.match(text, /^היי דנה! תודה שבחרת ב/);
+  const t = text.match(/\/r\/[\w-]+\?i=(\w+)/)[1];
+  assert.ok(store.inviteByToken(campaign.id, t), 'a personal invite was created, so the answer is linked to the customer');
+  const bad = await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '12' } });
+  assert.equal(bad.location, '/admin?send=bad');
+  assert.match((await owner.req(bad.location)).text, /מספר הטלפון לא נראה תקין/);
+});

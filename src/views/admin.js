@@ -1,6 +1,6 @@
 import { EDITABLE_TEXT_KEYS, LANGUAGES, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
-import { asset, formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
+import { asset, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
@@ -150,6 +150,30 @@ function trendDiff(now, before, baseCount) {
 
 const G_MARK = `<svg class="src-g" width="14" height="14" viewBox="0 0 48 48" aria-label="גוגל" role="img"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
 
+const WA_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>';
+
+/** Send a customer a personal survey link on WhatsApp, from the dashboard. */
+function sendDialog(campaigns, csrf) {
+  return `<dialog id="wa-send" class="wa-dialog" aria-labelledby="wa-send-title">
+    <form method="post" action="/admin/send" target="_blank" class="stack"
+      onsubmit="var f=this;setTimeout(function(){f.reset();f.closest('dialog').close();var t=document.getElementById('wa-sent');t.hidden=false;setTimeout(function(){t.hidden=true},5000)},300)">
+      <div class="row between"><h3 id="wa-send-title">${WA_ICON} שליחת בקשת דירוג בוואטסאפ</h3>
+        <button type="button" class="icon-btn" aria-label="סגירה" onclick="this.closest('dialog').close()">✕</button></div>
+      <p class="muted small">כותבים את הטלפון של הלקוח, ונפתח וואטסאפ עם הודעה מוכנה וקישור אישי לסקר. נשאר רק ללחוץ "שליחה".</p>
+      ${csrfField(csrf)}
+      <label>טלפון של הלקוח<input name="phone" type="tel" inputmode="tel" required minlength="9" maxlength="20" placeholder="050-1234567" dir="ltr" autocomplete="off"></label>
+      <label>שם הלקוח (לא חובה)<input name="customer_name" maxlength="80" autocomplete="off"></label>
+      ${
+        campaigns.length > 1
+          ? `<label>קמפיין<select name="campaign">${campaigns.map((c) => `<option value="${c.id}">${h(c.name)}</option>`).join('')}</select></label>`
+          : `<input type="hidden" name="campaign" value="${campaigns[0].id}">`
+      }
+      <button class="btn wa">${WA_ICON} פתיחה בוואטסאפ</button>
+    </form>
+  </dialog>
+  <div id="wa-sent" class="toast" role="status" hidden>וואטסאפ נפתח בחלון חדש. אפשר לשלוח ללקוח הבא.</div>`;
+}
+
 /** One row in a mixed list of survey answers and Google reviews. */
 function feedRow(item) {
   const name = item.name || 'לקוח/ה';
@@ -204,6 +228,7 @@ export function dashboardView({
   can = () => true,
   onboarding = null,
   csrf = '',
+  sendError = false,
 }) {
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
   const hasGoogle = g.total > 0 || g.count > 0;
@@ -246,9 +271,12 @@ export function dashboardView({
       <div class="cover-bar">
         ${g0.total ? `<a class="cover-google" href="/admin/google/reviews" title="הדירוג בגוגל"><b>${g0.avg.toFixed(1)}</b><span class="cover-star">★</span><span>${g0.total.toLocaleString('he-IL')} ביקורות בגוגל</span></a>` : ''}
         ${filter}
+        ${can('manager') && campaigns.length ? `<button type="button" class="btn cover-wa" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} שליחה בוואטסאפ</button>` : ''}
         ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
       </div>
-    </header>`;
+    </header>
+    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf) : ''}
+    ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}`;
 
   if (!campaigns.length && !hasGoogle) {
     return `${cover}
@@ -794,8 +822,7 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
 export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, can = () => true, emailInvites = false, mailEnabled = false }) {
   const url = `${baseUrl}/r/${campaign.slug}`;
   const inviteUrl = (t) => `${url}?i=${t}`;
-  const inviteMsg = (inv) =>
-    `היי ${inv.customer_name || ''}! תודה שבחרת ב${businessName}. נשמח לשמוע איך היה (פחות מדקה): ${inviteUrl(inv.token)}`;
+  const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token) });
   return `<p><a href="/admin/campaigns">→ חזרה לקמפיינים</a></p>
   <h1>QR ושליחה: ${h(campaign.name)}</h1>
   <div class="grid2">

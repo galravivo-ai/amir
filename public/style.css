@@ -839,3 +839,14 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .card.empty .btn { margin-top: .4rem; }
 .dash-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .dash-col > .card { margin-bottom: 0; }
+.cover-wa { background: #1faa55; border-color: #1faa55; color: #fff; min-height: 38px; }
+.cover-wa:hover { background: #18914a; }
+.wa-dialog { border: 0; border-radius: 18px; padding: 18px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 24px 60px rgba(23, 18, 58, .3); }
+.wa-dialog::backdrop { background: rgba(23, 18, 58, .45); }
+.wa-dialog h3 { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+.wa-dialog h3 svg { color: #1faa55; }
+.wa-dialog .btn.wa { width: 100%; }
+.toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 70; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(23, 18, 58, .3); font-size: .92rem; max-width: calc(100vw - 32px); }
+.toast[hidden] { display: none; }
+.wa-dialog .row.between { flex-wrap: nowrap; align-items: center; gap: 8px; }
+.wa-dialog h3 { flex: 1; }
