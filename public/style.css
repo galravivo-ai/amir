@@ -215,7 +215,7 @@ body.app { display: flex; min-height: 100vh; }
 .waiting a:hover .w-name { color: var(--purple); }
 .w-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--purple-soft); color: var(--purple); display: grid; place-items: center; font-weight: 700; flex: none; }
 .w-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.w-name { font-weight: 700; display: flex; gap: 8px; align-items: center; }
+.w-name { font-weight: 700; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .w-text { font-size: .92rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dist-row { display: flex; align-items: center; gap: .6rem; margin: .4rem 0; }
 .dist-label { width: 2.6rem; font-size: .9rem; }
@@ -273,7 +273,7 @@ textarea[readonly] { font-family: ui-monospace, monospace; font-size: .85rem; ba
   .side-user { order: 5; border: 0; padding: 0; margin: 0; }
   .side-user a span { display: none; }
   .app-main { padding: 20px 16px 40px; }
-  .dash-grid { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
   .qrow { grid-template-columns: 1fr 1fr; padding-bottom: .6rem; border-bottom: 1px dashed var(--line); }
   .qrow input[name=q_label], .qrow input[name=q_options] { grid-column: 1 / -1; }
   .table.responsive thead { display: none; }
@@ -717,3 +717,11 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .g-matches { display: grid; gap: 8px; }
 .g-match { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .g-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.src-tag { display: inline-flex; align-items: center; gap: 3px; font-size: .74rem; font-weight: 600; color: var(--ink-2); background: var(--line-2); border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; vertical-align: middle; }
+.src-tag .src-g { flex-shrink: 0; }
+.kpi-star { color: var(--star); font-size: .7em; }
+.dash-section { font-size: 1.15rem; margin: 2rem 0 .8rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.chart-note { margin: .4rem 0 0; }
+.w-when { display: block; margin-top: 2px; }
+.waiting a > .badge { flex-shrink: 0; }
+@media (max-width: 640px) { .waiting a { flex-wrap: wrap; } .waiting a > .w-body { flex-basis: calc(100% - 60px); } .waiting a > .badge { margin-inline-start: 48px; } }

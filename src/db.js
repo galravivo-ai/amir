@@ -372,6 +372,11 @@ const MIGRATIONS = [
   ALTER TABLE google_locations ADD COLUMN sync_error TEXT;
   ALTER TABLE google_reviews ADD COLUMN link TEXT NOT NULL DEFAULT '';
   `,
+  // v16: AI topic tags on Google reviews, so the dashboard covers them too
+  `
+  ALTER TABLE google_reviews ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';
+  ALTER TABLE google_reviews ADD COLUMN tagged_at TEXT;
+  `,
 ];
 
 function migrate(db) {

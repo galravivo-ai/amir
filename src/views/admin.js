@@ -5,7 +5,6 @@ import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
-import { googleDashCard } from './google.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -41,9 +40,12 @@ function dailyChart(daily) {
       const x = padX + i * step + (step - bw) / 2;
       const pos = d.responses - d.negative;
       const r = Math.min(4, bw / 2);
-      return `<g><title>${h(d.date)}: ${pos} מרוצים, ${d.negative} לא מרוצים, ${d.scans} סריקות</title>
+      const parts = [`${pos} מרוצים`, `${d.negative} לא מרוצים`];
+      if (d.google) parts.push(`מתוכם ${d.google} בגוגל`);
+      if (d.scans) parts.push(`${d.scans} סריקות`);
+      return `<g><title>${h(d.date)}: ${parts.join(', ')}</title>
         ${pos ? `<rect class="bar-pos" x="${x}" y="${y(pos)}" width="${bw}" height="${y(0) - y(pos)}" rx="${r}"/>` : ''}
-        ${d.negative ? `<rect class="bar-neg" x="${x}" y="${y(d.responses)}" width="${bw}" height="${y(pos) - y(d.responses) - 1}" rx="${r}"/>` : ''}
+        ${d.negative ? `<rect class="bar-neg" x="${x}" y="${y(d.responses)}" width="${bw}" height="${Math.max(1, y(pos) - y(d.responses) - (pos ? 2 : 0))}" rx="${r}"/>` : ''}
       </g>`;
     })
     .join('');
@@ -138,22 +140,45 @@ function trendDiff(now, before, baseCount) {
   return [`${diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)} מהתקופה הקודמת`, diff > 0 ? 'up' : 'down'];
 }
 
-function waitingList(rows) {
-  if (!rows.length) return '<p class="muted">אין פניות פתוחות. כל הכבוד!</p>';
-  return `<div class="waiting">${rows
-    .map((r) => {
-      const name = r.customer_name || 'לקוח/ה';
-      const pill = r.overdue ? '<span class="badge st-late">באיחור</span>' : statusBadge(r.status);
-      return `<a href="/admin/responses/${r.id}">
-        <span class="w-avatar">${h(name.trim().charAt(0))}</span>
-        <span class="w-body">
-          <span class="w-name">${h(name)} ${stars(r.rating)}</span>
-          <span class="w-text">${h(r.comment) || '<span class="muted">בלי הערה</span>'}</span>
-        </span>
-        ${pill}
-      </a>`;
-    })
-    .join('')}</div>`;
+const G_MARK = `<svg class="src-g" width="14" height="14" viewBox="0 0 48 48" aria-label="גוגל" role="img"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+
+/** One row in a mixed list of survey answers and Google reviews. */
+function feedRow(item) {
+  const name = item.name || 'לקוח/ה';
+  return `<a href="${item.href}">
+    <span class="w-avatar">${h(name.trim().charAt(0))}</span>
+    <span class="w-body">
+      <span class="w-name">${h(name)} ${stars(item.rating)} <span class="src-tag">${item.google ? `${G_MARK} גוגל` : 'סקר'}</span></span>
+      <span class="w-text">${h(item.text) || '<span class="muted">בלי טקסט</span>'}</span>
+      <span class="w-when muted small">${h(formatDate(item.when))}</span>
+    </span>
+    ${item.pill || ''}
+  </a>`;
+}
+
+const fromResponse = (r) => ({
+  name: r.customer_name,
+  rating: r.rating,
+  text: r.comment,
+  when: r.created_at,
+  sortKey: new Date(`${String(r.created_at).replace(' ', 'T')}Z`).getTime() || 0,
+  href: `/admin/responses/${r.id}`,
+  pill: r.sentiment === 'negative' ? (r.overdue ? '<span class="badge st-late">באיחור</span>' : statusBadge(r.status)) : '',
+});
+const fromReview = (g) => ({
+  name: g.reviewer || 'לקוח אנונימי',
+  rating: g.rating,
+  text: g.comment,
+  when: g.create_time,
+  sortKey: Date.parse(g.create_time) || 0,
+  google: true,
+  href: `/admin/google/reviews/${g.id}`,
+  pill: g.reply ? '' : '<span class="badge st-new">ממתינה לתשובה</span>',
+});
+
+function feed(items, empty) {
+  if (!items.length) return `<p class="muted">${empty}</p>`;
+  return `<div class="waiting">${items.map(feedRow).join('')}</div>`;
 }
 
 export function dashboardView({
@@ -164,19 +189,26 @@ export function dashboardView({
   days,
   waiting,
   topics = [],
+  google = null,
+  latest = [],
   userName,
   quotaWarning = '',
   can = () => true,
   onboarding = null,
   csrf = '',
-  google = null,
 }) {
+  const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], latest: [], waiting: [], unanswered: 0 };
+  const hasGoogle = g.total > 0 || g.count > 0 || g.latest.length > 0;
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
   const filter = `<form method="get" class="filters">
-      <select name="campaign" aria-label="קמפיין" onchange="this.form.submit()"><option value="">כל הקמפיינים</option>${campaigns
-        .map((c) => `<option value="${c.id}" ${c.id === campaignId ? 'selected' : ''}>${h(c.name)}</option>`)
-        .join('')}</select>
+      ${
+        campaigns.length
+          ? `<select name="campaign" aria-label="קמפיין" onchange="this.form.submit()"><option value="">כל הקמפיינים</option>${campaigns
+              .map((c) => `<option value="${c.id}" ${c.id === campaignId ? 'selected' : ''}>${h(c.name)}</option>`)
+              .join('')}</select>`
+          : ''
+      }
       <select name="days" aria-label="תקופה" onchange="this.form.submit()">${[7, 30, 90, 365]
         .map((d) => `<option value="${d}" ${d === days ? 'selected' : ''}>${d} ימים</option>`)
         .join('')}</select>
@@ -184,10 +216,38 @@ export function dashboardView({
       ${can('manager') ? '<a class="btn accent" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
     </form>`;
 
-  if (!campaigns.length) {
+  if (!campaigns.length && !hasGoogle) {
     return `<div class="dash-head"><div class="titles"><h1>${h(greeting(userName))}</h1></div></div>
       ${checklist || `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`}`;
   }
+
+  // ---- everything customers said, surveys and Google together ----
+  const total = stats.responses + g.count;
+  const prevTotal = prev.responses + g.prevCount;
+  const sumRatings = stats.avgRating * stats.responses + g.avgPeriod * g.count;
+  const avgAll = total ? sumRatings / total : 0;
+  const prevAvg = prevTotal ? (prev.avgRating * prev.responses + g.prevAvg * g.prevCount) / prevTotal : 0;
+  const [countHint, countTrend] = trendPct(total, prevTotal);
+  const [avgHint, avgTrend] = trendDiff(avgAll, prevAvg, prevTotal);
+  const sources = [g.count ? `${g.count} בגוגל` : '', stats.responses ? `${stats.responses} בסקרים` : ''].filter(Boolean).join(' · ');
+  const daily = stats.daily.map((d) => {
+    const gd = g.daily.get(d.date) || { n: 0, neg: 0 };
+    return { ...d, responses: d.responses + gd.n, negative: d.negative + gd.neg, google: gd.n };
+  });
+  const dist = [0, 1, 2, 3, 4].map((i) => stats.distribution[i] + g.distribution[i]);
+  const toHandle = stats.openIssues + g.unanswered;
+
+  const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 6);
+  const latestItems = [...latest.map(fromResponse), ...g.latest.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 8);
+
+  const googleKpi = hasGoogle
+    ? kpi(
+        'דירוג בגוגל',
+        g.total ? `${g.avg.toFixed(1)} <span class="kpi-star">★</span>` : '—',
+        g.total ? `${g.total.toLocaleString('he-IL')} ביקורות סה״כ` : '',
+      )
+    : kpi('דירוג בגוגל', '—', 'עוד לא מחובר', '');
+  const handleLink = g.unanswered && !stats.openIssues ? '/admin/google/reviews?filter=unanswered' : '/admin/responses?sentiment=negative&status=new';
 
   const resolve =
     stats.avgResolveHours == null
@@ -197,51 +257,20 @@ export function dashboardView({
         : stats.avgResolveHours < 48
           ? `${stats.avgResolveHours.toFixed(1)} שע׳`
           : `${(stats.avgResolveHours / 24).toFixed(1)} ימים`;
-  const [respHint, respTrend] = trendPct(stats.responses, prev.responses);
-  const [avgHint, avgTrend] = trendDiff(stats.avgRating, prev.avgRating, prev.responses);
 
-  return `<div class="dash-head">
-      <div class="titles"><h1>${h(greeting(userName))}</h1><p class="muted" style="margin:0">מה קרה ב-${days} הימים האחרונים</p></div>
-      ${filter}
-    </div>
-    ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
-    ${checklist}
-    ${
-      stats.overdue
-        ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
-            stats.overdue === 1 ? 'לקוח לא מרוצה אחד מחכה' : `${stats.overdue} לקוחות לא מרוצים מחכים`
-          } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
-        : ''
-    }
-    ${googleDashCard(google)}
+  const surveySection = campaigns.length
+    ? `<h2 class="dash-section">סקרים ו-QR</h2>
     <div class="kpis">
-      ${kpi('דירוג ממוצע', stats.avgRating ? stats.avgRating.toFixed(1) : '—', avgHint || `${stats.positive} מרוצים · ${stats.negative} לא מרוצים`, avgTrend)}
-      ${kpi('דירוגים', stats.responses.toLocaleString('he-IL'), respHint || `${pct(stats.responseRate)} מהסריקות`, respTrend)}
-      ${kpi('קליקים לביקורת בגוגל', stats.reviewClicks.toLocaleString('he-IL'), `${pct(stats.reviewConversion)} מהמדרגים`)}
+      ${kpi('סריקות וכניסות', stats.scans.toLocaleString('he-IL'), `${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים`)}
+      ${kpi('מילאו סקר', stats.responses.toLocaleString('he-IL'), `${pct(stats.responseRate)} מהסריקות`)}
+      ${kpi('הופנו לביקורת בגוגל', stats.reviewClicks.toLocaleString('he-IL'), `${pct(stats.reviewConversion)} מהמדרגים`)}
       ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} באיחור` : 'אין פניות באיחור', stats.overdue ? 'down' : 'up')}
     </div>
-    <div class="dash-grid">
-      <section class="card">
-        <div class="card-head"><h3>דירוגים לפי יום</h3>
-          <div class="legend"><span><i class="sw pos"></i>מרוצים</span><span><i class="sw neg"></i>לא מרוצים</span></div>
-        </div>
-        ${dailyChart(stats.daily)}
-      </section>
-      <section class="card">
-        <div class="card-head"><h3>מחכים לטיפול</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>
-        ${waitingList(waiting)}
-      </section>
-    </div>
-    <div class="grid2">
-      <section class="card"><h3>התפלגות דירוגים</h3>${distribution(stats.distribution)}</section>
-      ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3>${optionBreakdown(stats.optionCounts)}</section>`}
-    </div>
-    ${topics?.length ? `<section class="card"><h3>מה הלקוחות סימנו בשאלות</h3>${optionBreakdown(stats.optionCounts)}</section>` : ''}
     <div class="grid2">
       <section class="card">
         <h3>מדדים נוספים</h3>
         <dl class="dl">
-          <dt>סריקות וכניסות</dt><dd>${stats.scans.toLocaleString('he-IL')} (${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים)</dd>
+          <dt>דירוג ממוצע בסקרים</dt><dd>${stats.avgRating ? `${stats.avgRating.toFixed(1)} ★` : '—'}</dd>
           <dt>NPS</dt><dd>${stats.nps ?? '—'}${stats.npsCount ? ` <span class="muted small">(${stats.npsCount} עונים)</span>` : ''}</dd>
           <dt>זמן טיפול ממוצע</dt><dd>${resolve}</dd>
           <dt>לקוחות כועסים שהוחזרו</dt><dd>${
@@ -249,7 +278,6 @@ export function dashboardView({
               ? `${Math.round((stats.recoveredYes / stats.recoveredAnswered) * 100)}% <span class="muted small">(${stats.recoveredYes} מתוך ${stats.recoveredAnswered} שענו)</span>`
               : '<span class="muted">עוד אין תשובות</span>'
           }</dd>
-          <dt>מרוצים / לא מרוצים</dt><dd>${stats.positive} / ${stats.negative}</dd>
         </dl>
       </section>
       <section class="card"><h3>מקורות סריקה</h3>
@@ -261,7 +289,52 @@ export function dashboardView({
             : '<p class="muted">אין עדיין סריקות. אפשר ליצור QR נפרד לכל שולחן או קופה בעמוד השליחה של הקמפיין.</p>'
         }
       </section>
-    </div>`;
+    </div>
+    ${Object.keys(stats.optionCounts).length ? `<section class="card"><h3>מה הלקוחות סימנו בשאלות</h3>${optionBreakdown(stats.optionCounts)}</section>` : ''}`
+    : '';
+
+  return `<div class="dash-head">
+      <div class="titles"><h1>${h(greeting(userName))}</h1><p class="muted" style="margin:0">מה הלקוחות אמרו ב-${days} הימים האחרונים, בגוגל ובסקרים</p></div>
+      ${filter}
+    </div>
+    ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
+    ${checklist}
+    ${
+      stats.overdue
+        ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
+            stats.overdue === 1 ? 'לקוח לא מרוצה אחד מחכה' : `${stats.overdue} לקוחות לא מרוצים מחכים`
+          } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
+        : ''
+    }
+    <div class="kpis">
+      ${googleKpi}
+      ${kpi('ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint || sources || 'אין בתקופה הזו', countTrend)}
+      ${kpi('דירוג ממוצע בתקופה', avgAll ? `${avgAll.toFixed(1)} <span class="kpi-star">★</span>` : '—', avgHint || `${stats.positive + g.positive} מרוצים · ${stats.negative + g.negative} לא מרוצים`, avgTrend)}
+      ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} פניות מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
+    </div>
+    <div class="dash-grid">
+      <section class="card">
+        <div class="card-head"><h3>ביקורות ודירוגים לפי יום</h3>
+          <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
+        </div>
+        ${dailyChart(daily)}
+        <p class="muted small chart-note">גוגל וסקרים יחד. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
+        ${feed(waitingItems, 'אין ביקורות שליליות או פניות שמחכות. כל הכבוד!')}
+      </section>
+    </div>
+    <div class="grid2">
+      <section class="card"><h3>התפלגות כוכבים</h3>${distribution(dist)}
+        <p class="muted small">${sources ? `${sources} ב-${days} הימים האחרונים` : 'אין בתקופה הזו'}</p></section>
+      ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3><p class="muted">כשעוזר ה-AI פעיל, הוא מסווג כל ביקורת והערה לנושאים (שירות, המתנה, מחיר...) ותראו כאן מה חוזר הכי הרבה.</p></section>`}
+    </div>
+    <section class="card">
+      <div class="card-head"><h3>אחרונות</h3>${hasGoogle ? '<a href="/admin/google/reviews" class="small">כל ביקורות גוגל</a>' : ''}</div>
+      ${feed(latestItems, 'עוד אין ביקורות או דירוגים.')}
+    </section>
+    ${surveySection}`;
 }
 
 // ---------------------------------------------------------------- responses

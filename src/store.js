@@ -715,14 +715,87 @@ export function createStore(db) {
     setTags: (id, tags) =>
       q("UPDATE responses SET tags = ?, tagged_at = datetime('now') WHERE id = ?").run(JSON.stringify(tags), id),
     /** How often each topic came up, split by satisfied / unsatisfied. */
+    /** How often each topic came up in surveys and Google reviews, split by satisfied / unsatisfied. */
     topicCounts(businessId, { campaignId = null, days = 30 } = {}) {
+      const since = sqlTime(-days * 864e5);
+      const sinceIso = new Date(Date.now() - days * 864e5).toISOString();
       return q(
-        `SELECT t.value AS topic, SUM(r.sentiment = 'positive') AS positive, SUM(r.sentiment = 'negative') AS negative,
-                COUNT(*) AS total
-         FROM responses r JOIN campaigns c ON c.id = r.campaign_id, json_each(r.tags) t
-         WHERE c.business_id = ? AND r.created_at >= ? ${campaignId ? 'AND c.id = ?' : ''}
-         GROUP BY t.value ORDER BY total DESC LIMIT 10`,
-      ).all(...[businessId, sqlTime(-days * 864e5), ...(campaignId ? [campaignId] : [])]);
+        `SELECT topic, SUM(pos) AS positive, SUM(neg) AS negative, COUNT(*) AS total FROM (
+           SELECT t.value AS topic, r.sentiment = 'positive' AS pos, r.sentiment = 'negative' AS neg
+           FROM responses r JOIN campaigns c ON c.id = r.campaign_id, json_each(r.tags) t
+           WHERE c.business_id = ? AND r.created_at >= ? ${campaignId ? 'AND c.id = ?' : ''}
+           UNION ALL
+           SELECT t.value, g.rating >= 4, g.rating < 4
+           FROM google_reviews g JOIN google_locations l ON l.id = g.location_id, json_each(g.tags) t
+           WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? ${campaignId ? 'AND l.campaign_id = ?' : ''}
+         ) GROUP BY topic ORDER BY total DESC LIMIT 10`,
+      ).all(
+        ...[businessId, since, ...(campaignId ? [campaignId] : []), businessId, sinceIso, ...(campaignId ? [campaignId] : [])],
+      );
+    },
+    untaggedGoogleReviews: (plans, limit = 20) =>
+      q(`SELECT g.id, g.comment, g.rating FROM google_reviews g
+         JOIN google_locations l ON l.id = g.location_id JOIN businesses b ON b.id = l.business_id
+         WHERE g.comment != '' AND g.tagged_at IS NULL AND l.enabled = 1 AND g.create_time >= ?
+           AND b.plan IN (${plans.map(() => '?').join(',') || "''"})
+         ORDER BY g.id DESC LIMIT ?`).all(new Date(Date.now() - 90 * 864e5).toISOString(), ...plans, limit),
+    setGoogleTags: (id, tags) =>
+      q("UPDATE google_reviews SET tags = ?, tagged_at = datetime('now') WHERE id = ?").run(JSON.stringify(tags), id),
+
+    /**
+     * Google reviews over a period, for the dashboard: counts, average, star
+     * distribution, per-day split and the latest ones. Only places that are
+     * followed count; a campaign filter keeps the places linked to it.
+     */
+    googleStats(businessId, { campaignId = null, days = 30 } = {}) {
+      const now = Date.now();
+      const iso = (ms) => new Date(ms).toISOString();
+      const where = `l.business_id = ? AND l.enabled = 1 ${campaignId ? 'AND l.campaign_id = ?' : ''}`;
+      const args = [businessId, ...(campaignId ? [campaignId] : [])];
+      const from = iso(now - days * 864e5);
+      const period = q(
+        `SELECT COUNT(*) AS n, AVG(g.rating) AS avg, SUM(g.rating >= 4) AS positive, SUM(g.rating < 4) AS negative,
+                SUM(g.rating = 1) AS s1, SUM(g.rating = 2) AS s2, SUM(g.rating = 3) AS s3, SUM(g.rating = 4) AS s4, SUM(g.rating = 5) AS s5
+         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ?`,
+      ).get(...args, from);
+      const prev = q(
+        `SELECT COUNT(*) AS n, AVG(g.rating) AS avg FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+         WHERE ${where} AND g.create_time >= ? AND g.create_time < ?`,
+      ).get(...args, iso(now - 2 * days * 864e5), from);
+      const daily = q(
+        `SELECT substr(g.create_time, 1, 10) AS d, COUNT(*) AS n, SUM(g.rating < 4) AS neg
+         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? GROUP BY d`,
+      ).all(...args, from);
+      const latest = q(
+        `SELECT g.*, l.title AS location_title FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+         WHERE ${where} ORDER BY g.create_time DESC LIMIT 8`,
+      ).all(...args);
+      const waiting = q(
+        `SELECT g.*, l.title AS location_title FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+         WHERE ${where} AND g.reply = '' AND g.rating <= 3 ORDER BY g.create_time DESC LIMIT 5`,
+      ).all(...args);
+      const unanswered = q(
+        `SELECT COUNT(*) AS n FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.reply = ''`,
+      ).get(...args).n;
+      const overall = q(
+        `SELECT SUM(l.total_reviews) AS total, SUM(l.avg_rating * l.total_reviews) AS weighted FROM google_locations l
+         WHERE ${where} AND l.total_reviews > 0`,
+      ).get(...args);
+      return {
+        total: overall.total || 0,
+        avg: overall.total ? overall.weighted / overall.total : 0,
+        unanswered,
+        count: period.n,
+        avgPeriod: period.avg || 0,
+        positive: period.positive || 0,
+        negative: period.negative || 0,
+        distribution: [period.s1, period.s2, period.s3, period.s4, period.s5].map((v) => v || 0),
+        prevCount: prev.n,
+        prevAvg: prev.avg || 0,
+        daily: new Map(daily.map((r) => [r.d, { n: r.n, neg: r.neg || 0 }])),
+        latest,
+        waiting,
+      };
     },
     setPublished: (id, on) => q('UPDATE responses SET published = ? WHERE id = ? AND publish_consent = 1').run(on ? 1 : 0, id),
     setAiDraft: (id, text) => q('UPDATE responses SET ai_draft = ? WHERE id = ?').run(text, id),

@@ -1,7 +1,11 @@
 import { accessOf } from './plans.js';
 
-/** How many pages to read on a place's first sync (about 8 + 20 + 20 reviews). */
-const FIRST_SYNC_PAGES = 3;
+/**
+ * How many pages to read on a place's first sync (8 + 5 × 20 reviews), enough
+ * history for the dashboard's periods; it stops early past a year back.
+ */
+const FIRST_SYNC_PAGES = 6;
+const HISTORY_MS = 365 * 864e5;
 /** Later syncs stop as soon as they reach a review we already have. */
 const LATER_SYNC_PAGES = 3;
 
@@ -40,7 +44,8 @@ export function createSerpSync({ store, serp, notifier, intervalHours = Number(p
           await notifier?.googleReview({ business, review: saved }).catch((err) => console.warn('[serp] alert failed:', err.message));
         }
         token = r.next;
-        if (!token || (!firstSync && reachedKnown)) break;
+        const oldest = Date.parse(r.reviews.at(-1)?.createTime || '');
+        if (!token || (!firstSync && reachedKnown) || (firstSync && oldest < Date.now() - HISTORY_MS)) break;
       }
       if (place) store.updateSerpPlace(loc.id, place);
       store.googleLocationStats(loc.id, place?.rating || loc.avg_rating || null, place?.total || loc.total_reviews || null);

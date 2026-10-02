@@ -152,7 +152,11 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   assert.equal(await googleSync.syncBusiness(store.businessById(biz.id)), 0);
 
   // Dashboard and list show the Google rating and the unanswered review.
-  assert.match((await req('/admin')).text, /4\.5 ★<\/b> בגוגל/);
+  const dash = (await req('/admin')).text;
+  assert.match(dash, /דירוג בגוגל/);
+  assert.match(dash, /4\.5 <span class="kpi-star">/);
+  assert.match(dash, /חיכינו המון/, 'the negative Google review waits for handling on the dashboard');
+  assert.match(dash, /12 ביקורות סה״כ/);
   const list = await req('/admin/google/reviews?filter=unanswered');
   assert.match(list.text, /חיכינו המון/);
   assert.doesNotMatch(list.text, /Invalid Date/);

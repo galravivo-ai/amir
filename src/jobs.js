@@ -40,11 +40,20 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
   async function aiTagging() {
     if (!ai?.tagComments) return 0;
     const plans = Object.entries(PLANS).filter(([, p]) => p.ai).map(([k]) => k);
+    let tagged = 0;
     const batch = store.untaggedResponses(plans, 20);
-    if (!batch.length) return 0;
-    const tags = await ai.tagComments(batch.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
-    for (const r of batch) store.setTags(r.id, tags.get(r.id) ?? []);
-    return batch.length;
+    if (batch.length) {
+      const tags = await ai.tagComments(batch.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
+      for (const r of batch) store.setTags(r.id, tags.get(r.id) ?? []);
+      tagged += batch.length;
+    }
+    const reviews = store.untaggedGoogleReviews(plans, 20);
+    if (reviews.length) {
+      const tags = await ai.tagComments(reviews.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
+      for (const r of reviews) store.setGoogleTags(r.id, tags.get(r.id) ?? []);
+      tagged += reviews.length;
+    }
+    return tagged;
   }
 
   async function slaAlerts() {
