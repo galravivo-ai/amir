@@ -183,3 +183,16 @@ test('when Hebrew answers have no reviews, a plainer request is used', async () 
     fake.hebrewEmpty = false;
   }
 });
+
+test('the dashboard follows the chosen range', async () => {
+  const req = client();
+  await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const all = (await req('/admin?range=365d')).text;
+  assert.match(all, /dash-cover/);
+  assert.match(all, /בשנה האחרונה/);
+  assert.match(all, /חיכינו שעה/);
+  // A range before any review shows none of them.
+  const old = (await req('/admin?range=custom&from=2025-01-01&to=2025-01-31')).text;
+  assert.match(old, /בין 1\.1\.2025 ל-31\.1\.2025/);
+  assert.doesNotMatch(old, /מקום מעולה/);
+});

@@ -1,4 +1,5 @@
 import express from 'express';
+import { resolvePeriod } from '../period.js';
 import QRCode from 'qrcode';
 import { EDITABLE_TEXT_KEYS, LANGUAGES, textsFor } from '../i18n.js';
 import { AiError, TOPICS } from '../ai.js';
@@ -34,18 +35,19 @@ export function adminRoutes(ctx) {
     const campaigns = store.campaignsFor(req.business.id);
     const onboarding = store.onboarding(req.business);
     const campaignId = campaigns.find((c) => c.id === Number(req.query.campaign))?.id ?? null;
-    const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
-    const stats = store.stats(req.business.id, { campaignId, days });
-    const prev = store.periodSummary(req.business.id, { campaignId, fromDays: days * 2, toDays: days });
-    const topics = store.topicCounts(req.business.id, { campaignId, days });
+    const period = resolvePeriod(req.query);
+    const range = { campaignId, from: period.from, to: period.to };
+    const stats = store.stats(req.business.id, range);
+    const span = (period.to ?? Date.now()) - period.from;
+    const prev = store.periodSummary(req.business.id, { campaignId, from: period.from - span, to: period.from });
+    const topics = store.topicCounts(req.business.id, range);
     const waiting = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', status: 'new', limit: 5 });
     const monthly = store.monthlyResponseCount(req.business.id);
     const quotaWarning =
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    const google = store.googleStats(req.business.id, { campaignId, days });
-    const latest = store.listResponses(req.business.id, { campaignId, limit: 8 }).filter((r) => r.completed || r.comment);
+    const google = store.googleStats(req.business.id, range);
     render(
       req,
       res,
@@ -55,11 +57,11 @@ export function adminRoutes(ctx) {
         prev,
         campaigns,
         campaignId,
-        days,
+        period,
+        business: req.business,
         waiting,
         topics,
         google,
-        latest,
         userName: req.user.name,
         quotaWarning,
         can: req.can,

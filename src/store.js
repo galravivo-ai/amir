@@ -716,21 +716,27 @@ export function createStore(db) {
       q("UPDATE responses SET tags = ?, tagged_at = datetime('now') WHERE id = ?").run(JSON.stringify(tags), id),
     /** How often each topic came up, split by satisfied / unsatisfied. */
     /** How often each topic came up in surveys and Google reviews, split by satisfied / unsatisfied. */
-    topicCounts(businessId, { campaignId = null, days = 30 } = {}) {
-      const since = sqlTime(-days * 864e5);
-      const sinceIso = new Date(Date.now() - days * 864e5).toISOString();
+    topicCounts(businessId, { campaignId = null, days = 30, from = null, to = null } = {}) {
+      const end = to ?? Date.now();
+      const start = from ?? end - days * 864e5;
+      const sqlAt = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+      const since = sqlAt(start);
+      // Without an end date nothing is cut off, not even what arrived this second.
+      const until = to == null ? '9999-12-31 23:59:59' : sqlAt(end);
+      const sinceIso = new Date(start).toISOString();
+      const untilIso = to == null ? '9999-12-31T23:59:59Z' : new Date(end).toISOString();
       return q(
         `SELECT topic, SUM(pos) AS positive, SUM(neg) AS negative, COUNT(*) AS total FROM (
            SELECT t.value AS topic, r.sentiment = 'positive' AS pos, r.sentiment = 'negative' AS neg
            FROM responses r JOIN campaigns c ON c.id = r.campaign_id, json_each(r.tags) t
-           WHERE c.business_id = ? AND r.created_at >= ? ${campaignId ? 'AND c.id = ?' : ''}
+           WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${campaignId ? 'AND c.id = ?' : ''}
            UNION ALL
            SELECT t.value, g.rating >= 4, g.rating < 4
            FROM google_reviews g JOIN google_locations l ON l.id = g.location_id, json_each(g.tags) t
-           WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? ${campaignId ? 'AND l.campaign_id = ?' : ''}
+           WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? AND g.create_time < ? ${campaignId ? 'AND l.campaign_id = ?' : ''}
          ) GROUP BY topic ORDER BY total DESC LIMIT 10`,
       ).all(
-        ...[businessId, since, ...(campaignId ? [campaignId] : []), businessId, sinceIso, ...(campaignId ? [campaignId] : [])],
+        ...[businessId, since, until, ...(campaignId ? [campaignId] : []), businessId, sinceIso, untilIso, ...(campaignId ? [campaignId] : [])],
       );
     },
     untaggedGoogleReviews: (plans, limit = 20) =>
@@ -744,32 +750,30 @@ export function createStore(db) {
 
     /**
      * Google reviews over a period, for the dashboard: counts, average, star
-     * distribution, per-day split and the latest ones. Only places that are
+     * distribution, per-day split and the ones waiting for a reply. Only places that are
      * followed count; a campaign filter keeps the places linked to it.
      */
-    googleStats(businessId, { campaignId = null, days = 30 } = {}) {
-      const now = Date.now();
+    googleStats(businessId, { campaignId = null, days = 30, from = null, to = null } = {}) {
+      const end = to ?? Date.now();
+      const start = from ?? end - days * 864e5;
       const iso = (ms) => new Date(ms).toISOString();
       const where = `l.business_id = ? AND l.enabled = 1 ${campaignId ? 'AND l.campaign_id = ?' : ''}`;
       const args = [businessId, ...(campaignId ? [campaignId] : [])];
-      const from = iso(now - days * 864e5);
+      const fromIso = iso(start);
+      const toIso = to == null ? '9999-12-31T23:59:59Z' : iso(end);
       const period = q(
         `SELECT COUNT(*) AS n, AVG(g.rating) AS avg, SUM(g.rating >= 4) AS positive, SUM(g.rating < 4) AS negative,
                 SUM(g.rating = 1) AS s1, SUM(g.rating = 2) AS s2, SUM(g.rating = 3) AS s3, SUM(g.rating = 4) AS s4, SUM(g.rating = 5) AS s5
-         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ?`,
-      ).get(...args, from);
+         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? AND g.create_time < ?`,
+      ).get(...args, fromIso, toIso);
       const prev = q(
         `SELECT COUNT(*) AS n, AVG(g.rating) AS avg FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
          WHERE ${where} AND g.create_time >= ? AND g.create_time < ?`,
-      ).get(...args, iso(now - 2 * days * 864e5), from);
+      ).get(...args, iso(start - (end - start)), fromIso);
       const daily = q(
         `SELECT substr(g.create_time, 1, 10) AS d, COUNT(*) AS n, SUM(g.rating < 4) AS neg
-         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? GROUP BY d`,
-      ).all(...args, from);
-      const latest = q(
-        `SELECT g.*, l.title AS location_title FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
-         WHERE ${where} ORDER BY g.create_time DESC LIMIT 8`,
-      ).all(...args);
+         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? AND g.create_time < ? GROUP BY d`,
+      ).all(...args, fromIso, toIso);
       const waiting = q(
         `SELECT g.*, l.title AS location_title FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
          WHERE ${where} AND g.reply = '' AND g.rating <= 3 ORDER BY g.create_time DESC LIMIT 5`,
@@ -793,7 +797,6 @@ export function createStore(db) {
         prevCount: prev.n,
         prevAvg: prev.avg || 0,
         daily: new Map(daily.map((r) => [r.d, { n: r.n, neg: r.neg || 0 }])),
-        latest,
         waiting,
       };
     },
@@ -955,8 +958,9 @@ export function createStore(db) {
 
     // ---------- analytics ----------
     /** Headline numbers for the window [now - fromDays, now - toDays), used for trends. */
-    periodSummary(businessId, { campaignId = null, fromDays, toDays = 0 }) {
-      const args = [businessId, sqlTime(-fromDays * 864e5), sqlTime(-toDays * 864e5)];
+    periodSummary(businessId, { campaignId = null, fromDays, toDays = 0, from = null, to = null }) {
+      const sqlAt = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+      const args = [businessId, from != null ? sqlAt(from) : sqlTime(-fromDays * 864e5), to != null ? sqlAt(to) : sqlTime(-toDays * 864e5)];
       const cf = campaignId ? 'AND c.id = ?' : '';
       if (campaignId) args.push(campaignId);
       const r = q(
@@ -967,15 +971,21 @@ export function createStore(db) {
       return { responses: r.responses || 0, avgRating: r.avg_rating || 0, reviewed: r.reviewed || 0 };
     },
 
-    stats(businessId, { campaignId = null, days = 30 } = {}) {
-      const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 19).replace('T', ' ');
+    /** Everything the dashboard shows about surveys, for [from, to) (ms) or the last `days`. */
+    stats(businessId, { campaignId = null, days = 30, from = null, to = null } = {}) {
+      const end = to ?? Date.now();
+      const start = from ?? end - days * 864e5;
+      const sqlAt = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+      const since = sqlAt(start);
+      // Without an end date nothing is cut off, not even what arrived this second.
+      const until = to == null ? '9999-12-31 23:59:59' : sqlAt(end);
       const cFilter = campaignId ? 'AND c.id = ?' : '';
-      const base = campaignId ? [businessId, since, campaignId] : [businessId, since];
+      const base = campaignId ? [businessId, since, until, campaignId] : [businessId, since, until];
 
       const ev = q(
         `SELECT e.type, COUNT(*) AS n, COUNT(DISTINCT e.visitor_id) AS uniq
          FROM events e JOIN campaigns c ON c.id = e.campaign_id
-         WHERE c.business_id = ? AND e.created_at >= ? ${cFilter}
+         WHERE c.business_id = ? AND e.created_at >= ? AND e.created_at < ? ${cFilter}
          GROUP BY e.type`,
       ).all(...base);
       const evMap = Object.fromEntries(ev.map((e) => [e.type, e]));
@@ -993,7 +1003,7 @@ export function createStore(db) {
                 AVG(CASE WHEN r.resolved_at IS NOT NULL
                     THEN (julianday(r.resolved_at) - julianday(r.created_at)) * 24 END) AS avg_resolve_hours
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
-         WHERE c.business_id = ? AND r.created_at >= ? ${cFilter}`,
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter}`,
       ).get(...base);
       const overdue = q(
         `SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
@@ -1005,34 +1015,34 @@ export function createStore(db) {
       const dist = [0, 0, 0, 0, 0];
       for (const row of q(
         `SELECT r.rating, COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
-         WHERE c.business_id = ? AND r.created_at >= ? ${cFilter} GROUP BY r.rating`,
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter} GROUP BY r.rating`,
       ).all(...base)) {
         if (row.rating >= 1 && row.rating <= 5) dist[row.rating - 1] = row.n;
       }
 
       const daily = new Map();
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+      for (let t = Date.parse(since.slice(0, 10)); t < end; t += 864e5) {
+        const d = new Date(t).toISOString().slice(0, 10);
         daily.set(d, { date: d, scans: 0, responses: 0, negative: 0 });
       }
       for (const row of q(
         `SELECT substr(e.created_at, 1, 10) AS d, COUNT(*) AS n FROM events e
          JOIN campaigns c ON c.id = e.campaign_id
-         WHERE c.business_id = ? AND e.created_at >= ? ${cFilter} AND e.type = 'scan' GROUP BY d`,
+         WHERE c.business_id = ? AND e.created_at >= ? AND e.created_at < ? ${cFilter} AND e.type = 'scan' GROUP BY d`,
       ).all(...base)) {
         if (daily.has(row.d)) daily.get(row.d).scans = row.n;
       }
       for (const row of q(
         `SELECT substr(r.created_at, 1, 10) AS d, COUNT(*) AS n, SUM(r.sentiment = 'negative') AS neg
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
-         WHERE c.business_id = ? AND r.created_at >= ? ${cFilter} GROUP BY d`,
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter} GROUP BY d`,
       ).all(...base)) {
         if (daily.has(row.d)) Object.assign(daily.get(row.d), { responses: row.n, negative: row.neg });
       }
 
       const sources = q(
         `SELECT e.source, COUNT(*) AS scans FROM events e JOIN campaigns c ON c.id = e.campaign_id
-         WHERE c.business_id = ? AND e.created_at >= ? ${cFilter} AND e.type = 'scan'
+         WHERE c.business_id = ? AND e.created_at >= ? AND e.created_at < ? ${cFilter} AND e.type = 'scan'
          GROUP BY e.source ORDER BY scans DESC LIMIT 10`,
       ).all(...base);
 
@@ -1042,7 +1052,7 @@ export function createStore(db) {
       let npsCount = 0;
       const rows = q(
         `SELECT r.answers, c.questions FROM responses r JOIN campaigns c ON c.id = r.campaign_id
-         WHERE c.business_id = ? AND r.created_at >= ? ${cFilter} AND r.completed = 1`,
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter} AND r.completed = 1`,
       ).all(...base);
       const optionCounts = {};
       for (const row of rows) {

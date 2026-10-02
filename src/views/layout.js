@@ -100,19 +100,19 @@ ${SKIP()}
 
   const role = business.role;
   const links = [
-    isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
-    isAgency && ['/agency', 'הלקוחות שלי', 'chart'],
     ['/admin', 'לוח בקרה', 'home'],
-    ['/admin/responses', 'תגובות', 'inbox'],
+    ['/admin/google/reviews', 'ביקורות', 'star', googlePending],
     ['/admin/responses?sentiment=negative&status=new', 'פניות פתוחות', 'alert', openCount],
-    ['/admin/google/reviews', 'ביקורות גוגל', 'star', googlePending],
+    ['/admin/insights', 'תובנות AI', 'spark'],
+    ['/admin/responses', 'תגובות מסקרים', 'inbox'],
     ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
     ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
-    ['/admin/insights', 'תובנות AI', 'spark'],
     role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
     role === 'owner' && ['/admin/team', 'צוות', 'team'],
     role === 'owner' && ['/admin/integrations', 'חיבורים', 'plug'],
     role === 'owner' && ['/admin/business', 'הגדרות', 'gear'],
+    isAgency && ['/agency', 'הלקוחות שלי', 'chart'],
+    isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
   ].filter(Boolean);
 
   const bizInitial = h(String(business.name).trim().charAt(0) || '·');

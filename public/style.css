@@ -725,3 +725,53 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .w-when { display: block; margin-top: 2px; }
 .waiting a > .badge { flex-shrink: 0; }
 @media (max-width: 640px) { .waiting a { flex-wrap: wrap; } .waiting a > .w-body { flex-basis: calc(100% - 60px); } .waiting a > .badge { margin-inline-start: 48px; } }
+
+/* ---- executive cover ---- */
+.dash-cover { --cover: var(--purple); position: relative; overflow: hidden; border-radius: 22px; padding: 26px 28px 18px; margin-bottom: 1.2rem; color: #fff;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--cover) 55%, #fff 0%) 0%, transparent 55%),
+              linear-gradient(135deg, color-mix(in srgb, var(--cover) 92%, #000) 0%, color-mix(in srgb, var(--cover) 70%, #0b0830) 100%);
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--cover) 28%, transparent); }
+.dash-cover::after { content: ''; position: absolute; inset-inline-start: -60px; bottom: -90px; width: 260px; height: 260px; border-radius: 50%; background: rgba(255, 255, 255, .07); pointer-events: none; }
+.cover-id { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; position: relative; z-index: 1; }
+.cover-logo { width: 76px; height: 76px; border-radius: 20px; background: #fff; display: grid; place-items: center; overflow: hidden; flex: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+.cover-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.cover-logo span { font-size: 2rem; font-weight: 800; color: var(--cover); }
+.cover-text { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.cover-text h1 { margin: 0; color: #fff; font-size: clamp(1.5rem, 3vw, 2.1rem); line-height: 1.15; }
+.cover-greet { font-size: .9rem; opacity: .85; font-weight: 600; }
+.cover-sub { font-size: .92rem; opacity: .8; }
+.cover-google { display: inline-flex; align-items: baseline; gap: 6px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .25); color: #fff; text-decoration: none; border-radius: 16px; padding: 10px 16px; backdrop-filter: blur(4px); }
+.cover-google b { font-size: 1.6rem; line-height: 1; }
+.cover-google .cover-star { color: var(--yellow); font-size: 1.1rem; }
+.cover-google span:last-child { font-size: .85rem; opacity: .9; }
+.cover-google:hover { background: rgba(255, 255, 255, .22); }
+.cover-bar { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .18); }
+.cover-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; margin: 0; }
+.cover-filters select, .cover-filters input { background: rgba(255, 255, 255, .95); border-color: transparent; min-height: 40px; }
+.range-custom { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #fff; font-size: .9rem; }
+.range-custom[hidden] { display: none; }
+.range-custom label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-weight: 600; }
+.range-custom input { width: auto; }
+.cover-btn { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+.cover-btn:hover { background: #ffdb5c; }
+@media (max-width: 640px) {
+  .dash-cover { padding: 20px 16px 14px; border-radius: 18px; }
+  .cover-logo { width: 60px; height: 60px; border-radius: 16px; }
+  .cover-google { width: 100%; }
+  .cover-filters select { flex: 1 1 140px; min-width: 0; }
+}
+
+/* ---- compact first steps ---- */
+.ob-compact { padding: 12px 16px; }
+.ob-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ob-ring { --p: 0; width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: conic-gradient(var(--yellow) calc(var(--p) * 1%), var(--line-2) 0); }
+.ob-ring span { width: 36px; height: 36px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: .78rem; font-weight: 800; }
+.ob-main { flex: 1; min-width: 160px; display: flex; flex-direction: column; }
+.ob-row .btn { min-height: 36px; padding: .3em 1em; }
+.ob-details { margin-top: 6px; }
+.ob-details summary { cursor: pointer; color: var(--purple); font-weight: 600; width: fit-content; }
+.ob-details .ob-steps { margin-top: 6px; }
+.ob-details .ob-steps li { padding: 4px 8px; }
+.ob-details .ob-check { width: 20px; height: 20px; }
+.kpis.kpis-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }

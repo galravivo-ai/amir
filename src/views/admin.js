@@ -5,6 +5,7 @@ import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
+import { PRESETS } from '../period.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -90,29 +91,35 @@ function optionBreakdown(optionCounts) {
 
 function onboardingCard(o, csrf) {
   const pctDone = Math.round((o.done / o.total) * 100);
-  const next = o.steps.find((s) => !s.done && !s.optional);
-  return `<section class="card onboarding">
-    <div class="card-head">
-      <h3>צעדים ראשונים <span class="muted small">${o.done} מתוך ${o.total}</span></h3>
+  const next = o.steps.find((s) => !s.done && !s.optional) || o.steps.find((s) => !s.done);
+  return `<section class="card onboarding ob-compact">
+    <div class="ob-row">
+      <div class="ob-ring" style="--p:${pctDone}" role="img" aria-label="${o.done} מתוך ${o.total} צעדים"><span>${o.done}/${o.total}</span></div>
+      <div class="ob-main">
+        <b>צעדים ראשונים</b>
+        ${next ? `<span class="muted small">הצעד הבא: ${h(next.label)}</span>` : '<span class="muted small">כמעט סיימתם</span>'}
+      </div>
+      ${next ? `<a class="btn accent" href="${h(next.href)}">להתחיל</a>` : ''}
       <form method="post" action="/admin/onboarding/dismiss">
         <input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link small">הסתרה</button>
       </form>
     </div>
-    <div class="usage-bar ob-bar"><span style="width:${pctDone}%"></span></div>
-    <ol class="ob-steps">
-      ${o.steps
-        .map(
-          (s) => `<li class="${s.done ? 'done' : ''} ${s === next ? 'next' : ''}">
-            <span class="ob-check">${s.done ? icon('check', 16) : ''}</span>
-            ${s.done ? `<span>${h(s.label)}</span>` : `<a href="${h(s.href)}">${h(s.label)}</a>`}
-            ${s.optional ? '<span class="muted small">(לא חובה)</span>' : ''}
-            ${s === next ? `<a class="btn accent" href="${h(s.href)}">להתחיל</a>` : ''}
-          </li>`,
-        )
-        .join('')}
-    </ol>
+    <details class="ob-details"><summary class="small">כל הצעדים</summary>
+      <ol class="ob-steps">
+        ${o.steps
+          .map(
+            (s) => `<li class="${s.done ? 'done' : ''}">
+              <span class="ob-check">${s.done ? icon('check', 14) : ''}</span>
+              ${s.done ? `<span>${h(s.label)}</span>` : `<a href="${h(s.href)}">${h(s.label)}</a>`}
+              ${s.optional ? '<span class="muted small">(לא חובה)</span>' : ''}
+            </li>`,
+          )
+          .join('')}
+      </ol>
+    </details>
   </section>`;
 }
+
 
 function greeting(name) {
   const hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hour12: false }));
@@ -186,22 +193,25 @@ export function dashboardView({
   prev,
   campaigns,
   campaignId,
-  days,
+  period,
+  business = null,
   waiting,
   topics = [],
   google = null,
-  latest = [],
   userName,
   quotaWarning = '',
   can = () => true,
   onboarding = null,
   csrf = '',
 }) {
-  const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], latest: [], waiting: [], unanswered: 0 };
-  const hasGoogle = g.total > 0 || g.count > 0 || g.latest.length > 0;
+  const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
+  const hasGoogle = g.total > 0 || g.count > 0;
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
-  const filter = `<form method="get" class="filters">
+  const presetOptions = Object.entries(PRESETS)
+    .map(([k, l]) => `<option value="${k}" ${k === period.key ? 'selected' : ''}>${h(l)}</option>`)
+    .join('');
+  const filter = `<form method="get" class="filters cover-filters">
       ${
         campaigns.length
           ? `<select name="campaign" aria-label="קמפיין" onchange="this.form.submit()"><option value="">כל הקמפיינים</option>${campaigns
@@ -209,15 +219,35 @@ export function dashboardView({
               .join('')}</select>`
           : ''
       }
-      <select name="days" aria-label="תקופה" onchange="this.form.submit()">${[7, 30, 90, 365]
-        .map((d) => `<option value="${d}" ${d === days ? 'selected' : ''}>${d} ימים</option>`)
-        .join('')}</select>
+      <select name="range" aria-label="טווח זמנים" onchange="if(this.value==='custom'){var c=this.form.querySelector('.range-custom');c.hidden=false;c.querySelector('input').focus()}else{this.form.submit()}">${presetOptions}</select>
+      <span class="range-custom" ${period.key === 'custom' ? '' : 'hidden'}>
+        <label>מ-<input type="date" name="from" value="${h(period.fromDay)}" max="${h(period.todayDay)}" dir="ltr"></label>
+        <label>עד<input type="date" name="to" value="${h(period.toDay)}" max="${h(period.todayDay)}" dir="ltr"></label>
+        <button class="btn primary">הצגה</button>
+      </span>
       <noscript><button class="btn">סינון</button></noscript>
-      ${can('manager') ? '<a class="btn accent" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
     </form>`;
+  // The executive cover: the business's own logo and color, the period and the filters.
+  const brand = safeColor(business?.brand_color, '#4b2bd6');
+  const logo = logoSrc(business);
+  const g0 = google || {};
+  const cover = `<header class="dash-cover" style="--cover:${brand}">
+      <div class="cover-id">
+        <span class="cover-logo">${
+          logo ? `<img src="${h(logo)}" alt="${h(business?.name || '')}">` : `<span>${h(String(business?.name || '★').trim().charAt(0))}</span>`
+        }</span>
+        <div class="cover-text">
+          <span class="cover-greet">${h(greeting(userName))}</span>
+          <h1>${h(business?.name || 'לוח בקרה')}</h1>
+          <span class="cover-sub">מה הלקוחות אמרו ${h(period.label)}, בגוגל ובסקרים</span>
+        </div>
+        ${g0.total ? `<a class="cover-google" href="/admin/google/reviews"><b>${g0.avg.toFixed(1)}</b><span class="cover-star">★</span><span>${g0.total.toLocaleString('he-IL')} ביקורות בגוגל</span></a>` : ''}
+      </div>
+      <div class="cover-bar">${filter}${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}</div>
+    </header>`;
 
   if (!campaigns.length && !hasGoogle) {
-    return `<div class="dash-head"><div class="titles"><h1>${h(greeting(userName))}</h1></div></div>
+    return `${cover}
       ${checklist || `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`}`;
   }
 
@@ -238,15 +268,7 @@ export function dashboardView({
   const toHandle = stats.openIssues + g.unanswered;
 
   const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 6);
-  const latestItems = [...latest.map(fromResponse), ...g.latest.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 8);
 
-  const googleKpi = hasGoogle
-    ? kpi(
-        'דירוג בגוגל',
-        g.total ? `${g.avg.toFixed(1)} <span class="kpi-star">★</span>` : '—',
-        g.total ? `${g.total.toLocaleString('he-IL')} ביקורות סה״כ` : '',
-      )
-    : kpi('דירוג בגוגל', '—', 'עוד לא מחובר', '');
   const handleLink = g.unanswered && !stats.openIssues ? '/admin/google/reviews?filter=unanswered' : '/admin/responses?sentiment=negative&status=new';
 
   const resolve =
@@ -293,10 +315,7 @@ export function dashboardView({
     ${Object.keys(stats.optionCounts).length ? `<section class="card"><h3>מה הלקוחות סימנו בשאלות</h3>${optionBreakdown(stats.optionCounts)}</section>` : ''}`
     : '';
 
-  return `<div class="dash-head">
-      <div class="titles"><h1>${h(greeting(userName))}</h1><p class="muted" style="margin:0">מה הלקוחות אמרו ב-${days} הימים האחרונים, בגוגל ובסקרים</p></div>
-      ${filter}
-    </div>
+  return `${cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${checklist}
     ${
@@ -306,8 +325,7 @@ export function dashboardView({
           } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
-    <div class="kpis">
-      ${googleKpi}
+    <div class="kpis kpis-3">
       ${kpi('ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint || sources || 'אין בתקופה הזו', countTrend)}
       ${kpi('דירוג ממוצע בתקופה', avgAll ? `${avgAll.toFixed(1)} <span class="kpi-star">★</span>` : '—', avgHint || `${stats.positive + g.positive} מרוצים · ${stats.negative + g.negative} לא מרוצים`, avgTrend)}
       ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} פניות מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
@@ -327,13 +345,9 @@ export function dashboardView({
     </div>
     <div class="grid2">
       <section class="card"><h3>התפלגות כוכבים</h3>${distribution(dist)}
-        <p class="muted small">${sources ? `${sources} ב-${days} הימים האחרונים` : 'אין בתקופה הזו'}</p></section>
+        <p class="muted small">${sources ? `${sources} ${h(period.label)}` : 'אין בתקופה הזו'}</p></section>
       ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3><p class="muted">כשעוזר ה-AI פעיל, הוא מסווג כל ביקורת והערה לנושאים (שירות, המתנה, מחיר...) ותראו כאן מה חוזר הכי הרבה.</p></section>`}
     </div>
-    <section class="card">
-      <div class="card-head"><h3>אחרונות</h3>${hasGoogle ? '<a href="/admin/google/reviews" class="small">כל ביקורות גוגל</a>' : ''}</div>
-      ${feed(latestItems, 'עוד אין ביקורות או דירוגים.')}
-    </section>
     ${surveySection}`;
 }
 
