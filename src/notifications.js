@@ -62,7 +62,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
             ${data.comment ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(data.comment)}</blockquote>` : ''}
             <p><b>לקוח:</b> ${h(data.customer_name || '—')} · <span dir="ltr">${h(data.phone || '')}</span> ${h(data.email || '')}
             ${data.wants_contact ? '<br><b>ביקש שיחזרו אליו</b>' : ''}</p>
-            ${emailButton(adminUrl, 'לטיפול בפנייה', color)}`,
+            ${emailButton(adminUrl, 'לטיפול בלקוח', color)}`,
           footer: `${h(business.name)} · אפשר לשנות את ההתראות בהגדרות העסק`,
         }),
       });
@@ -72,7 +72,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       const color = safeColor(business.brand_color);
       pusher
         ?.sendToBusiness(business.id, {
-          title: `פנייה ממתינה יותר מ-${business.sla_hours} שעות`,
+          title: `לקוח לא מרוצה מחכה יותר מ-${business.sla_hours} שעות`,
           body: `${response.customer_name || 'לקוח'}: ${response.comment || response.campaign_name}`.slice(0, 140),
           url: `/admin/responses/${response.id}`,
           tag: `sla-${response.id}`,
@@ -82,13 +82,13 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         kind: 'sla_alert',
         businessId: business.id,
         to: recipients(business),
-        subject: `פנייה ממתינה יותר מ-${business.sla_hours} שעות · ${response.campaign_name}`,
+        subject: `לקוח לא מרוצה מחכה יותר מ-${business.sla_hours} שעות · ${response.campaign_name}`,
         html: emailLayout({
           color,
-          title: 'פנייה של לקוח לא מרוצה עדיין לא טופלה',
+          title: 'לקוח לא מרוצה עדיין מחכה שתחזרו אליו',
           body: `<p>${stars(response.rating)} · ${h(response.customer_name || 'לקוח')} · ${h(response.campaign_name)}</p>
             ${response.comment ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(response.comment)}</blockquote>` : ''}
-            ${emailButton(url(`/admin/responses/${response.id}`), 'לטיפול בפנייה', color)}`,
+            ${emailButton(url(`/admin/responses/${response.id}`), 'לטיפול בלקוח', color)}`,
           footer: h(business.name),
         }),
       });
@@ -150,7 +150,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       pusher
         ?.sendToBusiness(business.id, {
           title: 'הלקוח ענה שהטיפול לא עזר',
-          body: `${response.customer_name || 'לקוח'} · הפנייה נפתחה מחדש`,
+          body: `${response.customer_name || 'לקוח'} · הלקוח חזר לרשימת הלא מרוצים`,
           url: `/admin/responses/${response.id}`,
           tag: `resp-${response.id}`,
         })
@@ -159,7 +159,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         kind: 'followup_no',
         businessId: business.id,
         to: recipients(business),
-        subject: `הלקוח ענה שהטיפול לא עזר · הפנייה נפתחה מחדש`,
+        subject: `הלקוח ענה שהטיפול לא עזר · הלקוח חזר לרשימת הלא מרוצים`,
         html: emailLayout({
           color,
           title: 'פנייה נפתחה מחדש',
@@ -260,7 +260,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
               ${row('לקוחות לא מרוצים', stats.negative)}
               ${row('קליקים לביקורת', stats.reviewClicks)}
               ${row('NPS', stats.nps ?? '—')}
-              ${row('פניות פתוחות', stats.openIssues)}
+              ${row('לקוחות לא מרוצים שמחכים', stats.openIssues)}
               ${row('פניות באיחור', stats.overdue)}
               ${stats.topStaff ? row('העובד/ת המוביל/ה', `${h(stats.topStaff.name)} (${stats.topStaff.avg_rating.toFixed(2)}★, ${stats.topStaff.responses} דירוגים)`) : ''}
             </table>

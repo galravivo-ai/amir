@@ -286,7 +286,7 @@ export function dashboardView({
       ${kpi('סריקות וכניסות', stats.scans.toLocaleString('he-IL'), `${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים`)}
       ${kpi('מילאו סקר', stats.responses.toLocaleString('he-IL'), `${pct(stats.responseRate)} מהסריקות`)}
       ${kpi('הופנו לביקורת בגוגל', stats.reviewClicks.toLocaleString('he-IL'), `${pct(stats.reviewConversion)} מהמדרגים`)}
-      ${kpi('פניות פתוחות', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} באיחור` : 'אין פניות באיחור', stats.overdue ? 'down' : 'up')}
+      ${kpi('לקוחות לא מרוצים שמחכים', `<a href="/admin/responses?sentiment=negative&status=new">${stats.openIssues}</a>`, stats.overdue ? `${stats.overdue} מחכים יותר מדי זמן` : 'אף אחד לא מחכה יותר מדי', stats.overdue ? 'down' : 'up')}
     </div>
     <div class="grid2">
       <section class="card">
@@ -328,7 +328,7 @@ export function dashboardView({
     <div class="kpis kpis-3">
       ${kpi('ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint || sources || 'אין בתקופה הזו', countTrend)}
       ${kpi('דירוג ממוצע בתקופה', avgAll ? `${avgAll.toFixed(1)} <span class="kpi-star">★</span>` : '—', avgHint || `${stats.positive + g.positive} מרוצים · ${stats.negative + g.negative} לא מרוצים`, avgTrend)}
-      ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} פניות מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
+      ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} לקוחות לא מרוצים מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
     </div>
     <div class="dash-grid">
       <section class="card">
@@ -340,7 +340,7 @@ export function dashboardView({
       </section>
       <section class="card">
         <div class="card-head"><h3>מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
-        ${feed(waitingItems, 'אין ביקורות שליליות או פניות שמחכות. כל הכבוד!')}
+        ${feed(waitingItems, 'אין ביקורות שליליות או לקוחות לא מרוצים שמחכים. כל הכבוד!')}
       </section>
     </div>
     <div class="grid2">
@@ -421,8 +421,14 @@ export function responsesView({ rows, campaigns, filters, page, hasMore, staff =
     return params.toString();
   };
   const exportParams = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
-  return `<div class="page-head"><h1>תגובות</h1>
+  const unhappyView = filters.sentiment === 'negative' && filters.status === 'new';
+  return `<div class="page-head"><h1>${unhappyView ? 'לקוחות לא מרוצים' : 'תגובות מסקרים'}</h1>
       <a class="btn" href="/admin/responses.csv?${h(exportParams)}">ייצוא CSV</a></div>
+    ${
+      unhappyView
+        ? '<p class="page-intro">לקוחות שדירגו נמוך בסקר ועוד לא טיפלתם בהם. פותחים את הלקוח, חוזרים אליו בטלפון או בוואטסאפ, ומסמנים "טופל". ככה לקוח כועס הופך ללקוח שחוזר, לפני שהוא כותב ביקורת רעה בגוגל.</p>'
+        : ''
+    }
     <form method="get" class="filters">
       <select name="campaign">${opt('', 'כל הקמפיינים', filters.campaign)}${campaigns
         .map((c) => opt(c.id, c.name, filters.campaign))

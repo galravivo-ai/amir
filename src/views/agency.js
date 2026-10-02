@@ -22,14 +22,14 @@ export function agencyView({ agency, agencies, clients, members, csrf, error = '
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">לקוחות</div><div class="kpi-value">${clients.length}</div><div class="kpi-hint">מתוך ${agency.max_clients} בחבילה</div></div>
     <div class="kpi"><div class="kpi-label">דירוגים החודש</div><div class="kpi-value">${totals.responses.toLocaleString('he-IL')}</div></div>
-    <div class="kpi"><div class="kpi-label">פניות פתוחות</div><div class="kpi-value">${totals.open}</div>
-      <div class="kpi-hint ${totals.overdue ? 'down' : 'up'}">${totals.overdue ? `${totals.overdue} באיחור` : 'אין פניות באיחור'}</div></div>
+    <div class="kpi"><div class="kpi-label">לקוחות לא מרוצים שמחכים</div><div class="kpi-value">${totals.open}</div>
+      <div class="kpi-hint ${totals.overdue ? 'down' : 'up'}">${totals.overdue ? `${totals.overdue} באיחור` : 'אף אחד לא מחכה יותר מדי'}</div></div>
   </div>
   <section class="card">
     <div class="card-head"><h3>לקוחות</h3></div>
     ${
       clients.length
-        ? `<table class="table responsive"><thead><tr><th>עסק</th><th>דירוג (30 יום)</th><th>דירוגים החודש</th><th>פניות פתוחות</th><th>תוכנית</th><th></th></tr></thead><tbody>${clients
+        ? `<table class="table responsive"><thead><tr><th>עסק</th><th>דירוג (30 יום)</th><th>דירוגים החודש</th><th>לא מרוצים שמחכים</th><th>תוכנית</th><th></th></tr></thead><tbody>${clients
             .map(
               (c) => `<tr class="${c.overdue ? 'late' : ''}">
                 <td data-l="עסק"><b>${h(c.name)}</b><div class="small muted">מאז ${h(formatDate(c.created_at).split(',')[0])}</div></td>

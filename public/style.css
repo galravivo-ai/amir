@@ -775,3 +775,4 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .ob-details .ob-steps li { padding: 4px 8px; }
 .ob-details .ob-check { width: 20px; height: 20px; }
 .kpis.kpis-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.page-intro { color: var(--ink-2); background: var(--purple-soft); border-radius: 12px; padding: 10px 14px; margin: -.4rem 0 1rem; max-width: 820px; line-height: 1.6; }

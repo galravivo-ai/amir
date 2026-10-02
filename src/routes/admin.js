@@ -106,7 +106,7 @@ export function adminRoutes(ctx) {
     render(
       req,
       res,
-      'תגובות',
+      filters.sentiment === 'negative' && filters.status === 'new' ? 'לקוחות לא מרוצים' : 'תגובות מסקרים',
       V.responsesView({
         rows: rows.slice(0, PAGE_SIZE),
         hasMore: rows.length > PAGE_SIZE,
