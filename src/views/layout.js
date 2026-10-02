@@ -1,16 +1,16 @@
 import { PUBLIC_TEXTS } from '../i18n.js';
 import { limitLabel } from '../plans.js';
-import { h, logoSrc, safeColor } from '../util.js';
+import { asset, h, logoSrc, safeColor } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { operatorInfo } from './site.js';
 
 const HEAD = (title) => `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${h(title)}</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="${asset('style.css')}">
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
-<script src="/static/assist.js"></script>`;
+<script src="${asset('assist.js')}"></script>`;
 
 const SKIP = (label = 'דלג לתוכן') => `<a class="skip-link" href="#main">${h(label)}</a>`;
 

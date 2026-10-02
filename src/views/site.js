@@ -1,5 +1,5 @@
 import { TRIAL_DAYS } from '../plans.js';
-import { h } from '../util.js';
+import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 
@@ -21,11 +21,11 @@ function sitePage({ title, description = '', body, signupOpen = true }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${h(title)}</title>
 ${description ? `<meta name="description" content="${h(description)}">` : ''}
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="${asset('style.css')}">
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<script src="/static/assist.js"></script>
+<script src="${asset('assist.js')}"></script>
 </head>
 <body class="site">
 <a class="skip-link" href="#main">דלג לתוכן</a>

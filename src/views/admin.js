@@ -1,6 +1,6 @@
 import { EDITABLE_TEXT_KEYS, LANGUAGES, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
-import { formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
+import { asset, formatDate, h, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
@@ -232,18 +232,21 @@ export function dashboardView({
   const logo = logoSrc(business);
   const g0 = google || {};
   const cover = `<header class="dash-cover" style="--cover:${brand}">
-      <div class="cover-id">
-        <span class="cover-logo">${
-          logo ? `<img src="${h(logo)}" alt="${h(business?.name || '')}">` : `<span>${h(String(business?.name || '★').trim().charAt(0))}</span>`
-        }</span>
+      <div class="cover-top">
         <div class="cover-text">
           <span class="cover-greet">${h(greeting(userName))}</span>
           <h1>${h(business?.name || 'לוח בקרה')}</h1>
-          <span class="cover-sub">מה הלקוחות אמרו ${h(period.label)}, בגוגל ובסקרים</span>
+          <span class="cover-sub">מה הלקוחות אמרו ${h(period.label)}</span>
         </div>
-        ${g0.total ? `<a class="cover-google" href="/admin/google/reviews"><b>${g0.avg.toFixed(1)}</b><span class="cover-star">★</span><span>${g0.total.toLocaleString('he-IL')} ביקורות בגוגל</span></a>` : ''}
+        <span class="cover-logo">${
+          logo ? `<img src="${h(logo)}" alt="${h(business?.name || '')}">` : `<span>${h(String(business?.name || '★').trim().charAt(0))}</span>`
+        }</span>
       </div>
-      <div class="cover-bar">${filter}${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}</div>
+      <div class="cover-bar">
+        ${g0.total ? `<a class="cover-google" href="/admin/google/reviews" title="הדירוג בגוגל"><b>${g0.avg.toFixed(1)}</b><span class="cover-star">★</span><span>${g0.total.toLocaleString('he-IL')} ביקורות בגוגל</span></a>` : ''}
+        ${filter}
+        ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
+      </div>
     </header>`;
 
   if (!campaigns.length && !hasGoogle) {
@@ -386,7 +389,7 @@ function statusBadge(status) {
 }
 
 export function responsesTable(rows) {
-  if (!rows.length) return '<p class="muted">אין תגובות להצגה.</p>';
+  if (!rows.length) return '<p class="muted">לא נמצאו תגובות שמתאימות לסינון.</p>';
   return `<table class="table responsive">
     <thead><tr><th>תאריך</th><th>קמפיין</th><th>דירוג</th><th>הערה</th><th>לקוח</th><th>ביקורת</th><th>סטטוס</th></tr></thead>
     <tbody>${rows
@@ -422,39 +425,63 @@ export function responsesView({ rows, campaigns, filters, page, hasMore, staff =
   };
   const exportParams = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
   const unhappyView = filters.sentiment === 'negative' && filters.status === 'new';
+  const filtered = Object.entries(filters).some(([k, v]) => v && !(unhappyView && (k === 'sentiment' || k === 'status')));
+  const empty = !rows.length && page === 1 && !filtered;
+  const advancedOn = Boolean(filters.status && !unhappyView) || filters.staff || filters.tag || filters.overdue || filters.consent;
+  const intro = unhappyView
+    ? 'לקוחות שדירגו נמוך בסקר ועוד לא טיפלתם בהם. פותחים את הלקוח, חוזרים אליו בטלפון או בוואטסאפ, ומסמנים "טופל". ככה לקוח כועס הופך ללקוח שחוזר, לפני שהוא כותב ביקורת רעה בגוגל.'
+    : 'כל סקר שלקוח מילא דרך ה-QR או הקישור שלכם: הדירוג, התשובות וההערה. ביקורות מגוגל נמצאות בעמוד "ביקורות".';
+  const emptyState = unhappyView
+    ? '<div class="card empty"><p><b>אין לקוחות לא מרוצים שמחכים.</b></p><p class="muted">כשלקוח ידרג נמוך בסקר, הוא יופיע כאן ותקבלו התראה.</p></div>'
+    : `<div class="card empty"><p><b>עוד אף לקוח לא מילא סקר.</b></p>
+        <p class="muted">מדפיסים את שלט ה-QR ומניחים אותו בקופה או על השולחנות, או שולחים ללקוחות את הקישור לסקר.</p>
+        <a class="btn primary" href="/admin/campaigns">לקמפיינים ו-QR</a></div>`;
   return `<div class="page-head"><h1>${unhappyView ? 'לקוחות לא מרוצים' : 'תגובות מסקרים'}</h1>
-      <a class="btn" href="/admin/responses.csv?${h(exportParams)}">ייצוא CSV</a></div>
+      ${rows.length ? `<a class="btn" href="/admin/responses.csv?${h(exportParams)}">ייצוא CSV</a>` : ''}</div>
+    <p class="page-intro">${intro}</p>
     ${
-      unhappyView
-        ? '<p class="page-intro">לקוחות שדירגו נמוך בסקר ועוד לא טיפלתם בהם. פותחים את הלקוח, חוזרים אליו בטלפון או בוואטסאפ, ומסמנים "טופל". ככה לקוח כועס הופך ללקוח שחוזר, לפני שהוא כותב ביקורת רעה בגוגל.</p>'
-        : ''
-    }
-    <form method="get" class="filters">
-      <select name="campaign">${opt('', 'כל הקמפיינים', filters.campaign)}${campaigns
-        .map((c) => opt(c.id, c.name, filters.campaign))
-        .join('')}</select>
-      <select name="sentiment">${opt('', 'כל הדירוגים', filters.sentiment)}${opt(
-        'positive',
-        'מרוצים',
-        filters.sentiment,
-      )}${opt('negative', 'לא מרוצים', filters.sentiment)}</select>
-      <select name="status">${opt('', 'כל הסטטוסים', filters.status)}${Object.entries(STATUSES)
-        .map(([k, v]) => opt(k, v, filters.status))
-        .join('')}</select>
+      empty
+        ? emptyState
+        : `<form method="get" class="filters">
+      ${unhappyView ? '<input type="hidden" name="sentiment" value="negative"><input type="hidden" name="status" value="new">' : ''}
+      <input name="q" placeholder="חיפוש בשם, טלפון או הערה" value="${h(filters.q)}">
       ${
-        staff.length
-          ? `<select name="staff" aria-label="עובד">${opt('', 'כל העובדים', filters.staff)}${staff
-              .map((s) => opt(s.id, s.name, filters.staff))
+        campaigns.length > 1
+          ? `<select name="campaign" aria-label="קמפיין" onchange="this.form.submit()">${opt('', 'כל הקמפיינים', filters.campaign)}${campaigns
+              .map((c) => opt(c.id, c.name, filters.campaign))
               .join('')}</select>`
           : ''
       }
-      <select name="tag" aria-label="נושא">${opt('', 'כל הנושאים', filters.tag)}${TOPICS.map((t) => opt(t, t, filters.tag)).join('')}</select>
-      <label class="check"><input type="checkbox" name="overdue" value="1" ${filters.overdue ? 'checked' : ''}> באיחור בלבד</label>
-      <label class="check"><input type="checkbox" name="consent" value="1" ${filters.consent ? 'checked' : ''}> אישרו פרסום</label>
-      <input name="q" placeholder="חיפוש בשם / טלפון / הערה" value="${h(filters.q)}">
-      <button class="btn">סינון</button>
+      ${
+        unhappyView
+          ? ''
+          : `<select name="sentiment" aria-label="דירוג" onchange="this.form.submit()">${opt('', 'כל הדירוגים', filters.sentiment)}${opt('positive', 'מרוצים', filters.sentiment)}${opt('negative', 'לא מרוצים', filters.sentiment)}</select>`
+      }
+      <button class="btn">חיפוש</button>
+      <details class="more-filters" ${advancedOn ? 'open' : ''}><summary>עוד סינונים</summary>
+        <div class="filters">
+          ${
+            unhappyView
+              ? ''
+              : `<select name="status" aria-label="סטטוס">${opt('', 'כל הסטטוסים', filters.status)}${Object.entries(STATUSES)
+                  .map(([k, v]) => opt(k, v, filters.status))
+                  .join('')}</select>`
+          }
+          ${
+            staff.length
+              ? `<select name="staff" aria-label="עובד">${opt('', 'כל העובדים', filters.staff)}${staff
+                  .map((s) => opt(s.id, s.name, filters.staff))
+                  .join('')}</select>`
+              : ''
+          }
+          <select name="tag" aria-label="נושא">${opt('', 'כל הנושאים', filters.tag)}${TOPICS.map((t) => opt(t, t, filters.tag)).join('')}</select>
+          <label class="check"><input type="checkbox" name="overdue" value="1" ${filters.overdue ? 'checked' : ''}> רק מי שמחכה יותר מדי</label>
+          <label class="check"><input type="checkbox" name="consent" value="1" ${filters.consent ? 'checked' : ''}> אישרו לפרסם את ההערה</label>
+        </div>
+      </details>
     </form>
-    <div class="card">${responsesTable(rows)}</div>
+    <div class="card">${responsesTable(rows)}</div>`
+    }
     <div class="pager">
       ${page > 1 ? `<a class="btn" href="?${h(qs(page - 1))}">הקודם</a>` : ''}
       ${hasMore ? `<a class="btn" href="?${h(qs(page + 1))}">הבא</a>` : ''}
@@ -840,7 +867,7 @@ export function posterView({ campaign, business, qrSvg, t, staff = null }) {
   const steps = [t.poster_step1, t.poster_step2, t.poster_step3];
   return `<!doctype html><html lang="${h(campaign.lang)}" dir="${h(t.dir)}"><head><meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${h(business.name)} · QR</title><link rel="stylesheet" href="/static/style.css">
+  <title>${h(business.name)} · QR</title><link rel="stylesheet" href="${asset('style.css')}">
   <style>:root{--brand:${safeColor(business.brand_color)}}</style></head>
   <body class="poster">
     <div class="poster-toolbar noprint">

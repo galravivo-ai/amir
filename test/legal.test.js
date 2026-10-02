@@ -24,7 +24,7 @@ test('legal pages, accessibility menu and cookie notice', async () => {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, marker, path);
-    assert.match(html, /<script src="\/static\/assist\.js"><\/script>/, `${path} loads the accessibility menu`);
+    assert.match(html, /<script src="\/static\/assist\.js(\?v=\w+)?"><\/script>/, `${path} loads the accessibility menu`);
     assert.match(html, /href="#main"/, `${path} has a skip link`);
     for (const link of ['/terms', '/privacy', '/cookies', '/accessibility']) assert.match(html, new RegExp(`href="${link}"`), `${path} footer links ${link}`);
   }
