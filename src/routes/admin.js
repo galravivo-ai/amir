@@ -7,7 +7,7 @@ import { AiError, TOPICS } from '../ai.js';
 import { limitLabel } from '../plans.js';
 import { normalizeQuestions, STATUSES } from '../store.js';
 import { templateQuestions, TEMPLATES } from '../templates.js';
-import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, safeUrl, waLink, waNumber } from '../util.js';
+import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, normalizeInviteTemplate, safeUrl, waLink, waNumber } from '../util.js';
 import { parseJson } from '../db.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
@@ -439,6 +439,7 @@ export function adminRoutes(ctx) {
         invites: store.invitesFor(c.id),
         newInvite,
         businessName: req.business.name,
+        inviteTemplate: req.business.invite_template,
         can: req.can,
         emailInvites: req.plan.emailInvites,
         mailEnabled: ctx.mailer.enabled,
@@ -466,6 +467,13 @@ export function adminRoutes(ctx) {
     res.redirect(303, `/admin/campaigns/${c.id}/share?invite=${t}`);
   });
 
+  // The menu's "QR poster": the first active campaign's designer.
+  admin.get('/poster', (req, res) => {
+    const campaigns = store.campaignsFor(req.business.id);
+    const c = campaigns.find((x) => x.active) || campaigns[0];
+    res.redirect(303, c ? `/admin/campaigns/${c.id}/poster` : '/admin/campaigns/new');
+  });
+
   // Quick send from anywhere: a personal survey link, opened straight in WhatsApp
   // with the message ready, so sending takes two taps.
   admin.post('/send', manager, (req, res) => {
@@ -476,7 +484,9 @@ export function adminRoutes(ctx) {
     const name = String(req.body.customer_name ?? '').trim().slice(0, 80);
     const t = store.createInvite(c.id, { customer_name: name, phone });
     const link = `${ctx.baseUrl(req)}/r/${c.slug}?i=${t}`;
-    res.redirect(303, waLink(phone, inviteMessage({ name, businessName: req.business.name, link })));
+    // The text edited in the send window for this customer, else the business's wording.
+    const template = normalizeInviteTemplate(req.body.message) || req.business.invite_template;
+    res.redirect(303, waLink(phone, inviteMessage({ name, businessName: req.business.name, link, template })));
   });
 
   return admin;

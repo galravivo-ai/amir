@@ -381,6 +381,10 @@ const MIGRATIONS = [
   `
   ALTER TABLE campaigns ADD COLUMN poster_design TEXT NOT NULL DEFAULT '{}';
   `,
+  // v18: the business's own wording for the WhatsApp rating request
+  `
+  ALTER TABLE businesses ADD COLUMN invite_template TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

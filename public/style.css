@@ -848,5 +848,15 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 .wa-dialog .btn.wa { width: 100%; }
 .toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 70; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(23, 18, 58, .3); font-size: .92rem; max-width: calc(100vw - 32px); }
 .toast[hidden] { display: none; }
-.wa-dialog .row.between { flex-wrap: nowrap; align-items: center; gap: 8px; }
-.wa-dialog h3 { flex: 1; }
+.wa-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wa-head h3 { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+/* WhatsApp wording */
+.im-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.im-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-btn { border: 1px solid var(--line); background: var(--purple-soft); color: var(--purple); border-radius: 99px; padding: 4px 12px; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.chip-btn:hover { background: #e4ddff; }
+.im-preview { background: #e9e2d8; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; }
+.wa-bubble { align-self: flex-start; max-width: 92%; background: #d9fdd3; color: #111b21; border-radius: 10px 10px 10px 2px; padding: 8px 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 1px rgba(0, 0, 0, .12); font-size: .95rem; }
+.wa-msg summary { cursor: pointer; color: var(--purple); font-weight: 600; font-size: .9rem; width: fit-content; }
+.wa-msg textarea { margin-top: 6px; }
+@media (max-width: 760px) { .im-grid { grid-template-columns: minmax(0, 1fr); } }

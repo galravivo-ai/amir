@@ -1,6 +1,6 @@
 import { accessOf, CYCLES, FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
-import { formatDate, h, logoSrc } from '../util.js';
+import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
 import { agenciesAdminBlock } from './agency.js';
 import { icon } from './icons.js';
@@ -11,6 +11,60 @@ const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}
 const checked = (on) => (on ? 'checked' : '');
 
 // ---------------------------------------------------------------- business
+
+/** The WhatsApp wording, with placeholders and a live preview. */
+function inviteMessageCard(business, csrf) {
+  const current = business.invite_template || DEFAULT_INVITE_TEMPLATE;
+  const sample = (t) => inviteMessage({ name: 'דנה', businessName: business.name, link: 'https://gofive.co.il/r/…', template: t });
+  return `<section class="card stack" id="invite-message">
+    <h3>נוסח ההודעה בוואטסאפ</h3>
+    <p class="muted small">זו ההודעה שנפתחת כששולחים ללקוח בקשת דירוג. אפשר לכתוב אותה בסגנון של העסק. המילים בסוגריים מוחלפות לבד לכל לקוח.</p>
+    <div class="im-grid">
+      <form method="post" action="/admin/business/invite-message" class="stack">
+        ${csrfField(csrf)}
+        <div class="im-chips" aria-label="הוספת שדה להודעה">
+          ${[
+            ['{שם}', 'שם הלקוח'],
+            ['{עסק}', 'שם העסק'],
+            ['{קישור}', 'הקישור לסקר'],
+          ]
+            .map(([tok, l]) => `<button type="button" class="chip-btn" data-insert="${tok}">+ ${l}</button>`)
+            .join('')}
+        </div>
+        <textarea name="invite_template" id="im-text" rows="5" maxlength="${INVITE_TEMPLATE_MAX}" dir="rtl">${h(current)}</textarea>
+        <p class="muted small">אם השם לא ידוע, "{שם}" פשוט נעלם מההודעה. אם תשכחו את {קישור}, הוא יתווסף בסוף.</p>
+        <div class="row compact">
+          <button class="btn primary">שמירה</button>
+          ${business.invite_template ? '<button class="btn-link" name="reset" value="1" formnovalidate>חזרה לנוסח המקורי</button>' : ''}
+        </div>
+      </form>
+      <div class="im-preview" aria-live="polite">
+        <span class="muted small">כך הלקוח יראה את ההודעה:</span>
+        <div class="wa-bubble" id="im-preview">${h(sample(current))}</div>
+      </div>
+    </div>
+    <script>
+    (function () {
+      var ta = document.getElementById('im-text'), out = document.getElementById('im-preview');
+      var biz = ${JSON.stringify(business.name)};
+      function render() {
+        var t = ta.value.trim() || ${JSON.stringify(DEFAULT_INVITE_TEMPLATE)};
+        if (t.indexOf('{קישור}') < 0) t += ' {קישור}';
+        out.textContent = t.replace(/[ \t]?\{שם\}/g, function (m) { return m.replace('{שם}', 'דנה'); })
+          .replace(/\{עסק\}/g, biz).replace(/\{קישור\}/g, 'https://gofive.co.il/r/…');
+      }
+      ta.addEventListener('input', render);
+      document.querySelectorAll('[data-insert]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var s = ta.selectionStart, e = ta.selectionEnd, tok = b.dataset.insert;
+          ta.value = ta.value.slice(0, s) + tok + ta.value.slice(e);
+          ta.focus(); ta.selectionStart = ta.selectionEnd = s + tok.length; render();
+        });
+      });
+    })();
+    </script>
+  </section>`;
+}
 
 export function businessView({ business, csrf, plan, error = '' }) {
   return `<h1>הגדרות עסק</h1>
@@ -59,6 +113,8 @@ export function businessView({ business, csrf, plan, error = '' }) {
       <button class="btn primary">שמירה</button>
     </form>
   </div>
+
+  ${inviteMessageCard(business, csrf)}
 
   <section class="card stack" id="logo">
     <h3>לוגו</h3>

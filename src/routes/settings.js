@@ -3,7 +3,7 @@ import multer from 'multer';
 import { AiError } from '../ai.js';
 import { CYCLES, limitLabel, PLANS, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
-import { clampInt, emailList, errorPage, imageMime, isEmail, safeColor, safeUrl } from '../util.js';
+import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
 import * as V from '../views/settings.js';
 import { BIZ_COOKIE } from './context.js';
@@ -48,6 +48,12 @@ export function settingsRoutes(ctx) {
       brand_color: safeColor(req.body.brand_color, b.brand_color),
     });
     res.redirect(303, '/admin/business?ok=1');
+  });
+
+  router.post('/business/invite-message', owner, (req, res) => {
+    const reset = req.body.reset === '1';
+    store.updateBusiness(req.business.id, { invite_template: reset ? '' : normalizeInviteTemplate(req.body.invite_template) });
+    res.redirect(303, '/admin/business?ok=1#invite-message');
   });
 
   router.post('/business/notifications', owner, (req, res) => {

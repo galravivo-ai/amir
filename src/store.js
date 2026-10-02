@@ -309,7 +309,7 @@ export function createStore(db) {
       const allowed = [
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
-        'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request',
+        'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -353,7 +353,7 @@ export function createStore(db) {
         { key: 'brand', label: 'מעלים לוגו ובוחרים צבע', href: '/admin/business#logo', done: Boolean(business.logo_version || business.logo_url) },
         { key: 'campaign', label: 'יוצרים קמפיין ראשון', href: '/admin/campaigns/new', done: c.campaigns > 0 },
         { key: 'google', label: 'מחברים את הקישור לביקורות בגוגל', href: '/admin/campaigns', done: (c.google || 0) > 0 },
-        { key: 'poster', label: 'מדפיסים שלט QR', href: '/admin/campaigns', done: Boolean(flags.poster) },
+        { key: 'poster', label: 'מעצבים ומדפיסים שלט QR', href: '/admin/poster', done: Boolean(flags.poster) },
         { key: 'test', label: 'סורקים ומדרגים בעצמכם, לבדיקה', href: '/admin/campaigns', done: responses > 0 },
         { key: 'team', label: 'מזמינים עובד לצוות', href: '/admin/team', done: members > 1, optional: true },
       ];

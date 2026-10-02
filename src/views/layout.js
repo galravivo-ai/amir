@@ -106,6 +106,7 @@ ${SKIP()}
     ['/admin/insights', 'תובנות AI', 'spark'],
     ['/admin/responses', 'תגובות מסקרים', 'inbox'],
     ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
+    ['/admin/poster', 'עיצוב שלט QR', 'print'],
     ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
     role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
     role === 'owner' && ['/admin/team', 'צוות', 'team'],

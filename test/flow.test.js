@@ -1175,9 +1175,39 @@ test('quick WhatsApp send from the dashboard', async () => {
   assert.equal(wa.pathname, '/972501234567');
   const text = wa.searchParams.get('text');
   assert.match(text, /^היי דנה! תודה שבחרת ב/);
-  const t = text.match(/\/r\/[\w-]+\?i=(\w+)/)[1];
+  const t = text.match(/\/r\/[\w-]+\?i=([\w-]+)/)[1];
   assert.ok(store.inviteByToken(campaign.id, t), 'a personal invite was created, so the answer is linked to the customer');
   const bad = await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '12' } });
   assert.equal(bad.location, '/admin?send=bad');
   assert.match((await owner.req(bad.location)).text, /מספר הטלפון לא נראה תקין/);
+});
+
+test('WhatsApp wording: the business writes its own, and can tweak one message', async () => {
+  const owner = await registeredOwner('wa-wording@example.com');
+  const campaign = await createCampaign(owner);
+  const token = await csrfOf(owner);
+  // The designer is one click away: menu, campaign list and first steps.
+  assert.match((await owner.req('/admin')).text, /href="\/admin\/poster"/);
+  assert.equal((await owner.req('/admin/poster')).location, `/admin/campaigns/${campaign.id}/poster`);
+  assert.match((await owner.req('/admin/campaigns')).text, new RegExp(`/admin/campaigns/${campaign.id}/poster`));
+
+  const settings = await owner.req('/admin/business');
+  assert.match(settings.text, /נוסח ההודעה בוואטסאפ/);
+  await owner.req('/admin/business/invite-message', { method: 'POST', form: { _csrf: token, invite_template: 'שלום {שם} 🙂 איך היה אצלנו ב{עסק}? נשמח לדירוג' } });
+  const sent = await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0521234567', customer_name: 'רון', campaign: String(campaign.id) } });
+  const text = new URL(sent.location).searchParams.get('text');
+  assert.match(text, /^שלום רון 🙂 איך היה אצלנו ב.+\? נשמח לדירוג https?:\/\/[^ ]+\/r\/[\w-]+\?i=[\w-]+$/, 'the link is added when the wording left it out');
+
+  // Without a name the greeting stays tidy.
+  const noName = new URL((await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0521234567' } })).location).searchParams.get('text');
+  assert.match(noName, /^שלום 🙂/);
+
+  // A one-off edit in the send window wins for that message only.
+  const once = new URL((await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0521234567', message: 'מבצע! {קישור}' } })).location).searchParams.get('text');
+  assert.match(once, /^מבצע! https?:/);
+
+  // Back to the original wording.
+  await owner.req('/admin/business/invite-message', { method: 'POST', form: { _csrf: token, reset: '1' } });
+  const reset = new URL((await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0521234567' } })).location).searchParams.get('text');
+  assert.match(reset, /^היי! תודה שבחרת ב/);
 });

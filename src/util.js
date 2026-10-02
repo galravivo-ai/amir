@@ -143,9 +143,26 @@ export function waNumber(phone) {
   return d;
 }
 
-/** The WhatsApp / SMS text that invites a customer to rate. */
-export function inviteMessage({ name = '', businessName, link }) {
-  return `היי${name ? ` ${name}` : ''}! תודה שבחרת ב${businessName}. נשמח לשמוע איך היה (פחות מדקה): ${link}`;
+// The WhatsApp text that invites a customer to rate. A business can write its
+// own; {שם}, {עסק} and {קישור} are filled in per customer.
+export const DEFAULT_INVITE_TEMPLATE = 'היי {שם}! תודה שבחרת ב{עסק}. נשמח לשמוע איך היה (פחות מדקה): {קישור}';
+export const INVITE_TEMPLATE_MAX = 600;
+
+/** Cleans a template a business wrote; the link is added at the end if it was left out. */
+export function normalizeInviteTemplate(text) {
+  const t = String(text ?? '').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, INVITE_TEMPLATE_MAX);
+  if (!t) return '';
+  return t.includes('{קישור}') ? t : `${t} {קישור}`;
+}
+
+export function inviteMessage({ name = '', businessName, link, template = '' }) {
+  const t = normalizeInviteTemplate(template) || DEFAULT_INVITE_TEMPLATE;
+  const who = String(name ?? '').trim();
+  return t
+    // Without a name, "היי {שם}!" becomes "היי!" rather than "היי !".
+    .replace(/[ \t]?\{שם\}/g, (m) => (who ? m.replace('{שם}', who) : ''))
+    .replace(/\{עסק\}/g, businessName)
+    .replace(/\{קישור\}/g, link);
 }
 
 export function waLink(phone, text) {

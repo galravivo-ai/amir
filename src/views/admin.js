@@ -1,6 +1,6 @@
 import { EDITABLE_TEXT_KEYS, LANGUAGES, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
-import { asset, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
+import { asset, DEFAULT_INVITE_TEMPLATE, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { TEMPLATES } from '../templates.js';
@@ -153,11 +153,11 @@ const G_MARK = `<svg class="src-g" width="14" height="14" viewBox="0 0 48 48" ar
 const WA_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>';
 
 /** Send a customer a personal survey link on WhatsApp, from the dashboard. */
-function sendDialog(campaigns, csrf) {
+function sendDialog(campaigns, csrf, template) {
   return `<dialog id="wa-send" class="wa-dialog" aria-labelledby="wa-send-title">
     <form method="post" action="/admin/send" target="_blank" class="stack"
       onsubmit="var f=this;setTimeout(function(){f.reset();f.closest('dialog').close();var t=document.getElementById('wa-sent');t.hidden=false;setTimeout(function(){t.hidden=true},5000)},300)">
-      <div class="row between"><h3 id="wa-send-title">${WA_ICON} שליחת בקשת דירוג בוואטסאפ</h3>
+      <div class="wa-head"><h3 id="wa-send-title">${WA_ICON} שליחת בקשת דירוג בוואטסאפ</h3>
         <button type="button" class="icon-btn" aria-label="סגירה" onclick="this.closest('dialog').close()">✕</button></div>
       <p class="muted small">כותבים את הטלפון של הלקוח, ונפתח וואטסאפ עם הודעה מוכנה וקישור אישי לסקר. נשאר רק ללחוץ "שליחה".</p>
       ${csrfField(csrf)}
@@ -168,6 +168,10 @@ function sendDialog(campaigns, csrf) {
           ? `<label>קמפיין<select name="campaign">${campaigns.map((c) => `<option value="${c.id}">${h(c.name)}</option>`).join('')}</select></label>`
           : `<input type="hidden" name="campaign" value="${campaigns[0].id}">`
       }
+      <details class="wa-msg"><summary>עריכת ההודעה</summary>
+        <textarea name="message" rows="4" maxlength="600">${h(template)}</textarea>
+        <p class="muted small">{שם}, {עסק} ו-{קישור} יוחלפו לבד. לשינוי קבוע של הנוסח: <a href="/admin/business#invite-message">הגדרות</a>.</p>
+      </details>
       <button class="btn wa">${WA_ICON} פתיחה בוואטסאפ</button>
     </form>
   </dialog>
@@ -275,7 +279,7 @@ export function dashboardView({
         ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
       </div>
     </header>
-    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf) : ''}
+    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, business?.invite_template || DEFAULT_INVITE_TEMPLATE) : ''}
     ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}`;
 
   if (!campaigns.length && !hasGoogle) {
@@ -666,7 +670,8 @@ export function campaignsView({ campaigns, baseUrl, can = () => true, limitReach
                   <div class="small muted">סף מרוצים: ${c.threshold}★ ומעלה · ${c.questionsList.length} שאלות · ${c.google_review_url ? 'גוגל מחובר' : '<b>חסר קישור גוגל</b>'}</div>
                   <div class="actions">
                     ${can('manager') ? `<a class="btn" href="/admin/campaigns/${c.id}">עריכה</a>` : ''}
-                    <a class="btn" href="/admin/campaigns/${c.id}/share">QR, שלטים ושליחה</a>
+                    <a class="btn accent" href="/admin/campaigns/${c.id}/poster">עיצוב שלט QR</a>
+                    <a class="btn" href="/admin/campaigns/${c.id}/share">קישור ושליחה ללקוחות</a>
                     <a class="btn" href="/admin?campaign=${c.id}">נתונים</a>
                   </div>
                 </div>
@@ -819,10 +824,10 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
   }`;
 }
 
-export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, can = () => true, emailInvites = false, mailEnabled = false }) {
+export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, inviteTemplate = '', can = () => true, emailInvites = false, mailEnabled = false }) {
   const url = `${baseUrl}/r/${campaign.slug}`;
   const inviteUrl = (t) => `${url}?i=${t}`;
-  const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token) });
+  const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token), template: inviteTemplate });
   return `<p><a href="/admin/campaigns">→ חזרה לקמפיינים</a></p>
   <h1>QR ושליחה: ${h(campaign.name)}</h1>
   <div class="grid2">
