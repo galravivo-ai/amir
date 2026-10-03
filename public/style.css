@@ -1053,7 +1053,7 @@ a.biz-card:hover { background: #352a88; }
 .hl-tips h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: var(--purple); }
 .hl-desc { display: grid; gap: 8px; margin-top: 10px; }
 .hl-desc h4 { margin: 0; color: var(--ink); }
-.hl-desc textarea { width: 100%; background: #fff; }
+.hl-desc textarea { width: 100%; background: #fff; font: inherit; line-height: 1.6; }
 .hl-desc .btn { justify-self: start; }
 
 /* this week's tasks */
