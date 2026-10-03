@@ -91,10 +91,10 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1#businesses');
   });
 
-  // The "AI visibility plus" add-on, turned on after payment.
+  // Wider AI visibility for one business whose plan doesn't include it (a gift or a deal).
   router.post('/businesses/:id/ai-plus', (req, res) => {
     const business = store.businessById(Number(req.params.id));
-    if (business) store.updateBusiness(business.id, { ai_plus: req.body.on === '1', ai_plus_request: null });
+    if (business) store.updateBusiness(business.id, { ai_plus: req.body.on === '1' });
     res.redirect(303, '/superadmin?ok=1#businesses');
   });
 

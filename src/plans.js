@@ -1,8 +1,8 @@
 // Subscription plans and their limits. Online payment is not wired up yet: a
 // business asks for a plan from /admin/plan and a system admin activates it
 // from /superadmin. `Infinity` = unlimited. Prices are monthly, in ILS,
-// including VAT. Plans differ only in the number of branches (campaigns):
-// every feature is included in every plan.
+// including VAT. Plans differ in the number of branches (campaigns), and from
+// "pro" up AI visibility also covers ChatGPT, Gemini and Perplexity (aiPlus).
 const ALL_FEATURES = {
   teamMembers: Infinity,
   monthlyResponses: Infinity,
@@ -19,6 +19,7 @@ export const PLANS = {
     tagline: 'לעסק עם נקודה אחת',
     campaigns: 1,
     ...ALL_FEATURES,
+    aiPlus: false,
   },
   pro: {
     label: 'מקצועי',
@@ -26,6 +27,7 @@ export const PLANS = {
     tagline: 'לעסק שגדל',
     campaigns: 3,
     ...ALL_FEATURES,
+    aiPlus: true,
   },
   business: {
     label: 'עסקי',
@@ -33,6 +35,7 @@ export const PLANS = {
     tagline: 'לרשתות וזכיינים',
     campaigns: 10,
     ...ALL_FEATURES,
+    aiPlus: true,
   },
   // Not on the price list: chains above 10 branches get a personal quote and
   // a system admin assigns this plan.
@@ -43,20 +46,20 @@ export const PLANS = {
     tagline: 'יותר מ-10 סניפים, בהצעת מחיר',
     campaigns: Infinity,
     ...ALL_FEATURES,
+    aiPlus: true,
   },
 };
 
 /**
- * An add-on on top of any plan: AI visibility checked in ChatGPT, Gemini and
- * Perplexity too, with more questions. A system admin turns it on per business.
+ * Wider AI visibility: ChatGPT, Gemini and Perplexity too, with more questions.
+ * Included from "pro" up; a system admin may also turn it on for one business.
  */
 export const AI_PLUS = {
-  label: 'נראות ב-AI פלוס',
-  price: 49,
+  label: 'נראות ב-AI מורחבת',
   tagline: 'בודקים אם ממליצים עליכם גם ב-ChatGPT, ב-Gemini וב-Perplexity',
   features: ['בדיקה שבועית ב-ChatGPT, Gemini ו-Perplexity, בנוסף לגוגל ול-Claude', 'עד 10 שאלות במקום 5', 'השוואה בין כל המנועים לאורך זמן'],
 };
-export const hasAiPlus = (business) => Boolean(business?.ai_plus);
+export const hasAiPlus = (business) => Boolean(planOf(business).aiPlus || business?.ai_plus);
 
 /** Plans shown on the price list. */
 export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));

@@ -157,7 +157,7 @@ test('ChatGPT, Gemini and Perplexity read their answers and sources', async () =
   assert.deepEqual(await e.perplexity('q'), { text: 'ג׳קו סטריט', sources: [{ title: '', link: 'https://www.timeout.co.il/a' }] });
 });
 
-test('the plus add-on: requested by the owner, turned on by the system admin, adds engines and questions', async () => {
+test('wider AI visibility: in "pro" and up, a gift on "basic", more engines and questions', async () => {
   const asked = [];
   const app = createApp(openDb(':memory:'), {
     authLimit: { windowMs: 60e3, max: 1000 },
@@ -188,36 +188,40 @@ test('the plus add-on: requested by the owner, turned on by the system admin, ad
     await req('/register', { method: 'POST', form: { name: 'דנה', email: 'plus@example.com', password: 'password123', business: 'פלאס קפה', terms: '1' } });
     const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
     const biz = app.store.businessesFor(app.store.userByEmail('plus@example.com').id)[0];
+    const fresh = () => app.store.businessById(biz.id);
 
+    // The trial is on "pro", which includes it.
+    assert.deepEqual(app.visibility.engines(fresh()), ['chatgpt']);
+    assert.match((await req('/admin/ai-visibility')).text, /עד 10\)/);
+
+    app.store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
     let page = (await req('/admin/ai-visibility')).text;
-    assert.match(page, /נראות ב-AI פלוס/, 'the add-on is offered');
+    assert.match(page, /לשדרוג המסלול/, 'basic is offered the upgrade');
     assert.match(page, /עד 5\)/);
-    assert.doesNotMatch(page, /בדיקה עכשיו/, 'without the add-on no engine is on here');
+    assert.doesNotMatch(page, /בדיקה עכשיו/, 'no engine is on for basic here');
+    assert.deepEqual(app.visibility.engines(fresh()), []);
 
-    assert.equal((await req('/admin/ai-visibility/plus', { method: 'POST', form: { _csrf: token } })).status, 303);
-    assert.ok(app.store.businessById(biz.id).ai_plus_request);
-    assert.match((await req('/admin/ai-visibility')).text, /ביקשתם את התוסף/);
+    const pricing = (await req('/admin/plan')).text;
+    assert.match(pricing, /נראות ב-AI בגוגל וב-Claude/);
+    assert.match(pricing, /נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity/);
 
-    // Turned on by a system admin.
+    // A system admin can give it to one basic business.
     app.store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('plus@example.com');
-    assert.match((await req('/superadmin')).text, /ביקש: נראות ב-AI פלוס/);
+    assert.match((await req('/superadmin')).text, /נראות ב-AI מורחבת במתנה/);
     assert.equal((await req(`/superadmin/businesses/${biz.id}/ai-plus`, { method: 'POST', form: { _csrf: token, on: '1' } })).status, 303);
-    const on = app.store.businessById(biz.id);
-    assert.equal(on.ai_plus, 1);
-    assert.equal(on.ai_plus_request, null);
+    assert.equal(fresh().ai_plus, 1);
 
     const form = new URLSearchParams({ _csrf: token });
     for (let i = 1; i <= 12; i++) form.append('queries', `שאלה מספר ${i}`);
     await req('/admin/ai-visibility/settings', { method: 'POST', form });
-    assert.equal(JSON.parse(app.store.businessById(biz.id).ai_queries).length, 10, 'up to 10 questions with the add-on');
+    assert.equal(JSON.parse(fresh().ai_queries).length, 10, 'up to 10 questions');
 
     page = (await req('/admin/ai-visibility')).text;
     assert.match(page, /בדיקה עכשיו/);
-    assert.doesNotMatch(page, /להוספת התוסף/);
-    const r = await app.visibility.runBusiness(app.store.businessById(biz.id));
+    assert.doesNotMatch(page, /לשדרוג המסלול/);
+    const r = await app.visibility.runBusiness(fresh());
     assert.equal(r.mentioned, 10);
     assert.equal(asked.length, 10);
-    assert.deepEqual(app.visibility.engines(app.store.businessById(biz.id)), ['chatgpt']);
   } finally {
     srv.close();
   }

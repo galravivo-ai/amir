@@ -1,4 +1,4 @@
-import { AI_PLUS, annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
+import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
@@ -6,7 +6,7 @@ const FEATURED = 'pro';
 const branchesLabel = (p) =>
   p.campaigns === Infinity ? 'סניפים ללא הגבלה' : p.campaigns === 1 ? 'סניף אחד' : `עד ${p.campaigns} סניפים`;
 
-// Every plan includes everything; only the number of branches changes.
+// Every plan includes these; the branches and the AI engines change.
 const INCLUDED = [
   'משתמשים ודירוגים ללא הגבלה',
   'QR, סקר והפניה לביקורת בגוגל',
@@ -20,7 +20,7 @@ const INCLUDED = [
  * `action(key)` returns the call to action for a plan: a link on the landing
  * page, a submit button inside the plan page's form.
  */
-export function pricingCards({ action, current = '', idPrefix = 'cycle', addon = true }) {
+export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
   const cards = Object.entries(PUBLIC_PLANS)
     .map(([key, p]) => {
       const yearly = annualPrice(p);
@@ -36,6 +36,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', addon =
         <div class="plan-branches">${h(branchesLabel(p))}</div>
         <ul>
           ${INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
+          <li class="${p.aiPlus ? 'plan-plus' : ''}">✓ ${p.aiPlus ? 'נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity' : 'נראות ב-AI בגוגל וב-Claude'}</li>
         </ul>
         ${action(key, p)}
       </div>`;
@@ -49,8 +50,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', addon =
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
-    ${addon ? `<div class="plan-addon"><div><b>תוסף: ${h(AI_PLUS.label)}</b> · ${ils(AI_PLUS.price)} לחודש<br><span class="muted small">${h(AI_PLUS.tagline)}. מתווסף לכל מסלול.</span></div></div>` : ''}
-    <p class="pricing-note">כל המסלולים כוללים את כל הפיצ'רים, ההבדל הוא רק במספר הסניפים · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
+    <p class="pricing-note">ההבדל בין המסלולים: מספר הסניפים, ומהמסלול המקצועי גם בדיקת נראות ב-ChatGPT, Gemini ו-Perplexity · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }
 

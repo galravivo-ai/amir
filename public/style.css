@@ -926,9 +926,7 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 
 /* AI visibility plus add-on */
 .vis-plus { border: 1.5px solid var(--purple); }
-.vis-plus-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-.vis-plus-head h3 { margin: 6px 0 2px; }
-.vis-plus-head p { margin: 0; }
-.vis-plus-price b { font-size: 1.8rem; }
+.vis-plus h3 { margin: 8px 0 2px; }
+.vis-plus p { margin: 0; }
 .vis-plus-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 4px; }
-.plan-addon { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px dashed var(--purple); border-radius: 12px; margin: 12px 0; }
+.plan li.plan-plus { font-weight: 700; color: var(--purple); }

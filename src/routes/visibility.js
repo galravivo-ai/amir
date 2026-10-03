@@ -10,7 +10,6 @@ export function visibilityRoutes(ctx, { visibility }) {
   const { store, render, requireRole } = ctx;
   const router = express.Router();
   const manager = requireRole('manager');
-  const owner = requireRole('owner');
   // Checks run in the background: a full run asks several engines several questions.
   const running = new Set();
 
@@ -27,9 +26,8 @@ export function visibilityRoutes(ctx, { visibility }) {
         allEngines: ENGINES,
         maxQueries: visibility.maxQueries(req.business),
         plus: hasAiPlus(req.business),
-        // The add-on is offered once at least one of its engines is set up.
+        // The upgrade is offered once at least one of the wider engines is set up.
         plusOffer: visibility.engines().some((e) => PLUS_ENGINES.includes(e)) ? AI_PLUS : null,
-        plusRequested: Boolean(req.business.ai_plus_request),
         running: running.has(req.business.id),
         aiAvailable: Boolean(ctx.ai?.suggestQueries) && req.plan.ai,
         csrf: req.user.csrf,
@@ -38,9 +36,7 @@ export function visibilityRoutes(ctx, { visibility }) {
           ? 'נשמר.'
           : req.query.started
             ? 'הבדיקה התחילה. היא לוקחת כמה דקות, אפשר לרענן את הדף.'
-            : req.query.requested
-              ? `הבקשה ל${AI_PLUS.label} נשלחה. ניצור איתכם קשר להשלמת התשלום ונפעיל את התוסף.`
-              : '',
+            : '',
         ...extra,
       }),
     );
@@ -84,17 +80,6 @@ export function visibilityRoutes(ctx, { visibility }) {
         .finally(() => running.delete(id));
     }
     res.redirect(303, '/admin/ai-visibility?started=1');
-  });
-
-  // No online payment yet: the owner asks, a system admin turns it on after payment.
-  router.post('/ai-visibility/plus', owner, async (req, res) => {
-    if (!hasAiPlus(req.business)) {
-      store.updateBusiness(req.business.id, { ai_plus_request: JSON.stringify({ by: req.user.email, at: new Date().toISOString() }) });
-      await ctx.notifier
-        ?.planRequested({ business: req.business, plan: AI_PLUS, cycle: `תוסף, ₪${AI_PLUS.price} לחודש`, user: req.user, admins: ctx.adminEmails() })
-        .catch((err) => console.error('[notify] AI plus request failed:', err));
-    }
-    res.redirect(303, '/admin/ai-visibility?requested=1');
   });
 
   return router;

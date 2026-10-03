@@ -23,26 +23,18 @@ function cell(row) {
   </details></td>`;
 }
 
-function plusCard({ offer, requested, csrf, can }) {
+function plusCard({ offer, can }) {
   return `<section class="card vis-plus">
-    <div class="vis-plus-head"><div><span class="badge st-in_progress">תוסף</span><h3>${h(offer.label)}</h3>
-      <p class="muted">${h(offer.tagline)}</p></div>
-      <div class="vis-plus-price"><b>₪${offer.price}</b><span class="muted small"> לחודש, בנוסף למסלול</span></div></div>
+    <span class="badge st-in_progress">במסלול מקצועי ומעלה</span><h3>${h(offer.label)}</h3>
+    <p class="muted">${h(offer.tagline)}</p>
     <ul class="vis-plus-list">${offer.features.map((f) => `<li>✓ ${h(f)}</li>`).join('')}</ul>
-    ${
-      requested
-        ? '<p class="flash">ביקשתם את התוסף. ניצור איתכם קשר להשלמת התשלום ונפעיל אותו.</p>'
-        : can('owner')
-          ? `<form method="post" action="/admin/ai-visibility/plus"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn accent">להוספת התוסף</button></form>`
-          : '<p class="muted small">בעלי העסק יכולים להזמין את התוסף.</p>'
-    }
+    ${can('owner') ? '<a class="btn accent" href="/admin/plan">לשדרוג המסלול</a>' : '<p class="muted small">בעלי העסק יכולים לשדרג את המסלול.</p>'}
   </section>`;
 }
 
 export function visibilityView({
   business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
-  maxQueries = 5, plus = false, plusOffer = null, plusRequested = false, notice = '', error = '', suggested = null,
+  maxQueries = 5, plus = false, plusOffer = null, notice = '', error = '', suggested = null,
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
@@ -60,8 +52,8 @@ export function visibilityView({
   const editing = suggested || queries;
   const inputs = Array.from({ length: maxQueries }, (_, i) => editing[i] || '');
 
-  const offer = !plus && plusOffer ? plusCard({ offer: plusOffer, requested: plusRequested, csrf, can }) : '';
-  return `<div class="page-head"><h1>${icon('search', 26)} נראות ב-AI${plus ? ' <span class="badge st-resolved">פלוס</span>' : ''}</h1>
+  const offer = !plus && plusOffer ? plusCard({ offer: plusOffer, can }) : '';
+  return `<div class="page-head"><h1>${icon('search', 26)} נראות ב-AI${plus ? ' <span class="badge st-resolved">מורחבת</span>' : ''}</h1>
       ${
         can('manager') && queries.length && engines.length
           ? `<form method="post" action="/admin/ai-visibility/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
