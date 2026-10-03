@@ -6,7 +6,7 @@ import express from 'express';
  * trust nothing they're sent: Cardcom's payment is re-read from Cardcom, and
  * WhatsApp's updates must carry Meta's signature.
  */
-export function webhookRoutes(store, { billing = null, whatsapp = null } = {}) {
+export function webhookRoutes(store, { billing = null } = {}) {
   const router = express.Router();
 
   router.post('/billing/cardcom/webhook', express.json({ limit: '100kb' }), async (req, res) => {
@@ -54,6 +54,5 @@ export function webhookRoutes(store, { billing = null, whatsapp = null } = {}) {
     },
   );
 
-  void whatsapp;
   return router;
 }

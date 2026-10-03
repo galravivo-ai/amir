@@ -2,6 +2,8 @@ import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DA
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
+// Automatic WhatsApp sending is listed only once the platform's number is set up.
+const waOn = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 
 const branchesLabel = (p) =>
   p.campaigns === Infinity ? 'סניפים ללא הגבלה' : p.campaigns === 1 ? 'סניף אחד' : `עד ${p.campaigns} סניפים`;
@@ -36,6 +38,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
         <div class="plan-branches">${h(branchesLabel(p))}</div>
         <ul>
           ${INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
+          ${waOn() ? `<li>✓ עד ${p.waMonthly.toLocaleString('he-IL')} בקשות דירוג בוואטסאפ בחודש, נשלחות אוטומטית</li>` : ''}
           <li class="${p.aiPlus ? 'plan-plus' : ''}">✓ ${p.aiPlus ? 'נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity' : 'נראות ב-AI בגוגל וב-Claude'}</li>
         </ul>
         ${action(key, p)}

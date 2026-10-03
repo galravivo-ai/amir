@@ -1,12 +1,13 @@
 import { backupDb, lastBackupAge } from './backup.js';
 import { accessOf, PLANS } from './plans.js';
+import { sendWhatsAppInvite } from './whatsapp.js';
 
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, whatsapp = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -32,6 +33,22 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
         store.markInviteEmailed(invite.id);
         sent++;
       }
+    }
+    return sent;
+  }
+
+  /** WhatsApp requests the API scheduled for later. */
+  async function scheduledWhatsApp() {
+    if (!whatsapp) return 0;
+    const baseUrl = String(process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '');
+    let sent = 0;
+    for (const invite of store.whatsAppDue()) {
+      // Clear the time first so a slow or failing send can't repeat.
+      store.setInviteWhatsApp(invite.id, { wa_send_at: null });
+      const business = store.businessById(invite.business_id);
+      if (accessOf(business).state === 'paused') continue;
+      const campaign = store.campaignById(invite.campaign_id);
+      if ((await sendWhatsAppInvite({ store, whatsapp, business, campaign, invite, baseUrl })).ok) sent++;
     }
     return sent;
   }
@@ -133,7 +150,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, aiVisibility, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, aiVisibility, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -147,6 +164,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
   return {
     renewals,
     scheduledInvites,
+    scheduledWhatsApp,
     aiTagging,
     inviteReminders,
     slaAlerts,

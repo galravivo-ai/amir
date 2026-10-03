@@ -9,6 +9,7 @@ import { normalizeQuestions, STATUSES } from '../store.js';
 import { templateQuestions, TEMPLATES } from '../templates.js';
 import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, normalizeInviteTemplate, safeUrl, waLink, waNumber } from '../util.js';
 import { parseJson } from '../db.js';
+import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
 
@@ -69,6 +70,8 @@ export function adminRoutes(ctx) {
         onboarding,
         csrf: req.user.csrf,
         sendError: req.query.send === 'bad',
+        waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
+        waResult: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,
       }),
     );
   });
@@ -443,6 +446,7 @@ export function adminRoutes(ctx) {
         can: req.can,
         emailInvites: req.plan.emailInvites,
         mailEnabled: ctx.mailer.enabled,
+        waAuto: Boolean(ctx.whatsapp),
       }),
       { flash: req.query.ok && !newInvite ? 'הקמפיין נוצר! עכשיו אפשר להדפיס QR או לשלוח ללקוחות' : '' },
     );
@@ -453,11 +457,15 @@ export function adminRoutes(ctx) {
     if (!c) return;
     const email = String(req.body.email ?? '').trim().toLowerCase();
     const useEmail = req.plan.emailInvites && isEmail(email);
+    const phone = String(req.body.phone ?? '').trim().slice(0, 30);
     const t = store.createInvite(c.id, {
       customer_name: String(req.body.customer_name ?? '').trim().slice(0, 80),
-      phone: String(req.body.phone ?? '').trim().slice(0, 30),
+      phone,
       email: useEmail ? email : '',
     });
+    if (ctx.whatsapp && req.body.wa === '1' && waNumber(phone).length >= 11) {
+      await sendWhatsAppInvite({ store, whatsapp: ctx.whatsapp, business: req.business, campaign: c, invite: store.inviteByToken(c.id, t), baseUrl: ctx.baseUrl(req) });
+    }
     if (useEmail) {
       const invite = store.inviteByToken(c.id, t);
       if (await ctx.notifier.customerInvite({ business: req.business, campaign: c, invite })) {
@@ -476,13 +484,18 @@ export function adminRoutes(ctx) {
 
   // Quick send from anywhere: a personal survey link, opened straight in WhatsApp
   // with the message ready, so sending takes two taps.
-  admin.post('/send', manager, (req, res) => {
+  admin.post('/send', manager, async (req, res) => {
     const campaigns = store.campaignsFor(req.business.id);
     const c = campaigns.find((x) => x.id === Number(req.body.campaign)) || campaigns[0];
     const phone = String(req.body.phone ?? '').trim().slice(0, 30);
     if (!c || waNumber(phone).length < 9) return res.redirect(303, '/admin?send=bad');
     const name = String(req.body.customer_name ?? '').trim().slice(0, 80);
     const t = store.createInvite(c.id, { customer_name: name, phone });
+    // Sent for them from the platform's WhatsApp number, without opening WhatsApp.
+    if (req.body.via === 'auto' && ctx.whatsapp) {
+      const r = await sendWhatsAppInvite({ store, whatsapp: ctx.whatsapp, business: req.business, campaign: c, invite: store.inviteByToken(c.id, t), baseUrl: ctx.baseUrl(req) });
+      return res.redirect(303, r.ok ? '/admin?wa=sent' : `/admin?wa=err&msg=${encodeURIComponent(r.error)}`);
+    }
     const link = `${ctx.baseUrl(req)}/r/${c.slug}?i=${t}`;
     // The text edited in the send window for this customer, else the business's wording.
     const template = normalizeInviteTemplate(req.body.message) || req.business.invite_template;

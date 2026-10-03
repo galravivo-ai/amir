@@ -20,6 +20,7 @@ export const PLANS = {
     campaigns: 1,
     ...ALL_FEATURES,
     aiPlus: false,
+    waMonthly: 100,
   },
   pro: {
     label: 'מקצועי',
@@ -28,6 +29,7 @@ export const PLANS = {
     campaigns: 3,
     ...ALL_FEATURES,
     aiPlus: true,
+    waMonthly: 300,
   },
   business: {
     label: 'עסקי',
@@ -36,6 +38,7 @@ export const PLANS = {
     campaigns: 10,
     ...ALL_FEATURES,
     aiPlus: true,
+    waMonthly: 1000,
   },
   // Not on the price list: chains above 10 branches get a personal quote and
   // a system admin assigns this plan.
@@ -47,6 +50,7 @@ export const PLANS = {
     campaigns: Infinity,
     ...ALL_FEATURES,
     aiPlus: true,
+    waMonthly: 3000,
   },
 };
 

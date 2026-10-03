@@ -11,6 +11,7 @@ import { createAnswerEngines } from './answerEngines.js';
 import { createCardcom } from './cardcom.js';
 import { createBilling } from './billing.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import { createWhatsApp } from './whatsapp.js';
 import { visibilityRoutes } from './routes/visibility.js';
 import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
@@ -79,6 +80,8 @@ export function createApp(db, options = {}) {
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   ctx.billing = billing;
+  const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
+  ctx.whatsapp = whatsapp;
   const app = express();
   app.disable('x-powered-by');
   if (options.trustProxy ?? process.env.TRUST_PROXY) app.set('trust proxy', 1);
@@ -93,6 +96,7 @@ export function createApp(db, options = {}) {
     '/api/v1',
     apiRoutes(store, {
       notifier,
+      whatsapp,
       apiLimit: options.apiLimit,
       baseUrl: (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`,
     }),
@@ -114,5 +118,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing };
 }

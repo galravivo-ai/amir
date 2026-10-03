@@ -1,6 +1,7 @@
 import express from 'express';
 import { accessOf, planOf } from '../plans.js';
-import { isEmail, sqlTime } from '../util.js';
+import { isEmail, sqlTime, waNumber } from '../util.js';
+import { sendWhatsAppInvite } from '../whatsapp.js';
 import { rateLimiter } from './public.js';
 
 /**
@@ -8,7 +9,7 @@ import { rateLimiter } from './public.js';
  * a POS, booking system, online store, or Make / Zapier. Authenticated with a
  * per-business key: `Authorization: Bearer rk_...`.
  */
-export function apiRoutes(store, { notifier, baseUrl = (req) => `${req.protocol}://${req.get('host')}`, apiLimit } = {}) {
+export function apiRoutes(store, { notifier, whatsapp = null, baseUrl = (req) => `${req.protocol}://${req.get('host')}`, apiLimit } = {}) {
   const router = express.Router();
   router.use(express.json({ limit: '20kb' }));
   router.use(rateLimiter(apiLimit || { windowMs: 60e3, max: 120 }));
@@ -68,7 +69,10 @@ export function apiRoutes(store, { notifier, baseUrl = (req) => `${req.protocol}
       });
     }
 
-    const canEmail = Boolean(email) && planOf(req.business).emailInvites && body.send_email !== false;
+    // WhatsApp when the platform has it and there's a phone; email otherwise
+    // (or as well, when the caller asks for both).
+    const useWa = Boolean(whatsapp) && waNumber(phone).length >= 11 && body.send_whatsapp !== false;
+    const canEmail = Boolean(email) && planOf(req.business).emailInvites && body.send_email !== false && (!useWa || body.send_email === true);
     const t = store.createApiInvite(campaign.id, {
       customer_name: String(body.name ?? body.customer_name ?? '').trim().slice(0, 80),
       phone,
@@ -77,7 +81,16 @@ export function apiRoutes(store, { notifier, baseUrl = (req) => `${req.protocol}
       external_id: String(body.external_id ?? '').slice(0, 80),
     });
     const invite = store.inviteByToken(campaign.id, t);
-    let status = canEmail ? 'scheduled' : 'created';
+    let status = canEmail || useWa ? 'scheduled' : 'created';
+    let whatsappResult = null;
+    if (useWa) {
+      if (delay > 0) store.setInviteWhatsApp(invite.id, { wa_send_at: sqlTime(delay * 60e3) });
+      else {
+        const r = await sendWhatsAppInvite({ store, whatsapp, business: req.business, campaign, invite, baseUrl: baseUrl(req) });
+        whatsappResult = r.ok ? 'sent' : 'failed';
+        status = r.ok ? 'sent' : canEmail ? status : 'created';
+      }
+    }
     if (canEmail && delay === 0) {
       store.markInviteSendAttempted(invite.id);
       if (await notifier.customerInvite({ business: req.business, campaign, invite })) {
@@ -92,6 +105,7 @@ export function apiRoutes(store, { notifier, baseUrl = (req) => `${req.protocol}
         link: `${baseUrl(req)}/r/${campaign.slug}?i=${t}`,
         send_at: canEmail ? invite.send_at : null,
         campaign: campaign.slug,
+        whatsapp: useWa ? whatsappResult || 'scheduled' : null,
       },
     });
   });

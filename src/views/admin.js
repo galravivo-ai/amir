@@ -153,13 +153,17 @@ const G_MARK = `<svg class="src-g" width="14" height="14" viewBox="0 0 48 48" ar
 const WA_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>';
 
 /** Send a customer a personal survey link on WhatsApp, from the dashboard. */
-function sendDialog(campaigns, csrf, template) {
+function sendDialog(campaigns, csrf, template, waAuto = null) {
   return `<dialog id="wa-send" class="wa-dialog" aria-labelledby="wa-send-title">
     <form method="post" action="/admin/send" target="_blank" class="stack"
       onsubmit="var f=this;setTimeout(function(){f.reset();f.closest('dialog').close();var t=document.getElementById('wa-sent');t.hidden=false;setTimeout(function(){t.hidden=true},5000)},300)">
       <div class="wa-head"><h3 id="wa-send-title">${WA_ICON} שליחת בקשת דירוג בוואטסאפ</h3>
         <button type="button" class="icon-btn" aria-label="סגירה" onclick="this.closest('dialog').close()">✕</button></div>
-      <p class="muted small">כותבים את הטלפון של הלקוח, ונפתח וואטסאפ עם הודעה מוכנה וקישור אישי לסקר. נשאר רק ללחוץ "שליחה".</p>
+      <p class="muted small">${
+        waAuto
+          ? `כותבים את הטלפון של הלקוח, וההודעה עם קישור אישי לסקר נשלחת אליו בוואטסאפ ישר מהמערכת. נשארו ${waAuto.left} מתוך ${waAuto.quota} הודעות החודש.`
+          : 'כותבים את הטלפון של הלקוח, ונפתח וואטסאפ עם הודעה מוכנה וקישור אישי לסקר. נשאר רק ללחוץ "שליחה".'
+      }</p>
       ${csrfField(csrf)}
       <label>טלפון של הלקוח<input name="phone" type="tel" inputmode="tel" required minlength="9" maxlength="20" placeholder="050-1234567" dir="ltr" autocomplete="off"></label>
       <label>שם הלקוח (לא חובה)<input name="customer_name" maxlength="80" autocomplete="off"></label>
@@ -170,9 +174,17 @@ function sendDialog(campaigns, csrf, template) {
       }
       <details class="wa-msg"><summary>עריכת ההודעה</summary>
         <textarea name="message" rows="4" maxlength="600">${h(template)}</textarea>
-        <p class="muted small">{שם}, {עסק} ו-{קישור} יוחלפו לבד. לשינוי קבוע של הנוסח: <a href="/admin/business#invite-message">הגדרות</a>.</p>
+        <p class="muted small">{שם}, {עסק} ו-{קישור} יוחלפו לבד. לשינוי קבוע של הנוסח: <a href="/admin/business#invite-message">הגדרות</a>.${
+          waAuto ? ' הנוסח הזה הוא לשליחה מהטלפון שלכם. בשליחה האוטומטית נשלח הנוסח הקבוע שאושר בוואטסאפ.' : ''
+        }</p>
       </details>
-      <button class="btn wa">${WA_ICON} פתיחה בוואטסאפ</button>
+      ${
+        waAuto
+          ? `<div class="row compact">
+              <button class="btn wa" name="via" value="auto" formtarget="_self" ${waAuto.left ? '' : 'disabled'}>${WA_ICON} ${waAuto.left ? 'שליחה אוטומטית' : 'המכסה החודשית נוצלה'}</button>
+              <button class="btn" name="via" value="manual">פתיחה בוואטסאפ שלי</button></div>`
+          : `<button class="btn wa">${WA_ICON} פתיחה בוואטסאפ</button>`
+      }
     </form>
   </dialog>
   <div id="wa-sent" class="toast" role="status" hidden>וואטסאפ נפתח בחלון חדש. אפשר לשלוח ללקוח הבא.</div>`;
@@ -233,6 +245,8 @@ export function dashboardView({
   onboarding = null,
   csrf = '',
   sendError = false,
+  waAuto = null,
+  waResult = null,
 }) {
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
   const hasGoogle = g.total > 0 || g.count > 0;
@@ -279,8 +293,10 @@ export function dashboardView({
         ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
       </div>
     </header>
-    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, business?.invite_template || DEFAULT_INVITE_TEMPLATE) : ''}
-    ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}`;
+    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, business?.invite_template || DEFAULT_INVITE_TEMPLATE, waAuto) : ''}
+    ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}
+    ${waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
+    ${waResult && !waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(waResult.error || 'שגיאה')}</div>` : ''}`;
 
   if (!campaigns.length && !hasGoogle) {
     return `${cover}
@@ -824,7 +840,15 @@ export function campaignFormView({ campaign, csrf, error = '' }) {
   }`;
 }
 
-export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, inviteTemplate = '', can = () => true, emailInvites = false, mailEnabled = false }) {
+export function shareView({ campaign, baseUrl, csrf, invites, newInvite, businessName, inviteTemplate = '', can = () => true, emailInvites = false, mailEnabled = false, waAuto = false }) {
+  const waState = (inv) =>
+    inv.wa_status
+      ? `<div class="small ${inv.wa_status === 'failed' ? 'danger-text' : 'muted'}" ${inv.wa_error ? `title="${h(inv.wa_error === 'quota' ? 'המכסה החודשית נוצלה' : inv.wa_error)}"` : ''}>💬 ${
+          { sent: 'נשלח בוואטסאפ', delivered: 'נמסר בוואטסאפ', read: 'נקרא בוואטסאפ', failed: 'לא נשלח בוואטסאפ' }[inv.wa_status] || ''
+        }</div>`
+      : inv.wa_send_at
+        ? `<div class="small muted">💬 יישלח בוואטסאפ ב-${h(formatDate(inv.wa_send_at))}</div>`
+        : '';
   const url = `${baseUrl}/r/${campaign.slug}`;
   const inviteUrl = (t) => `${url}?i=${t}`;
   const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token), template: inviteTemplate });
@@ -861,6 +885,7 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
           <input name="phone" placeholder="טלפון" maxlength="30" dir="ltr">
           ${emailInvites ? '<input name="email" type="email" placeholder="אימייל (לא חובה)" maxlength="120" dir="ltr">' : ''}
         </div>
+        ${waAuto ? '<label class="check"><input type="checkbox" name="wa" value="1" checked> לשלוח ללקוח בוואטסאפ אוטומטית</label>' : ''}
         <button class="btn primary">יצירת קישור</button>
         ${emailInvites && !mailEnabled ? '<p class="muted small">שימו לב: שליחת מיילים עוד לא הוגדרה בשרת, ההודעות נשמרות ביומן בלבד.</p>' : ''}
       </form>`
@@ -868,7 +893,7 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
       }
       ${
         newInvite
-          ? `<div class="flash">${newInvite.email_sent_at ? `נשלח מייל ל-<span dir="ltr">${h(newInvite.email)}</span>. ` : ''}נוצר קישור: <span dir="ltr">${h(inviteUrl(newInvite.token))}</span>
+          ? `<div class="flash">${newInvite.wa_status === 'sent' ? 'נשלח בוואטסאפ. ' : newInvite.wa_status === 'failed' ? `<b>לא נשלח בוואטסאפ${newInvite.wa_error === 'quota' ? ' (המכסה החודשית נוצלה)' : ''}.</b> ` : ''}${newInvite.email_sent_at ? `נשלח מייל ל-<span dir="ltr">${h(newInvite.email)}</span>. ` : ''}נוצר קישור: <span dir="ltr">${h(inviteUrl(newInvite.token))}</span>
               <div class="actions"><a class="btn wa" target="_blank" rel="noopener" href="${h(
                 waLink(newInvite.phone, inviteMsg(newInvite)),
               )}">שליחה בוואטסאפ</a>
@@ -881,6 +906,7 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
               .map(
                 (inv) => `<tr><td>${h(inv.customer_name)}<div class="small" dir="ltr">${h(inv.phone)} ${h(inv.email)}</div>
                   ${inv.email_sent_at ? `<div class="small muted">✉ נשלח במייל${inv.reminder_sent_at ? ' + תזכורת' : ''}</div>` : inv.send_at ? `<div class="small muted">✉ יישלח ב-${h(formatDate(inv.send_at))}</div>` : ''}
+                  ${waState(inv)}
                   ${inv.origin === 'api' ? '<span class="badge st-pub">אוטומטי</span>' : ''}</td>
                   <td class="small">${h(formatDate(inv.created_at))}</td>
                   <td>${inv.opened_at ? '✓' : '—'}</td><td>${inv.responded_at ? '✓' : '—'}</td>
