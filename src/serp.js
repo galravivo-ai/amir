@@ -90,6 +90,32 @@ function review(r) {
   };
 }
 
+const has = (v) => (Array.isArray(v) ? v.length > 0 : v != null && v !== '' && !(typeof v === 'object' && !Object.keys(v).length));
+
+/**
+ * The profile fields the health check reads. `null` means SerpApi didn't say,
+ * which the check treats as unknown rather than missing.
+ */
+export function profileOf(p) {
+  const types = Array.isArray(p.types) ? p.types : p.type ? [p.type] : [];
+  const photos = num(p.photos_count ?? p.images_count) || (Array.isArray(p.images) ? p.images.length : 0);
+  return {
+    title: p.title || '',
+    rating: num(p.rating),
+    reviews: Math.round(num(p.reviews)),
+    phone: p.phone || '',
+    website: p.website || '',
+    address: p.address || '',
+    hours: has(p.operating_hours) || has(p.hours),
+    description: typeof p.description === 'string' ? p.description : p.description?.snippet || p.about?.description || '',
+    types,
+    photos: photos || null,
+    attributes: has(p.extensions) || has(p.service_options) || has(p.amenities),
+    menu: has(p.menu),
+    unclaimed: p.unclaimed_listing === true ? true : null,
+  };
+}
+
 /** The reviews array, wherever this version of the answer keeps it. */
 function findReviews(r) {
   if (Array.isArray(r.reviews)) return r.reviews;
@@ -178,6 +204,21 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
         return { matches: [], unreadLink: true };
       }
       return { matches: await this.search(text) };
+    },
+
+    /**
+     * What the public Google profile shows: hours, phone, site, categories,
+     * description, photos and more. By place id when known, else by searching
+     * for the place and picking it by its data id.
+     */
+    async placeDetails({ placeId = '', dataId = '', title = '', address = '' }) {
+      let p = null;
+      if (placeId) p = (await call({ engine: 'google_maps', place_id: placeId, hl: 'iw', gl: 'il' })).place_results || null;
+      if (!p && title) {
+        const r = await call({ engine: 'google_maps', type: 'search', q: [title, address].filter(Boolean).join(' '), hl: 'iw', gl: 'il' });
+        p = r.place_results || (r.local_results || []).find((x) => (dataId && x.data_id === dataId) || (placeId && x.place_id === placeId)) || null;
+      }
+      return p ? profileOf(p) : null;
     },
 
     /** Google's AI Mode answer to a question, as text and sources. */

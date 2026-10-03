@@ -133,32 +133,39 @@ ${SKIP()}
   const groups = [
     { items: [['/admin', 'לוח בקרה', 'home']] },
     {
-      key: 'feedback',
-      label: 'ביקורות ולקוחות',
+      key: 'reputation',
+      label: 'מוניטין וביקורות',
       items: [
         ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending],
         ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
         ['/admin/responses', 'תגובות מסקרים', 'inbox'],
-      ],
-    },
-    {
-      key: 'collect',
-      label: 'השגת ביקורות ושיווק',
-      items: [
         ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
         ['/admin/poster', 'עיצוב שלט QR', 'print'],
-        ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
         role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
       ],
     },
     {
-      key: 'insights',
-      label: 'ניתוח ודוחות',
+      key: 'profile',
+      label: 'פרופיל הגוגל',
+      items: [
+        ['/admin/profile', 'בריאות הפרופיל', 'shield'],
+        ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
+      ],
+    },
+    {
+      key: 'visibility',
+      label: 'נראות ומתחרים',
+      items: [
+        ['/admin/competitors', 'מתחרים', 'rivals'],
+        ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
+      ],
+    },
+    {
+      key: 'growth',
+      label: 'צמיחה ודוחות',
       items: [
         ['/admin/insights', 'תובנות AI', 'spark'],
         ['/admin/reports/monthly', 'דוח חודשי', 'report'],
-        ['/admin/competitors', 'מתחרים', 'rivals'],
-        ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
         ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
       ],
     },

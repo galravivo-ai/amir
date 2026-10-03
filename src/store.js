@@ -1031,6 +1031,32 @@ export function createStore(db) {
     googleReviewCount: (locationId, fromIso, toIso = '9999-12-31T23:59:59Z') =>
       q('SELECT COUNT(*) AS n FROM google_reviews WHERE location_id = ? AND create_time >= ? AND create_time < ?').get(locationId, fromIso, toIso).n,
 
+    // ---------- profile health ----------
+    saveAudit(businessId, locationId, { score = 0, profile = {}, items = [], tips = '', error = null }) {
+      q('INSERT INTO profile_audits (business_id, location_id, score, profile, items, tips, error) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+        businessId, locationId, score, JSON.stringify(profile), JSON.stringify(items), tips, error,
+      );
+    },
+    /** The latest check of each followed place, and the score a month or more before it. */
+    latestAudits(businessId) {
+      return q(`SELECT a.*, l.title AS location_title,
+                  (SELECT p.score FROM profile_audits p WHERE p.location_id = a.location_id AND p.error IS NULL AND p.run_at <= datetime(a.run_at, '-25 days')
+                   ORDER BY p.id DESC LIMIT 1) AS prev_score
+                FROM profile_audits a JOIN google_locations l ON l.id = a.location_id
+                WHERE a.business_id = ? AND l.enabled = 1
+                  AND a.id = (SELECT MAX(id) FROM profile_audits WHERE location_id = a.location_id)
+                ORDER BY l.id`).all(businessId);
+    },
+    /** Followed places not checked for `days`, of businesses that aren't paused. */
+    auditsDue: (days) =>
+      q(`SELECT l.* FROM google_locations l JOIN businesses b ON b.id = l.business_id
+         WHERE l.enabled = 1 AND b.billing != 'paused'
+           AND COALESCE((SELECT MAX(run_at) FROM profile_audits a WHERE a.location_id = l.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
+
+    // ---------- weekly tasks ----------
+    tasksDone: (businessId, week) => q('SELECT task FROM weekly_tasks_done WHERE business_id = ? AND week = ?').all(businessId, week).map((r) => r.task),
+    markTaskDone: (businessId, week, task) => q('INSERT OR IGNORE INTO weekly_tasks_done (business_id, week, task) VALUES (?, ?, ?)').run(businessId, week, task),
+
     // ---------- monthly report ----------
     monthlyReport: (businessId, month) => q('SELECT * FROM monthly_reports WHERE business_id = ? AND month = ?').get(businessId, month) || null,
     saveMonthlyReport: (businessId, month, summary) =>

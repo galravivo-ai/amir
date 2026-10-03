@@ -15,6 +15,8 @@ import { createWhatsApp } from './whatsapp.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { reportRoutes } from './routes/reports.js';
+import { createHealth } from './healthRun.js';
+import { healthRoutes } from './routes/health.js';
 import { visibilityRoutes } from './routes/visibility.js';
 import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
@@ -79,6 +81,7 @@ export function createApp(db, options = {}) {
   const serp = options.serp !== undefined ? options.serp : createSerp();
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
   const competitors = serp ? createCompetitors({ store, serp }) : null;
+  const health = serp ? createHealth({ store, serp, ai }) : null;
   const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines() });
   const cardcom = options.cardcom !== undefined ? options.cardcom : createCardcom();
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
@@ -113,7 +116,7 @@ export function createApp(db, options = {}) {
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
-  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx));
+  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), healthRoutes(ctx, { health }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 
@@ -122,5 +125,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, health, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing, health };
 }

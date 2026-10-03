@@ -1033,3 +1033,25 @@ a.biz-card:hover { background: #352a88; }
 .ai-btn.ai-busy svg { animation: ai-spin 1s linear infinite; }
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ai-btn.ai-busy svg { animation-duration: 3s; } }
+
+/* Google profile health */
+.hl-card { display: grid; gap: 14px; }
+.hl-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.hl-top h3 { margin: 0 0 2px; }
+.hl-label { font-weight: 800; font-size: 1.1rem; }
+.hl-ring { --c: #ef4444; width: 104px; height: 104px; border-radius: 50%; flex: none; display: grid; place-content: center; text-align: center;
+  background: radial-gradient(closest-side, var(--card, #fff) 78%, transparent 80% 100%), conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0); }
+.hl-ring b { font-size: 2rem; line-height: 1; }
+.hl-ring small { font-size: .72rem; color: var(--muted, #6b7280); }
+.hl-ring.good { --c: #16a34a; } .hl-ring.okay { --c: #65a30d; } .hl-ring.mid { --c: #f59e0b; }
+.hl-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.hl-list li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; background: #fafafa; }
+.hl-mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; flex: none; color: #fff; }
+.hl-list .ok .hl-mark { background: #16a34a; } .hl-list .mid .hl-mark { background: #f59e0b; } .hl-list .bad .hl-mark { background: #ef4444; } .hl-list .unk .hl-mark { background: #9ca3af; }
+.hl-list .bad, .hl-list .mid { background: #fff7ed; }
+.hl-tips { background: #f5f3ff; border-radius: 14px; padding: 14px 16px; }
+.hl-tips h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: var(--purple); }
+.hl-desc { display: grid; gap: 8px; margin-top: 10px; }
+.hl-desc h4 { margin: 0; color: var(--ink); }
+.hl-desc textarea { width: 100%; background: #fff; }
+.hl-desc .btn { justify-self: start; }

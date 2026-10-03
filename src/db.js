@@ -509,6 +509,27 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN monthly_report INTEGER NOT NULL DEFAULT 1;
   ALTER TABLE businesses ADD COLUMN last_monthly_report TEXT;
   `,
+  // v24: Google profile health checks, and weekly tasks marked done
+  `
+  CREATE TABLE profile_audits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    run_at TEXT NOT NULL DEFAULT (datetime('now')),
+    score INTEGER NOT NULL DEFAULT 0,
+    profile TEXT NOT NULL DEFAULT '{}',
+    items TEXT NOT NULL DEFAULT '[]',
+    tips TEXT NOT NULL DEFAULT '',
+    error TEXT
+  );
+  CREATE INDEX idx_profile_audits_location ON profile_audits(location_id, id);
+  CREATE TABLE weekly_tasks_done (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    week TEXT NOT NULL,
+    task TEXT NOT NULL,
+    PRIMARY KEY (business_id, week, task)
+  );
+  `,
 ];
 
 function migrate(db) {
