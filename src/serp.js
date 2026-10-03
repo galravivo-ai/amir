@@ -1,6 +1,7 @@
 // Google Maps places and reviews through SerpApi, for businesses that follow
 // a place by its link instead of connecting their Google account.
 // All calls go through `fetchImpl` so tests can stand in for SerpApi.
+import { flattenSerpAnswer } from './visibility.js';
 
 const API = 'https://serpapi.com/search.json';
 // Short links are followed only on these hosts, so a pasted link can't make
@@ -149,6 +150,22 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
         return { matches: [] };
       }
       return { matches: await this.search(text) };
+    },
+
+    /** Google's AI Mode answer to a question, as text and sources. */
+    async aiMode(question) {
+      const r = await call({ engine: 'google_ai_mode', q: question, hl: 'iw', gl: 'il', no_cache: 'true' });
+      return flattenSerpAnswer(r);
+    },
+
+    /** The AI Overview above Google's results, or null when Google shows none. */
+    async aiOverview(question) {
+      const r = await call({ engine: 'google', q: question, hl: 'iw', gl: 'il', google_domain: 'google.co.il', no_cache: 'true' });
+      let ov = r.ai_overview;
+      if (!ov) return null;
+      // Sometimes the overview comes in a second request, with a token that lives a minute.
+      if (ov.page_token && !ov.text_blocks) ov = (await call({ engine: 'google_ai_overview', page_token: ov.page_token })).ai_overview || ov;
+      return flattenSerpAnswer(ov);
     },
 
     /** The untouched SerpApi answer for a place, for the system admin's diagnosis page. */

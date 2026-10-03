@@ -205,6 +205,29 @@ export function createStore(db) {
     googlePosts: (businessId, limit = 30) =>
       q('SELECT * FROM google_posts WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
 
+    // ---------- AI visibility ----------
+    saveAiCheck(businessId, runAt, c) {
+      q(`INSERT INTO ai_checks (business_id, run_at, query, engine, mentioned, cited, snippet, cited_link, sources, error)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        businessId, runAt, c.query, c.engine, c.mentioned ? 1 : 0, c.cited ? 1 : 0, c.snippet || '', c.citedLink || '',
+        JSON.stringify(c.sources || []), c.error || null,
+      );
+    },
+    /** The latest run's rows, and a score per earlier run for the trend. */
+    aiVisibility(businessId) {
+      const runs = q(
+        `SELECT run_at, COUNT(*) AS total, SUM(error IS NULL) AS answered, SUM(mentioned) AS mentioned, SUM(cited) AS cited
+         FROM ai_checks WHERE business_id = ? GROUP BY run_at ORDER BY run_at DESC LIMIT 12`,
+      ).all(businessId);
+      const latest = runs[0]
+        ? q('SELECT * FROM ai_checks WHERE business_id = ? AND run_at = ? ORDER BY id').all(businessId, runs[0].run_at)
+        : [];
+      return { runs: runs.reverse(), latest };
+    },
+    aiVisibilityDue: (days) =>
+      q(`SELECT * FROM businesses WHERE ai_queries != '[]'
+           AND (ai_checked_at IS NULL OR ai_checked_at < datetime('now', ?))`).all(`-${Number(days) || 7} days`),
+
     // ---------- leads (quote requests) ----------
     createLead(f) {
       const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
@@ -329,6 +352,7 @@ export function createStore(db) {
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
+        'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;

@@ -105,6 +105,7 @@ ${SKIP()}
     ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
     ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
     ['/admin/insights', 'תובנות AI', 'spark'],
+    ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
     ['/admin/responses', 'תגובות מסקרים', 'inbox'],
     ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
     ['/admin/poster', 'עיצוב שלט QR', 'print'],

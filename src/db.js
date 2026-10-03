@@ -413,6 +413,28 @@ const MIGRATIONS = [
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   `,
+  // v20: AI visibility: the questions to ask AI engines, and what they answered
+  `
+  ALTER TABLE businesses ADD COLUMN ai_queries TEXT NOT NULL DEFAULT '[]';
+  ALTER TABLE businesses ADD COLUMN ai_aliases TEXT NOT NULL DEFAULT '';
+  ALTER TABLE businesses ADD COLUMN ai_site TEXT NOT NULL DEFAULT '';
+  ALTER TABLE businesses ADD COLUMN ai_city TEXT NOT NULL DEFAULT '';
+  ALTER TABLE businesses ADD COLUMN ai_checked_at TEXT;
+  CREATE TABLE ai_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    run_at TEXT NOT NULL,
+    query TEXT NOT NULL,
+    engine TEXT NOT NULL,
+    mentioned INTEGER NOT NULL DEFAULT 0,
+    cited INTEGER NOT NULL DEFAULT 0,
+    snippet TEXT NOT NULL DEFAULT '',
+    cited_link TEXT NOT NULL DEFAULT '',
+    sources TEXT NOT NULL DEFAULT '[]',
+    error TEXT
+  );
+  CREATE INDEX idx_ai_checks_business ON ai_checks(business_id, run_at);
+  `,
 ];
 
 function migrate(db) {

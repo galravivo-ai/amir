@@ -6,7 +6,7 @@ import { accessOf, PLANS } from './plans.js';
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -106,6 +106,11 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return sent;
   }
 
+  /** Weekly: do AI answers mention the business? */
+  async function aiVisibility() {
+    return visibility ? visibility.runDue() : 0;
+  }
+
   /** New Google reviews: connected businesses every 30 minutes, places followed by link every few hours. */
   async function googleReviews() {
     const connected = googleSync ? await googleSync.syncAll() : 0;
@@ -123,7 +128,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ scheduledInvites, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, aiVisibility, weeklyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -142,6 +147,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     weeklyReports,
     trialNotices,
     googleReviews,
+    aiVisibility,
     dailyBackup,
     runAll,
     start(intervalMs = 5 * 60e3) {

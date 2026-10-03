@@ -6,6 +6,8 @@ import { createGoogle } from './google.js';
 import { createGoogleSync } from './googleSync.js';
 import { createSerp } from './serp.js';
 import { createSerpSync } from './serpSync.js';
+import { createVisibility } from './visibilityRun.js';
+import { visibilityRoutes } from './routes/visibility.js';
 import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
 import { createMailer } from './mailer.js';
@@ -68,6 +70,7 @@ export function createApp(db, options = {}) {
   const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
   const serp = options.serp !== undefined ? options.serp : createSerp();
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
+  const visibility = createVisibility({ store, serp, ai });
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   const app = express();
   app.disable('x-powered-by');
@@ -94,7 +97,7 @@ export function createApp(db, options = {}) {
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
-  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }));
+  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 
@@ -103,5 +106,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, backups: options.backups ?? true }), googleSync, serpSync };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, backups: options.backups ?? true }), googleSync, serpSync, visibility };
 }
