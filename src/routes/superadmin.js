@@ -23,6 +23,7 @@ export function superadminRoutes(ctx) {
         csrf: req.user.csrf,
         mailEnabled: ctx.mailer.enabled,
         aiEnabled: Boolean(ctx.ai),
+        aiTest: req.query.ai === 'ok' ? { ok: true, text: String(req.query.t ?? '').slice(0, 80) } : req.query.ai === 'err' ? { ok: false, error: String(req.query.t ?? '').slice(0, 300) } : null,
         meId: req.user.id,
       }),
     );
@@ -96,6 +97,13 @@ export function superadminRoutes(ctx) {
     const business = store.businessById(Number(req.params.id));
     if (business) store.updateBusiness(business.id, { ai_plus: req.body.on === '1' });
     res.redirect(303, '/superadmin?ok=1#businesses');
+  });
+
+  // One small request to Anthropic, showing the exact answer or error.
+  router.post('/ai-test', async (req, res) => {
+    if (!ctx.ai?.ping) return res.redirect(303, '/superadmin?ai=err&t=' + encodeURIComponent('ANTHROPIC_API_KEY לא מוגדר בשרת (או שהשרת לא הופעל מחדש אחרי ההוספה).'));
+    const r = await ctx.ai.ping();
+    res.redirect(303, `/superadmin?ai=${r.ok ? 'ok' : 'err'}&t=${encodeURIComponent(r.ok ? r.text : r.error)}#ai`);
   });
 
   router.post('/leads/:id', (req, res) => {

@@ -525,7 +525,7 @@ const MAIL_KINDS = {
   password_reset: 'איפוס סיסמה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, meId, agencies = [], leads = [], error = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '' }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
@@ -579,8 +579,10 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     <div class="kpi"><div class="kpi-label">משתמשים</div><div class="kpi-value">${users.length}</div></div>
     <div class="kpi"><div class="kpi-label">שליחת מיילים</div><div class="kpi-value small-value">${mailEnabled ? 'SMTP פעיל' : 'רישום בלבד'}</div>
       <div class="kpi-hint">${mailEnabled ? '' : 'הגדירו SMTP_URL כדי לשלוח בפועל'}</div></div>
-    <div class="kpi"><div class="kpi-label">עוזר AI</div><div class="kpi-value small-value">${aiEnabled ? 'פעיל' : 'כבוי'}</div>
-      <div class="kpi-hint">${aiEnabled ? '' : 'הגדירו ANTHROPIC_API_KEY'}</div></div>
+    <div class="kpi" id="ai"><div class="kpi-label">עוזר AI</div><div class="kpi-value small-value">${aiEnabled ? 'מפתח מוגדר' : 'כבוי'}</div>
+      <div class="kpi-hint">${aiEnabled ? '' : 'הגדירו ANTHROPIC_API_KEY'}</div>
+      <form method="post" action="/superadmin/ai-test">${csrfField(csrf)}<button class="btn-link">בדיקת חיבור ל-AI</button></form>
+      ${aiTest ? (aiTest.ok ? `<div class="small" style="color:#15803d">✓ עובד. התשובה: ${h(aiTest.text)}</div>` : `<div class="small danger-text">✗ ${h(aiTest.error)}</div>`) : ''}</div>
   </div>
   ${
     requests.length

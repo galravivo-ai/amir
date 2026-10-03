@@ -100,6 +100,8 @@ function textOf(message) {
  * `client` can be injected for tests.
  */
 export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL } = {}) {
+  // A key pasted with spaces, a line break or quotes around it still works.
+  apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!client && !apiKey) return null;
   const anthropic = client || new Anthropic({ apiKey });
 
@@ -119,15 +121,31 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
       return textOf(message);
     } catch (err) {
       if (err instanceof AiError) throw err;
-      if (err instanceof Anthropic.AuthenticationError) throw new AiError('מפתח ה-API של Anthropic לא תקין.');
-      if (err instanceof Anthropic.RateLimitError) throw new AiError('יותר מדי בקשות ל-AI כרגע, נסו שוב בעוד דקה.');
-      if (err instanceof Anthropic.APIError) throw new AiError(`שגיאה בשירות ה-AI (${err.status ?? 'רשת'}), נסו שוב.`);
+      // The full error goes to the server log; the user gets a short Hebrew one.
+      console.warn('[ai] request failed:', err.status ?? '', err.message);
+      if (err instanceof Anthropic.APIError) err = Object.assign(toAiError(err), { cause: err });
       throw err;
     }
   }
 
+  function toAiError(err) {
+    if (err instanceof Anthropic.AuthenticationError) return new AiError('מפתח ה-API של Anthropic לא תקין.');
+    if (err instanceof Anthropic.RateLimitError) return new AiError('יותר מדי בקשות ל-AI כרגע, נסו שוב בעוד דקה.');
+    return new AiError(`שגיאה בשירות ה-AI (${err.status ?? 'רשת'}), נסו שוב.`);
+  }
+
   return {
     model,
+    /** A one-word request for the system admin's check; reports the exact error. */
+    async ping() {
+      try {
+        const text = await ask('ענה במילה אחת: תקין', 'בדיקה', 'low');
+        return { ok: true, text: text.slice(0, 80) };
+      } catch (err) {
+        const cause = err.cause instanceof Anthropic.APIError ? err.cause : err;
+        return { ok: false, error: `${cause.status ?? ''} ${String(cause.message || err.message)}`.trim().slice(0, 300) };
+      }
+    },
     draftReply({ businessName, rating, answers, comment, customerName }) {
       const lines = [
         `שם העסק: ${businessName}`,
