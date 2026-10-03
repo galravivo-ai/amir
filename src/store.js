@@ -353,6 +353,7 @@ export function createStore(db) {
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request',
+        'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -952,6 +953,50 @@ export function createStore(db) {
     pushSubscriptionsForBusiness: (businessId) =>
       q(`SELECT p.* FROM push_subscriptions p JOIN memberships m ON m.user_id = p.user_id
          WHERE m.business_id = ? AND m.role IN ('owner', 'manager')`).all(businessId),
+
+    // ---------- payments ----------
+    createPayment(businessId, { kind, plan, cycle, amount, createdBy = '' }) {
+      return Number(
+        q('INSERT INTO payments (business_id, kind, plan, cycle, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(
+          businessId, kind, plan, cycle, amount, createdBy,
+        ).lastInsertRowid,
+      );
+    },
+    paymentById: (id) => q('SELECT * FROM payments WHERE id = ?').get(id) || null,
+    setPaymentPage: (id, pageId) => q('UPDATE payments SET page_id = ? WHERE id = ?').run(pageId, id),
+    /** Marks a pending payment paid or failed; false if it was already settled (a repeat). */
+    settlePayment(id, { status, transactionId = null, error = null }) {
+      const r = q(`UPDATE payments SET status = ?, transaction_id = ?, error = ?, paid_at = CASE WHEN ? = 'paid' THEN datetime('now') END
+                   WHERE id = ? AND status = 'pending'`).run(status, transactionId, error, status, id);
+      return r.changes > 0;
+    },
+    paymentsFor: (businessId, limit = 24) => q('SELECT * FROM payments WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
+    /** Card subscriptions whose paid period is over. */
+    renewalsDue: (now = sqlTime()) =>
+      q(`SELECT b.*, u.email AS owner_email FROM businesses b LEFT JOIN users u ON u.id = b.user_id
+         WHERE b.billing = 'active' AND b.card_token IS NOT NULL AND b.paid_until IS NOT NULL AND b.paid_until <= ?`).all(now),
+
+    // ---------- WhatsApp invites ----------
+    setInviteWhatsApp(id, f) {
+      const keys = ['wa_message_id', 'wa_status', 'wa_error', 'wa_send_at', 'wa_sent_at'].filter((k) => f[k] !== undefined);
+      if (keys.length) q(`UPDATE invites SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => f[k]), id);
+    },
+    /** A delivery update from WhatsApp; statuses only move forward. */
+    updateWhatsAppStatus(messageId, status, error = null) {
+      const order = { sent: 1, delivered: 2, read: 3, failed: 4 };
+      const invite = q('SELECT id, wa_status FROM invites WHERE wa_message_id = ?').get(messageId);
+      if (!invite || (order[invite.wa_status] || 0) >= (order[status] || 0)) return false;
+      q('UPDATE invites SET wa_status = ?, wa_error = ? WHERE id = ?').run(status, error, invite.id);
+      return true;
+    },
+    /** WhatsApp invites the API scheduled for later. */
+    whatsAppDue: () =>
+      q(`SELECT i.*, c.business_id FROM invites i JOIN campaigns c ON c.id = i.campaign_id
+         WHERE i.wa_send_at IS NOT NULL AND i.wa_send_at <= ? AND i.wa_send_at >= ? AND c.active = 1`).all(sqlTime(), sqlTime(-3 * 864e5)),
+    /** WhatsApp messages a business sent this calendar month (UTC), for the plan's quota. */
+    whatsAppSentThisMonth: (businessId) =>
+      q(`SELECT COUNT(*) AS n FROM invites i JOIN campaigns c ON c.id = i.campaign_id
+         WHERE c.business_id = ? AND i.wa_sent_at >= strftime('%Y-%m-01 00:00:00', 'now')`).get(businessId).n,
 
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),

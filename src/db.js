@@ -440,6 +440,39 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN ai_plus INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE businesses ADD COLUMN ai_plus_request TEXT;
   `,
+  // v22: card payments (Cardcom) with automatic renewal, and WhatsApp API invites
+  `
+  ALTER TABLE businesses ADD COLUMN paid_until TEXT;
+  ALTER TABLE businesses ADD COLUMN card_token TEXT;
+  ALTER TABLE businesses ADD COLUMN card_expiry TEXT;
+  ALTER TABLE businesses ADD COLUMN card_last4 TEXT;
+  ALTER TABLE businesses ADD COLUMN auto_renew INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE businesses ADD COLUMN pay_failures INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE businesses ADD COLUMN next_plan TEXT;
+  ALTER TABLE businesses ADD COLUMN next_cycle TEXT;
+  CREATE TABLE payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    plan TEXT NOT NULL,
+    cycle TEXT NOT NULL,
+    amount REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    page_id TEXT,
+    transaction_id TEXT,
+    error TEXT,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at TEXT
+  );
+  CREATE INDEX idx_payments_business ON payments(business_id, id);
+  ALTER TABLE invites ADD COLUMN wa_message_id TEXT;
+  ALTER TABLE invites ADD COLUMN wa_status TEXT;
+  ALTER TABLE invites ADD COLUMN wa_error TEXT;
+  ALTER TABLE invites ADD COLUMN wa_send_at TEXT;
+  ALTER TABLE invites ADD COLUMN wa_sent_at TEXT;
+  CREATE INDEX idx_invites_wa_message ON invites(wa_message_id);
+  `,
 ];
 
 function migrate(db) {

@@ -199,11 +199,25 @@ export function settingsRoutes(ctx) {
   });
 
   // ---------- plan ----------
-  // No online payment yet: the owner asks for a plan and the operator activates it.
+  // With Cardcom configured the owner pays by card on Cardcom's page; without
+  // it (or for a chain's quote) the owner asks and the operator activates.
   router.post('/plan/request', owner, async (req, res) => {
     const plan = Object.hasOwn(PLANS, req.body.plan) ? req.body.plan : null;
     const cycle = Object.hasOwn(CYCLES, req.body.cycle) ? req.body.cycle : 'monthly';
     if (!plan) return res.redirect(303, '/admin/plan');
+    const billing = ctx.billing;
+    if (billing && PLANS[plan].price != null) {
+      try {
+        if (billing.hasCardPlan(req.business)) {
+          const r = await billing.changePlan({ business: req.business, email: req.user.email, plan, cycle });
+          return res.redirect(303, `/admin/plan?change=${r.status}${r.error ? `&err=${encodeURIComponent(r.error)}` : ''}`);
+        }
+        return res.redirect(303, await billing.startCheckout({ business: req.business, email: req.user.email, plan, cycle, baseUrl: ctx.baseUrl(req) }));
+      } catch (err) {
+        console.error('[billing] checkout failed:', err.message);
+        return res.redirect(303, `/admin/plan?err=${encodeURIComponent('לא הצלחנו לפתוח את דף התשלום. נסו שוב בעוד כמה דקות.')}`);
+      }
+    }
     store.updateBusiness(req.business.id, {
       plan_request: JSON.stringify({ plan, cycle, by: req.user.email, at: new Date().toISOString() }),
     });
@@ -211,6 +225,25 @@ export function settingsRoutes(ctx) {
       ?.planRequested({ business: req.business, plan: PLANS[plan], cycle: CYCLES[cycle], user: req.user, admins: ctx.adminEmails() })
       .catch((err) => console.error('[notify] planRequested failed:', err));
     res.redirect(303, '/admin/plan?requested=1');
+  });
+
+  // Cardcom sends the customer back here after the payment page.
+  router.get('/billing/done', async (req, res) => {
+    const payment = ctx.billing && store.paymentById(Number(req.query.p));
+    if (!payment || payment.business_id !== req.business.id) return res.redirect(303, '/admin/plan');
+    try {
+      const after = await ctx.billing.complete(payment.id, { failed: req.query.failed === '1' });
+      if (after.status === 'paid') return res.redirect(303, '/admin/plan?paid=1');
+      return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `התשלום לא עבר${after.error ? `: ${after.error}` : ''}` : 'התשלום עוד לא אושר. אם חויבתם, הוא יופיע כאן בעוד כמה דקות.')}`);
+    } catch (err) {
+      console.error('[billing] completing failed:', err.message);
+      return res.redirect(303, `/admin/plan?err=${encodeURIComponent('לא הצלחנו לאמת את התשלום מול חברת הסליקה. אם חויבתם, הוא יופיע כאן בעוד כמה דקות.')}`);
+    }
+  });
+
+  router.post('/billing/auto-renew', owner, (req, res) => {
+    if (ctx.billing) ctx.billing.setAutoRenew(req.business, req.body.on === '1');
+    res.redirect(303, '/admin/plan?renew=' + (req.body.on === '1' ? 'on' : 'off'));
   });
 
   router.get('/plan', (req, res) => {
@@ -226,6 +259,14 @@ export function settingsRoutes(ctx) {
         requested: req.query.requested === '1',
         csrf: req.user.csrf,
         can: req.can,
+        cardBilling: Boolean(ctx.billing),
+        payments: store.paymentsFor(req.business.id, 12).filter((p) => p.status !== 'pending'),
+        notice: req.query.paid
+          ? 'התשלום עבר. המסלול פעיל, והחשבונית נשלחה למייל.'
+          : { upgraded: 'המסלול שודרג.', scheduled: 'השינוי ייכנס לתוקף בחידוש הבא.', kept: 'המסלול נשאר כמו שהוא.' }[req.query.change] ||
+            { on: 'החידוש האוטומטי פעיל.', off: 'החידוש האוטומטי בוטל. המסלול פעיל עד סוף התקופה ששולמה.' }[req.query.renew] ||
+            '',
+        error: String(req.query.err ?? '').slice(0, 300),
         usage: {
           campaigns: store.campaignsFor(req.business.id).length,
           members: store.membersOf(req.business.id).length,

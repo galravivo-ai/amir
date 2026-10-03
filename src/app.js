@@ -8,6 +8,9 @@ import { createSerp } from './serp.js';
 import { createSerpSync } from './serpSync.js';
 import { createVisibility } from './visibilityRun.js';
 import { createAnswerEngines } from './answerEngines.js';
+import { createCardcom } from './cardcom.js';
+import { createBilling } from './billing.js';
+import { webhookRoutes } from './routes/webhooks.js';
 import { visibilityRoutes } from './routes/visibility.js';
 import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
@@ -52,7 +55,7 @@ function securityHeaders(_req, res, next) {
     'Referrer-Policy': 'same-origin',
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy':
-      "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self' https://accounts.google.com https://wa.me https://api.whatsapp.com; frame-ancestors 'none'",
+      "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self' https://secure.cardcom.solutions https://accounts.google.com https://wa.me https://api.whatsapp.com; frame-ancestors 'none'",
   });
   next();
 }
@@ -72,7 +75,10 @@ export function createApp(db, options = {}) {
   const serp = options.serp !== undefined ? options.serp : createSerp();
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
   const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines() });
+  const cardcom = options.cardcom !== undefined ? options.cardcom : createCardcom();
+  const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
+  ctx.billing = billing;
   const app = express();
   app.disable('x-powered-by');
   if (options.trustProxy ?? process.env.TRUST_PROXY) app.set('trust proxy', 1);
@@ -91,6 +97,7 @@ export function createApp(db, options = {}) {
       baseUrl: (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`,
     }),
   );
+  app.use(webhookRoutes(store, { billing }));
   app.use(publicRoutes(store, { ...options, notifier }));
   app.use(widgetRoutes(store));
 
@@ -107,5 +114,5 @@ export function createApp(db, options = {}) {
     console.error(err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, backups: options.backups ?? true }), googleSync, serpSync, visibility };
+  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing };
 }

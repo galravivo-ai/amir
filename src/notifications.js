@@ -203,6 +203,25 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** A card renewal failed, the account was paused, or a cancelled plan ended. */
+    async billingNotice({ business, kind, error = '' }) {
+      const texts = {
+        failed: ['החיוב החודשי לא עבר', `<p>ניסינו לחייב את הכרטיס של <b>${h(business.name)}</b> ולא הצלחנו${error ? ` (${h(error)})` : ''}. ננסה שוב מחר.</p>
+          <p>כדי שהסקרים לא יושהו, אפשר לשלם עכשיו בכרטיס אחר.</p>`],
+        paused: ['החשבון הושהה: החיוב לא עבר', `<p>אחרי כמה ניסיונות, לא הצלחנו לחייב את הכרטיס של <b>${h(business.name)}</b>, והסקרים הושהו. כל הנתונים שמורים.</p>
+          <p>אחרי תשלום הכול חוזר לעבוד מיד.</p>`],
+        ended: ['המנוי הסתיים', `<p>המנוי של <b>${h(business.name)}</b> הסתיים כמו שביקשתם, והסקרים הושהו. כל הנתונים שמורים, ואפשר לחדש בכל רגע.</p>`],
+      };
+      const [title, body] = texts[kind] || texts.failed;
+      return mailer.send({
+        kind: `billing_${kind}`,
+        businessId: business.id,
+        to: recipients(business),
+        subject: `${title} · ${business.name}`,
+        html: emailLayout({ title, brand: true, body: `${body}${emailButton(url('/admin/plan'), 'לעמוד התשלום')}` }),
+      });
+    },
+
     /** Someone asked for a quote on the website. */
     async leadReceived({ lead, kindLabel, admins }) {
       if (!admins.length) return false;

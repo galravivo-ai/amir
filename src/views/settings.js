@@ -338,7 +338,12 @@ export function integrationsView({ keys, newKey, csrf, baseUrl, available, campa
 
 // ---------------------------------------------------------------- plan
 
-export function planView({ business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false }) {
+const PAYMENT_KINDS = { checkout: 'תשלום', renewal: 'חידוש', upgrade: 'שדרוג' };
+
+export function planView({
+  business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false,
+  cardBilling = false, payments = [], notice = '', error = '',
+}) {
   const meter = (label, used, max) => {
     if (max === Infinity) {
       return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} · ללא הגבלה</span></div></div>`;
@@ -355,9 +360,28 @@ export function planView({ business, plan, usage, access, request = null, csrf =
   } else if (access?.state === 'paused') {
     status = `<div class="plan-status paused"><b>${access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה'}</b>
       <span>הסקרים ללקוחות לא פעילים. כל הנתונים שמורים, ואחרי בחירת מסלול הכול חוזר לעבוד כמו קודם.</span></div>`;
+  } else if (business.card_token && business.paid_until) {
+    const until = h(formatDate(`${business.paid_until.replace(' ', 'T')}Z`).split(',')[0]);
+    const next = PLANS[business.next_plan];
+    status = `<div class="plan-status active"><b>מסלול ${h(plan.label)} · ${h(cycle)}</b>
+      <span>${
+        business.auto_renew
+          ? `החידוש הבא ב-${until}${next ? `, למסלול ${h(next.label)} (${h(CYCLES[business.next_cycle] || cycle)})` : ''}, בכרטיס שמסתיים ב-${h(business.card_last4 || '····')}.`
+          : `פעיל עד ${until}, בלי חידוש אוטומטי.`
+      }</span>
+      ${
+        can('owner')
+          ? `<form method="post" action="/admin/billing/auto-renew" class="inline">${csrfField(csrf)}
+              <button class="btn-link ${business.auto_renew ? 'danger-text' : ''}" name="on" value="${business.auto_renew ? '0' : '1'}"
+                ${business.auto_renew ? `onclick="return confirm('לבטל את החידוש האוטומטי? המסלול יישאר פעיל עד ${until}.')"` : ''}>${
+                  business.auto_renew ? 'ביטול החידוש האוטומטי' : 'חידוש אוטומטי מחדש'
+                }</button></form>`
+          : ''
+      }</div>`;
   } else {
     status = `<div class="plan-status active"><b>מסלול ${h(plan.label)} · ${h(cycle)}</b><span>החשבון פעיל.</span></div>`;
   }
+  const paying = Boolean(business.card_token && access?.state === 'active');
   const pending =
     request && PLANS[request.plan]
       ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}${
@@ -370,10 +394,25 @@ export function planView({ business, plan, usage, access, request = null, csrf =
   const action = (key) =>
     can('owner')
       ? `<button class="btn ${key === 'pro' ? 'accent' : 'primary'} plan-cta" name="plan" value="${key}">${
-          access?.state === 'active' && key === business.plan ? 'להחליף תדירות תשלום' : `בחירה ב${h(PLANS[key].label)}`
+          access?.state === 'active' && key === business.plan
+            ? 'להחליף תדירות תשלום'
+            : cardBilling && !paying
+              ? `תשלום ומעבר ל${h(PLANS[key].label)}`
+              : `בחירה ב${h(PLANS[key].label)}`
         }</button>`
       : '';
+  const history = payments.length
+    ? `<section class="card"><h3>תשלומים</h3><div class="table-wrap"><table class="table"><thead><tr><th>תאריך</th><th>מה</th><th>סכום</th><th>סטטוס</th></tr></thead><tbody>${payments
+        .map(
+          (p) => `<tr><td>${h(formatDate(`${String(p.paid_at || p.created_at).replace(' ', 'T')}Z`).split(',')[0])}</td>
+            <td>${h(PAYMENT_KINDS[p.kind] || p.kind)} · ${h(PLANS[p.plan]?.label || p.plan)}</td><td>₪${h(String(p.amount))}</td>
+            <td>${p.status === 'paid' ? '<span class="badge st-resolved">שולם</span>' : `<span class="badge st-new" title="${h(p.error || '')}">נכשל</span>`}</td></tr>`,
+        )
+        .join('')}</tbody></table></div><p class="muted small">החשבוניות נשלחות במייל מחברת הסליקה.</p></section>`
+    : '';
   return `<h1>התוכנית שלי</h1>
+  ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
+  ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${pending}
   <section class="card stack">
     ${status}
@@ -396,10 +435,15 @@ export function planView({ business, plan, usage, access, request = null, csrf =
           </form>`)
         : ''
     }
-    <p class="muted small">התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.${
-      op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''
-    }</p>
-  </section>`;
+    <p class="muted small">${
+      cardBilling
+        ? paying
+          ? 'שדרוג נכנס לתוקף מיד, ומחויב רק על הימים שנשארו עד החידוש. מעבר למסלול זול יותר או לתדירות אחרת נכנס לתוקף בחידוש הבא.'
+          : 'התשלום בכרטיס אשראי, בדף המאובטח של קארדקום. המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.'
+        : 'התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.'
+    }${op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''}</p>
+  </section>
+  ${history}`;
 }
 
 // ---------------------------------------------------------------- AI insights
@@ -467,6 +511,9 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
 // ---------------------------------------------------------------- superadmin
 
 const MAIL_KINDS = {
+  billing_failed: 'חיוב שנכשל',
+  billing_paused: 'השהיה בגלל חיוב',
+  billing_ended: 'סיום מנוי',
   negative_alert: 'התראת לקוח לא מרוצה',
   sla_alert: 'פנייה באיחור',
   weekly_report: 'דוח שבועי',
@@ -488,6 +535,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     const wanted = req && PLANS[req.plan] ? req : null;
     return `<div class="billing-cell">
       ${statusBadge(b)} <b>${h(PLANS[b.plan]?.label || b.plan)}</b>
+      ${b.card_token && b.paid_until ? `<div class="small muted">כרטיס ··${h(b.card_last4 || '')} · עד ${h(b.paid_until.slice(0, 10))}${b.auto_renew ? '' : ' · בלי חידוש'}${b.pay_failures ? ` · <b class="danger-text">${b.pay_failures} חיובים נכשלו</b>` : ''}</div>` : ''}
       ${wanted ? `<div class="small"><b class="req-flag">ביקש: ${h(PLANS[wanted.plan].label)} ${h(CYCLES[wanted.cycle] || '')}</b></div>` : ''}
       <form method="post" action="/superadmin/businesses/${b.id}/plan" class="row compact">
         ${csrfField(csrf)}
