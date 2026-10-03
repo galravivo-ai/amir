@@ -208,6 +208,8 @@ export function authRoutes(ctx) {
       csrf: req.user.csrf,
       totpEnabled: Boolean(full.totp_enabled),
       backupLeft: store.backupCodesLeft(full.id),
+      businesses: store.businessesFor(full.id),
+      saved: req.query.ok === '1',
       ...extra,
     });
   };
@@ -261,6 +263,14 @@ export function authRoutes(ctx) {
     const name = String(req.body.name ?? '').trim().slice(0, 80);
     if (name) store.updateUserName(req.user.id, name);
     res.redirect(303, '/account?ok=1');
+  });
+
+  // Renaming a business the user owns, right from the account page.
+  router.post('/account/business/:id/name', ctx.requireAuth, (req, res) => {
+    const business = store.business(Number(req.params.id), req.user.id);
+    const name = String(req.body.name ?? '').trim().slice(0, 100);
+    if (business?.role === 'owner' && name) store.updateBusiness(business.id, { name });
+    res.redirect(303, '/account?ok=1#businesses');
   });
 
   router.post('/account/password', ctx.requireAuth, (req, res) => {

@@ -1211,3 +1211,44 @@ test('WhatsApp wording: the business writes its own, and can tweak one message',
   const reset = new URL((await owner.req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0521234567' } })).location).searchParams.get('text');
   assert.match(reset, /^היי! תודה שבחרת ב/);
 });
+
+test('the owner renames the business from the account page', async () => {
+  const { openDb } = await import('../src/db.js');
+  const { createApp } = await import('../src/app.js');
+  const app = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, serp: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null });
+  const srv = app.app.listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}`;
+  const jar = {};
+  const call = async (path, form) => {
+    const res = await fetch(url + path, {
+      method: form ? 'POST' : 'GET',
+      redirect: 'manual',
+      headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '), ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+    });
+    for (const c of res.headers.getSetCookie()) {
+      const [pair] = c.split(';');
+      jar[pair.slice(0, pair.indexOf('='))] = pair.slice(pair.indexOf('=') + 1);
+    }
+    return { status: res.status, location: res.headers.get('location'), text: await res.text() };
+  };
+  try {
+    await call('/register', { name: 'גל', email: 'rename@example.com', password: 'password123', business: 'העסק שלי', terms: '1' });
+    const page = await call('/account');
+    assert.match(page.text, /id="businesses"/);
+    const token = page.text.match(/name="_csrf" value="([^"]+)"/)[1];
+    const biz = app.store.businessesFor(app.store.userByEmail('rename@example.com').id)[0];
+    const r = await call(`/account/business/${biz.id}/name`, { _csrf: token, name: 'ג׳קו סטריט' });
+    assert.equal(r.location, '/account?ok=1#businesses');
+    assert.equal(app.store.businessById(biz.id).name, 'ג׳קו סטריט');
+    assert.match((await call('/admin')).text, /<a href="\/account#businesses" title="שינוי שם העסק" class="biz-card">/);
+    // Someone else's business can't be renamed.
+    const other = app.store.createBusiness(app.store.userByEmail('rename@example.com').id, { name: 'אחר' });
+    app.store.db.prepare('DELETE FROM memberships WHERE business_id = ?').run(other);
+    await call(`/account/business/${other}/name`, { _csrf: token, name: 'נפרץ' });
+    assert.equal(app.store.businessById(other).name, 'אחר');
+  } finally {
+    srv.close();
+  }
+});

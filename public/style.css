@@ -1024,3 +1024,5 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
   .cmp-bar { display: none; }
   .cmp-recent { min-width: 0; }
 }
+a.biz-card { text-decoration: none; color: inherit; }
+a.biz-card:hover { background: #352a88; }

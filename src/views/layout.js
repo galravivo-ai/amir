@@ -187,10 +187,10 @@ ${SKIP()}
               .join('')}
           </select>
         </form>`
-      : `<div class="biz-card">
+      : `<${role === 'owner' ? 'a href="/account#businesses" title="שינוי שם העסק"' : 'div'} class="biz-card">
           <span class="biz-avatar">${bizLogo}</span>
           <span class="biz-meta"><b>${h(business.name)}</b>${usage ? `<small>תוכנית ${h(usage.planLabel)}</small>` : ''}</span>
-        </div>`;
+        </${role === 'owner' ? 'a' : 'div'}>`;
 
   const usageBlock =
     usage && usage.limit !== Infinity

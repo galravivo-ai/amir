@@ -175,14 +175,16 @@ export function backupCodesView({ codes }) {
   </section>`;
 }
 
-export function accountView({ user, csrf, error = '', totpEnabled = false, backupLeft = 0 }) {
+export function accountView({ user, csrf, error = '', totpEnabled = false, backupLeft = 0, businesses = [], saved = false }) {
+  const owned = businesses.filter((b) => b.role === 'owner');
   return `<h1>החשבון שלי</h1>
+  ${saved ? '<div class="flash">נשמר.</div>' : ''}
   ${errorBox(error)}
   <div class="grid2">
     <form method="post" action="/account" class="card stack">
       ${csrfField(csrf)}
       <h3>פרטים</h3>
-      <label>שם<input name="name" required maxlength="80" value="${h(user.name)}"></label>
+      <label>השם שלך<input name="name" required maxlength="80" value="${h(user.name)}"></label>
       <label>אימייל<input value="${h(user.email)}" dir="ltr" disabled></label>
       <button class="btn primary">שמירה</button>
     </form>
@@ -195,6 +197,24 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
       <p class="muted small">שינוי הסיסמה ינתק את כל שאר המכשירים.</p>
     </form>
   </div>
+  ${
+    owned.length
+      ? `<section class="card stack" id="businesses">
+          <h3>${owned.length > 1 ? 'שמות העסקים' : 'שם העסק'}</h3>
+          <p class="muted small">השם שמופיע בתפריט, בסקר ללקוחות, בהודעות ובדוחות.</p>
+          ${owned
+            .map(
+              (b) => `<form method="post" action="/account/business/${b.id}/name" class="row compact">
+                ${csrfField(csrf)}
+                <label class="sr-only" for="biz-name-${b.id}">שם העסק</label>
+                <input id="biz-name-${b.id}" name="name" required maxlength="100" value="${h(b.name)}">
+                <button class="btn">שמירה</button>
+              </form>`,
+            )
+            .join('')}
+        </section>`
+      : ''
+  }
   <section class="card stack" id="push">
     <h3>התראות לטלפון ולמחשב</h3>
     <p class="muted">התראה קופצת על כל לקוח לא מרוצה, על פנייה שמחכה יותר מדי זמן, ועל לקוח שענה שהטיפול לא עזר.</p>
