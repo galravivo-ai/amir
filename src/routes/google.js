@@ -41,7 +41,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     const notice = req.query.connected
       ? 'החשבון חובר. סמנו את הסניפים שתרצו לעקוב אחריהם.'
       : req.query.added
-        ? 'העסק נוסף והביקורות שלו נטענו.'
+        ? 'העסק נוסף. הביקורות נטענות עכשיו ברקע, זה לוקח עד דקה.'
         : req.query.synced
           ? 'הסנכרון הסתיים.'
           : req.query.ok
@@ -154,13 +154,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       return connectPage(req, res);
     }
     const loc = store.addSerpLocation(req.business.id, { ...p, reviewUrl: writeReviewUrl(p.placeId) });
-    try {
-      await serpSync.syncLocation(req.business, loc);
-      res.redirect(303, '/admin/google?added=1');
-    } catch (err) {
+    // The first load reads up to a year of reviews (several searches), so it
+    // runs in the background; the page shows it loading and refreshes.
+    const business = req.business;
+    serpSync.syncLocation(business, loc).catch((err) => {
       console.warn('[serp] first sync failed:', err.message);
-      res.redirect(303, `/admin/google?err=${encodeURIComponent(humanError(err))}`);
-    }
+      store.setLocationSyncError(loc.id, humanError(err));
+    });
+    res.redirect(303, '/admin/google?added=1');
   }
 
   // ---- posts to the Google Business Profile ----

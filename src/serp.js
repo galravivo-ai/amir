@@ -6,7 +6,7 @@ import { flattenSerpAnswer } from './visibility.js';
 const API = 'https://serpapi.com/search.json';
 // Short links are followed only on these hosts, so a pasted link can't make
 // the server fetch arbitrary addresses.
-const SHORT_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl', 'g.page', 'g.co']);
+const SHORT_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl', 'g.page', 'g.co', 'share.google']);
 const GOOGLE_HOST = /(^|\.)google\.[a-z.]+$/i;
 
 export class SerpError extends Error {
@@ -34,14 +34,27 @@ export function parseMapsLink(link) {
   } catch {
     return null;
   }
-  const s = decodeURIComponent(u.href);
-  const dataId = (s.match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i) || [])[1] || '';
+  // Google's cookie-consent page carries the real address in `continue`.
+  if (/^consent\./.test(u.hostname) && u.searchParams.get('continue')) return parseMapsLink(u.searchParams.get('continue'));
+  let s = u.href;
+  try {
+    s = decodeURIComponent(u.href);
+  } catch {
+    /* keep it encoded */
+  }
+  const dataId = (s.match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i) || s.match(/[?&]ftid=(0x[0-9a-f]+:0x[0-9a-f]+)/i) || [])[1] || '';
   const placeId =
     u.searchParams.get('query_place_id') || u.searchParams.get('place_id') || (s.match(/place_id:([\w-]{10,})/) || [])[1] || '';
   const name = ((u.pathname.match(/\/maps\/place\/([^/]+)/) || [])[1] || u.searchParams.get('q') || u.searchParams.get('query') || '')
     .replace(/\+/g, ' ')
     .trim();
-  return { dataId, placeId, name: name.startsWith('place_id:') ? '' : decodeURIComponent(name) };
+  let decoded = name;
+  try {
+    decoded = decodeURIComponent(name);
+  } catch {
+    /* keep it as it came */
+  }
+  return { dataId, placeId, name: name.startsWith('place_id:') ? '' : decoded };
 }
 
 const num = (v) => {
@@ -110,9 +123,15 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
   /** Follows a short share link (maps.app.goo.gl...) to the full Maps URL. */
   async function expand(link) {
     let url = link;
-    for (let hop = 0; hop < 4; hop++) {
+    for (let hop = 0; hop < 5; hop++) {
       const host = new URL(url).hostname;
-      if (!SHORT_HOSTS.has(host)) break;
+      if (!SHORT_HOSTS.has(host) && !/^consent\.google\./.test(host)) break;
+      if (/^consent\./.test(host)) {
+        const next = new URL(url).searchParams.get('continue');
+        if (!next) break;
+        url = next;
+        continue;
+      }
       const res = await fetchImpl(url, { redirect: 'manual', signal: AbortSignal.timeout(15e3) });
       const next = res.headers.get('location');
       if (!next) break;

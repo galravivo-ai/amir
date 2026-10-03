@@ -42,7 +42,7 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
           ${l.sync_error ? `<div class="danger-text small">הבדיקה האחרונה נכשלה: ${h(l.sync_error)}</div>` : ''}
           ${debug && l.source === 'serp' ? `<a class="small" href="/admin/google/locations/${l.id}/debug">בדיקת SerpApi</a>` : ''}</td>
         <td data-l="דירוג">${l.total_reviews ? `${Number(l.avg_rating).toFixed(1)} ★ <span class="muted small">(${Number(l.total_reviews).toLocaleString('he-IL')})</span>` : '—'}
-          <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : ''}</div></td>
+          <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : l.source === 'serp' && !l.sync_error ? '<span class="g-loading">טוען ביקורות…</span>' : ''}</div></td>
         <td data-l="מעקב">${
           can('manager')
             ? `<div class="row compact"><form method="post" action="/admin/google/locations/${l.id}" class="row compact">
@@ -99,6 +99,11 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
         : ''
     }
     ${places.length ? locationsTable(places, { campaigns, csrf, can, deletable: true, debug }) : ''}
+    ${
+      places.some((l) => !l.synced_at && !l.sync_error)
+        ? '<script>setTimeout(function(){location.replace(location.pathname)},8000)</script>'
+        : ''
+    }
     <p class="muted small">כדי לענות לביקורת, לוחצים עליה ואז "מענה בגוגל". ה-AI יכול לנסח לכם טיוטה להעתקה.</p>
   </section>`;
 }

@@ -80,6 +80,10 @@ function client() {
 test('parse Google Maps links', () => {
   assert.deepEqual(parseMapsLink(`https://www.google.com/maps/place/Caf%C3%A9+Landwer/@32,34,17z/data=!4m6!3m5!1s${DATA_ID}!8m2`), { dataId: DATA_ID, placeId: '', name: 'Café Landwer' });
   assert.equal(parseMapsLink('https://www.google.com/maps/search/?api=1&query=x&query_place_id=ChIJabcdefghijk').placeId, 'ChIJabcdefghijk');
+  // Newer share links and Google's consent page.
+  assert.equal(parseMapsLink(`https://consent.google.com/m?continue=${encodeURIComponent(`https://www.google.com/maps/place/X/data=!4m2!3m1!1s${DATA_ID}`)}`).dataId, DATA_ID);
+  assert.equal(parseMapsLink(`https://www.google.com/maps?ftid=${DATA_ID}&entry=gps`).dataId, DATA_ID);
+  assert.equal(parseMapsLink('https://www.google.com/maps/place/%E0%A4%A').name, '%E0%A4%A', 'a broken escape does not throw');
   assert.equal(parseMapsLink('not a link'), null);
 });
 
