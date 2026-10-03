@@ -1026,3 +1026,10 @@ html.a11y-focus *:focus { outline: 4px solid #ffb020 !important; outline-offset:
 }
 a.biz-card { text-decoration: none; color: inherit; }
 a.biz-card:hover { background: #352a88; }
+
+/* AI buttons spin their spark while the AI works */
+.ai-btn { display: inline-flex; align-items: center; gap: 6px; }
+.ai-btn.ai-busy { opacity: .85; cursor: progress; }
+.ai-btn.ai-busy svg { animation: ai-spin 1s linear infinite; }
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ai-btn.ai-busy svg { animation-duration: 3s; } }

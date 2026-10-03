@@ -122,7 +122,7 @@ export function visibilityView({
                 <button class="btn primary">שמירה</button>
                 ${
                   aiAvailable
-                    ? `<button class="btn" formaction="/admin/ai-visibility/suggest" formnovalidate>${icon('spark', 16)} ה-AI יציע שאלות</button>
+                    ? `<button class="btn ai-btn" formaction="/admin/ai-visibility/suggest" formnovalidate>${icon('spark', 16)} <span>ה-AI יציע שאלות</span></button>
                        <input name="about" class="inline-about" placeholder="תחום העסק, למשל: בית קפה" maxlength="120">`
                     : ''
                 }

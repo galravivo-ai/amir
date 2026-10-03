@@ -18,6 +18,13 @@ const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1d1650">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+// AI buttons: while the AI works, the spark spins and the label says so.
+document.addEventListener('submit',function(e){var b=e.submitter;if(!b||!b.classList.contains('ai-btn'))return;
+var l=b.querySelector('span');if(l){b.dataset.label=l.textContent;l.textContent='ה-AI עובד…'}b.classList.add('ai-busy');b.setAttribute('aria-busy','true');
+setTimeout(function(){b.disabled=true},0)});
+window.addEventListener('pageshow',function(){document.querySelectorAll('.ai-busy').forEach(function(b){b.classList.remove('ai-busy');b.disabled=false;b.removeAttribute('aria-busy');var l=b.querySelector('span');if(l&&b.dataset.label)l.textContent=b.dataset.label})});
+</script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>`;
 
 export function brandMark(size = 34) {

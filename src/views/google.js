@@ -218,7 +218,7 @@ export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, c
   const text = draft || review.reply || '';
   const aiForm = aiAvailable
     ? `<form method="post" action="/admin/google/reviews/${review.id}/draft"><input type="hidden" name="_csrf" value="${h(csrf)}">
-        <button class="btn">${icon('spark', 16)} ${draft ? 'טיוטה אחרת' : 'טיוטה מה-AI'}</button></form>`
+        <button class="btn ai-btn">${icon('spark', 16)} <span>${draft ? 'טיוטה אחרת' : 'טיוטה מה-AI'}</span></button></form>`
     : '';
   const googleLink = review.link || (review.place_id ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(review.place_id)}` : '');
   let answer = '';
@@ -340,7 +340,7 @@ export function googlePostsView({
         aiAvailable
           ? `<div class="ai-row">
               <input name="idea" maxlength="500" value="${v('idea')}" placeholder="על מה הפוסט? למשל: השבוע קפה ומאפה ב-20 ש״ח עד 11:00">
-              <button class="btn" formaction="${action('/admin/google/posts/draft')}" formnovalidate>${icon('spark', 16)} ה-AI ינסח</button>
+              <button class="btn ai-btn" formaction="${action('/admin/google/posts/draft')}" formnovalidate>${icon('spark', 16)} <span>ה-AI ינסח</span></button>
             </div>`
           : ''
       }

@@ -482,13 +482,13 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
   } else if (!planAllows) {
     form = `<p class="muted">תובנות AI זמינות בתוכנית מקצועי ומעלה. <a href="/admin/plan">פרטים</a></p>`;
   } else if (canGenerate) {
-    form = `<form method="post" action="/admin/insights" class="row" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='מנתח... (עד דקה)'">
+    form = `<form method="post" action="/admin/insights" class="row">
       ${csrfField(csrf)}
       <select name="campaign" aria-label="קמפיין"><option value="">כל הקמפיינים</option>${campaigns
         .map((c) => `<option value="${c.id}">${h(c.name)}</option>`)
         .join('')}</select>
       <select name="days" aria-label="תקופה"><option value="7">7 ימים</option><option value="30" selected>30 ימים</option><option value="90">90 ימים</option></select>
-      <button class="btn primary">הפקת תובנות</button>
+      <button class="btn primary ai-btn">${icon('spark', 16)} <span>הפקת תובנות</span></button>
     </form>`;
   }
   return `<h1>תובנות AI</h1>
@@ -581,7 +581,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
       <div class="kpi-hint">${mailEnabled ? '' : 'הגדירו SMTP_URL כדי לשלוח בפועל'}</div></div>
     <div class="kpi" id="ai"><div class="kpi-label">עוזר AI</div><div class="kpi-value small-value">${aiEnabled ? 'מפתח מוגדר' : 'כבוי'}</div>
       <div class="kpi-hint">${aiEnabled ? '' : 'הגדירו ANTHROPIC_API_KEY'}</div>
-      <form method="post" action="/superadmin/ai-test">${csrfField(csrf)}<button class="btn-link">בדיקת חיבור ל-AI</button></form>
+      <form method="post" action="/superadmin/ai-test">${csrfField(csrf)}<button class="btn-link ai-btn">${icon('spark', 14)} <span>בדיקת חיבור ל-AI</span></button></form>
       ${aiTest ? (aiTest.ok ? `<div class="small" style="color:#15803d">✓ עובד. התשובה: ${h(aiTest.text)}</div>` : `<div class="small danger-text">✗ ${h(aiTest.error)}</div>`) : ''}</div>
   </div>
   ${

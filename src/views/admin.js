@@ -624,7 +624,7 @@ function followupBlock(r, followupUrl, businessName) {
 function draftSection({ r, csrf, aiAvailable, aiReason, aiError }) {
   const button = aiAvailable
     ? `<form method="post" action="/admin/responses/${r.id}/draft" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='כותב...'">
-        ${csrfField(csrf)}<button class="btn">${r.ai_draft ? 'ניסוח מחדש' : '✨ ניסוח תשובה עם AI'}</button></form>`
+        ${csrfField(csrf)}<button class="btn ai-btn">${icon('spark', 16)} <span>${r.ai_draft ? 'ניסוח מחדש' : 'ניסוח תשובה עם AI'}</span></button></form>`
     : `<p class="muted small">${h(aiReason)}</p>`;
   return `<section class="card stack" id="draft">
     <h3>תשובה ללקוח</h3>
