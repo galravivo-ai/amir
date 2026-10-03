@@ -102,6 +102,7 @@ ${SKIP()}
   const links = [
     ['/admin', 'לוח בקרה', 'home'],
     ['/admin/google/reviews', 'ביקורות', 'star', googlePending],
+    ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
     ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
     ['/admin/insights', 'תובנות AI', 'spark'],
     ['/admin/responses', 'תגובות מסקרים', 'inbox'],

@@ -266,7 +266,7 @@ export function googleDashCard(summary) {
 /** Tabs shared by the Google pages. */
 export function googleTabs(current) {
   const tab = (href, label, key) => `<a href="${href}" class="${key === current ? 'active' : ''}" ${key === current ? 'aria-current="page"' : ''}>${label}</a>`;
-  return `<nav class="g-tabs" aria-label="גוגל">${tab('/admin/google/reviews', 'ביקורות', 'reviews')}${tab('/admin/google/posts', 'פוסטים', 'posts')}${tab('/admin/google', 'הגדרות חיבור', 'settings')}</nav>`;
+  return `<nav class="g-tabs" aria-label="גוגל">${tab('/admin/google/reviews', 'ביקורות', 'reviews')}${tab('/admin/google', 'הגדרות חיבור', 'settings')}</nav>`;
 }
 
 export function googlePostsView({
@@ -300,7 +300,7 @@ export function googlePostsView({
       : `<li class="bad">✗ ${h(r.location)}: ${h(r.error)}</li>`;
   const action = (path) => `${path}?_csrf=${encodeURIComponent(csrf)}`;
   return `<h1>${GOOGLE_G} פוסטים בגוגל</h1>
-  ${googleTabs('posts')}
+  <p class="page-intro">פוסט בפרופיל העסק מופיע למי שמחפש אתכם בגוגל ובמפות. פוסט קבוע, פעם בשבוע-שבועיים, עוזר להופיע גבוה יותר.</p>
   ${posted ? `<div class="flash">הפוסט נשלח לגוגל.<ul class="post-results">${results(posted).map(resultLine).join('')}</ul></div>` : ''}
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${
@@ -437,7 +437,7 @@ export function googlePostsView({
               </article>`,
             )
             .join('')}</div>`
-        : '<p class="muted">עוד לא פורסמו פוסטים מכאן. פוסט קבוע (פעם בשבוע-שבועיים) עוזר לעסק להופיע גבוה יותר בחיפוש במפות.</p>'
+        : '<p class="muted">עוד לא פורסמו פוסטים מכאן.</p>'
     }
   </section>`;
 }

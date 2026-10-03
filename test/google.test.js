@@ -293,3 +293,10 @@ test('compose a Google post, with AI and a photo, and publish it to a location',
   assert.match(refused.text, /גוגל עוד לא אישרה/);
   assert.equal(store.googlePosts(biz.id).length, 1);
 });
+
+test('Google posts has its own menu item', async () => {
+  const req = await owner('g-menu@example.com');
+  const page = await req('/admin/google/posts');
+  assert.match(page.text, /<a href="\/admin\/google\/posts" class="active" aria-current="page">/);
+  assert.doesNotMatch(page.text, /class="g-tabs"/);
+});
