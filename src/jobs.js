@@ -9,7 +9,7 @@ import { sendWhatsAppInvite } from './whatsapp.js';
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, whatsapp = null, competitors = null, health = null, ctx = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, whatsapp = null, competitors = null, health = null, rankings = null, ctx = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -170,6 +170,11 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return health ? health.runDue() : 0;
   }
 
+  /** Weekly: where each followed search shows the business on the map. */
+  async function mapRankings() {
+    return rankings ? rankings.runDue() : 0;
+  }
+
   /** One automatic backup a day (kept next to the database; copy offsite too). */
   async function dailyBackup() {
     if (!backups || lastBackupAge() < 23 * 3600e3) return 0;
@@ -180,7 +185,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, competitorChecks, profileHealth, aiVisibility, weeklyReports, monthlyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, competitorChecks, profileHealth, mapRankings, aiVisibility, weeklyReports, monthlyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -195,6 +200,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     renewals,
     competitorChecks,
     profileHealth,
+    mapRankings,
     monthlyReports,
     scheduledInvites,
     scheduledWhatsApp,

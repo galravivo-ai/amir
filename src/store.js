@@ -1053,6 +1053,28 @@ export function createStore(db) {
          WHERE l.enabled = 1 AND b.billing != 'paused'
            AND COALESCE((SELECT MAX(run_at) FROM profile_audits a WHERE a.location_id = l.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
 
+    // ---------- map rank tracking ----------
+    setLocationCoords: (id, lat, lng) => q('UPDATE google_locations SET lat = ?, lng = ? WHERE id = ?').run(lat, lng, id),
+    rankKeywords: (businessId) =>
+      q(`SELECT k.*, l.title AS location_title, l.lat, l.lng, l.data_id, l.place_id, l.address,
+           (SELECT c.id FROM rank_checks c WHERE c.keyword_id = k.id ORDER BY c.id DESC LIMIT 1) AS last_check_id
+         FROM rank_keywords k JOIN google_locations l ON l.id = k.location_id WHERE k.business_id = ? ORDER BY k.id`).all(businessId),
+    addRankKeyword: (businessId, locationId, keyword, radius) =>
+      Number(q('INSERT INTO rank_keywords (business_id, location_id, keyword, radius_m) VALUES (?, ?, ?, ?)').run(businessId, locationId, keyword, radius).lastInsertRowid),
+    deleteRankKeyword: (businessId, id) => q('DELETE FROM rank_keywords WHERE business_id = ? AND id = ?').run(businessId, id),
+    saveRankCheck(keywordId, { avgRank = null, found = 0, points = [], leaders = [], error = null }) {
+      q('INSERT INTO rank_checks (keyword_id, avg_rank, found, points, leaders, error) VALUES (?, ?, ?, ?, ?, ?)').run(
+        keywordId, avgRank, found, JSON.stringify(points), JSON.stringify(leaders), error,
+      );
+    },
+    /** The last few checks of a keyword, newest first. */
+    rankChecks: (keywordId, limit = 8) => q('SELECT * FROM rank_checks WHERE keyword_id = ? ORDER BY id DESC LIMIT ?').all(keywordId, limit),
+    rankKeywordsDue: (days) =>
+      q(`SELECT k.*, l.lat, l.lng, l.data_id, l.place_id, l.title AS location_title, l.address FROM rank_keywords k
+         JOIN google_locations l ON l.id = k.location_id JOIN businesses b ON b.id = k.business_id
+         WHERE l.enabled = 1 AND b.billing != 'paused'
+           AND COALESCE((SELECT MAX(run_at) FROM rank_checks c WHERE c.keyword_id = k.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
+
     // ---------- weekly tasks ----------
     tasksDone: (businessId, week) => q('SELECT task FROM weekly_tasks_done WHERE business_id = ? AND week = ?').all(businessId, week).map((r) => r.task),
     markTaskDone: (businessId, week, task) => q('INSERT OR IGNORE INTO weekly_tasks_done (business_id, week, task) VALUES (?, ?, ?)').run(businessId, week, task),

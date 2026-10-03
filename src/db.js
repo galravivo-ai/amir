@@ -530,6 +530,31 @@ const MIGRATIONS = [
     PRIMARY KEY (business_id, week, task)
   );
   `,
+  // v25: map rank tracking (a grid of searches around each place)
+  `
+  ALTER TABLE google_locations ADD COLUMN lat REAL;
+  ALTER TABLE google_locations ADD COLUMN lng REAL;
+  CREATE TABLE rank_keywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    keyword TEXT NOT NULL,
+    radius_m INTEGER NOT NULL DEFAULT 1000,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_rank_keywords_business ON rank_keywords(business_id);
+  CREATE TABLE rank_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword_id INTEGER NOT NULL REFERENCES rank_keywords(id) ON DELETE CASCADE,
+    run_at TEXT NOT NULL DEFAULT (datetime('now')),
+    avg_rank REAL,
+    found INTEGER NOT NULL DEFAULT 0,
+    points TEXT NOT NULL DEFAULT '[]',
+    leaders TEXT NOT NULL DEFAULT '[]',
+    error TEXT
+  );
+  CREATE INDEX idx_rank_checks_keyword ON rank_checks(keyword_id, id);
+  `,
 ];
 
 function migrate(db) {

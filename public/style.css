@@ -1064,3 +1064,18 @@ a.biz-card:hover { background: #352a88; }
 .task-body { flex: 1 1 260px; display: grid; gap: 2px; }
 .task-actions { display: flex; align-items: center; gap: 10px; }
 .small-btn { padding: 6px 14px; font-size: .9rem; }
+
+/* map rank grid */
+.rk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.rk-head h3 { margin: 0 0 2px; }
+.rk-body { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
+.rk-grid { display: grid; grid-template-columns: repeat(3, 76px); gap: 6px; direction: ltr; }
+.rk-cell { height: 66px; border-radius: 12px; display: grid; place-content: center; text-align: center; color: #fff; background: #9ca3af; }
+.rk-cell b { font-size: 1.35rem; line-height: 1; }
+.rk-cell small { font-size: .62rem; opacity: .9; }
+.rk-cell.top { background: #16a34a; } .rk-cell.good { background: #84cc16; color: #1a2e05; } .rk-cell.low { background: #f59e0b; color: #3b2300; }
+.rk-cell.center { outline: 3px solid var(--purple); outline-offset: 2px; }
+.rk-facts { display: grid; gap: 12px; flex: 1 1 220px; }
+.rk-facts > div { display: grid; gap: 2px; }
+.rk-avg { font-size: 2rem; line-height: 1.1; }
+.rk-leaders { margin: 4px 0 0; padding-inline-start: 18px; }

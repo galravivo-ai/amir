@@ -24,6 +24,7 @@ export function createHealth({ store, serp, ai = null, everyDays = 7 }) {
     try {
       const profile = await serp.placeDetails({ placeId: loc.place_id, dataId: loc.data_id, title: loc.title, address: loc.address });
       if (!profile) throw new Error('לא מצאנו את הפרופיל בגוגל. בדקו שהעסק מופיע בגוגל מפות.');
+      if (profile.lat && profile.lng && !loc.lat) store.setLocationCoords(loc.id, profile.lat, profile.lng);
       const result = healthChecks(profile, activityOf(store, business.id, loc));
       let tips = '';
       if (ai?.profileTips && planOf(business).ai) {

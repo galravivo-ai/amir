@@ -113,6 +113,8 @@ export function profileOf(p) {
     attributes: has(p.extensions) || has(p.service_options) || has(p.amenities),
     menu: has(p.menu),
     unclaimed: p.unclaimed_listing === true ? true : null,
+    lat: Number(p.gps_coordinates?.latitude) || null,
+    lng: Number(p.gps_coordinates?.longitude) || null,
   };
 }
 
@@ -219,6 +221,15 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
         p = r.place_results || (r.local_results || []).find((x) => (dataId && x.data_id === dataId) || (placeId && x.place_id === placeId)) || null;
       }
       return p ? profileOf(p) : null;
+    },
+
+    /**
+     * The Maps results for a search made from a point, in order. One search.
+     * `zoom` sets how wide around the point Google looks.
+     */
+    async mapResults(query, { lat, lng, zoom = 15 }) {
+      const r = await call({ engine: 'google_maps', type: 'search', q: query, ll: `@${lat},${lng},${zoom}z`, hl: 'iw', gl: 'il' });
+      return (r.local_results || []).map((x, i) => ({ position: Number(x.position) || i + 1, dataId: x.data_id || '', placeId: x.place_id || '', title: x.title || '', rating: num(x.rating) }));
     },
 
     /** Google's AI Mode answer to a question, as text and sources. */

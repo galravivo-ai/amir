@@ -156,6 +156,7 @@ ${SKIP()}
       key: 'visibility',
       label: 'נראות ומתחרים',
       items: [
+        ['/admin/rankings', 'מיקום במפות', 'pin'],
         ['/admin/competitors', 'מתחרים', 'rivals'],
         ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
       ],
