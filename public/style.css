@@ -146,6 +146,17 @@ body.app { display: flex; min-height: 100vh; }
 .side-nav a:hover { background: var(--night-2); color: #fff; }
 .side-nav a.active { background: var(--yellow); color: var(--night); font-weight: 700; }
 .side-nav a span:first-of-type { flex: 1; }
+.nav-plain, .nav-links { display: flex; flex-direction: column; gap: 2px; }
+.nav-group { margin-top: 10px; }
+.nav-group-title { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; cursor: pointer; padding: 6px 12px; color: #9d94d9; font: inherit; font-size: .78rem; font-weight: 700; letter-spacing: .03em; text-align: start; border-radius: 8px; }
+.nav-group-title:hover { color: #fff; }
+.nav-group-title span:first-child { flex: 1; }
+.nav-group-title svg { transition: transform .15s; }
+.nav-group.folded .nav-group-title svg { transform: rotate(90deg); }
+.nav-group.folded .nav-links { display: none; }
+.nav-group-badge { display: none; }
+.nav-group.folded .nav-group-badge { display: inline-block; }
+.nav-plain + .nav-plain { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--night-2); }
 .nav-badge { background: #ff6b4a; color: #fff; font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
 .side-nav a.active .nav-badge { background: var(--night); }
 .usage { margin-top: auto; background: var(--night-2); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; color: var(--night-text); text-decoration: none; font-size: .85rem; }
@@ -270,6 +281,9 @@ textarea[readonly] { font-family: ui-monospace, monospace; font-size: .85rem; ba
   .biz-meta small, .usage { display: none; }
   .side-nav { order: 10; width: 100%; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 2px; }
   .side-nav a { white-space: nowrap; padding: 8px 12px; }
+  .nav-plain, .nav-group, .nav-links, .nav-group.folded .nav-links { display: contents; }
+  .nav-group-title { display: none; }
+  .nav-plain + .nav-plain { margin: 0; padding: 0; border: 0; }
   .side-user { order: 5; border: 0; padding: 0; margin: 0; }
   .side-user a span { display: none; }
   .app-main { padding: 20px 16px 40px; }

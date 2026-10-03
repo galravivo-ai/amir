@@ -30,6 +30,29 @@ function initialMark(name, size) {
 }
 
 /** Whether a nav link points at the current page (query strings must match when the link has one). */
+function navLink([href, label, ic, badge], current) {
+  const active = isActive(href, current);
+  return `<a href="${href}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>
+          ${icon(ic)}<span>${label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}
+        </a>`;
+}
+
+/** A titled, foldable group of menu links (or plain links, without a title). */
+function navGroup(g, current) {
+  const links = g.items.map((item) => navLink(item, current)).join('');
+  if (!g.label) return `<div class="nav-plain">${links}</div>`;
+  const hasActive = g.items.some(([href]) => isActive(href, current));
+  const folded = g.folded && !hasActive;
+  const badges = g.items.reduce((n, item) => n + (Number(item[3]) || 0), 0);
+  const id = `nav-${g.key}`;
+  return `<div class="nav-group ${folded ? 'folded' : ''} ${hasActive ? 'has-active' : ''}" data-g="${g.key}">
+      <button type="button" class="nav-group-title" aria-expanded="${!folded}" aria-controls="${id}">
+        <span>${g.label}</span>${badges ? `<span class="nav-badge nav-group-badge">${badges}</span>` : ''}${icon('chevron', 14)}
+      </button>
+      <div class="nav-links" id="${id}">${links}</div>
+    </div>`;
+}
+
 function isActive(href, current) {
   const [path, query] = href.split('?');
   const [curPath, curQuery = ''] = String(current || '').split('?');
@@ -99,26 +122,55 @@ ${SKIP()}
   }
 
   const role = business.role;
-  const links = [
-    ['/admin', 'לוח בקרה', 'home'],
-    ['/admin/google/reviews', 'ביקורות', 'star', googlePending],
-    ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
-    ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
-    ['/admin/insights', 'תובנות AI', 'spark'],
-    ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
-    ['/admin/competitors', 'מתחרים', 'rivals'],
-    ['/admin/reports/monthly', 'דוח חודשי', 'report'],
-    ['/admin/responses', 'תגובות מסקרים', 'inbox'],
-    ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
-    ['/admin/poster', 'עיצוב שלט QR', 'print'],
-    ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
-    role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
-    role === 'owner' && ['/admin/team', 'צוות', 'team'],
-    role === 'owner' && ['/admin/integrations', 'חיבורים', 'plug'],
-    role === 'owner' && ['/admin/business', 'הגדרות', 'gear'],
-    isAgency && ['/agency', 'הלקוחות שלי', 'chart'],
-    isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield'],
-  ].filter(Boolean);
+  // The menu in groups; a group can be folded, and remembers it (the active one stays open).
+  const groups = [
+    { items: [['/admin', 'לוח בקרה', 'home']] },
+    {
+      key: 'feedback',
+      label: 'ביקורות ולקוחות',
+      items: [
+        ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending],
+        ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
+        ['/admin/responses', 'תגובות מסקרים', 'inbox'],
+      ],
+    },
+    {
+      key: 'collect',
+      label: 'השגת ביקורות ושיווק',
+      items: [
+        ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
+        ['/admin/poster', 'עיצוב שלט QR', 'print'],
+        ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
+        role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
+      ],
+    },
+    {
+      key: 'insights',
+      label: 'ניתוח ודוחות',
+      items: [
+        ['/admin/insights', 'תובנות AI', 'spark'],
+        ['/admin/reports/monthly', 'דוח חודשי', 'report'],
+        ['/admin/competitors', 'מתחרים', 'rivals'],
+        ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
+        ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
+      ],
+    },
+    role === 'owner' && {
+      key: 'manage',
+      label: 'ניהול העסק',
+      folded: true,
+      items: [
+        ['/admin/business', 'הגדרות', 'gear'],
+        ['/admin/team', 'צוות', 'team'],
+        ['/admin/integrations', 'חיבורים', 'plug'],
+        ['/admin/plan', 'התוכנית שלי', 'report'],
+      ],
+    },
+    { items: [isAgency && ['/agency', 'הלקוחות שלי', 'chart'], isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield']] },
+  ]
+    .filter(Boolean)
+    .map((g) => ({ ...g, items: g.items.filter(Boolean) }))
+    .filter((g) => g.items.length);
 
   const bizInitial = h(String(business.name).trim().charAt(0) || '·');
   const bizLogo = logoSrc(business)
@@ -158,15 +210,13 @@ ${SKIP()}
   <a class="side-brand" href="/admin">${mark(34)}<span>${wordmark(brand)}</span></a>
   ${bizBlock}
   <nav class="side-nav" aria-label="ניווט ראשי">
-    ${links
-      .map(([href, label, ic, badge]) => {
-        const active = isActive(href, current);
-        return `<a href="${href}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>
-          ${icon(ic)}<span>${label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}
-        </a>`;
-      })
-      .join('')}
+    ${groups.map((g) => navGroup(g, current)).join('')}
   </nav>
+  <script>(function(){var s={};try{s=JSON.parse(localStorage.getItem('gf-nav')||'{}')}catch(e){}
+document.querySelectorAll('.nav-group[data-g]').forEach(function(g){var k=g.getAttribute('data-g'),b=g.querySelector('.nav-group-title');
+function set(c){g.classList.toggle('folded',c);b.setAttribute('aria-expanded',String(!c))}
+if(!g.classList.contains('has-active')&&typeof s[k]==='boolean')set(s[k]);
+b.addEventListener('click',function(){var c=!g.classList.contains('folded');set(c);s[k]=c;try{localStorage.setItem('gf-nav',JSON.stringify(s))}catch(e){}})})})();</script>
   ${usageBlock}
   <form method="post" action="/logout" class="side-user">
     <input type="hidden" name="_csrf" value="${h(csrf)}">
