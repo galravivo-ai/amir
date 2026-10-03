@@ -7,6 +7,7 @@ import { createGoogleSync } from './googleSync.js';
 import { createSerp } from './serp.js';
 import { createSerpSync } from './serpSync.js';
 import { createVisibility } from './visibilityRun.js';
+import { createAnswerEngines } from './answerEngines.js';
 import { visibilityRoutes } from './routes/visibility.js';
 import { googleRoutes } from './routes/google.js';
 import { createJobs } from './jobs.js';
@@ -70,7 +71,7 @@ export function createApp(db, options = {}) {
   const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
   const serp = options.serp !== undefined ? options.serp : createSerp();
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
-  const visibility = createVisibility({ store, serp, ai });
+  const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines() });
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   const app = express();
   app.disable('x-powered-by');

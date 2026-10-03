@@ -46,6 +46,18 @@ export const PLANS = {
   },
 };
 
+/**
+ * An add-on on top of any plan: AI visibility checked in ChatGPT, Gemini and
+ * Perplexity too, with more questions. A system admin turns it on per business.
+ */
+export const AI_PLUS = {
+  label: 'נראות ב-AI פלוס',
+  price: 49,
+  tagline: 'בודקים אם ממליצים עליכם גם ב-ChatGPT, ב-Gemini וב-Perplexity',
+  features: ['בדיקה שבועית ב-ChatGPT, Gemini ו-Perplexity, בנוסף לגוגל ול-Claude', 'עד 10 שאלות במקום 5', 'השוואה בין כל המנועים לאורך זמן'],
+};
+export const hasAiPlus = (business) => Boolean(business?.ai_plus);
+
 /** Plans shown on the price list. */
 export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));
 

@@ -130,3 +130,95 @@ test('set the questions, run a check, see the results', async () => {
   created.store.db.prepare("UPDATE businesses SET ai_checked_at = datetime('now', '-8 days') WHERE id = ?").run(biz.id);
   assert.equal(created.store.aiVisibilityDue(7).some((b) => b.id === biz.id), true);
 });
+
+test('ChatGPT, Gemini and Perplexity read their answers and sources', async () => {
+  const { createAnswerEngines } = await import('../src/answerEngines.js');
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body), headers: init.headers });
+    const json = (b) => ({ ok: true, status: 200, text: async () => JSON.stringify(b) });
+    if (url.includes('openai.com')) {
+      return json({ output: [{ type: 'web_search_call' }, { type: 'message', content: [{ type: 'output_text', text: 'נסו את ג׳קו סטריט.', annotations: [{ type: 'url_citation', url: 'https://jackos.co.il/', title: 'Jacko' }] }] }] });
+    }
+    if (url.includes('googleapis.com')) {
+      return json({ candidates: [{ content: { parts: [{ text: 'קפה לנדוור' }] }, groundingMetadata: { groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/x', title: 'landwer.co.il' } }] } }] });
+    }
+    if (url.includes('perplexity.ai')) return json({ choices: [{ message: { content: 'ג׳קו סטריט' } }], citations: ['https://www.timeout.co.il/a'] });
+    return { ok: false, status: 404, text: async () => '{}' };
+  };
+  assert.deepEqual(Object.keys(createAnswerEngines({ env: {}, fetchImpl })), []);
+  const e = createAnswerEngines({ env: { OPENAI_API_KEY: 'o', GEMINI_API_KEY: 'g', PERPLEXITY_API_KEY: 'p' }, fetchImpl });
+  assert.deepEqual(await e.chatgpt('q', { city: 'תל אביב' }), { text: 'נסו את ג׳קו סטריט.', sources: [{ title: 'Jacko', link: 'https://jackos.co.il/' }] });
+  assert.equal(calls[0].body.tools[0].type, 'web_search');
+  assert.equal(calls[0].body.tools[0].user_location.city, 'תל אביב');
+  assert.equal(calls[0].headers.authorization, 'Bearer o');
+  assert.deepEqual((await e.gemini('q')).sources, [{ title: 'landwer.co.il', link: 'https://landwer.co.il' }], 'the redirect is replaced by the site');
+  assert.equal(calls[1].headers['x-goog-api-key'], 'g');
+  assert.deepEqual(await e.perplexity('q'), { text: 'ג׳קו סטריט', sources: [{ title: '', link: 'https://www.timeout.co.il/a' }] });
+});
+
+test('the plus add-on: requested by the owner, turned on by the system admin, adds engines and questions', async () => {
+  const asked = [];
+  const app = createApp(openDb(':memory:'), {
+    authLimit: { windowMs: 60e3, max: 1000 },
+    backups: false,
+    google: null,
+    serp: null,
+    ai: null,
+    answerEngines: { chatgpt: async (q) => (asked.push(q), { text: 'ממליץ על פלאס קפה', sources: [] }) },
+  });
+  const srv = app.app.listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}`;
+  const jar = {};
+  const req = async (path, { method = 'GET', form } = {}) => {
+    const res = await fetch(url + path, {
+      method,
+      redirect: 'manual',
+      headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '), ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+      body: form ? (form instanceof URLSearchParams ? form : new URLSearchParams(form)).toString() : undefined,
+    });
+    for (const c of res.headers.getSetCookie()) {
+      const [pair] = c.split(';');
+      jar[pair.slice(0, pair.indexOf('='))] = pair.slice(pair.indexOf('=') + 1);
+    }
+    return { status: res.status, text: await res.text() };
+  };
+  try {
+    await req('/register', { method: 'POST', form: { name: 'דנה', email: 'plus@example.com', password: 'password123', business: 'פלאס קפה', terms: '1' } });
+    const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+    const biz = app.store.businessesFor(app.store.userByEmail('plus@example.com').id)[0];
+
+    let page = (await req('/admin/ai-visibility')).text;
+    assert.match(page, /נראות ב-AI פלוס/, 'the add-on is offered');
+    assert.match(page, /עד 5\)/);
+    assert.doesNotMatch(page, /בדיקה עכשיו/, 'without the add-on no engine is on here');
+
+    assert.equal((await req('/admin/ai-visibility/plus', { method: 'POST', form: { _csrf: token } })).status, 303);
+    assert.ok(app.store.businessById(biz.id).ai_plus_request);
+    assert.match((await req('/admin/ai-visibility')).text, /ביקשתם את התוסף/);
+
+    // Turned on by a system admin.
+    app.store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('plus@example.com');
+    assert.match((await req('/superadmin')).text, /ביקש: נראות ב-AI פלוס/);
+    assert.equal((await req(`/superadmin/businesses/${biz.id}/ai-plus`, { method: 'POST', form: { _csrf: token, on: '1' } })).status, 303);
+    const on = app.store.businessById(biz.id);
+    assert.equal(on.ai_plus, 1);
+    assert.equal(on.ai_plus_request, null);
+
+    const form = new URLSearchParams({ _csrf: token });
+    for (let i = 1; i <= 12; i++) form.append('queries', `שאלה מספר ${i}`);
+    await req('/admin/ai-visibility/settings', { method: 'POST', form });
+    assert.equal(JSON.parse(app.store.businessById(biz.id).ai_queries).length, 10, 'up to 10 questions with the add-on');
+
+    page = (await req('/admin/ai-visibility')).text;
+    assert.match(page, /בדיקה עכשיו/);
+    assert.doesNotMatch(page, /להוספת התוסף/);
+    const r = await app.visibility.runBusiness(app.store.businessById(biz.id));
+    assert.equal(r.mentioned, 10);
+    assert.equal(asked.length, 10);
+    assert.deepEqual(app.visibility.engines(app.store.businessById(biz.id)), ['chatgpt']);
+  } finally {
+    srv.close();
+  }
+});

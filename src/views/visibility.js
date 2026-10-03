@@ -1,6 +1,6 @@
 import { parseJson } from '../db.js';
 import { formatDate, h } from '../util.js';
-import { MAX_QUERIES } from '../visibility.js';
+import { PLUS_ENGINES } from '../visibility.js';
 import { icon } from './icons.js';
 
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
@@ -23,11 +23,31 @@ function cell(row) {
   </details></td>`;
 }
 
-export function visibilityView({ business, queries, data, engines, allEngines, running, aiAvailable, csrf, can, notice = '', error = '', suggested = null }) {
+function plusCard({ offer, requested, csrf, can }) {
+  return `<section class="card vis-plus">
+    <div class="vis-plus-head"><div><span class="badge st-in_progress">תוסף</span><h3>${h(offer.label)}</h3>
+      <p class="muted">${h(offer.tagline)}</p></div>
+      <div class="vis-plus-price"><b>₪${offer.price}</b><span class="muted small"> לחודש, בנוסף למסלול</span></div></div>
+    <ul class="vis-plus-list">${offer.features.map((f) => `<li>✓ ${h(f)}</li>`).join('')}</ul>
+    ${
+      requested
+        ? '<p class="flash">ביקשתם את התוסף. ניצור איתכם קשר להשלמת התשלום ונפעיל אותו.</p>'
+        : can('owner')
+          ? `<form method="post" action="/admin/ai-visibility/plus"><input type="hidden" name="_csrf" value="${h(csrf)}">
+              <button class="btn accent">להוספת התוסף</button></form>`
+          : '<p class="muted small">בעלי העסק יכולים להזמין את התוסף.</p>'
+    }
+  </section>`;
+}
+
+export function visibilityView({
+  business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
+  maxQueries = 5, plus = false, plusOffer = null, plusRequested = false, notice = '', error = '', suggested = null,
+}) {
   const { runs, latest } = data;
   const last = runs.at(-1);
   const answered = latest.filter((r) => !r.error);
-  const shownEngines = engines.length ? engines : Object.keys(allEngines);
+  const shownEngines = engines.length ? engines : Object.keys(allEngines).filter((e) => plus || !PLUS_ENGINES.includes(e));
   const byQuery = new Map();
   for (const r of latest) {
     if (!byQuery.has(r.query)) byQuery.set(r.query, {});
@@ -38,9 +58,10 @@ export function visibilityView({ business, queries, data, engines, allEngines, r
     return rows.length ? `${pct(rows.filter((r) => r.mentioned).length, rows.length)}%` : '—';
   };
   const editing = suggested || queries;
-  const inputs = Array.from({ length: MAX_QUERIES }, (_, i) => editing[i] || '');
+  const inputs = Array.from({ length: maxQueries }, (_, i) => editing[i] || '');
 
-  return `<div class="page-head"><h1>${icon('search', 26)} נראות ב-AI</h1>
+  const offer = !plus && plusOffer ? plusCard({ offer: plusOffer, requested: plusRequested, csrf, can }) : '';
+  return `<div class="page-head"><h1>${icon('search', 26)} נראות ב-AI${plus ? ' <span class="badge st-resolved">פלוס</span>' : ''}</h1>
       ${
         can('manager') && queries.length && engines.length
           ? `<form method="post" action="/admin/ai-visibility/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
@@ -89,13 +110,14 @@ export function visibilityView({ business, queries, data, engines, allEngines, r
           ? '<div class="card empty"><p class="muted">עוד לא בוצעה בדיקה. לחצו "בדיקה עכשיו", או חכו לבדיקה השבועית.</p></div>'
           : ''
     }
+    ${offer}
     ${
       can('manager')
         ? `<section class="card stack" id="setup">
             <h3>מה לבדוק</h3>
             <form method="post" action="/admin/ai-visibility/settings" class="stack">
               <input type="hidden" name="_csrf" value="${h(csrf)}">
-              <div class="stack tight-stack"><span class="label-text">השאלות שלקוחות שואלים (עד ${MAX_QUERIES})</span>
+              <div class="stack tight-stack"><span class="label-text">השאלות שלקוחות שואלים (עד ${maxQueries})</span>
                 ${inputs.map((q, i) => `<input name="queries" value="${h(q)}" maxlength="160" placeholder="${i === 0 ? 'למשל: איפה יש ארוחת בוקר טובה בדיזנגוף?' : ''}" aria-label="שאלה ${i + 1}">`).join('')}
                 <span class="muted small">כתבו את השאלות בלי שם העסק, כמו שלקוח חדש היה שואל.</span>
               </div>
@@ -114,7 +136,7 @@ export function visibilityView({ business, queries, data, engines, allEngines, r
                 }
               </div>
             </form>
-            <p class="muted small">כל שאלה נבדקת בכל מנוע זמין: ${Object.values(allEngines).join(', ')}. בגוגל, כל שאלה היא חיפוש ב-SerpApi.</p>
+            <p class="muted small">כל שאלה נבדקת בכל מנוע שפעיל אצלכם: ${shownEngines.map((e) => h(allEngines[e])).join(', ')}.</p>
           </section>`
         : ''
     }`;

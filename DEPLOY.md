@@ -107,6 +107,18 @@ cd amir && git pull && docker compose up -d --build
 
 עמוד "נראות ב-AI" בודק פעם בשבוע אם תשובות AI מזכירות את העסק ומצטטות את האתר או את פרופיל הגוגל שלו, לפי עד 5 שאלות שהעסק מגדיר. המנועים: Google AI Mode ו-Google AI Overview (דרך `SERPAPI_KEY`), ו-Claude עם חיפוש ברשת (דרך `ANTHROPIC_API_KEY`). כל שאלה עולה חיפוש אחד או שניים ב-SerpApi לכל בדיקה, ובערך 5-10 אגורות ב-Claude.
 
+### תוסף "נראות ב-AI פלוס" (₪49 לחודש)
+
+תוסף בתשלום לכל עסק: בודק גם ב-ChatGPT, ב-Gemini וב-Perplexity, ומאפשר עד 10 שאלות במקום 5. בעל העסק מבקש אותו מעמוד "נראות ב-AI", ואתם מפעילים אותו בניהול המערכת, בשורה של העסק, אחרי התשלום. התוסף מוצע ללקוחות רק אם לפחות מפתח אחד מאלה מוגדר:
+
+| משתנה | מנוע | איפה מקבלים מפתח |
+|---|---|---|
+| `OPENAI_API_KEY` | ChatGPT עם חיפוש ברשת | platform.openai.com ← API keys |
+| `GEMINI_API_KEY` | Gemini עם חיפוש בגוגל | aistudio.google.com ← Get API key (צריך חשבון בתשלום) |
+| `PERPLEXITY_API_KEY` | Perplexity Sonar | perplexity.ai ← Settings ← API |
+
+לא חובה: `OPENAI_MODEL` (ברירת מחדל `gpt-5-mini`), `GEMINI_MODEL` (ברירת מחדל `gemini-2.5-flash`), `PERPLEXITY_MODEL` (ברירת מחדל `sonar`). העלות בערך 2-4 סנט לשאלה ב-ChatGPT, כ-1 סנט ב-Perplexity, וב-Gemini יש מכסה חינמית יומית לחיפושים.
+
 ## חיבור לגוגל (ביקורות מ-Google Business Profile)
 
 פעם אחת, בחשבון גוגל של מפעיל המערכת:

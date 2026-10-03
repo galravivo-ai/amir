@@ -435,6 +435,11 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_ai_checks_business ON ai_checks(business_id, run_at);
   `,
+  // v21: the "AI visibility plus" add-on, and an owner's request for it
+  `
+  ALTER TABLE businesses ADD COLUMN ai_plus INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE businesses ADD COLUMN ai_plus_request TEXT;
+  `,
 ];
 
 function migrate(db) {

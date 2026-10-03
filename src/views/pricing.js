@@ -1,4 +1,4 @@
-import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
+import { AI_PLUS, annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
@@ -20,7 +20,7 @@ const INCLUDED = [
  * `action(key)` returns the call to action for a plan: a link on the landing
  * page, a submit button inside the plan page's form.
  */
-export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
+export function pricingCards({ action, current = '', idPrefix = 'cycle', addon = true }) {
   const cards = Object.entries(PUBLIC_PLANS)
     .map(([key, p]) => {
       const yearly = annualPrice(p);
@@ -49,6 +49,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
+    ${addon ? `<div class="plan-addon"><div><b>תוסף: ${h(AI_PLUS.label)}</b> · ${ils(AI_PLUS.price)} לחודש<br><span class="muted small">${h(AI_PLUS.tagline)}. מתווסף לכל מסלול.</span></div></div>` : ''}
     <p class="pricing-note">כל המסלולים כוללים את כל הפיצ'רים, ההבדל הוא רק במספר הסניפים · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }

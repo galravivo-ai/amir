@@ -1,4 +1,4 @@
-import { accessOf, CYCLES, FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
+import { accessOf, AI_PLUS, CYCLES, FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
@@ -386,7 +386,7 @@ export function planView({ business, plan, usage, access, request = null, csrf =
     ${can('owner') ? '' : '<p class="muted">רק בעלי העסק יכולים לבחור מסלול.</p>'}
     <form method="post" action="/admin/plan/request">
       <input type="hidden" name="_csrf" value="${h(csrf)}">
-      ${pricingCards({ action, current: access?.state === 'active' ? business.plan : '' })}
+      ${pricingCards({ action, current: access?.state === 'active' ? business.plan : '', addon: false })}
     </form>
     ${
       can('owner')
@@ -396,6 +396,8 @@ export function planView({ business, plan, usage, access, request = null, csrf =
           </form>`)
         : ''
     }
+    <div class="plan-addon"><div><b>תוסף: ${h(AI_PLUS.label)}</b> · ₪${AI_PLUS.price} לחודש<br><span class="muted small">${h(AI_PLUS.tagline)}. עד 10 שאלות במקום 5.</span></div>
+      ${business.ai_plus ? '<span class="badge st-resolved">פעיל</span>' : '<a class="btn" href="/admin/ai-visibility">לפרטים</a>'}</div>
     <p class="muted small">התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.${
       op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''
     }</p>
@@ -501,11 +503,16 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
         <button class="btn-link" name="do" value="extend">+7 ימי ניסיון</button>
         ${accessOf(b).state === 'paused' ? '' : '<button class="btn-link danger-text" name="do" value="pause">השהיה</button>'}
       </form>
+      <form method="post" action="/superadmin/businesses/${b.id}/ai-plus" class="row compact small">
+        ${csrfField(csrf)}
+        ${b.ai_plus ? `<b>${h(AI_PLUS.label)} פעיל</b>` : b.ai_plus_request ? `<b class="req-flag">ביקש: ${h(AI_PLUS.label)}</b>` : ''}
+        <button class="btn-link" name="on" value="${b.ai_plus ? '0' : '1'}">${b.ai_plus ? 'כיבוי התוסף' : `הפעלת ${h(AI_PLUS.label)}`}</button>
+      </form>
     </div>`;
   };
   const requests = businesses.filter((b) => {
     const r = parseJson(b.plan_request, null);
-    return r && PLANS[r.plan];
+    return (r && PLANS[r.plan]) || (b.ai_plus_request && !b.ai_plus);
   });
   const agencySelect = (b) => `<form method="post" action="/superadmin/businesses/${b.id}/agency" class="inline">
       ${csrfField(csrf)}
@@ -525,9 +532,9 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
   </div>
   ${
     requests.length
-      ? `<div class="warn">${requests.length === 1 ? 'עסק אחד ביקש מסלול' : `${requests.length} עסקים ביקשו מסלול`}: ${requests
+      ? `<div class="warn">${requests.length === 1 ? 'עסק אחד ביקש מסלול או תוסף' : `${requests.length} עסקים ביקשו מסלול או תוסף`}: ${requests
           .map((b) => h(b.name))
-          .join(', ')}. אחרי שהתשלום הוסדר, לוחצים "הפעלה" בשורה של העסק.</div>`
+          .join(', ')}. אחרי שהתשלום הוסדר, מפעילים בשורה של העסק.</div>`
       : ''
   }
   <section class="card" id="businesses">

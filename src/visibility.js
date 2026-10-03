@@ -5,9 +5,17 @@ export const ENGINES = {
   google_ai_mode: 'Google AI Mode',
   google_ai_overview: 'Google AI Overview',
   claude: 'Claude',
+  chatgpt: 'ChatGPT',
+  gemini: 'Gemini',
+  perplexity: 'Perplexity',
 };
 
+/** Engines that come only with the "AI visibility plus" add-on. */
+export const PLUS_ENGINES = ['chatgpt', 'gemini', 'perplexity'];
+
+/** Questions per business: the plans include 5, the add-on raises it. */
 export const MAX_QUERIES = 5;
+export const PLUS_MAX_QUERIES = 10;
 
 /** Lowercase, no niqqud or punctuation, one spelling for geresh and quotes. */
 export function normalize(text) {
