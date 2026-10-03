@@ -16,6 +16,13 @@ const fake = {
   async fetch(url, init = {}) {
     fake.calls.push(url);
     const json = (body, status = 200) => ({ ok: status < 400, status, headers: new Headers(), text: async () => JSON.stringify(body) });
+    // share.google goes through google.com/share.google to a Google search for the place.
+    if (url.startsWith('https://share.google/')) {
+      return { ok: false, status: 302, headers: new Headers({ location: 'https://www.google.com/share.google?q=TOKEN123' }), text: async () => '' };
+    }
+    if (url.startsWith('https://www.google.com/share.google')) {
+      return { ok: false, status: 302, headers: new Headers({ location: 'https://www.google.com/search?q=%D7%A7%D7%A4%D7%94+%D7%9C%D7%A0%D7%93%D7%95%D7%95%D7%A8&kgmid=/g/11abc' }), text: async () => '' };
+    }
     if (url.startsWith('https://maps.app.goo.gl/')) {
       assert.equal(init.redirect, 'manual');
       return { ok: false, status: 302, headers: new Headers({ location: `https://www.google.com/maps/place/Cafe/@32,34,17z/data=!4m6!3m5!1s${DATA_ID}!8m2` }), text: async () => '' };
@@ -199,4 +206,13 @@ test('the dashboard follows the chosen range', async () => {
   const old = (await req('/admin?range=custom&from=2025-01-01&to=2025-01-31')).text;
   assert.match(old, /בין 1\.1\.2025 ל-31\.1\.2025/);
   assert.doesNotMatch(old, /מקום מעולה/);
+});
+
+test('a share.google link leads to a search by the place name', async () => {
+  const serp = createSerp({ apiKey: 'serp-key', fetchImpl: (url, init) => fake.fetch(url, init) });
+  const before = fake.calls.length;
+  const found = await serp.find('https://share.google/PQditwFuU3V7sz2ZJ');
+  assert.equal(found.matches.length, 2);
+  const search = fake.calls.slice(before).find((u) => u.includes('engine=google_maps'));
+  assert.equal(new URL(search).searchParams.get('q'), 'קפה לנדוור', 'searched by the name, not the share token');
 });

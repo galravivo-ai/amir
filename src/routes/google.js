@@ -129,7 +129,10 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       const found = await serp.find(query);
       if (found.direct) return addPlace(req, res, found.direct);
       res.locals.matches = found.matches;
-      if (!found.matches.length) res.locals.error = 'לא מצאנו את העסק. נסו להוסיף את העיר, או להדביק את הקישור מגוגל מפות.';
+      if (!found.matches.length)
+        res.locals.error = found.unreadLink
+          ? 'לא הצלחנו לקרוא את הקישור הזה. כתבו במקומו את שם העסק והעיר (למשל: ג׳קו סטריט דיזנגוף תל אביב) ובחרו מהרשימה.'
+          : 'לא מצאנו את העסק. נסו להוסיף את העיר, או להדביק את הקישור מגוגל מפות.';
     } catch (err) {
       console.warn('[serp] find failed:', err.message);
       res.locals.error = humanError(err);

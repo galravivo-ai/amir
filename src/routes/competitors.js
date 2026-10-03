@@ -34,7 +34,7 @@ export function competitorRoutes(ctx, { serp, competitors }) {
     try {
       const found = await serp.find(query);
       if (found.direct) return add(req, res, found.direct);
-      page(req, res, { query, matches: found.matches, error: found.matches.length ? '' : 'לא מצאנו את העסק. נסו להוסיף את העיר, או להדביק קישור מגוגל מפות.' });
+      page(req, res, { query, matches: found.matches, error: found.matches.length ? '' : found.unreadLink ? 'לא הצלחנו לקרוא את הקישור הזה. כתבו במקומו את שם העסק והעיר.' : 'לא מצאנו את העסק. נסו להוסיף את העיר, או להדביק קישור מגוגל מפות.' });
     } catch (err) {
       page(req, res, { query, error: err instanceof SerpError ? 'החיפוש בגוגל לא הצליח כרגע. נסו שוב בעוד כמה דקות.' : 'משהו השתבש, נסו שוב.' });
     }

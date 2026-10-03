@@ -123,17 +123,24 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
   /** Follows a short share link (maps.app.goo.gl...) to the full Maps URL. */
   async function expand(link) {
     let url = link;
-    for (let hop = 0; hop < 5; hop++) {
-      const host = new URL(url).hostname;
-      if (!SHORT_HOSTS.has(host) && !/^consent\.google\./.test(host)) break;
-      if (/^consent\./.test(host)) {
-        const next = new URL(url).searchParams.get('continue');
+    for (let hop = 0; hop < 6; hop++) {
+      const u = new URL(url);
+      if (/^consent\./.test(u.hostname)) {
+        const next = u.searchParams.get('continue');
         if (!next) break;
         url = next;
         continue;
       }
+      // Short links, and the hop share.google makes through google.com/share.google.
+      const hop1 = SHORT_HOSTS.has(u.hostname) || (GOOGLE_HOST.test(u.hostname) && u.pathname === '/share.google');
+      if (!hop1) break;
       const res = await fetchImpl(url, { redirect: 'manual', signal: AbortSignal.timeout(15e3) });
-      const next = res.headers.get('location');
+      let next = res.headers.get('location');
+      if (!next && res.status === 200) {
+        // Some answers redirect in the page instead of the header.
+        const body = (await res.text()).slice(0, 200000).replace(/&amp;/g, '&').replace(/\\u003d/g, '=').replace(/\\u0026/g, '&');
+        next = (body.match(/https:\/\/(?:www\.|maps\.)?google\.[a-z.]+\/(?:maps|search)[^"'<>\s\\]*/) || [])[0] || null;
+      }
       if (!next) break;
       url = new URL(next, url).href;
     }
@@ -165,8 +172,10 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
       if (link) {
         const parsed = parseMapsLink(link) || {};
         if (parsed.dataId || parsed.placeId) return { direct: { dataId: parsed.dataId, placeId: parsed.placeId, title: parsed.name, address: '' } };
-        if (parsed.name) return { matches: await this.search(parsed.name) };
-        return { matches: [] };
+        // A link we could only read a name from (a Google search page, say): search by the name.
+        const host = new URL(link).hostname;
+        if (parsed.name && !SHORT_HOSTS.has(host)) return { matches: await this.search(parsed.name) };
+        return { matches: [], unreadLink: true };
       }
       return { matches: await this.search(text) };
     },
