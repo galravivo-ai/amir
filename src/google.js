@@ -174,6 +174,9 @@ export function createGoogle({
       };
     },
 
+    /** Publishes a post (see posts.js for the body); returns Google's LocalPost. */
+    createPost: (token, locationName, body) => call(`${REVIEWS_URL}/${locationName}/localPosts`, { method: 'POST', token, body }),
+
     reply: (token, reviewName, comment) => call(`${REVIEWS_URL}/${reviewName}/reply`, { method: 'PUT', token, body: { comment } }),
   };
 }

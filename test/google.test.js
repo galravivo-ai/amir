@@ -35,6 +35,10 @@ const fakeGoogle = {
       return json(200, { reviews: fakeGoogle.reviews, averageRating: 4.5, totalReviewCount: 12 });
     }
     if (url.endsWith('/reply') && init.method === 'PUT') return json(200, JSON.parse(init.body));
+    if (url.endsWith('/localPosts') && init.method === 'POST') {
+      if (fakeGoogle.postsFail) return json(403, { error: { message: 'The caller does not have permission' } });
+      return json(200, { name: `${url.split('/v4/')[1]}/1`, state: 'LIVE', searchUrl: 'https://local.google.com/place?post=1' });
+    }
     return json(404, { error: { message: `unexpected ${url}` } });
   },
 };
@@ -42,6 +46,9 @@ const fakeGoogle = {
 const fakeAi = {
   async draftGoogleReply(input) {
     return `תודה ${input.reviewer}!`;
+  },
+  async draftPost(input) {
+    return `פוסט על: ${input.idea}`;
   },
 };
 
@@ -64,7 +71,7 @@ after(() => server.close());
 
 function client() {
   const jar = {};
-  return async function req(path, { method = 'GET', form } = {}) {
+  async function req(path, { method = 'GET', form } = {}) {
     const res = await fetch(base + path, {
       method,
       redirect: 'manual',
@@ -80,7 +87,17 @@ function client() {
       jar[pair.slice(0, i)] = pair.slice(i + 1);
     }
     return { status: res.status, location: res.headers.get('location'), text: await res.text() };
+  }
+  req.raw = async (path, body) => {
+    const res = await fetch(base + path, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ') },
+      body,
+    });
+    return { status: res.status, location: res.headers.get('location'), text: await res.text() };
   };
+  return req;
 }
 const csrf = async (req) => (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
 
@@ -205,4 +222,74 @@ test('without Google credentials the page explains the setup to the system admin
     base = old;
     srv.close();
   }
+});
+
+test('compose a Google post, with AI and a photo, and publish it to a location', async () => {
+  const { store } = created;
+  const req = await owner('g-poster@example.com');
+  const token = await csrf(req);
+  const biz = store.businessesFor(store.userByEmail('g-poster@example.com').id)[0];
+
+  // Before connecting: the composer works, publishing explains what's missing.
+  const before = await req('/admin/google/posts');
+  assert.match(before.text, /פוסטים בגוגל/);
+  assert.match(before.text, /לחבר את חשבון הגוגל/);
+  assert.doesNotMatch(before.text, /פרסום בגוגל<\/button>/);
+
+  const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  const state = new URL(start.location).searchParams.get('state');
+  await req(`/admin/google/callback?code=abc&state=${state}`);
+  const [loc] = store.googleLocations(biz.id);
+
+  // Multipart requests carry the CSRF token in the query string.
+  const send = async (path, fields, file) => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(fields)) for (const x of [].concat(v)) fd.append(k, x);
+    if (file) fd.append('photo', new Blob([file], { type: 'image/png' }), 'photo.png');
+    return req.raw(`${path}?_csrf=${encodeURIComponent(token)}`, fd);
+  };
+
+  const page = await req('/admin/google/posts');
+  assert.match(page.text, /פרסום בגוגל<\/button>/);
+  assert.match(page.text, new RegExp(`name="locations" value="${loc.id}" checked`));
+
+  // The AI drafts from an idea; the photo survives the round trip.
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001', 'hex');
+  const drafted = await send('/admin/google/posts/draft', { topic: 'STANDARD', idea: 'קפה ב-10 ש"ח' }, png);
+  assert.match(drafted.text, /פוסט על: קפה ב-10 ש&quot;ח|פוסט על: קפה ב-10 ש"ח/);
+  const imageToken = drafted.text.match(/name="image_token" value="([\w-]+)"/)[1];
+  const img = await fetch(`${base}/m/${imageToken}`);
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/png');
+
+  // An offer without dates is refused with a clear message.
+  const bad = await send('/admin/google/posts', { topic: 'OFFER', title: '1+1', summary: 'x', locations: String(loc.id) });
+  assert.match(bad.text, /צריך תאריך התחלה ותאריך סיום/);
+
+  // Publish an offer with a button and the photo.
+  const ok = await send('/admin/google/posts', {
+    topic: 'OFFER', title: '1+1 על קפה', starts_at: '2026-10-05T08:00', ends_at: '2026-10-12T11:00', coupon: 'COFFEE',
+    summary: 'כל השבוע', cta_type: 'ORDER', cta_url: 'https://example.com/order', image_token: imageToken, locations: String(loc.id),
+  });
+  assert.equal(ok.status, 303);
+  const call = fakeGoogle.calls.findLast(([m, u]) => m === 'POST' && u.endsWith('/localPosts'));
+  assert.ok(call[1].endsWith('/v4/accounts/1/locations/9/localPosts'));
+  const body = JSON.parse(call[2]);
+  assert.equal(body.topicType, 'OFFER');
+  assert.equal(body.event.title, '1+1 על קפה');
+  assert.deepEqual(body.event.schedule.startDate, { year: 2026, month: 10, day: 5 });
+  assert.equal(body.event.schedule.endTime.hours, 11);
+  assert.equal(body.offer.couponCode, 'COFFEE');
+  assert.deepEqual(body.callToAction, { actionType: 'ORDER', url: 'https://example.com/order' });
+  assert.equal(body.media[0].sourceUrl, `${base}/m/${imageToken}`);
+  const after = await req(ok.location);
+  assert.match(after.text, /הפוסט נשלח לגוגל/);
+  assert.match(after.text, /✓ קפה במרכז/);
+
+  // When Google refuses (API not approved yet), nothing is saved and the reason is clear.
+  fakeGoogle.postsFail = true;
+  const refused = await send('/admin/google/posts', { topic: 'STANDARD', summary: 'שלום', locations: String(loc.id) });
+  fakeGoogle.postsFail = false;
+  assert.match(refused.text, /גוגל עוד לא אישרה/);
+  assert.equal(store.googlePosts(biz.id).length, 1);
 });

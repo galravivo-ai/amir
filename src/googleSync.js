@@ -49,6 +49,21 @@ export function createGoogleSync({ store, google, notifier }) {
     return added;
   }
 
+  /** Publishes one post to each chosen location; one location failing doesn't stop the rest. */
+  async function publishPost(businessId, locations, body) {
+    const token = await tokenFor(businessId);
+    const results = [];
+    for (const loc of locations) {
+      try {
+        const p = await google.createPost(token, loc.name, body);
+        results.push({ location: loc.title, ok: true, state: p.state || '', url: p.searchUrl || '' });
+      } catch (err) {
+        results.push({ location: loc.title, ok: false, error: err.message, status: err.status || 0 });
+      }
+    }
+    return results;
+  }
+
   async function reply(businessId, review, text) {
     const token = await tokenFor(businessId);
     await google.reply(token, review.name, text);
@@ -71,5 +86,5 @@ export function createGoogleSync({ store, google, notifier }) {
     return total;
   }
 
-  return { tokenFor, refreshLocations, syncBusiness, reply, syncAll };
+  return { tokenFor, refreshLocations, syncBusiness, reply, publishPost, syncAll };
 }

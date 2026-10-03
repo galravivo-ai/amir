@@ -385,6 +385,34 @@ const MIGRATIONS = [
   `
   ALTER TABLE businesses ADD COLUMN invite_template TEXT NOT NULL DEFAULT '';
   `,
+  // v19: posts to Google Business Profile, and the photos they carry
+  `
+  CREATE TABLE google_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    topic TEXT NOT NULL DEFAULT 'STANDARD',
+    summary TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    starts_at TEXT NOT NULL DEFAULT '',
+    ends_at TEXT NOT NULL DEFAULT '',
+    coupon TEXT NOT NULL DEFAULT '',
+    terms TEXT NOT NULL DEFAULT '',
+    cta_type TEXT NOT NULL DEFAULT '',
+    cta_url TEXT NOT NULL DEFAULT '',
+    image_token TEXT NOT NULL DEFAULT '',
+    results TEXT NOT NULL DEFAULT '[]',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_google_posts_business ON google_posts(business_id, id);
+  CREATE TABLE post_images (
+    token TEXT PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    mime TEXT NOT NULL,
+    data BLOB NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  `,
 ];
 
 function migrate(db) {

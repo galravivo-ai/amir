@@ -134,6 +134,7 @@ export function googleConnectView({
           }<a class="btn primary" href="/admin/google/reviews">לביקורות</a></div>`
         : ''
     }</div>
+  ${googleTabs('settings')}
   ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${serpMissing ? '<div class="warn">כדי לעקוב אחרי ביקורות לפי קישור, הוסיפו ב-Railway את המשתנה <code>SERPAPI_KEY</code> (רק מנהל המערכת רואה את זה).</div>' : ''}
@@ -191,8 +192,8 @@ export function googleReviewsView({ reviews, locations, filters, summary }) {
       <select name="filter" onchange="this.form.submit()" aria-label="סינון">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}</select>
       ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
       <noscript><button class="btn">סינון</button></noscript>
-      <a class="btn" href="/admin/google">הגדרות חיבור</a>
     </form></div>
+  ${googleTabs('reviews')}
   ${
     reviews.length
       ? `<div class="g-list">${reviews
@@ -260,4 +261,183 @@ export function googleDashCard(summary) {
     ${GOOGLE_G}<span><b>${summary.avg.toFixed(1)} ★</b> בגוגל · ${summary.total.toLocaleString('he-IL')} ביקורות</span>
     ${summary.unanswered ? `<span class="badge st-new">${summary.unanswered} ממתינות לתשובה</span>` : '<span class="muted small">הכול נענה ✓</span>'}
   </a>`;
+}
+
+/** Tabs shared by the Google pages. */
+export function googleTabs(current) {
+  const tab = (href, label, key) => `<a href="${href}" class="${key === current ? 'active' : ''}" ${key === current ? 'aria-current="page"' : ''}>${label}</a>`;
+  return `<nav class="g-tabs" aria-label="גוגל">${tab('/admin/google/reviews', 'ביקורות', 'reviews')}${tab('/admin/google/posts', 'פוסטים', 'posts')}${tab('/admin/google', 'הגדרות חיבור', 'settings')}</nav>`;
+}
+
+export function googlePostsView({
+  posts,
+  locations,
+  connected,
+  gbpAvailable,
+  aiAvailable,
+  csrf,
+  can,
+  topics,
+  ctaTypes,
+  businessName,
+  posted = null,
+  values = {},
+  error = '',
+}) {
+  const v = (k, d = '') => h(values[k] ?? d);
+  const topic = topics[values.topic] ? values.topic : 'STANDARD';
+  const chosen = new Set([].concat(values.locations ?? locations.map((l) => String(l.id))).map(String));
+  const results = (p) => {
+    try {
+      return JSON.parse(p.results || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const resultLine = (r) =>
+    r.ok
+      ? `<li class="ok">✓ ${h(r.location)}${r.state === 'PROCESSING' ? ' · בבדיקה של גוגל' : ''}${r.url ? ` · <a href="${h(r.url)}" target="_blank" rel="noopener">לפוסט</a>` : ''}</li>`
+      : `<li class="bad">✗ ${h(r.location)}: ${h(r.error)}</li>`;
+  const action = (path) => `${path}?_csrf=${encodeURIComponent(csrf)}`;
+  return `<h1>${GOOGLE_G} פוסטים בגוגל</h1>
+  ${googleTabs('posts')}
+  ${posted ? `<div class="flash">הפוסט נשלח לגוגל.<ul class="post-results">${results(posted).map(resultLine).join('')}</ul></div>` : ''}
+  ${error ? `<div class="error">${h(error)}</div>` : ''}
+  ${
+    connected
+      ? ''
+      : `<div class="warn">${
+          gbpAvailable
+            ? 'כדי לפרסם ישירות מכאן צריך <a href="/admin/google">לחבר את חשבון הגוגל של העסק</a> (ממתין לאישור של גוגל).'
+            : 'פרסום ישיר יהיה זמין אחרי חיבור החשבון לגוגל.'
+        } בינתיים אפשר לכתוב כאן את הפוסט, גם בעזרת ה-AI, ללחוץ "העתקה" ואז "פתיחה בגוגל" ולהדביק.</div>`
+  }
+  ${
+    can('manager')
+      ? `<div class="post-grid">
+    <form id="post-form" class="card stack" method="post" action="${action('/admin/google/posts')}" enctype="multipart/form-data">
+      <input type="hidden" name="image_token" value="${v('image_token')}">
+      <div class="seg" role="radiogroup" aria-label="סוג הפוסט">${Object.entries(topics)
+        .map(([k, l]) => `<label><input type="radio" name="topic" value="${k}" ${k === topic ? 'checked' : ''}><span>${h(l)}</span></label>`)
+        .join('')}</div>
+      <div class="when-event stack">
+        <label>כותרת<input name="title" maxlength="58" value="${v('title')}" placeholder="למשל: 1+1 על כל הקפה"></label>
+        <div class="grid2 tight">
+          <label>מתחיל<input type="datetime-local" name="starts_at" value="${v('starts_at')}"></label>
+          <label>נגמר<input type="datetime-local" name="ends_at" value="${v('ends_at')}"></label>
+        </div>
+      </div>
+      <div class="when-offer grid2 tight">
+        <label>קוד קופון (לא חובה)<input name="coupon" maxlength="58" value="${v('coupon')}" dir="ltr"></label>
+        <label>תנאים (לא חובה)<input name="terms" maxlength="500" value="${v('terms')}"></label>
+      </div>
+      ${
+        aiAvailable
+          ? `<div class="ai-row">
+              <input name="idea" maxlength="500" value="${v('idea')}" placeholder="על מה הפוסט? למשל: השבוע קפה ומאפה ב-20 ש״ח עד 11:00">
+              <button class="btn" formaction="${action('/admin/google/posts/draft')}" formnovalidate>${icon('spark', 16)} ה-AI ינסח</button>
+            </div>`
+          : ''
+      }
+      <label>הטקסט של הפוסט
+        <textarea name="summary" id="post-text" rows="7" maxlength="1500" placeholder="מה חדש אצלכם?">${v('summary')}</textarea>
+        <span class="muted small"><span id="post-count">0</span>/1500</span>
+      </label>
+      <div class="stack tight-stack"><span class="label-text">תמונה (לא חובה)</span>
+        <label class="file-pick">
+          <input type="file" name="photo" id="post-photo" accept="image/jpeg,image/png">
+          <span class="btn">${icon('inbox', 18)} ${values.image_token ? 'החלפת תמונה' : 'בחירת תמונה'}</span>
+          <span class="file-name" id="post-photo-name">${values.image_token ? 'נבחרה תמונה' : 'JPG או PNG, עד 5MB'}</span>
+        </label>
+      </div>
+      <div class="grid2 tight">
+        <label>כפתור<select name="cta_type" id="post-cta">${Object.entries(ctaTypes)
+          .map(([k, l]) => `<option value="${k}" ${k === (values.cta_type ?? '') ? 'selected' : ''}>${h(l)}</option>`)
+          .join('')}</select></label>
+        <label class="when-url">קישור לכפתור<input name="cta_url" value="${v('cta_url')}" dir="ltr" placeholder="https://"></label>
+      </div>
+      ${
+        connected && locations.length
+          ? `<fieldset class="post-locs"><legend>לפרסם ב:</legend>${locations
+              .map((l) => `<label class="check"><input type="checkbox" name="locations" value="${l.id}" ${chosen.has(String(l.id)) ? 'checked' : ''}> ${h(l.title)}</label>`)
+              .join('')}</fieldset>`
+          : ''
+      }
+      <div class="row compact">
+        ${connected ? '<button class="btn primary">פרסום בגוגל</button>' : ''}
+        <button type="button" class="btn" id="post-copy">העתקת הטקסט</button>
+        <a class="btn" href="https://business.google.com/" target="_blank" rel="noopener">פתיחה בגוגל ↗</a>
+      </div>
+    </form>
+    <aside class="post-preview" aria-label="תצוגה מקדימה">
+      <span class="muted small">כך זה ייראה בגוגל:</span>
+      <div class="gpost">
+        <div class="gpost-head"><span class="gpost-avatar">${h(String(businessName).charAt(0))}</span><b>${h(businessName)}</b></div>
+        <img id="pv-img" alt="" ${values.image_token ? `src="/m/${v('image_token')}"` : 'hidden'}>
+        <div class="gpost-body">
+          <b id="pv-title" hidden></b>
+          <span id="pv-dates" class="muted small" hidden></span>
+          <p id="pv-text"></p>
+          <span id="pv-coupon" class="gpost-coupon" hidden></span>
+          <span id="pv-cta" class="gpost-cta" hidden></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <script>
+  (function () {
+    var f = document.getElementById('post-form'); if (!f) return;
+    var $ = function (id) { return document.getElementById(id); };
+    function fmt(v) { if (!v) return ''; var d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); }
+    function update() {
+      var topic = f.querySelector('input[name=topic]:checked').value;
+      f.classList.toggle('is-event', topic !== 'STANDARD');
+      f.classList.toggle('is-offer', topic === 'OFFER');
+      var cta = $('post-cta').value;
+      f.classList.toggle('has-url', !!cta && cta !== 'CALL');
+      var text = $('post-text').value;
+      $('post-count').textContent = text.length;
+      $('pv-text').textContent = text || 'הטקסט של הפוסט יופיע כאן';
+      var title = topic !== 'STANDARD' ? f.title.value.trim() : '';
+      $('pv-title').hidden = !title; $('pv-title').textContent = title;
+      var dates = topic !== 'STANDARD' && f.starts_at.value ? fmt(f.starts_at.value) + (f.ends_at.value ? ' – ' + fmt(f.ends_at.value) : '') : '';
+      $('pv-dates').hidden = !dates; $('pv-dates').textContent = dates;
+      var coupon = topic === 'OFFER' ? f.coupon.value.trim() : '';
+      $('pv-coupon').hidden = !coupon; $('pv-coupon').textContent = 'קוד: ' + coupon;
+      $('pv-cta').hidden = !cta; $('pv-cta').textContent = cta ? $('post-cta').selectedOptions[0].textContent : '';
+    }
+    f.addEventListener('input', update); f.addEventListener('change', update); update();
+    $('post-photo').addEventListener('change', function () {
+      var file = this.files[0], img = $('pv-img');
+      $('post-photo-name').textContent = file ? file.name : 'JPG או PNG, עד 5MB';
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () { img.src = reader.result; img.hidden = false; };
+      reader.readAsDataURL(file);
+    });
+    $('post-copy').addEventListener('click', function () {
+      var t = $('post-text').value, b = this;
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { b.textContent = 'הועתק ✓'; setTimeout(function () { b.textContent = 'העתקת הטקסט'; }, 2000); }).catch(function () { $('post-text').select(); document.execCommand('copy'); });
+    });
+  })();
+  </script>`
+      : ''
+  }
+  <section class="card stack">
+    <h3>פוסטים שפורסמו</h3>
+    ${
+      posts.length
+        ? `<div class="post-list">${posts
+            .map(
+              (p) => `<article class="post-item">
+                <div class="row between"><span class="badge">${h(topics[p.topic] || p.topic)}</span><span class="muted small">${h(formatDate(p.created_at))}</span></div>
+                ${p.title ? `<b>${h(p.title)}</b>` : ''}
+                <p>${h(p.summary.length > 220 ? `${p.summary.slice(0, 220)}…` : p.summary)}</p>
+                <ul class="post-results">${results(p).map(resultLine).join('')}</ul>
+              </article>`,
+            )
+            .join('')}</div>`
+        : '<p class="muted">עוד לא פורסמו פוסטים מכאן. פוסט קבוע (פעם בשבוע-שבועיים) עוזר לעסק להופיע גבוה יותר בחיפוש במפות.</p>'
+    }
+  </section>`;
 }

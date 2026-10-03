@@ -83,6 +83,19 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
   router.get('/cookies', (req, res) => res.send(cookiesView({ signupOpen: signupOpen() })));
   router.get('/accessibility', (req, res) => res.send(accessibilityView({ signupOpen: signupOpen() })));
 
+  // Photos attached to Google posts: public, because Google fetches them by URL.
+  router.get('/m/:token', (req, res) => {
+    const img = store.postImage(String(req.params.token).replace(/\.\w+$/, ''));
+    if (!img) return res.status(404).send(errorPage('הקובץ לא נמצא'));
+    res.set({
+      'Content-Type': img.mime,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
+    res.send(Buffer.from(img.data));
+  });
+
   router.get('/logo/:id', (req, res) => {
     const logo = store.logoOf(Number(req.params.id));
     if (!logo) return res.status(404).send(errorPage('הקובץ לא נמצא'));

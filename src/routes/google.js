@@ -1,9 +1,11 @@
 import crypto from 'node:crypto';
 import express from 'express';
+import multer from 'multer';
+import { CTA_TYPES, googlePostBody, POST_TOPICS, readPost } from '../posts.js';
 import { AiError } from '../ai.js';
 import { GoogleError } from '../google.js';
 import { SerpError, writeReviewUrl } from '../serp.js';
-import { h, safeUrl } from '../util.js';
+import { h, imageMime, safeUrl } from '../util.js';
 import * as V from '../views/google.js';
 
 const STATE_COOKIE = 'gstate';
@@ -160,6 +162,103 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res.redirect(303, `/admin/google?err=${encodeURIComponent(humanError(err))}`);
     }
   }
+
+  // ---- posts to the Google Business Profile ----
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });
+  const withPhoto = (req, res, next) =>
+    upload.single('photo')(req, res, (err) => {
+      if (err?.code === 'LIMIT_FILE_SIZE') {
+        req.photoError = 'התמונה גדולה מדי (עד 5MB).';
+        req.body ||= {};
+        return next();
+      }
+      next(err);
+    });
+  const postLocations = (businessId) => store.googleLocations(businessId).filter((l) => l.source === 'gbp' && l.enabled);
+  const postsPage = (req, res, extra = {}) =>
+    render(
+      req,
+      res,
+      'פוסטים בגוגל',
+      V.googlePostsView({
+        posts: store.googlePosts(req.business.id),
+        locations: postLocations(req.business.id),
+        connected: Boolean(google && store.googleConnection(req.business.id)),
+        gbpAvailable: Boolean(google),
+        aiAvailable: Boolean(ctx.ai?.draftPost) && req.plan.ai,
+        csrf: req.user.csrf,
+        can: req.can,
+        topics: POST_TOPICS,
+        ctaTypes: CTA_TYPES,
+        businessName: req.business.name,
+        posted: req.query.posted ? store.googlePosts(req.business.id).find((p) => p.id === Number(req.query.posted)) : null,
+        ...extra,
+      }),
+    );
+
+  router.get('/google/posts', (req, res) => postsPage(req, res));
+
+  /** Keeps a chosen photo across the AI-draft round trip. */
+  function photoToken(req) {
+    if (req.file) {
+      const mime = imageMime(req.file.buffer);
+      if (!mime || !['image/jpeg', 'image/png'].includes(mime)) {
+        req.photoError = 'גוגל מקבלת רק תמונות JPG או PNG.';
+        return '';
+      }
+      return store.savePostImage(req.business.id, { mime, data: req.file.buffer });
+    }
+    const t = String(req.body.image_token ?? '').replace(/[^\w-]/g, '');
+    return t && store.postImage(t) ? t : '';
+  }
+
+  router.post('/google/posts/draft', manager, withPhoto, async (req, res) => {
+    const imageToken = photoToken(req);
+    const values = { ...req.body, image_token: imageToken };
+    if (!ctx.ai?.draftPost || !req.plan.ai) return postsPage(req, res, { values, error: 'עוזר ה-AI לא פעיל.' });
+    const idea = String(req.body.idea ?? '').trim().slice(0, 500) || String(req.body.summary ?? '').trim().slice(0, 1500);
+    if (!idea) return postsPage(req, res, { values, error: 'כתבו בכמה מילים על מה הפוסט, וה-AI ינסח.' });
+    try {
+      const { post } = readPost(req.body);
+      const summary = await ctx.ai.draftPost({
+        businessName: req.business.name,
+        idea,
+        topic: POST_TOPICS[post.topic],
+        title: post.title,
+        cta: post.ctaType ? CTA_TYPES[post.ctaType] : '',
+      });
+      postsPage(req, res, { values: { ...values, summary }, error: req.photoError || '' });
+    } catch (err) {
+      postsPage(req, res, { values, error: err instanceof AiError ? err.message : 'ה-AI לא הצליח לנסח, נסו שוב.' });
+    }
+  });
+
+  router.post('/google/posts', manager, withPhoto, async (req, res) => {
+    const imageToken = photoToken(req);
+    const values = { ...req.body, image_token: imageToken };
+    const { post, errors } = readPost(req.body);
+    if (req.photoError) errors.push(req.photoError);
+    const ids = [].concat(req.body.locations ?? []).map(Number);
+    const chosen = postLocations(req.business.id).filter((l) => ids.includes(l.id));
+    if (!google || !store.googleConnection(req.business.id)) errors.push('כדי לפרסם ישירות מכאן צריך לחבר את חשבון הגוגל של העסק.');
+    else if (!chosen.length) errors.push('בחרו לפחות סניף אחד לפרסום.');
+    if (errors.length) return postsPage(req, res, { values, error: errors.join(' ') });
+
+    const imageUrl = imageToken ? `${ctx.baseUrl(req)}/m/${imageToken}` : '';
+    let results;
+    try {
+      results = await sync.publishPost(req.business.id, chosen, googlePostBody(post, { imageUrl }));
+    } catch (err) {
+      return postsPage(req, res, { values, error: humanError(err) });
+    }
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length === results.length) {
+      const err = new GoogleError(failed[0].error, failed[0].status);
+      return postsPage(req, res, { values, error: humanError(err) });
+    }
+    const id = store.createGooglePost(req.business.id, { ...post, imageToken, results, createdBy: req.user.id });
+    res.redirect(303, `/admin/google/posts?posted=${id}`);
+  });
 
   // System admin only: what SerpApi actually returns for a place, to diagnose parsing.
   router.get('/google/locations/:id/debug', async (req, res) => {

@@ -186,6 +186,25 @@ export function createStore(db) {
       return r.total ? { total: r.total, avg: r.weighted / r.total, unanswered } : { total: 0, avg: 0, unanswered };
     },
 
+    // ---------- posts to Google Business Profile ----------
+    savePostImage(businessId, { mime, data }) {
+      const t = token(12);
+      q('INSERT INTO post_images (token, business_id, mime, data) VALUES (?, ?, ?, ?)').run(t, businessId, mime, data);
+      return t;
+    },
+    postImage: (t) => q('SELECT mime, data FROM post_images WHERE token = ?').get(String(t)) || null,
+    createGooglePost(businessId, f) {
+      return Number(
+        q(`INSERT INTO google_posts (business_id, topic, summary, title, starts_at, ends_at, coupon, terms, cta_type, cta_url, image_token, results, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          businessId, f.topic, f.summary, f.title, f.startsAt, f.endsAt, f.coupon, f.terms, f.ctaType, f.ctaUrl, f.imageToken,
+          JSON.stringify(f.results || []), f.createdBy ?? null,
+        ).lastInsertRowid,
+      );
+    },
+    googlePosts: (businessId, limit = 30) =>
+      q('SELECT * FROM google_posts WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
+
     // ---------- leads (quote requests) ----------
     createLead(f) {
       const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
