@@ -473,6 +473,42 @@ const MIGRATIONS = [
   ALTER TABLE invites ADD COLUMN wa_sent_at TEXT;
   CREATE INDEX idx_invites_wa_message ON invites(wa_message_id);
   `,
+  // v23: competitors followed through SerpApi, daily rating snapshots, monthly reports
+  `
+  CREATE TABLE competitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    data_id TEXT NOT NULL DEFAULT '',
+    place_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    rating REAL,
+    total INTEGER,
+    recent30 INTEGER,
+    recent_capped INTEGER NOT NULL DEFAULT 0,
+    checked_at TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_competitors_business ON competitors(business_id);
+  CREATE TABLE place_snapshots (
+    kind TEXT NOT NULL,
+    ref_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    rating REAL,
+    total INTEGER,
+    PRIMARY KEY (kind, ref_id, day)
+  );
+  CREATE TABLE monthly_reports (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    month TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, month)
+  );
+  ALTER TABLE businesses ADD COLUMN monthly_report INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE businesses ADD COLUMN last_monthly_report TEXT;
+  `,
 ];
 
 function migrate(db) {

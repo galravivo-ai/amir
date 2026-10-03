@@ -354,6 +354,7 @@ export function createStore(db) {
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
+        'monthly_report', 'last_monthly_report',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -997,6 +998,66 @@ export function createStore(db) {
     whatsAppSentThisMonth: (businessId) =>
       q(`SELECT COUNT(*) AS n FROM invites i JOIN campaigns c ON c.id = i.campaign_id
          WHERE c.business_id = ? AND i.wa_sent_at >= strftime('%Y-%m-01 00:00:00', 'now')`).get(businessId).n,
+
+    // ---------- competitors ----------
+    competitorsFor: (businessId) => q('SELECT * FROM competitors WHERE business_id = ? ORDER BY id').all(businessId),
+    competitorById: (businessId, id) => q('SELECT * FROM competitors WHERE business_id = ? AND id = ?').get(businessId, id) || null,
+    addCompetitor(businessId, { dataId = '', placeId = '', title = '', address = '' }) {
+      const found = q('SELECT * FROM competitors WHERE business_id = ? AND ((data_id != \'\' AND data_id = ?) OR (place_id != \'\' AND place_id = ?))').get(
+        businessId, dataId, placeId,
+      );
+      if (found) return found;
+      const id = q('INSERT INTO competitors (business_id, data_id, place_id, title, address) VALUES (?, ?, ?, ?, ?)').run(
+        businessId, dataId, placeId, title, address,
+      ).lastInsertRowid;
+      return q('SELECT * FROM competitors WHERE id = ?').get(id);
+    },
+    deleteCompetitor: (businessId, id) => q('DELETE FROM competitors WHERE business_id = ? AND id = ?').run(businessId, id),
+    updateCompetitor(id, f) {
+      const keys = ['title', 'address', 'rating', 'total', 'recent30', 'recent_capped', 'checked_at', 'error'].filter((k) => f[k] !== undefined);
+      if (keys.length) q(`UPDATE competitors SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => (typeof f[k] === 'boolean' ? Number(f[k]) : f[k])), id);
+    },
+    /** Competitors not checked for `hours`, of businesses that aren't paused. */
+    competitorsDue: (hours) =>
+      q(`SELECT c.* FROM competitors c JOIN businesses b ON b.id = c.business_id
+         WHERE b.billing != 'paused' AND (c.checked_at IS NULL OR c.checked_at <= ?) ORDER BY c.checked_at IS NOT NULL, c.checked_at`).all(sqlTime(-hours * 3600e3)),
+    /** One rating / count reading a day, for trends ("competitor" or "location"). */
+    snapshot: (kind, refId, { rating, total }, day = sqlTime().slice(0, 10)) =>
+      q('INSERT OR REPLACE INTO place_snapshots (kind, ref_id, day, rating, total) VALUES (?, ?, ?, ?, ?)').run(kind, refId, day, rating, total),
+    /** The latest reading on or before `day`, else null. */
+    snapshotOnOrBefore: (kind, refId, day) =>
+      q('SELECT * FROM place_snapshots WHERE kind = ? AND ref_id = ? AND day <= ? ORDER BY day DESC LIMIT 1').get(kind, refId, day) || null,
+    /** Google reviews the business's places got in [fromIso, toIso). */
+    googleReviewCount: (locationId, fromIso, toIso = '9999-12-31T23:59:59Z') =>
+      q('SELECT COUNT(*) AS n FROM google_reviews WHERE location_id = ? AND create_time >= ? AND create_time < ?').get(locationId, fromIso, toIso).n,
+
+    // ---------- monthly report ----------
+    monthlyReport: (businessId, month) => q('SELECT * FROM monthly_reports WHERE business_id = ? AND month = ?').get(businessId, month) || null,
+    saveMonthlyReport: (businessId, month, summary) =>
+      q('INSERT OR REPLACE INTO monthly_reports (business_id, month, summary) VALUES (?, ?, ?)').run(businessId, month, summary),
+    /** The best and the worst things customers wrote in [from, to): survey comments and Google reviews. */
+    highlights(businessId, { from, to, limit = 3 }) {
+      const sqlAt = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+      const iso = (ms) => new Date(ms).toISOString();
+      const pick = (good) =>
+        q(`SELECT * FROM (
+             SELECT r.comment AS text, r.rating, r.customer_name AS name, 'survey' AS source, r.created_at AS at
+             FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+             WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? AND length(r.comment) >= 15 AND r.rating ${good ? '>= 5' : '<= 2'}
+             UNION ALL
+             SELECT g.comment, g.rating, g.reviewer, 'google', g.create_time
+             FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+             WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? AND g.create_time < ? AND length(g.comment) >= 15 AND g.rating ${good ? '>= 5' : '<= 2'}
+           ) ORDER BY length(text) BETWEEN 40 AND 280 DESC, at DESC LIMIT ?`)
+          .all(businessId, sqlAt(from), sqlAt(to), businessId, iso(from), iso(to), limit * 4)
+          // The same words twice (a survey comment also posted on Google) show once.
+          .filter((r, i, all) => all.findIndex((x) => x.text.trim() === r.text.trim()) === i)
+          .slice(0, limit);
+      return { good: pick(true), bad: pick(false) };
+    },
+    /** Businesses whose report for `month` wasn't sent yet. */
+    monthlyReportsDue: (month) =>
+      q("SELECT * FROM businesses WHERE monthly_report = 1 AND billing != 'paused' AND (last_monthly_report IS NULL OR last_monthly_report < ?)").all(month),
 
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),

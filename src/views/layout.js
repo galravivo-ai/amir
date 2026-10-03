@@ -106,6 +106,8 @@ ${SKIP()}
     ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
     ['/admin/insights', 'תובנות AI', 'spark'],
     ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
+    ['/admin/competitors', 'מתחרים', 'rivals'],
+    ['/admin/reports/monthly', 'דוח חודשי', 'report'],
     ['/admin/responses', 'תגובות מסקרים', 'inbox'],
     ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
     ['/admin/poster', 'עיצוב שלט QR', 'print'],

@@ -203,6 +203,34 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** Last month in numbers, with a link to the full (printable) report. */
+    async monthlyReport({ business, range, report: r, summary = '' }) {
+      const color = safeColor(business.brand_color);
+      const row = (label, value) =>
+        `<tr><td style="padding:6px 0;color:#6b7280">${h(label)}</td><td style="padding:6px 0;font-weight:bold">${value}</td></tr>`;
+      const one = (v) => (v ? v.toFixed(1) : '—');
+      return mailer.send({
+        kind: 'monthly_report',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `הדוח החודשי של ${business.name} · ${range.label}`,
+        html: emailLayout({
+          color,
+          title: `${range.label} ב${business.name}`,
+          body: `${summary ? `<p style="background:#f5f3ff;padding:12px 14px;border-radius:10px;line-height:1.7">${h(summary).replace(/\n+/g, '<br>')}</p>` : ''}
+            <table style="width:100%;border-collapse:collapse">
+              ${row('הדירוג בגוגל', `${one(r.google.avg)} ★ (${r.google.total.toLocaleString('he-IL')} ביקורות)`)}
+              ${row('ביקורות חדשות בגוגל', `${r.google.count} (בחודש הקודם ${r.googlePrev.count})`)}
+              ${row('דירוגים בסקר', `${r.surveys.responses}${r.surveys.responses ? `, ממוצע ${one(r.surveys.avgRating)} ★` : ''}`)}
+              ${row('לקוחות לא מרוצים', String(r.surveys.negative))}
+              ${r.competitors.position ? row('מול המתחרים', `מקום ${r.competitors.position.rank} מתוך ${r.competitors.position.of}`) : ''}
+              ${r.visibility ? row('נראות ב-AI', `הוזכרתם ב-${r.visibility.mentioned}% מהתשובות`) : ''}
+            </table>
+            ${emailButton(url(`/admin/reports/monthly?month=${range.month}`), 'לדוח המלא (אפשר לשמור כ-PDF)', color)}`,
+        }),
+      });
+    },
+
     /** A card renewal failed, the account was paused, or a cancelled plan ended. */
     async billingNotice({ business, kind, error = '' }) {
       const texts = {

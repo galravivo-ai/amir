@@ -60,6 +60,7 @@ export function settingsRoutes(ctx) {
     store.updateBusiness(req.business.id, {
       alert_negative: req.body.alert_negative === '1',
       weekly_report: req.body.weekly_report === '1',
+      monthly_report: req.body.monthly_report === '1',
       followup_auto: req.body.followup_auto === '1',
       alert_emails: emailList(req.body.alert_emails).join(', '),
       sla_hours: clampInt(req.body.sla_hours, 0, 720, 24),

@@ -88,6 +88,7 @@ export function businessView({ business, csrf, plan, error = '' }) {
       <h3>התראות וזמני טיפול</h3>
       <label class="check"><input type="checkbox" name="alert_negative" value="1" ${checked(business.alert_negative)}> מייל מיידי על כל לקוח לא מרוצה</label>
       <label class="check"><input type="checkbox" name="weekly_report" value="1" ${checked(business.weekly_report)}> דוח שבועי במייל (ימי ראשון בבוקר)</label>
+      <label class="check"><input type="checkbox" name="monthly_report" value="1" ${checked(business.monthly_report)}> דוח חודשי במייל (בתחילת כל חודש)</label>
       <label class="check"><input type="checkbox" name="followup_auto" value="1" ${checked(business.followup_auto)}> כשפנייה מסומנת "טופל", לשלוח ללקוח במייל שאלה אם הטיפול עזר</label>
       <label>למי לשלוח
         <input name="alert_emails" dir="ltr" value="${h(business.alert_emails)}" placeholder="ריק = כל הבעלים והמנהלים בצוות">
@@ -517,6 +518,7 @@ const MAIL_KINDS = {
   negative_alert: 'התראת לקוח לא מרוצה',
   sla_alert: 'פנייה באיחור',
   weekly_report: 'דוח שבועי',
+  monthly_report: 'דוח חודשי',
   customer_invite: 'בקשת דירוג ללקוח',
   customer_reminder: 'תזכורת ללקוח',
   team_invite: 'הזמנה לצוות',

@@ -1,5 +1,7 @@
 import { backupDb, lastBackupAge } from './backup.js';
-import { accessOf, PLANS } from './plans.js';
+import { accessOf, planOf, PLANS } from './plans.js';
+import { buildReport, lastMonth, monthRange } from './report.js';
+import { monthlySummary } from './routes/reports.js';
 import { sendWhatsAppInvite } from './whatsapp.js';
 
 /**
@@ -7,7 +9,7 @@ import { sendWhatsAppInvite } from './whatsapp.js';
  * Every job is idempotent (it records what it sent), so running it more often
  * or after a restart never sends duplicates.
  */
-export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, whatsapp = null, now = () => new Date(), backups = true }) {
+export function createJobs({ store, notifier, ai = null, googleSync = null, serpSync = null, visibility = null, billing = null, whatsapp = null, competitors = null, ctx = null, now = () => new Date(), backups = true }) {
   async function inviteReminders() {
     let sent = 0;
     for (const invite of store.invitesDueForReminder()) {
@@ -123,6 +125,24 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return sent;
   }
 
+  /** In the first days of a month, from 08:00 Israel time: last month's report by email, once. */
+  async function monthlyReports() {
+    const t = now();
+    const local = new Date(t.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+    if (local.getDate() > 5 || local.getHours() < 8) return 0;
+    const range = monthRange(lastMonth(t.getTime()), t.getTime());
+    let sent = 0;
+    for (const business of store.monthlyReportsDue(range.month)) {
+      store.updateBusiness(business.id, { last_monthly_report: range.month });
+      if (accessOf(business).state === 'paused') continue;
+      const report = buildReport(store, business, range, t.getTime());
+      if (report.empty) continue;
+      const summary = ctx ? await monthlySummary(ctx, business, range, report, planOf(business).ai) : { text: '' };
+      if (await notifier.monthlyReport({ business, range, report, summary: summary.text })) sent++;
+    }
+    return sent;
+  }
+
   /** Weekly: do AI answers mention the business? */
   async function aiVisibility() {
     return visibility ? visibility.runDue() : 0;
@@ -140,6 +160,11 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return billing ? billing.renewDue() : 0;
   }
 
+  /** Competitors every few days (one SerpApi search each), and today's reading of the business's own places. */
+  async function competitorChecks() {
+    return competitors ? competitors.runDue() : 0;
+  }
+
   /** One automatic backup a day (kept next to the database; copy offsite too). */
   async function dailyBackup() {
     if (!backups || lastBackupAge() < 23 * 3600e3) return 0;
@@ -150,7 +175,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, aiVisibility, weeklyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, competitorChecks, aiVisibility, weeklyReports, monthlyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -163,6 +188,8 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   return {
     renewals,
+    competitorChecks,
+    monthlyReports,
     scheduledInvites,
     scheduledWhatsApp,
     aiTagging,
