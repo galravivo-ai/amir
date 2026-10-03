@@ -1055,3 +1055,12 @@ a.biz-card:hover { background: #352a88; }
 .hl-desc h4 { margin: 0; color: var(--ink); }
 .hl-desc textarea { width: 100%; background: #fff; }
 .hl-desc .btn { justify-self: start; }
+
+/* this week's tasks */
+.tasks-card h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.tasks { list-style: none; counter-reset: t; padding: 0; margin: 0; display: grid; gap: 10px; }
+.tasks li { counter-increment: t; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; flex-wrap: wrap; }
+.tasks li::before { content: counter(t); width: 28px; height: 28px; border-radius: 50%; background: var(--purple); color: #fff; display: grid; place-items: center; font-weight: 800; flex: none; }
+.task-body { flex: 1 1 260px; display: grid; gap: 2px; }
+.task-actions { display: flex; align-items: center; gap: 10px; }
+.small-btn { padding: 6px 14px; font-size: .9rem; }

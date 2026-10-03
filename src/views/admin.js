@@ -190,6 +190,29 @@ function sendDialog(campaigns, csrf, template, waAuto = null) {
   <div id="wa-sent" class="toast" role="status" hidden>וואטסאפ נפתח בחלון חדש. אפשר לשלוח ללקוח הבא.</div>`;
 }
 
+/** This week's three things to do, each with a link and a "done" button. */
+function tasksCard(tasks, csrf) {
+  if (!tasks.length) return '';
+  return `<section class="card tasks-card" id="tasks">
+    <h3>${icon('check', 20)} המשימות השבוע</h3>
+    <ol class="tasks">${tasks
+      .map(
+        (t) => `<li>
+          <div class="task-body"><b>${h(t.title)}</b><span class="muted small">${h(t.why)}</span></div>
+          <div class="task-actions">
+            ${
+              t.action === 'wa'
+                ? `<button type="button" class="btn small-btn" onclick="var d=document.getElementById('wa-send');if(d)d.showModal();else location.href='/admin/campaigns'">לשליחה</button>`
+                : `<a class="btn small-btn" href="${h(t.href)}">לביצוע</a>`
+            }
+            <form method="post" action="/admin/tasks/${encodeURIComponent(t.key)}/done">${csrfField(csrf)}<button class="btn-link" title="יוסתר עד השבוע הבא">בוצע ✓</button></form>
+          </div>
+        </li>`,
+      )
+      .join('')}</ol>
+  </section>`;
+}
+
 /** One row in a mixed list of survey answers and Google reviews. */
 function feedRow(item) {
   const name = item.name || 'לקוח/ה';
@@ -247,6 +270,7 @@ export function dashboardView({
   sendError = false,
   waAuto = null,
   waResult = null,
+  tasks = [],
 }) {
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
   const hasGoogle = g.total > 0 || g.count > 0;
@@ -370,6 +394,7 @@ export function dashboardView({
   return `${cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${checklist}
+    ${tasksCard(tasks, csrf)}
     ${
       stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${

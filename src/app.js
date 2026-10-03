@@ -87,6 +87,7 @@ export function createApp(db, options = {}) {
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   ctx.billing = billing;
+  ctx.serp = serp;
   const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
   ctx.whatsapp = whatsapp;
   const app = express();

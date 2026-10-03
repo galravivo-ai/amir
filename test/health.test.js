@@ -88,3 +88,22 @@ test('the profile page: check, score, fixes and AI advice', async () => {
   // Weekly: not due again right away.
   assert.equal(await created.jobs.profileHealth(), 0);
 });
+
+test('this week\'s tasks: picked from the data, gone when done', async () => {
+  const { weekKey } = await import('../src/tasks.js');
+  assert.equal(weekKey(Date.parse('2026-10-03T10:00:00Z')), '2026-09-27', 'Saturday belongs to the week that began on Sunday');
+  assert.equal(weekKey(Date.parse('2026-10-03T22:30:00Z')), '2026-10-04', 'Sunday 00:30 in Israel starts a new week');
+
+  const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+  let page = (await req('/admin')).text;
+  assert.match(page, /המשימות השבוע/);
+  assert.match(page, /ליצור קמפיין ושלט QR/);
+  assert.match(page, /לענות לביקורת שמחכה בגוגל/);
+  assert.match(page, /לשפר בפרופיל: מספר טלפון/);
+  assert.equal((page.match(/<li>\s*<div class="task-body">/g) || []).length, 3, 'three at most');
+
+  assert.equal((await req('/admin/tasks/campaign/done', { method: 'POST', form: { _csrf: token } })).location, '/admin#tasks');
+  page = (await req('/admin')).text;
+  assert.doesNotMatch(page, /ליצור קמפיין ושלט QR/);
+  assert.match(page, /להוסיף 2-3 מתחרים|לבקש דירוג/, 'the next one moves up');
+});

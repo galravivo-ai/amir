@@ -10,6 +10,7 @@ import { templateQuestions, TEMPLATES } from '../templates.js';
 import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, normalizeInviteTemplate, safeUrl, waLink, waNumber } from '../util.js';
 import { parseJson } from '../db.js';
 import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
+import { weekKey, weeklyTasks } from '../tasks.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
 
@@ -31,6 +32,11 @@ export function adminRoutes(ctx) {
   admin.post('/onboarding/dismiss', manager, (req, res) => {
     store.setOnboardingFlag(req.business.id, 'dismissed');
     res.redirect(303, '/admin');
+  });
+
+  admin.post('/tasks/:key/done', (req, res) => {
+    store.markTaskDone(req.business.id, weekKey(), String(req.params.key).slice(0, 60));
+    res.redirect(303, '/admin#tasks');
   });
 
   admin.get('/', (req, res) => {
@@ -70,6 +76,7 @@ export function adminRoutes(ctx) {
         onboarding,
         csrf: req.user.csrf,
         sendError: req.query.send === 'bad',
+        tasks: req.can('manager') ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp), aiOn: Boolean(ctx.ai) && req.plan.ai }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
         waResult: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,
       }),
