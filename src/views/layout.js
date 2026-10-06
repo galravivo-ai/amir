@@ -221,8 +221,17 @@ ${SKIP()}
 <head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
 <body class="app">
 ${SKIP()}
-<aside class="sidebar">
-  <a class="side-brand" href="/admin">${mark(34)}<span>${wordmark(brand)}</span></a>
+<header class="m-top">
+  <button type="button" class="m-burger" aria-label="פתיחת התפריט" aria-controls="sidebar" aria-expanded="false">${icon('menu', 22)}</button>
+  <a class="m-brand" href="/admin">${mark(28)}<span>${wordmark(brand)}</span></a>
+  <a class="m-user" href="/account" aria-label="החשבון שלי">${icon('user', 20)}</a>
+</header>
+<div class="nav-scrim" hidden></div>
+<aside class="sidebar" id="sidebar">
+  <div class="side-head">
+    <a class="side-brand" href="/admin">${mark(34)}<span>${wordmark(brand)}</span></a>
+    <button type="button" class="m-close" aria-label="סגירת התפריט">${icon('close', 22)}</button>
+  </div>
   ${bizBlock}
   <nav class="side-nav" aria-label="ניווט ראשי">
     ${groups.map((g) => navGroup(g, current)).join('')}
@@ -232,6 +241,10 @@ document.querySelectorAll('.nav-group[data-g]').forEach(function(g){var k=g.getA
 function set(c){g.classList.toggle('folded',c);b.setAttribute('aria-expanded',String(!c))}
 if(!g.classList.contains('has-active')&&typeof s[k]==='boolean')set(s[k]);
 b.addEventListener('click',function(){var c=!g.classList.contains('folded');set(c);s[k]=c;try{localStorage.setItem('gf-nav',JSON.stringify(s))}catch(e){}})})})();</script>
+  <script>(function(){var b=document.body,o=document.querySelector('.m-burger'),sc=document.querySelector('.nav-scrim');
+function t(open){b.classList.toggle('nav-open',open);o.setAttribute('aria-expanded',String(open));sc.hidden=!open;if(open)document.querySelector('.m-close').focus()}
+o.addEventListener('click',function(){t(true)});sc.addEventListener('click',function(){t(false)});document.querySelector('.m-close').addEventListener('click',function(){t(false);o.focus()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList.contains('nav-open')){t(false);o.focus()}})})();</script>
   ${usageBlock}
   <form method="post" action="/logout" class="side-user">
     <input type="hidden" name="_csrf" value="${h(csrf)}">
