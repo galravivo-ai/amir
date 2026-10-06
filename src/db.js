@@ -555,6 +555,16 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_rank_checks_keyword ON rank_checks(keyword_id, id);
   `,
+  // v26: monthly usage of the actions a user starts (AI drafts, checks on demand)
+  `
+  CREATE TABLE usage_counts (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    month TEXT NOT NULL,
+    action TEXT NOT NULL,
+    n INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (business_id, month, action)
+  );
+  `,
 ];
 
 function migrate(db) {

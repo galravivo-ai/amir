@@ -1075,6 +1075,16 @@ export function createStore(db) {
          WHERE l.enabled = 1 AND b.billing != 'paused'
            AND COALESCE((SELECT MAX(run_at) FROM rank_checks c WHERE c.keyword_id = k.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
 
+    // ---------- usage limits ----------
+    usageFor: (businessId, month) =>
+      Object.fromEntries(q('SELECT action, n FROM usage_counts WHERE business_id = ? AND month = ?').all(businessId, month).map((r) => [r.action, r.n])),
+    /** Adds n (or takes it back when negative); never below zero. */
+    addUsage(businessId, month, action, n = 1) {
+      q(`INSERT INTO usage_counts (business_id, month, action, n) VALUES (?, ?, ?, MAX(?, 0))
+         ON CONFLICT(business_id, month, action) DO UPDATE SET n = MAX(n + ?, 0)`).run(businessId, month, action, n, n);
+    },
+    resetUsage: (businessId, month) => q('DELETE FROM usage_counts WHERE business_id = ? AND month = ?').run(businessId, month),
+
     // ---------- weekly tasks ----------
     tasksDone: (businessId, week) => q('SELECT task FROM weekly_tasks_done WHERE business_id = ? AND week = ?').all(businessId, week).map((r) => r.task),
     markTaskDone: (businessId, week, task) => q('INSERT OR IGNORE INTO weekly_tasks_done (business_id, week, task) VALUES (?, ?, ?)').run(businessId, week, task),

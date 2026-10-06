@@ -12,6 +12,7 @@ import { createCardcom } from './cardcom.js';
 import { createBilling } from './billing.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { createWhatsApp } from './whatsapp.js';
+import { createUsage } from './usage.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { reportRoutes } from './routes/reports.js';
@@ -91,6 +92,7 @@ export function createApp(db, options = {}) {
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   ctx.billing = billing;
   ctx.serp = serp;
+  ctx.usage = createUsage(store);
   const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
   ctx.whatsapp = whatsapp;
   const app = express();

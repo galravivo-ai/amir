@@ -16,7 +16,7 @@ function grid(points) {
     .join('')}</div>`;
 }
 
-export function rankingsView({ keywords, checks, locations, limit, running, available, csrf, can, error = '', notice = '' }) {
+export function rankingsView({ keywords, checks, locations, limit, running, available, csrf, can, runsLeft = null, error = '', notice = '' }) {
   const cards = keywords
     .map((k) => {
       const [last, prev] = (checks.get(k.id) || []).filter((c) => !c.error);
@@ -86,7 +86,7 @@ export function rankingsView({ keywords, checks, locations, limit, running, avai
       ${
         can('manager') && available && keywords.length
           ? `<form method="post" action="/admin/rankings/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn primary" ${running ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</button></form>`
+              <button class="btn primary" ${running || (runsLeft != null && runsLeft < keywords.length) ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
           : ''
       }</div>
     <p class="page-intro">כשמישהו ליד העסק מחפש בגוגל מפות "בית קפה", באיזה מקום אתם מופיעים? בודקים מ-9 נקודות סביב העסק, כי התוצאות משתנות לפי איפה המחפש עומד. ירוק זה שלושת הראשונים, המקומות שרוב האנשים לוחצים עליהם.</p>

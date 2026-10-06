@@ -1,4 +1,5 @@
 import express from 'express';
+import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
 import { CYCLES, limitLabel, PLANS, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
@@ -261,6 +262,7 @@ export function settingsRoutes(ctx) {
         csrf: req.user.csrf,
         can: req.can,
         cardBilling: Boolean(ctx.billing),
+        actionUsage: usageOf(store, req.business),
         payments: store.paymentsFor(req.business.id, 12).filter((p) => p.status !== 'pending'),
         notice: req.query.paid
           ? 'התשלום עבר. המסלול פעיל, והחשבונית נשלחה למייל.'
@@ -310,6 +312,8 @@ export function settingsRoutes(ctx) {
         answers: Object.entries(parseJson(r.answers, {})).map(([k, v]) => [labels[k] || k, [].concat(v).join(', ')]),
       };
     });
+    const over = ctx.usage.take(req.business, 'insights');
+    if (over) return fail(over);
     try {
       const content = await ctx.ai.summarize({ businessName: req.business.name, days, rows: prepared });
       store.saveInsight({
@@ -322,6 +326,7 @@ export function settingsRoutes(ctx) {
       });
       res.redirect(303, '/admin/insights');
     } catch (err) {
+      ctx.usage.give(req.business, 'insights');
       if (!(err instanceof AiError)) return next(err);
       fail(err.message);
     }

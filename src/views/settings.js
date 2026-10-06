@@ -6,6 +6,7 @@ import { agenciesAdminBlock } from './agency.js';
 import { icon } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { LEAD_KINDS, operatorInfo } from './site.js';
+import { ACTIONS as ACTION_LABELS } from '../usage.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -343,7 +344,7 @@ const PAYMENT_KINDS = { checkout: 'תשלום', renewal: 'חידוש', upgrade: 
 
 export function planView({
   business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false,
-  cardBilling = false, payments = [], notice = '', error = '',
+  cardBilling = false, payments = [], notice = '', error = '', actionUsage = null,
 }) {
   const meter = (label, used, max) => {
     if (max === Infinity) {
@@ -421,6 +422,14 @@ export function planView({
     ${meter('משתמשים בצוות', usage.members, plan.teamMembers)}
     ${meter('דירוגים החודש', usage.responses, plan.monthlyResponses)}
   </section>
+  ${
+    actionUsage
+      ? `<section class="card stack"><h3>שימוש החודש</h3>
+          <p class="muted small">פעולות שמפעילים בלחיצה. מה שרץ לבד (בדיקות שבועיות, סנכרון ביקורות) לא נספר כאן. מתאפס ב-1 לכל חודש.</p>
+          ${Object.entries(ACTION_LABELS).map(([k, label]) => meter(label, actionUsage[k].used, actionUsage[k].limit)).join('')}
+        </section>`
+      : ''
+  }
   <section class="card stack">
     <h3>המסלולים</h3>
     ${can('owner') ? '' : '<p class="muted">רק בעלי העסק יכולים לבחור מסלול.</p>'}
@@ -549,6 +558,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
           .join('')}</select>
         <button class="btn" name="do" value="activate">הפעלה</button>
         <button class="btn-link" name="do" value="extend">+7 ימי ניסיון</button>
+        <button class="btn-link" formaction="/superadmin/businesses/${b.id}/reset-usage" title="מאפס את מגבלות הפעולות הידניות לחודש הזה">איפוס מגבלות</button>
         ${accessOf(b).state === 'paused' ? '' : '<button class="btn-link danger-text" name="do" value="pause">השהיה</button>'}
       </form>
       ${

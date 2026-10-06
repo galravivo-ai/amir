@@ -29,6 +29,7 @@ export function visibilityRoutes(ctx, { visibility }) {
         // The upgrade is offered once at least one of the wider engines is set up.
         plusOffer: visibility.engines().some((e) => PLUS_ENGINES.includes(e)) ? AI_PLUS : null,
         running: running.has(req.business.id),
+        runsLeft: ctx.usage.left(req.business, 'visibility_run'),
         aiAvailable: Boolean(ctx.ai?.suggestQueries) && req.plan.ai,
         csrf: req.user.csrf,
         can: req.can,
@@ -62,10 +63,13 @@ export function visibilityRoutes(ctx, { visibility }) {
 
   router.post('/ai-visibility/suggest', manager, async (req, res) => {
     if (!ctx.ai?.suggestQueries || !req.plan.ai) return page(req, res, { error: 'עוזר ה-AI לא פעיל.' });
+    const over = ctx.usage.take(req.business, 'ai_draft');
+    if (over) return page(req, res, { error: over });
     try {
       const suggested = await ctx.ai.suggestQueries({ businessName: req.business.name, about: String(req.body.about ?? '').slice(0, 120), city: req.business.ai_city });
       page(req, res, { suggested, notice: 'אלה שאלות מוצעות. אפשר לערוך, ואז לשמור.' });
     } catch {
+      ctx.usage.give(req.business, 'ai_draft');
       page(req, res, { error: 'ה-AI לא הצליח להציע שאלות, נסו שוב.' });
     }
   });
@@ -73,6 +77,8 @@ export function visibilityRoutes(ctx, { visibility }) {
   router.post('/ai-visibility/run', manager, (req, res) => {
     const id = req.business.id;
     if (!running.has(id) && parseJson(req.business.ai_queries, []).length && visibility.engines(req.business).length) {
+      const over = ctx.usage.take(req.business, 'visibility_run');
+      if (over) return page(req, res, { error: over });
       running.add(id);
       visibility
         .runBusiness(store.businessById(id))

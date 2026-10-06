@@ -223,6 +223,8 @@ export function adminRoutes(ctx) {
     if (!ctx.ai || !req.plan.ai) return res.status(403).send(errorPage('עוזר ה-AI לא זמין בתוכנית הנוכחית'));
     const labels = Object.fromEntries(normalizeQuestions(parseJson(r.campaign_questions, [])).map((q) => [q.id, q.label]));
     const answers = Object.entries(parseJson(r.answers, {})).map(([k, v]) => [labels[k] || k, [].concat(v).join(', ')]);
+    const over = ctx.usage.take(req.business, 'ai_draft');
+    if (over) return res.redirect(303, `/admin/responses/${r.id}?aierr=${encodeURIComponent(over)}`);
     try {
       const text = await ctx.ai.draftReply({
         businessName: req.business.name,
@@ -234,6 +236,7 @@ export function adminRoutes(ctx) {
       store.setAiDraft(r.id, text.slice(0, 4000));
       res.redirect(303, `/admin/responses/${r.id}#draft`);
     } catch (err) {
+      ctx.usage.give(req.business, 'ai_draft');
       if (!(err instanceof AiError)) return next(err);
       res.redirect(303, `/admin/responses/${r.id}?aierr=${encodeURIComponent(err.message)}`);
     }

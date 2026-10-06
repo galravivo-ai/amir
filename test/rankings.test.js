@@ -97,3 +97,32 @@ test('follow a search: a grid of ranks, the average, and who leads', async () =>
   await req(`/admin/rankings/${k.id}/delete`, { method: 'POST', form: { _csrf: token } });
   assert.equal(created.store.rankKeywords(biz.id).length, 0);
 });
+
+test('monthly limits on actions started by hand', async () => {
+  const { monthKey, usageOf } = await import('../src/usage.js');
+  const biz = created.store.businessesFor(created.store.userByEmail('rk@example.com').id)[0];
+  const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+  created.store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
+  const loc = created.store.googleLocations(biz.id)[0];
+  created.store.resetUsage(biz.id, monthKey());
+
+  // Basic: 2 manual map checks a month; adding a search counts its first check.
+  await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'קפה', location: String(loc.id), radius: '500' } });
+  for (let i = 0; i < 50 && created.store.rankChecks(created.store.rankKeywords(biz.id)[0].id, 1).length === 0; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.equal(usageOf(created.store, created.store.businessById(biz.id)).rank_run.used, 1);
+  await new Promise((r) => setTimeout(r, 50));
+  await req('/admin/rankings/run', { method: 'POST', form: { _csrf: token } });
+  for (let i = 0; i < 50 && created.store.rankChecks(created.store.rankKeywords(biz.id)[0].id, 5).length < 2; i++) await new Promise((r) => setTimeout(r, 20));
+  await new Promise((r) => setTimeout(r, 50));
+  const over = await req('/admin/rankings/run', { method: 'POST', form: { _csrf: token } });
+  assert.match(over.text, /הגעתם למגבלה החודשית/);
+  assert.match((await req('/admin/rankings')).text, /נשארו 0 בדיקות ידניות החודש/);
+
+  // Shown on the plan page; a system admin can reset it.
+  const plan = (await req('/admin/plan')).text;
+  assert.match(plan, /שימוש החודש/);
+  assert.match(plan, /בדיקת מיקום במפות ידנית \(לכל חיפוש\)<\/span><span>2 \/ 2/);
+  created.store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('rk@example.com');
+  await req(`/superadmin/businesses/${biz.id}/reset-usage`, { method: 'POST', form: { _csrf: token } });
+  assert.equal(usageOf(created.store, created.store.businessById(biz.id)).rank_run.used, 0);
+});

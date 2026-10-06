@@ -29,7 +29,7 @@ function tipsBlock(tips, id) {
     .join('');
 }
 
-export function healthView({ audits, locations, running, csrf, can, available, aiOn, notice = '' }) {
+export function healthView({ audits, locations, running, csrf, can, available, aiOn, runsLeft = null, notice = '', error = '' }) {
   const byLoc = new Map(audits.map((a) => [a.location_id, a]));
   const cards = locations
     .map((loc) => {
@@ -63,11 +63,12 @@ export function healthView({ audits, locations, running, csrf, can, available, a
       ${
         can('manager') && available && locations.length
           ? `<form method="post" action="/admin/profile/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn primary ai-btn" ${running ? 'disabled' : ''}>${icon('spark', 16)} <span>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</span></button></form>`
+              <button class="btn primary ai-btn" ${running || runsLeft === 0 ? 'disabled' : ''}>${icon('spark', 16)} <span>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</span></button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
           : ''
       }</div>
     <p class="page-intro">גוגל מציגה גבוה יותר עסקים עם פרופיל מלא ופעיל: ביקורות טריות, מענה ללקוחות, שעות, תמונות ותיאור. כאן רואים מה חסר בפרופיל שלכם ומה לעשות קודם. הבדיקה רצה לבד פעם בשבוע.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
+    ${error ? `<div class="error">${h(error)}</div>` : ''}
     ${running ? '<div class="warn">הבדיקה רצה עכשיו, זה לוקח עד דקה. הדף יתרענן לבד.</div><script>setTimeout(function(){location.replace(location.pathname)},10000)</script>' : ''}
     ${available ? '' : '<div class="warn">הבדיקה עובדת דרך SerpApi. מנהל המערכת מגדיר אותו ב-Railway (SERPAPI_KEY).</div>'}
     ${

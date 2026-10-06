@@ -1,4 +1,5 @@
 import express from 'express';
+import { monthKey } from '../usage.js';
 import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
 
@@ -104,6 +105,13 @@ export function superadminRoutes(ctx) {
     if (!ctx.ai?.ping) return res.redirect(303, '/superadmin?ai=err&t=' + encodeURIComponent('ANTHROPIC_API_KEY לא מוגדר בשרת (או שהשרת לא הופעל מחדש אחרי ההוספה).'));
     const r = await ctx.ai.ping();
     res.redirect(303, `/superadmin?ai=${r.ok ? 'ok' : 'err'}&t=${encodeURIComponent(r.ok ? r.text : r.error)}#ai`);
+  });
+
+  // A fresh month of manual actions for one business (a mistake, or a good customer).
+  router.post('/businesses/:id/reset-usage', (req, res) => {
+    const business = store.businessById(Number(req.params.id));
+    if (business) store.resetUsage(business.id, monthKey());
+    res.redirect(303, '/superadmin?ok=1#businesses');
   });
 
   router.post('/leads/:id', (req, res) => {

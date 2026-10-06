@@ -16,6 +16,8 @@ export function healthRoutes(ctx, { health }) {
         audits: store.latestAudits(req.business.id),
         locations: store.googleLocations(req.business.id).filter((l) => l.enabled),
         running: running.has(req.business.id),
+        runsLeft: ctx.usage.left(req.business, 'health_run'),
+        error: String(req.query.err ?? '').slice(0, 300),
         csrf: req.user.csrf,
         can: req.can,
         available: Boolean(health),
@@ -28,6 +30,8 @@ export function healthRoutes(ctx, { health }) {
   router.post('/profile/run', requireRole('manager'), (req, res) => {
     const id = req.business.id;
     if (health && !running.has(id)) {
+      const over = ctx.usage.take(req.business, 'health_run');
+      if (over) return res.redirect(303, `/admin/profile?err=${encodeURIComponent(over)}`);
       running.add(id);
       health
         .checkBusiness(store.businessById(id))

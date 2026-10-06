@@ -34,7 +34,7 @@ function plusCard({ offer, can }) {
 
 export function visibilityView({
   business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
-  maxQueries = 5, plus = false, plusOffer = null, notice = '', error = '', suggested = null,
+  maxQueries = 5, plus = false, plusOffer = null, runsLeft = null, notice = '', error = '', suggested = null,
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
@@ -57,7 +57,7 @@ export function visibilityView({
       ${
         can('manager') && queries.length && engines.length
           ? `<form method="post" action="/admin/ai-visibility/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn primary" ${running ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</button></form>`
+              <button class="btn primary" ${running || runsLeft === 0 ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
           : ''
       }</div>
     <p class="page-intro">יותר ויותר לקוחות שואלים עוזר AI "איפה כדאי…" במקום לחפש בגוגל. כאן רואים אם התשובות ממליצות עליכם, ואם הן מצטטות את האתר או את פרופיל הגוגל שלכם. הבדיקה רצה לבד פעם בשבוע.</p>

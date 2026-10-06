@@ -21,6 +21,7 @@ export function rankingRoutes(ctx, { rankings }) {
         locations: store.googleLocations(req.business.id).filter((l) => l.enabled),
         limit: req.plan.rankKeywords,
         running: running.has(req.business.id),
+        runsLeft: ctx.usage.left(req.business, 'rank_run'),
         available: Boolean(rankings),
         csrf: req.user.csrf,
         can: req.can,
@@ -49,6 +50,9 @@ export function rankingRoutes(ctx, { rankings }) {
     if (store.rankKeywords(req.business.id).length >= req.plan.rankKeywords) {
       return page(req, res, { error: `המסלול שלכם כולל עד ${req.plan.rankKeywords} חיפושים במעקב.` });
     }
+    // The first check of a new search counts too, so adding and removing can't bypass the limit.
+    const over = ctx.usage.take(req.business, 'rank_run');
+    if (over) return page(req, res, { error: over });
     const id = store.addRankKeyword(req.business.id, loc.id, keyword, radius);
     const k = store.rankKeywords(req.business.id).find((x) => x.id === id);
     runInBackground(req.business.id, () => rankings.check(k));
@@ -56,7 +60,12 @@ export function rankingRoutes(ctx, { rankings }) {
   });
 
   router.post('/rankings/run', manager, (req, res) => {
-    if (rankings) runInBackground(req.business.id, () => rankings.checkBusiness(req.business.id));
+    const count = store.rankKeywords(req.business.id).length;
+    if (rankings && count && !running.has(req.business.id)) {
+      const over = ctx.usage.take(req.business, 'rank_run', count);
+      if (over) return page(req, res, { error: over });
+      runInBackground(req.business.id, () => rankings.checkBusiness(req.business.id));
+    }
     res.redirect(303, '/admin/rankings');
   });
 

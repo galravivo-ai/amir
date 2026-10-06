@@ -222,6 +222,8 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     if (!ctx.ai?.draftPost || !req.plan.ai) return postsPage(req, res, { values, error: 'עוזר ה-AI לא פעיל.' });
     const idea = String(req.body.idea ?? '').trim().slice(0, 500) || String(req.body.summary ?? '').trim().slice(0, 1500);
     if (!idea) return postsPage(req, res, { values, error: 'כתבו בכמה מילים על מה הפוסט, וה-AI ינסח.' });
+    const over = ctx.usage.take(req.business, 'ai_draft');
+    if (over) return postsPage(req, res, { values, error: over });
     try {
       const { post } = readPost(req.body);
       const summary = await ctx.ai.draftPost({
@@ -233,6 +235,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       });
       postsPage(req, res, { values: { ...values, summary }, error: req.photoError || '' });
     } catch (err) {
+      ctx.usage.give(req.business, 'ai_draft');
       postsPage(req, res, { values, error: err instanceof AiError ? err.message : 'ה-AI לא הצליח לנסח, נסו שוב.' });
     }
   });
@@ -356,6 +359,8 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     const review = loadReview(req, res);
     if (!review) return;
     if (!ctx.ai || !req.plan.ai) return reviewPage(req, res, review, { error: 'עוזר ה-AI לא פעיל.' });
+    const over = ctx.usage.take(req.business, 'ai_draft');
+    if (over) return reviewPage(req, res, review, { error: over });
     try {
       const draft = await ctx.ai.draftGoogleReply({
         businessName: req.business.name,
@@ -365,6 +370,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       });
       reviewPage(req, res, review, { draft });
     } catch (err) {
+      ctx.usage.give(req.business, 'ai_draft');
       reviewPage(req, res, review, { error: err instanceof AiError ? err.message : 'ה-AI לא הצליח לנסח טיוטה, נסו שוב.' });
     }
   });
