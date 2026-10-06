@@ -128,13 +128,14 @@ function findReviews(r) {
 }
 
 /** Returns null when no SerpApi key is configured. */
-export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch } = {}) {
+export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch, onCall = null } = {}) {
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) return null;
 
   async function call(params) {
     const q = new URLSearchParams({ ...params, api_key: apiKey });
     const res = await fetchImpl(`${API}?${q}`, { signal: AbortSignal.timeout(60e3) });
+    onCall?.();
     const text = await res.text();
     let json = {};
     try {
@@ -230,6 +231,19 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
     async mapResults(query, { lat, lng, zoom = 15 }) {
       const r = await call({ engine: 'google_maps', type: 'search', q: query, ll: `@${lat},${lng},${zoom}z`, hl: 'iw', gl: 'il' });
       return (r.local_results || []).map((x, i) => ({ position: Number(x.position) || i + 1, dataId: x.data_id || '', placeId: x.place_id || '', title: x.title || '', rating: num(x.rating) }));
+    },
+
+    /** The account's plan and how many searches are left this month (free: not counted as a search). */
+    async account() {
+      const res = await fetchImpl(`https://serpapi.com/account.json?api_key=${encodeURIComponent(apiKey)}`, { signal: AbortSignal.timeout(20e3) });
+      const json = JSON.parse(await res.text());
+      if (!res.ok || json.error) throw new SerpError(String(json.error || `HTTP ${res.status}`), res.status);
+      return {
+        plan: json.plan_name || '',
+        perMonth: Number(json.searches_per_month) || 0,
+        left: Number(json.plan_searches_left ?? json.total_searches_left) || 0,
+        used: Number(json.this_month_usage) || 0,
+      };
     },
 
     /** Google's AI Mode answer to a question, as text and sources. */

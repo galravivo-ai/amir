@@ -1,3 +1,4 @@
+import { withBusiness } from './meter.js';
 import { accessOf } from './plans.js';
 
 /**
@@ -15,7 +16,7 @@ const LATER_SYNC_PAGES = 3;
  * one SerpApi search, so places are checked every `intervalHours`.
  */
 export function createSerpSync({ store, serp, notifier, intervalHours = Number(process.env.SERPAPI_INTERVAL_HOURS) || 6 }) {
-  async function syncLocation(business, loc) {
+  async function syncLocationUnscoped(business, loc) {
     const firstSync = !loc.synced_at;
     let added = 0;
     try {
@@ -79,6 +80,9 @@ export function createSerpSync({ store, serp, notifier, intervalHours = Number(p
     }
     return total;
   }
+
+  // Searches and AI requests made here are counted against the business.
+  const syncLocation = (business, loc) => withBusiness(business.id, () => syncLocationUnscoped(business, loc));
 
   return { syncLocation, syncBusiness, syncAll, intervalHours };
 }

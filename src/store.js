@@ -1085,6 +1085,19 @@ export function createStore(db) {
     },
     resetUsage: (businessId, month) => q('DELETE FROM usage_counts WHERE business_id = ? AND month = ?').run(businessId, month),
 
+    // ---------- API usage (cost) ----------
+    /** Business 0 holds work no business caused (e.g. the system admin's checks). */
+    addApiUsage(businessId, month, service, calls, tokensIn, tokensOut) {
+      q(`INSERT INTO api_usage (business_id, month, service, calls, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(business_id, month, service) DO UPDATE SET calls = calls + excluded.calls,
+           tokens_in = tokens_in + excluded.tokens_in, tokens_out = tokens_out + excluded.tokens_out`).run(
+        businessId ?? 0, month, service, calls, tokensIn, tokensOut,
+      );
+    },
+    apiUsage: (month) =>
+      q(`SELECT u.*, b.name AS business_name, b.plan FROM api_usage u LEFT JOIN businesses b ON b.id = u.business_id
+         WHERE u.month = ? ORDER BY u.business_id`).all(month),
+
     // ---------- weekly tasks ----------
     tasksDone: (businessId, week) => q('SELECT task FROM weekly_tasks_done WHERE business_id = ? AND week = ?').all(businessId, week).map((r) => r.task),
     markTaskDone: (businessId, week, task) => q('INSERT OR IGNORE INTO weekly_tasks_done (business_id, week, task) VALUES (?, ?, ?)').run(businessId, week, task),

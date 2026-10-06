@@ -1,3 +1,4 @@
+import { withBusiness } from './meter.js';
 // Competitors: nearby places a business compares itself with, read through
 // SerpApi every few days (one search each). Each check keeps a daily
 // snapshot, so the page can show how ratings and review counts move.
@@ -7,7 +8,7 @@ const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 
 export function createCompetitors({ store, serp, intervalHours = Number(process.env.COMPETITOR_INTERVAL_HOURS) || 72, now = () => Date.now() }) {
   /** Reads a competitor's rating, review count and recent reviews. */
-  async function check(c) {
+  async function checkUnscoped(c) {
     const t = now();
     try {
       const r = await serp.reviews({ dataId: c.data_id, placeId: c.place_id });
@@ -43,6 +44,9 @@ export function createCompetitors({ store, serp, intervalHours = Number(process.
     }
     return checked;
   }
+
+  // Searches and AI requests made here are counted against the business.
+  const check = (c) => withBusiness(c.business_id, () => checkUnscoped(c));
 
   return { check, runDue, intervalHours };
 }

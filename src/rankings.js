@@ -1,3 +1,4 @@
+import { withBusiness } from './meter.js';
 import { accessOf } from './plans.js';
 
 // Map rank tracking: for a search like "בית קפה", where does the business show
@@ -27,7 +28,7 @@ export function createRankings({ store, serp, everyDays = 7 }) {
     return { lat: p.lat, lng: p.lng };
   }
 
-  async function check(k) {
+  async function checkUnscoped(k) {
     try {
       const center = await coordsOf(k);
       const points = [];
@@ -67,6 +68,9 @@ export function createRankings({ store, serp, everyDays = 7 }) {
     }
     return n;
   }
+
+  // Searches and AI requests made here are counted against the business.
+  const check = (k) => withBusiness(k.business_id, () => checkUnscoped(k));
 
   return { check, checkBusiness, runDue };
 }

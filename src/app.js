@@ -13,6 +13,7 @@ import { createBilling } from './billing.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { createWhatsApp } from './whatsapp.js';
 import { createUsage } from './usage.js';
+import { createMeter, withBusiness } from './meter.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { reportRoutes } from './routes/reports.js';
@@ -76,23 +77,35 @@ function securityHeaders(_req, res, next) {
 export function createApp(db, options = {}) {
   const store = createStore(db);
   const mailer = createMailer(db, { transport: options.mailTransport });
-  const ai = options.ai !== undefined ? options.ai : createAi();
+  const meter = createMeter(store);
+  const ai =
+    options.ai !== undefined
+      ? options.ai
+      : createAi({
+          onUsage: (u) =>
+            meter.record('ai', {
+              tokensIn: (u?.input_tokens || 0) + (u?.cache_read_input_tokens || 0) + (u?.cache_creation_input_tokens || 0),
+              tokensOut: u?.output_tokens || 0,
+            }),
+        });
   const pusher = createPusher(store, { webpush: options.webpush });
   const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl });
   const google = options.google !== undefined ? options.google : createGoogle();
   const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
-  const serp = options.serp !== undefined ? options.serp : createSerp();
+  const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp') });
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
   const competitors = serp ? createCompetitors({ store, serp }) : null;
   const health = serp ? createHealth({ store, serp, ai }) : null;
   const rankings = serp ? createRankings({ store, serp }) : null;
-  const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines() });
+  const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines({ onCall: (name) => meter.record(name) }) });
   const cardcom = options.cardcom !== undefined ? options.cardcom : createCardcom();
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
   ctx.billing = billing;
   ctx.serp = serp;
   ctx.usage = createUsage(store);
+  ctx.google = google;
+  ctx.visibility = visibility;
   const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
   ctx.whatsapp = whatsapp;
   const app = express();
@@ -122,7 +135,9 @@ export function createApp(db, options = {}) {
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
-  app.use('/admin', ctx.requireAuth, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), healthRoutes(ctx, { health }), rankingRoutes(ctx, { rankings }));
+  // Work done for a page of the business's admin is counted against that business.
+  const businessScope = (req, _res, next) => (req.business ? withBusiness(req.business.id, next) : next());
+  app.use('/admin', ctx.requireAuth, businessScope, adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), healthRoutes(ctx, { health }), rankingRoutes(ctx, { rankings }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 

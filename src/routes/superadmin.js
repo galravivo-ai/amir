@@ -1,5 +1,7 @@
 import express from 'express';
 import { monthKey } from '../usage.js';
+import { lastBackupAge } from '../backup.js';
+import { statusView } from '../views/status.js';
 import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
 
@@ -105,6 +107,38 @@ export function superadminRoutes(ctx) {
     if (!ctx.ai?.ping) return res.redirect(303, '/superadmin?ai=err&t=' + encodeURIComponent('ANTHROPIC_API_KEY לא מוגדר בשרת (או שהשרת לא הופעל מחדש אחרי ההוספה).'));
     const r = await ctx.ai.ping();
     res.redirect(303, `/superadmin?ai=${r.ok ? 'ok' : 'err'}&t=${encodeURIComponent(r.ok ? r.text : r.error)}#ai`);
+  });
+
+  // Which connections are set up, the SerpApi account, and what each business costs.
+  router.get('/status', async (req, res) => {
+    const env = process.env;
+    const set = (k) => Boolean(String(env[k] ?? '').trim());
+    const engines = ctx.visibility?.engines() || [];
+    const backupHours = lastBackupAge() / 3600e3;
+    const publicUrl = String(env.PUBLIC_URL || '');
+    const checks = [
+      { name: 'כתובת האתר (PUBLIC_URL)', state: publicUrl.startsWith('https://') ? 'ok' : 'warn', detail: publicUrl ? `<span dir="ltr">${publicUrl}</span>` : 'לא מוגדרת', what: 'קישורים במיילים, בתשלום ובוואטסאפ' },
+      { name: 'מיילים', state: ctx.mailer.enabled ? 'ok' : 'off', detail: ctx.mailer.enabled ? 'פעיל' : 'רק נרשמים ביומן', what: 'התראות, דוחות, בקשות דירוג במייל' },
+      { name: 'עוזר AI (Anthropic)', state: ctx.ai ? 'ok' : 'off', detail: ctx.ai ? 'מפתח מוגדר' : 'ANTHROPIC_API_KEY חסר', what: 'טיוטות, תובנות, תיוג, המלצות לפרופיל, סיכום חודשי' },
+      { name: 'SerpApi', state: ctx.serp ? 'ok' : 'off', detail: ctx.serp ? 'מפתח מוגדר' : 'SERPAPI_KEY חסר', what: 'ביקורות לפי קישור, מתחרים, בריאות פרופיל, מיקום במפות, נראות בגוגל' },
+      { name: 'התחברות עם גוגל (OAuth)', state: ctx.google ? 'warn' : 'off', detail: ctx.google ? 'מוגדר. מענה ופוסטים מחכים לאישור ה-API מגוגל' : 'לא מוגדר', what: 'מענה לביקורות ופרסום פוסטים ישירות מהמערכת' },
+      { name: 'ChatGPT · Gemini · Perplexity', state: ['chatgpt', 'gemini', 'perplexity'].every((e) => engines.includes(e)) ? 'ok' : engines.some((e) => ['chatgpt', 'gemini', 'perplexity'].includes(e)) ? 'warn' : 'off',
+        detail: ['chatgpt', 'gemini', 'perplexity'].map((e) => `${engines.includes(e) ? '✓' : '✗'} ${e}`).join(' · '), what: 'נראות ב-AI מורחבת (מקצועי ומעלה)' },
+      { name: 'תשלום בכרטיס (Cardcom)', state: ctx.billing ? 'ok' : 'off', detail: ctx.billing ? 'מסוף מוגדר' : 'CARDCOM_TERMINAL חסר: בחירת מסלול שולחת בקשה ידנית', what: 'תשלום אונליין וחידוש אוטומטי' },
+      { name: 'וואטסאפ אוטומטי (Meta)', state: ctx.whatsapp ? (set('WHATSAPP_APP_SECRET') ? 'ok' : 'warn') : 'off', detail: ctx.whatsapp ? (set('WHATSAPP_APP_SECRET') ? 'פעיל' : 'פעיל, בלי WHATSAPP_APP_SECRET לא יגיעו סטטוסי מסירה') : 'לא מוגדר: שליחה פותחת את הוואטסאפ של המשתמש', what: 'בקשות דירוג אוטומטיות בוואטסאפ' },
+      { name: 'פרטי קשר', state: set('CONTACT_EMAIL') && set('CONTACT_PHONE') ? 'ok' : 'warn', detail: [set('CONTACT_EMAIL') ? '✓ מייל' : '✗ CONTACT_EMAIL', set('CONTACT_PHONE') ? '✓ טלפון' : '✗ CONTACT_PHONE'].join(' · '), what: 'מופיעים בתקנון, בפרטיות ובהצהרת הנגישות (חובה)' },
+      { name: 'גיבוי יומי', state: backupHours < 26 ? 'ok' : 'warn', detail: Number.isFinite(backupHours) ? `האחרון לפני ${Math.round(backupHours)} שעות` : 'עוד לא נוצר', what: 'גיבוי של מסד הנתונים (נשמר על השרת)' },
+    ];
+    let serpAccount = null;
+    if (ctx.serp?.account) {
+      try {
+        serpAccount = await ctx.serp.account();
+      } catch (err) {
+        serpAccount = { error: err.message };
+      }
+    }
+    const month = monthKey();
+    render(req, res, 'מצב המערכת', statusView({ checks, serpAccount, usage: store.apiUsage(month), month, csrf: req.user.csrf }));
   });
 
   // A fresh month of manual actions for one business (a mistake, or a good customer).

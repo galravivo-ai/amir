@@ -1,3 +1,4 @@
+import { withBusiness } from './meter.js';
 import { activityOf, healthChecks } from './health.js';
 import { accessOf, planOf } from './plans.js';
 
@@ -20,7 +21,7 @@ export function createHealth({ store, serp, ai = null, everyDays = 7 }) {
     ].join('\n');
   }
 
-  async function checkLocation(business, loc) {
+  async function checkLocationUnscoped(business, loc) {
     try {
       const profile = await serp.placeDetails({ placeId: loc.place_id, dataId: loc.data_id, title: loc.title, address: loc.address });
       if (!profile) throw new Error('לא מצאנו את הפרופיל בגוגל. בדקו שהעסק מופיע בגוגל מפות.');
@@ -53,6 +54,9 @@ export function createHealth({ store, serp, ai = null, everyDays = 7 }) {
     }
     return done;
   }
+
+  // Searches and AI requests made here are counted against the business.
+  const checkLocation = (business, loc) => withBusiness(business.id, () => checkLocationUnscoped(business, loc));
 
   return { checkLocation, checkBusiness, runDue };
 }

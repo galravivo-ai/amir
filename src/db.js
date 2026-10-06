@@ -565,6 +565,18 @@ const MIGRATIONS = [
     PRIMARY KEY (business_id, month, action)
   );
   `,
+  // v27: what each business costs: SerpApi searches and AI requests per month
+  `
+  CREATE TABLE api_usage (
+    business_id INTEGER NOT NULL DEFAULT 0,
+    month TEXT NOT NULL,
+    service TEXT NOT NULL,
+    calls INTEGER NOT NULL DEFAULT 0,
+    tokens_in INTEGER NOT NULL DEFAULT 0,
+    tokens_out INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (business_id, month, service)
+  );
+  `,
 ];
 
 function migrate(db) {

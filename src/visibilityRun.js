@@ -1,3 +1,4 @@
+import { withBusiness } from './meter.js';
 import { parseJson } from './db.js';
 import { accessOf, hasAiPlus } from './plans.js';
 import { ENGINES, MAX_QUERIES, PLUS_ENGINES, PLUS_MAX_QUERIES, matchAnswer, namesOf } from './visibility.js';
@@ -27,7 +28,7 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
     return extra[engine](question, { city: business.ai_city });
   }
 
-  async function runBusiness(business) {
+  async function runBusinessUnscoped(business) {
     const queries = parseJson(business.ai_queries, []).slice(0, maxQueries(business));
     if (!queries.length || !engines(business).length) return null;
     const names = namesOf({
@@ -66,6 +67,9 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
     }
     return done;
   }
+
+  // Searches and AI requests made here are counted against the business.
+  const runBusiness = (business) => withBusiness(business.id, () => runBusinessUnscoped(business));
 
   return { engines, maxQueries, runBusiness, runDue };
 }

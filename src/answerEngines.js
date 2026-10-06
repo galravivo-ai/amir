@@ -94,13 +94,17 @@ function perplexity({ key, model, fetchImpl }) {
 }
 
 /** The engines whose keys are set: { chatgpt?, gemini?, perplexity? }. */
-export function createAnswerEngines({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+export function createAnswerEngines({ env = process.env, fetchImpl = globalThis.fetch, onCall = null } = {}) {
   const out = {};
+  const metered = (name, fn) => async (...args) => {
+    onCall?.(name);
+    return fn(...args);
+  };
   const openai = clean(env.OPENAI_API_KEY);
   const google = clean(env.GEMINI_API_KEY);
   const pplx = clean(env.PERPLEXITY_API_KEY);
-  if (openai) out.chatgpt = chatgpt({ key: openai, model: clean(env.OPENAI_MODEL) || 'gpt-5-mini', fetchImpl });
-  if (google) out.gemini = gemini({ key: google, model: clean(env.GEMINI_MODEL) || 'gemini-2.5-flash', fetchImpl });
-  if (pplx) out.perplexity = perplexity({ key: pplx, model: clean(env.PERPLEXITY_MODEL) || 'sonar', fetchImpl });
+  if (openai) out.chatgpt = metered('openai', chatgpt({ key: openai, model: clean(env.OPENAI_MODEL) || 'gpt-5-mini', fetchImpl }));
+  if (google) out.gemini = metered('gemini', gemini({ key: google, model: clean(env.GEMINI_MODEL) || 'gemini-2.5-flash', fetchImpl }));
+  if (pplx) out.perplexity = metered('perplexity', perplexity({ key: pplx, model: clean(env.PERPLEXITY_MODEL) || 'sonar', fetchImpl }));
   return out;
 }

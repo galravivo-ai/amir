@@ -110,7 +110,7 @@ function textOf(message) {
  * Returns an AI helper, or null when no Anthropic credentials are configured.
  * `client` can be injected for tests.
  */
-export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL } = {}) {
+export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL, onUsage = null } = {}) {
   // A key pasted with spaces, a line break or quotes around it still works.
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!client && !apiKey) return null;
@@ -129,6 +129,7 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
         fallbacks: 'default',
         messages: [{ role: 'user', content }],
       });
+      onUsage?.(message.usage);
       return textOf(message);
     } catch (err) {
       if (err instanceof AiError) throw err;
@@ -207,6 +208,7 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
             fallbacks: 'default',
             messages,
           });
+          onUsage?.(message.usage);
           if (message.stop_reason === 'refusal') throw new AiError('ה-AI סירב לענות על השאלה הזו.');
           for (const block of message.content) {
             if (block.type === 'text') {
