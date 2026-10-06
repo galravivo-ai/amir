@@ -1227,3 +1227,55 @@ body.app .nav-links { display: flex; flex-direction: column; gap: 1px; }
 body.app .cookie-bar { background: #fff; color: var(--ink-2); border: 1px solid var(--line); box-shadow: var(--shadow-md); }
 body.app .cookie-bar a { color: var(--purple); }
 .card > h3:first-child, .card > h2:first-child { margin-top: 0; }
+
+/* Refresh, round 2: more color. A deep indigo sidebar, a tinted canvas and a
+   brand-gradient dashboard header, keeping the cleaner cards and tables. */
+:root { --bg: #f1effa; --line: #e3e0f0; --line-2: #eeecf6; }
+body.app .sidebar { background: linear-gradient(180deg, #1c1650 0%, #15113d 100%); color: #c9c3ef; border-inline-end: 0; }
+body.app .side-brand .wm-go { color: #fff; }
+body.app .side-brand .wm-five { color: #a594ff; }
+body.app .biz-card { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .1); }
+body.app a.biz-card:hover { background: rgba(255, 255, 255, .11); border-color: rgba(255, 255, 255, .18); }
+body.app .biz-meta b, body.app .biz-card select { color: #fff; }
+body.app .biz-meta small { color: #a9a2d6; }
+body.app .side-nav a { color: #c9c3ef; }
+body.app .side-nav a .icon { color: #8c84c4; }
+body.app .side-nav a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+body.app .side-nav a:hover .icon { color: #fff; }
+body.app .side-nav a.active { background: linear-gradient(90deg, #6a4dff, #5b3df5); color: #fff; box-shadow: 0 6px 16px -6px rgba(106, 77, 255, .7); }
+body.app .side-nav a.active .icon { color: #fff; }
+body.app .side-nav a.active::before { display: none; }
+body.app .nav-group-title { color: #7f78b5; }
+body.app .nav-group-title:hover { color: #fff; }
+body.app .nav-plain + .nav-plain { border-top-color: rgba(255, 255, 255, .08); }
+body.app .usage { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .1); color: #c9c3ef; }
+body.app .usage-bar { background: rgba(255, 255, 255, .12); }
+body.app .usage-bar span { background: #ffd23f; }
+body.app .side-user { border-top-color: rgba(255, 255, 255, .1); }
+body.app .side-user, body.app .side-user a { color: #c9c3ef; }
+body.app .side-user .icon-btn:hover, body.app .side-user a:hover { color: #fff; }
+body.app .role-chip { color: #ffd23f; }
+
+/* dashboard header back in brand colors, but softer than the old block */
+.dash-cover { background: linear-gradient(120deg, var(--cover, #5b3df5) 0%, color-mix(in srgb, var(--cover, #5b3df5) 70%, #1c1650) 100%) !important; color: #fff; border: 0; box-shadow: 0 12px 30px -14px color-mix(in srgb, var(--cover, #5b3df5) 70%, transparent); }
+.dash-cover::before { inset: auto -60px -80px auto; width: 260px; height: 260px; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.cover-text h1 { color: #fff; }
+.cover-greet, .cover-sub { color: rgba(255, 255, 255, .78); }
+.cover-logo { border: 0; }
+.cover-bar { border-top-color: rgba(255, 255, 255, .18); }
+.cover-google { background: rgba(255, 255, 255, .14); color: #fff; border-color: rgba(255, 255, 255, .2); }
+.cover-google:hover { background: rgba(255, 255, 255, .22); }
+.cover-google span:last-child { color: rgba(255, 255, 255, .8); }
+.cover-google .cover-star { color: #ffd23f; }
+.cover-filters select, .cover-filters input { border-color: transparent; }
+.cover-btn { background: #ffd23f; border-color: #ffd23f; color: #1c1650; }
+.cover-btn:hover { background: #ffdc66; }
+
+/* colored accents on cards, KPIs and the trial bar */
+.kpi { position: relative; overflow: hidden; }
+.kpi::after { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, #6a4dff, #a594ff); }
+.trial-bar { background: linear-gradient(90deg, #fff6d6, #fffbeb); border-color: #fde68a; }
+.trial-bar .icon { color: #b45309; }
+@media (max-width: 900px) {
+  body.app .sidebar { border-bottom: 0; }
+}
