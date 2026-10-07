@@ -86,5 +86,59 @@ export function createGoogleSync({ store, google, notifier }) {
     return total;
   }
 
-  return { tokenFor, refreshLocations, syncBusiness, reply, publishPost, syncAll };
+  /**
+   * Pulls the profile's numbers: the first time 18 months back, then the last
+   * three weeks again (Google fills in the latest days late). Search terms
+   * for the last three full months, and the current one.
+   */
+  async function syncMetrics(business, { today = new Date() } = {}) {
+    const token = await tokenFor(business.id);
+    const day = (d) => d.toISOString().slice(0, 10);
+    const back = (n) => new Date(today.getTime() - n * 864e5);
+    let ok = 0;
+    for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled)) {
+      try {
+        const rows = await google.dailyMetrics(token, loc.name, { from: day(back(loc.metrics_at ? 21 : 540)), to: day(back(1)) });
+        store.saveProfileMetrics(loc.id, rows);
+        for (let i = 0; i <= 3; i++) {
+          const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - i, 1));
+          const month = d.toISOString().slice(0, 7);
+          try {
+            store.saveProfileKeywords(loc.id, month, await google.searchKeywords(token, loc.name, month));
+          } catch (err) {
+            // A month with no data yet is fine; the daily numbers still count.
+            if (err.status !== 400 && err.status !== 404) throw err;
+          }
+        }
+        store.setMetricsResult(loc.id, null);
+        ok++;
+      } catch (err) {
+        store.setMetricsResult(loc.id, err.message);
+        console.warn(`[google] metrics failed for location ${loc.id}: ${err.message}`);
+      }
+    }
+    return ok;
+  }
+
+  /** Background job: once a day per connected business (a failed pull is retried after a few hours). */
+  const lastTry = new Map();
+  async function syncAllMetrics() {
+    let n = 0;
+    for (const conn of store.googleConnections()) {
+      const business = store.businessById(conn.business_id);
+      if (!business || business.billing === 'paused') continue;
+      const locs = store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled);
+      const fresh = locs.length && locs.every((l) => l.metrics_at && Date.parse(`${l.metrics_at.replace(' ', 'T')}Z`) > Date.now() - 20 * 3600e3);
+      if (!locs.length || fresh || (lastTry.get(business.id) || 0) > Date.now() - 4 * 3600e3) continue;
+      lastTry.set(business.id, Date.now());
+      try {
+        n += await syncMetrics(business);
+      } catch (err) {
+        console.warn(`[google] metrics failed for business ${business.id}: ${err.message}`);
+      }
+    }
+    return n;
+  }
+
+  return { syncMetrics, syncAllMetrics, tokenFor, refreshLocations, syncBusiness, reply, publishPost, syncAll };
 }

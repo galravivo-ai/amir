@@ -1053,6 +1053,51 @@ export function createStore(db) {
          WHERE l.enabled = 1 AND b.billing != 'paused'
            AND COALESCE((SELECT MAX(run_at) FROM profile_audits a WHERE a.location_id = l.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
 
+    // ---------- profile performance (Business Profile Performance API) ----------
+    saveProfileMetrics(locationId, rows) {
+      const ins = q('INSERT INTO profile_metrics (location_id, date, metric, value) VALUES (?, ?, ?, ?) ON CONFLICT (location_id, date, metric) DO UPDATE SET value = excluded.value');
+      for (const r of rows) ins.run(locationId, r.date, r.metric, r.value);
+    },
+    saveProfileKeywords(locationId, month, rows) {
+      q('DELETE FROM profile_keywords WHERE location_id = ? AND month = ?').run(locationId, month);
+      const ins = q('INSERT OR REPLACE INTO profile_keywords (location_id, month, keyword, value, threshold) VALUES (?, ?, ?, ?, ?)');
+      for (const r of rows) ins.run(locationId, month, r.keyword, r.value ?? null, r.threshold ?? null);
+    },
+    /** A successful pull moves metrics_at (so the next one is short); a failed one only records why. */
+    setMetricsResult: (locationId, error) =>
+      error
+        ? q('UPDATE google_locations SET metrics_error = ? WHERE id = ?').run(String(error).slice(0, 300), locationId)
+        : q(`UPDATE google_locations SET metrics_at = datetime('now'), metrics_error = NULL WHERE id = ?`).run(locationId),
+    /** Each metric's total from `from` to `to` (dates, inclusive), for the business's followed places or one of them. */
+    profileMetricTotals(businessId, from, to, locationId = null) {
+      const rows = q(`SELECT m.metric, SUM(m.value) AS n FROM profile_metrics m JOIN google_locations l ON l.id = m.location_id
+                      WHERE l.business_id = ? AND l.enabled = 1 AND m.date >= ? AND m.date <= ? ${locationId ? 'AND l.id = ?' : ''}
+                      GROUP BY m.metric`).all(businessId, from, to, ...(locationId ? [locationId] : []));
+      return Object.fromEntries(rows.map((r) => [r.metric, r.n]));
+    },
+    /** Per day: { date, metric: value, ... }. */
+    profileMetricDaily(businessId, from, to, locationId = null) {
+      const rows = q(`SELECT m.date, m.metric, SUM(m.value) AS n FROM profile_metrics m JOIN google_locations l ON l.id = m.location_id
+                      WHERE l.business_id = ? AND l.enabled = 1 AND m.date >= ? AND m.date <= ? ${locationId ? 'AND l.id = ?' : ''}
+                      GROUP BY m.date, m.metric ORDER BY m.date`).all(businessId, from, to, ...(locationId ? [locationId] : []));
+      const byDate = new Map();
+      for (const r of rows) {
+        if (!byDate.has(r.date)) byDate.set(r.date, { date: r.date });
+        byDate.get(r.date)[r.metric] = r.n;
+      }
+      return byDate;
+    },
+    profileMetricsLastDate: (businessId) =>
+      q(`SELECT MAX(m.date) AS d FROM profile_metrics m JOIN google_locations l ON l.id = m.location_id WHERE l.business_id = ? AND l.enabled = 1`).get(businessId).d || null,
+    /** The searches that showed the profile, over the given months (YYYY-MM), most first. */
+    profileKeywords(businessId, months, locationId = null, limit = 30) {
+      if (!months.length) return [];
+      return q(`SELECT k.keyword, SUM(COALESCE(k.value, 0)) AS value, MAX(COALESCE(k.threshold, 0)) AS threshold, SUM(k.value IS NULL) AS below
+                FROM profile_keywords k JOIN google_locations l ON l.id = k.location_id
+                WHERE l.business_id = ? AND l.enabled = 1 AND k.month IN (${months.map(() => '?').join(',')}) ${locationId ? 'AND l.id = ?' : ''}
+                GROUP BY k.keyword ORDER BY value DESC, threshold DESC LIMIT ?`).all(businessId, ...months, ...(locationId ? [locationId] : []), limit);
+    },
+
     // ---------- map rank tracking ----------
     setLocationCoords: (id, lat, lng) => q('UPDATE google_locations SET lat = ?, lng = ? WHERE id = ?').run(lat, lng, id),
     rankKeywords: (businessId) =>

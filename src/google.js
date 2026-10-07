@@ -10,6 +10,30 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const ACCOUNTS_URL = 'https://mybusinessaccountmanagement.googleapis.com/v1/accounts';
 const INFO_URL = 'https://mybusinessbusinessinformation.googleapis.com/v1';
 const REVIEWS_URL = 'https://mybusiness.googleapis.com/v4';
+const PERF_URL = 'https://businessprofileperformance.googleapis.com/v1';
+
+/** The profile's daily numbers we keep (Business Profile Performance API). */
+export const DAILY_METRICS = [
+  'BUSINESS_IMPRESSIONS_MOBILE_SEARCH',
+  'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH',
+  'BUSINESS_IMPRESSIONS_MOBILE_MAPS',
+  'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',
+  'CALL_CLICKS',
+  'WEBSITE_CLICKS',
+  'BUSINESS_DIRECTION_REQUESTS',
+  'BUSINESS_CONVERSATIONS',
+  'BUSINESS_BOOKINGS',
+  'BUSINESS_FOOD_ORDERS',
+  'BUSINESS_FOOD_MENU_CLICKS',
+];
+
+const ymd = (iso) => {
+  const [year, month, day] = String(iso).split('-').map(Number);
+  return { year, month, day };
+};
+const pad = (n) => String(n).padStart(2, '0');
+/** The performance API wants "locations/L"; we store "accounts/A/locations/L". */
+const perfLocation = (name) => String(name).slice(String(name).indexOf('locations/'));
 const SCOPES = ['https://www.googleapis.com/auth/business.manage', 'openid', 'email'];
 
 export const STARS = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
@@ -176,6 +200,48 @@ export function createGoogle({
 
     /** Publishes a post (see posts.js for the body); returns Google's LocalPost. */
     createPost: (token, locationName, body) => call(`${REVIEWS_URL}/${locationName}/localPosts`, { method: 'POST', token, body }),
+
+    /** Daily values from `from` to `to` (YYYY-MM-DD, inclusive): [{ date, metric, value }]. Days Google leaves out are zero. */
+    async dailyMetrics(token, locationName, { from, to, metrics = DAILY_METRICS }) {
+      const q = new URLSearchParams();
+      for (const m of metrics) q.append('dailyMetrics', m);
+      const [a, b] = [ymd(from), ymd(to)];
+      q.set('dailyRange.start_date.year', a.year); q.set('dailyRange.start_date.month', a.month); q.set('dailyRange.start_date.day', a.day);
+      q.set('dailyRange.end_date.year', b.year); q.set('dailyRange.end_date.month', b.month); q.set('dailyRange.end_date.day', b.day);
+      const r = await call(`${PERF_URL}/${perfLocation(locationName)}:fetchMultiDailyMetricsTimeSeries?${q}`, { token });
+      const out = [];
+      for (const group of r.multiDailyMetricTimeSeries || []) {
+        for (const series of group.dailyMetricTimeSeries || []) {
+          for (const v of series.timeSeries?.datedValues || []) {
+            if (!v.date?.year) continue;
+            out.push({ date: `${v.date.year}-${pad(v.date.month)}-${pad(v.date.day)}`, metric: series.dailyMetric, value: Number(v.value) || 0 });
+          }
+        }
+      }
+      return out;
+    },
+
+    /** The searches that showed the profile in one month (YYYY-MM). Small counts come only as "under N". */
+    async searchKeywords(token, locationName, month) {
+      const [year, m] = month.split('-').map(Number);
+      const out = [];
+      let pageToken = '';
+      do {
+        const q = new URLSearchParams({
+          'monthlyRange.start_month.year': year, 'monthlyRange.start_month.month': m,
+          'monthlyRange.end_month.year': year, 'monthlyRange.end_month.month': m,
+          pageSize: '100',
+        });
+        if (pageToken) q.set('pageToken', pageToken);
+        const r = await call(`${PERF_URL}/${perfLocation(locationName)}/searchkeywords/impressions/monthly?${q}`, { token });
+        for (const k of r.searchKeywordsCounts || []) {
+          const v = k.insightsValue || {};
+          out.push({ keyword: k.searchKeyword, value: v.value != null ? Number(v.value) : null, threshold: v.threshold != null ? Number(v.threshold) : null });
+        }
+        pageToken = r.nextPageToken || '';
+      } while (pageToken && out.length < 300);
+      return out;
+    },
 
     reply: (token, reviewName, comment) => call(`${REVIEWS_URL}/${reviewName}/reply`, { method: 'PUT', token, body: { comment } }),
   };

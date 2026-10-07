@@ -3,6 +3,7 @@ import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
 import { asset, DEFAULT_INVITE_TEMPLATE, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
+import { performanceCard } from './performance.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -253,6 +254,7 @@ function feed(items, empty) {
 }
 
 export function dashboardView({
+  profile = null,
   stats,
   prev,
   campaigns,
@@ -324,7 +326,8 @@ export function dashboardView({
 
   if (!campaigns.length && !hasGoogle) {
     return `${cover}
-      ${checklist || `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`}`;
+      ${checklist || (profile ? '' : `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`)}
+      ${profile ? performanceCard(profile.totals, profile.prev) : ''}`;
   }
 
   // ---- everything customers said, surveys and Google together ----
@@ -395,6 +398,7 @@ export function dashboardView({
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${checklist}
     ${tasksCard(tasks, csrf)}
+    ${profile ? performanceCard(profile.totals, profile.prev) : ''}
     ${
       stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${

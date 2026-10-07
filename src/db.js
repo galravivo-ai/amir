@@ -577,6 +577,26 @@ const MIGRATIONS = [
     PRIMARY KEY (business_id, month, service)
   );
   `,
+  // v28: the profile's own numbers from Google (views, calls, directions, clicks) and the searches that found it
+  `
+  CREATE TABLE profile_metrics (
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    value INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (location_id, date, metric)
+  );
+  CREATE TABLE profile_keywords (
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    month TEXT NOT NULL,
+    keyword TEXT NOT NULL,
+    value INTEGER,
+    threshold INTEGER,
+    PRIMARY KEY (location_id, month, keyword)
+  );
+  ALTER TABLE google_locations ADD COLUMN metrics_at TEXT;
+  ALTER TABLE google_locations ADD COLUMN metrics_error TEXT;
+  `,
 ];
 
 function migrate(db) {

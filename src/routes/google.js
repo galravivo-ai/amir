@@ -98,7 +98,11 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       });
       await sync.refreshLocations(req.business.id);
       const locations = store.googleLocations(req.business.id);
-      if (locations.length === 1) await sync.syncBusiness(req.business).catch(() => {});
+      if (locations.length === 1) {
+        await sync.syncBusiness(req.business).catch(() => {});
+        // The profile's numbers (18 months on the first pull) load in the background.
+        sync.syncMetrics(store.businessById(req.business.id)).catch((err) => console.warn('[google] metrics failed:', err.message));
+      }
       res.redirect(303, '/admin/google?connected=1');
     } catch (err) {
       console.warn('[google] connect failed:', err.message);

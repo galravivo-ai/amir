@@ -39,6 +39,33 @@ const fakeGoogle = {
       if (fakeGoogle.postsFail) return json(403, { error: { message: 'The caller does not have permission' } });
       return json(200, { name: `${url.split('/v4/')[1]}/1`, state: 'LIVE', searchUrl: 'https://local.google.com/place?post=1' });
     }
+    if (url.startsWith('https://businessprofileperformance.googleapis.com/v1/locations/9:fetchMultiDailyMetricsTimeSeries?')) {
+      fakeGoogle.perfCalls = (fakeGoogle.perfCalls || 0) + 1;
+      const q = new URL(url).searchParams;
+      const start = Date.UTC(q.get('dailyRange.start_date.year'), q.get('dailyRange.start_date.month') - 1, q.get('dailyRange.start_date.day'));
+      const end = Date.UTC(q.get('dailyRange.end_date.year'), q.get('dailyRange.end_date.month') - 1, q.get('dailyRange.end_date.day'));
+      const series = (metric, v) => ({
+        dailyMetric: metric,
+        timeSeries: {
+          datedValues: Array.from({ length: Math.round((end - start) / 864e5) + 1 }, (_, i) => {
+            const d = new Date(start + i * 864e5);
+            // Google leaves out the value on days with none.
+            return { date: { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }, ...(v ? { value: String(v) } : {}) };
+          }),
+        },
+      });
+      return json(200, {
+        multiDailyMetricTimeSeries: [{
+          dailyMetricTimeSeries: [
+            series('BUSINESS_IMPRESSIONS_MOBILE_MAPS', 30), series('BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 10),
+            series('CALL_CLICKS', 2), series('WEBSITE_CLICKS', 1), series('BUSINESS_DIRECTION_REQUESTS', 3), series('BUSINESS_BOOKINGS', 0),
+          ],
+        }],
+      });
+    }
+    if (url.startsWith('https://businessprofileperformance.googleapis.com/v1/locations/9/searchkeywords/impressions/monthly?')) {
+      return json(200, { searchKeywordsCounts: [{ searchKeyword: 'בית קפה תל אביב', insightsValue: { value: '420' } }, { searchKeyword: 'קפה הרצל', insightsValue: { threshold: '15' } }] });
+    }
     return json(404, { error: { message: `unexpected ${url}` } });
   },
 };
@@ -299,4 +326,47 @@ test('Google posts has its own menu item', async () => {
   const page = await req('/admin/google/posts');
   assert.match(page.text, /<a href="\/admin\/google\/posts" class="active" aria-current="page">/);
   assert.doesNotMatch(page.text, /class="g-tabs"/);
+});
+
+test('profile performance: views, calls, directions and searches from Google', async () => {
+  const { store, googleSync } = created;
+  const req = await owner('perf-owner@example.com');
+  const token = await csrf(req);
+  const biz = store.businessesFor(store.userByEmail('perf-owner@example.com').id)[0];
+
+  // Not connected: the page asks to connect.
+  assert.match((await req('/admin/performance')).text, /צריך לחבר את פרופיל העסק בגוגל/);
+
+  const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  await req(`/admin/google/callback?code=abc&state=${new URL(start.location).searchParams.get('state')}`);
+  // The first pull starts in the background on connect; run one here to wait for it.
+  await googleSync.syncMetrics(store.businessById(biz.id));
+  const [loc] = store.googleLocations(biz.id);
+  assert.ok(loc.metrics_at);
+  assert.equal(loc.metrics_error, null);
+  const days = store.db.prepare("SELECT COUNT(DISTINCT date) AS n FROM profile_metrics WHERE location_id = ? AND metric = 'CALL_CLICKS'").get(loc.id).n;
+  assert.ok(days >= 500, 'the first pull goes back about 18 months');
+  assert.equal(store.db.prepare("SELECT COUNT(*) AS n FROM profile_metrics WHERE location_id = ? AND metric = 'BUSINESS_BOOKINGS' AND value != 0").get(loc.id).n, 0);
+
+  // 30 days: 40 views a day, 6 actions a day.
+  const page = (await req('/admin/performance')).text;
+  assert.match(page, /צפיות בפרופיל<\/span>\s*<span class="kpi-value">1,200</);
+  assert.match(page, /שיחות<\/span>\s*<span class="kpi-value">60</);
+  assert.match(page, /בקשות הגעה<\/span>\s*<span class="kpi-value">90</);
+  assert.match(page, /כניסות לאתר<\/span>\s*<span class="kpi-value">30</);
+  assert.match(page, /15\.0%/, 'conversion: actions out of views');
+  assert.match(page, /בית קפה תל אביב/);
+  assert.match(page, /פחות מ-15/);
+  assert.match(page, /מפות גוגל <b>900<\/b> \(75%\)/);
+  assert.match((await req('/admin/performance?days=365')).text, /לפי שבוע/);
+
+  // The dashboard shows the month's summary.
+  assert.match((await req('/admin')).text, /הפרופיל בגוגל ב-30 הימים האחרונים/);
+
+  // Later pulls only go back three weeks.
+  const before = fakeGoogle.calls.length;
+  await googleSync.syncMetrics(store.businessById(biz.id));
+  const q = new URL(fakeGoogle.calls.slice(before).find((c) => c[1].includes(':fetchMultiDailyMetricsTimeSeries'))[1]).searchParams;
+  const from = Date.UTC(q.get('dailyRange.start_date.year'), q.get('dailyRange.start_date.month') - 1, q.get('dailyRange.start_date.day'));
+  assert.ok(Date.now() - from < 23 * 864e5);
 });

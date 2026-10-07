@@ -148,6 +148,7 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
+        ['/admin/performance', 'ביצועי הפרופיל', 'chart'],
         ['/admin/profile', 'בריאות הפרופיל', 'shield'],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],

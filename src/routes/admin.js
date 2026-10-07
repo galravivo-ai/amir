@@ -10,6 +10,7 @@ import { templateQuestions, TEMPLATES } from '../templates.js';
 import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, normalizeInviteTemplate, safeUrl, waLink, waNumber } from '../util.js';
 import { parseJson } from '../db.js';
 import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
+import { performanceRange } from './performance.js';
 import { weekKey, weeklyTasks } from '../tasks.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
@@ -61,6 +62,11 @@ export function adminRoutes(ctx) {
       res,
       'לוח בקרה',
       V.dashboardView({
+        profile: (() => {
+          if (!store.profileMetricsLastDate(req.business.id)) return null;
+          const r = performanceRange(store, req.business.id, 30);
+          return { totals: store.profileMetricTotals(req.business.id, r.from, r.to), prev: store.profileMetricTotals(req.business.id, r.prevFrom, r.prevTo) };
+        })(),
         stats,
         prev,
         campaigns,
