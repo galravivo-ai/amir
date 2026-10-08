@@ -1,16 +1,16 @@
 import { parseJson } from '../db.js';
 import { formatDate, h } from '../util.js';
-import { PLUS_ENGINES } from '../visibility.js';
+import { PLUS_ENGINES, siteHost as siteHostOf } from '../visibility.js';
 import { icon } from './icons.js';
 
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
 
 function cell(row) {
   if (!row) return '<td class="vis-cell">—</td>';
-  if (row.error === 'no_answer') return '<td class="vis-cell muted" title="גוגל לא הציגה תשובת AI לחיפוש הזה">אין תשובת AI</td>';
-  if (row.error) return `<td class="vis-cell bad" title="${h(row.error)}">שגיאה</td>`;
+  if (row.error === 'no_answer') return '<td class="vis-cell" title="גוגל לא הציגה תשובת AI לחיפוש הזה"><span class="vis-chip none">אין תשובת AI</span></td>';
+  if (row.error) return `<td class="vis-cell" title="${h(row.error)}"><span class="vis-chip err">שגיאה</span></td>`;
   const sources = parseJson(row.sources, []);
-  const label = row.cited ? '<b class="ok">✓ הוזכרתם וצוטטתם</b>' : row.mentioned ? '<b class="ok">✓ הוזכרתם</b>' : '<span class="no">✗ לא הוזכרתם</span>';
+  const label = row.cited ? '<span class="vis-chip yes">✓ הוזכרתם וצוטטתם</span>' : row.mentioned ? '<span class="vis-chip yes">✓ הוזכרתם</span>' : '<span class="vis-chip no">✗ לא הוזכרתם</span>';
   return `<td class="vis-cell"><details><summary>${label}</summary>
     ${row.snippet ? `<blockquote>${h(row.snippet)}</blockquote>` : ''}
     ${
@@ -21,6 +21,139 @@ function cell(row) {
         : ''
     }
   </details></td>`;
+}
+
+const when = (runAt) => formatDate(`${runAt.replace(' ', 'T')}Z`);
+const hostOf = (link) => {
+  try {
+    return new URL(link).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+/** The score ring: how often the answers mention the business. */
+function hero(last, prev) {
+  const score = pct(last.mentioned, last.answered);
+  const before = prev ? pct(prev.mentioned, prev.answered) : null;
+  const diff = before == null ? null : score - before;
+  const tone = score >= 60 ? 'good' : score >= 35 ? 'okay' : score >= 15 ? 'mid' : 'bad';
+  const label = score >= 60 ? 'ה-AI ממליץ עליכם ברוב השאלות' : score >= 35 ? 'מופיעים בחלק מהתשובות' : score >= 15 ? 'מופיעים לפעמים' : 'כמעט לא מופיעים בתשובות';
+  return `<section class="card vis-hero">
+    <div class="hl-ring ${tone}" style="--p:${score}" role="img" aria-label="ציון נראות ${score} מתוך 100"><b>${score}</b><small>מתוך 100</small></div>
+    <div class="vis-hero-text">
+      <span class="muted small">ציון הנראות ב-AI</span>
+      <h2>${label}</h2>
+      <p class="muted">הוזכרתם ב-${last.mentioned} מתוך ${last.answered} תשובות${last.cited ? `, ובכ-${pct(last.cited, last.answered)}% מהן גם צוטטתם כמקור` : ''}.
+        ${diff ? `<span class="pf-chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} נקודות מהבדיקה הקודמת</span>` : diff === 0 ? '<span class="pf-chg flat">ללא שינוי מהבדיקה הקודמת</span>' : ''}</p>
+      <span class="muted small">בדיקה אחרונה: ${h(when(last.run_at))}</span>
+    </div>
+  </section>`;
+}
+
+function kpis(last, latest, byQuery) {
+  const questions = [...byQuery.values()];
+  const anyHit = questions.filter((cells) => Object.values(cells).some((r) => !r.error && r.mentioned)).length;
+  const noAnswer = latest.filter((r) => r.error === 'no_answer').length;
+  return `<div class="kpis vis-kpis">
+    <div class="kpi"><span class="kpi-label">הוזכרתם</span><span class="kpi-value">${pct(last.mentioned, last.answered)}%</span><span class="kpi-hint muted">מהתשובות</span></div>
+    <div class="kpi"><span class="kpi-label">צוטטתם כמקור</span><span class="kpi-value">${pct(last.cited, last.answered)}%</span><span class="kpi-hint muted">האתר או פרופיל הגוגל</span></div>
+    <div class="kpi"><span class="kpi-label">שאלות שבהן הופעתם</span><span class="kpi-value">${anyHit}/${questions.length}</span><span class="kpi-hint muted">לפחות במנוע אחד</span></div>
+    <div class="kpi"><span class="kpi-label">תשובות שנבדקו</span><span class="kpi-value">${last.answered}</span><span class="kpi-hint muted">${noAnswer ? `ועוד ${noAnswer} בלי תשובת AI` : `${questions.length} שאלות`}</span></div>
+  </div>`;
+}
+
+/** One card per engine: how often it mentions the business. */
+function engineCards(latest, shownEngines, allEngines) {
+  return `<div class="vis-eng-grid">${shownEngines
+    .map((e) => {
+      const rows = latest.filter((r) => r.engine === e && !r.error);
+      if (!rows.length) {
+        const err = latest.find((r) => r.engine === e);
+        return `<div class="vis-eng"><b>${h(allEngines[e])}</b><span class="vis-eng-pct muted">—</span><span class="muted small">${err?.error === 'no_answer' ? 'לא הציג תשובת AI' : err ? 'שגיאה בבדיקה' : 'לא נבדק'}</span></div>`;
+      }
+      const m = rows.filter((r) => r.mentioned).length;
+      const c = rows.filter((r) => r.cited).length;
+      const p = pct(m, rows.length);
+      return `<div class="vis-eng"><b>${h(allEngines[e])}</b>
+        <span class="vis-eng-pct">${p}%</span>
+        <span class="vis-eng-bar"><span style="width:${Math.max(2, p)}%"></span></span>
+        <span class="muted small">${m} מתוך ${rows.length} תשובות${c ? ` · צוטטתם ${c}` : ''}</span></div>`;
+    })
+    .join('')}</div>`;
+}
+
+/** Mentioned and cited, as a share of the answers, run after run. */
+function trend(runs) {
+  const w = 720, hgt = 220, padX = 34, padTop = 14, padBottom = 26;
+  const pts = runs.map((r) => ({ at: r.run_at, m: pct(r.mentioned, r.answered), c: pct(r.cited, r.answered) }));
+  const step = pts.length > 1 ? (w - padX * 2) / (pts.length - 1) : 0;
+  const x = (i) => (pts.length > 1 ? padX + i * step : w / 2);
+  const y = (v) => padTop + (hgt - padTop - padBottom) * (1 - v / 100);
+  const grid = [0, 50, 100]
+    .map((v) => `<line class="grid" x1="${padX}" x2="${w - 8}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${padX - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`)
+    .join('');
+  const line = (key, color) =>
+    `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map((p, i) => `${x(i)},${y(p[key])}`).join(' ')}"/>` +
+    pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p[key])}" r="4.5" fill="${color}" stroke="#fff" stroke-width="2"/>`).join('');
+  const hits = pts
+    .map((p, i) => `<g class="vis-hit"><title>${h(when(p.at))}
+הוזכרתם: ${p.m}%
+צוטטתם: ${p.c}%</title><rect x="${x(i) - Math.max(10, step / 2)}" y="${padTop}" width="${Math.max(20, step)}" height="${hgt - padTop - padBottom}"/></g>`)
+    .join('');
+  const dm = (s) => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
+  const ticks = pts.length > 1
+    ? [0, pts.length - 1].map((i, k) => `<text class="tick" x="${x(i)}" y="${hgt - 6}" text-anchor="${k ? 'end' : 'start'}">${dm(pts[i].at)}</text>`).join('')
+    : `<text class="tick" x="${w / 2}" y="${hgt - 6}" text-anchor="middle">${dm(pts[0].at)}</text>`;
+  return `<section class="card"><h3>המגמה לאורך זמן</h3>
+    <div class="pf-legend"><span><i style="background:#5b3df5"></i>הוזכרתם</span><span><i style="background:#12a594"></i>צוטטתם כמקור</span></div>
+    <svg viewBox="0 0 ${w} ${hgt}" class="chart vis-chart" role="img" aria-label="אחוז האזכורים והציטוטים בכל בדיקה" direction="ltr">
+      ${grid}${line('c', '#12a594')}${line('m', '#5b3df5')}${hits}${ticks}
+    </svg>
+    ${pts.length < 2 ? '<p class="muted small">המגמה תתמלא אחרי עוד כמה בדיקות שבועיות.</p>' : ''}
+  </section>`;
+}
+
+/** The sites the answers lean on: where it pays to be listed. */
+function sourcesCard(latest, business) {
+  const mine = siteHostOf(business.ai_site);
+  const count = new Map();
+  for (const r of latest) {
+    if (r.error) continue;
+    const hosts = new Set(parseJson(r.sources, []).map((s) => hostOf(s.link)).filter(Boolean));
+    for (const host of hosts) count.set(host, (count.get(host) || 0) + 1);
+  }
+  const top = [...count].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!top.length) return '';
+  const max = top[0][1];
+  return `<section class="card"><h3>על אילו אתרים ה-AI סומך</h3>
+    <p class="muted small">המקורות שהופיעו הכי הרבה בתשובות. כדאי שהעסק יופיע ויקבל ביקורות באתרים האלה.</p>
+    <ul class="vis-src-list">${top
+      .map(([host, n]) => {
+        const isMine = mine && (host === mine || host.endsWith(`.${mine}`));
+        return `<li class="${isMine ? 'mine' : ''}"><span class="vis-src-host"><bdi>${h(host)}</bdi>${isMine ? ' <span class="badge st-resolved">האתר שלכם</span>' : ''}</span>
+          <span class="vis-src-bar"><span style="width:${(n / max) * 100}%"></span></span><span class="vis-src-n">${n}</span></li>`;
+      })
+      .join('')}</ul></section>`;
+}
+
+function matrix(byQuery, shownEngines, allEngines) {
+  return `<section class="card">
+    <h3>התשובות לכל שאלה</h3>
+    <div class="table-wrap"><table class="table vis-table"><thead><tr><th>שאלה</th>${shownEngines.map((e) => `<th>${h(allEngines[e])}</th>`).join('')}</tr></thead>
+      <tbody>${[...byQuery]
+        .map(([q, cells]) => `<tr><td class="vis-q">${h(q)}</td>${shownEngines.map((e) => cell(cells[e])).join('')}</tr>`)
+        .join('')}</tbody></table></div>
+    <p class="muted small">לוחצים על תוצאה כדי לראות את המשפט שבו הוזכרתם ואת המקורות שהתשובה נשענה עליהם. תשובות AI משתנות מבדיקה לבדיקה, לכן כדאי להסתכל על המגמה.</p>
+  </section>`;
+}
+
+function dashboard({ runs, latest, shownEngines, allEngines, byQuery, business }) {
+  const last = runs.at(-1);
+  return `<div class="vis-top">${hero(last, runs.at(-2))}<section class="card vis-eng-card"><h3>לפי מנוע</h3>${engineCards(latest, shownEngines, allEngines)}</section></div>
+    ${kpis(last, latest, byQuery)}
+    <div class="dash-grid vis-grid">${trend(runs)}${sourcesCard(latest, business)}</div>
+    ${matrix(byQuery, shownEngines, allEngines)}`;
 }
 
 function plusCard({ offer, can }) {
@@ -38,17 +171,12 @@ export function visibilityView({
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
-  const answered = latest.filter((r) => !r.error);
   const shownEngines = engines.length ? engines : Object.keys(allEngines).filter((e) => plus || !PLUS_ENGINES.includes(e));
   const byQuery = new Map();
   for (const r of latest) {
     if (!byQuery.has(r.query)) byQuery.set(r.query, {});
     byQuery.get(r.query)[r.engine] = r;
   }
-  const engineScore = (e) => {
-    const rows = answered.filter((r) => r.engine === e);
-    return rows.length ? `${pct(rows.filter((r) => r.mentioned).length, rows.length)}%` : '—';
-  };
   const editing = suggested || queries;
   const inputs = Array.from({ length: maxQueries }, (_, i) => editing[i] || '');
 
@@ -71,33 +199,7 @@ export function visibilityView({
     }
     ${
       last
-        ? `<div class="kpis kpis-3">
-            <div class="kpi"><div class="kpi-label">הוזכרתם בתשובות</div><div class="kpi-value">${pct(last.mentioned, last.answered)}%</div>
-              <div class="kpi-hint">${last.mentioned} מתוך ${last.answered} תשובות</div></div>
-            <div class="kpi"><div class="kpi-label">צוטטתם כמקור</div><div class="kpi-value">${pct(last.cited, last.answered)}%</div>
-              <div class="kpi-hint">האתר שלכם או פרופיל הגוגל</div></div>
-            <div class="kpi"><div class="kpi-label">לפי מנוע</div><div class="vis-engines">${shownEngines
-              .map((e) => `<span><b>${engineScore(e)}</b> ${h(allEngines[e])}</span>`)
-              .join('')}</div><div class="kpi-hint">בדיקה אחרונה: ${h(formatDate(last.run_at.replace(' ', 'T') + 'Z'))}</div></div>
-          </div>
-          ${
-            runs.length > 1
-              ? `<section class="card"><h3>לאורך זמן</h3><div class="vis-trend" role="img" aria-label="אחוז האזכורים בכל בדיקה">${runs
-                  .map(
-                    (r) => `<div class="vis-bar" title="${h(formatDate(r.run_at.replace(' ', 'T') + 'Z'))}: ${pct(r.mentioned, r.answered)}%">
-                      <span style="height:${Math.max(3, pct(r.mentioned, r.answered))}%"></span><small>${pct(r.mentioned, r.answered)}%</small></div>`,
-                  )
-                  .join('')}</div></section>`
-              : ''
-          }
-          <section class="card">
-            <h3>התשובות לכל שאלה</h3>
-            <div class="table-wrap"><table class="table vis-table"><thead><tr><th>שאלה</th>${shownEngines.map((e) => `<th>${h(allEngines[e])}</th>`).join('')}</tr></thead>
-              <tbody>${[...byQuery]
-                .map(([q, cells]) => `<tr><td class="vis-q">${h(q)}</td>${shownEngines.map((e) => cell(cells[e])).join('')}</tr>`)
-                .join('')}</tbody></table></div>
-            <p class="muted small">לוחצים על תוצאה כדי לראות את המשפט שבו הוזכרתם ואת המקורות שהתשובה נשענה עליהם. תשובות AI משתנות מבדיקה לבדיקה, לכן כדאי להסתכל על המגמה.</p>
-          </section>`
+        ? dashboard({ runs, latest, shownEngines, allEngines, byQuery, business })
         : queries.length
           ? '<div class="card empty"><p class="muted">עוד לא בוצעה בדיקה. לחצו "בדיקה עכשיו", או חכו לבדיקה השבועית.</p></div>'
           : ''
