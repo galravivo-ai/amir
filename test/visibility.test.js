@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
+import { cityOf } from '../src/routes/visibility.js';
 import { createSerp } from '../src/serp.js';
 import { flattenSerpAnswer, matchAnswer, namesOf, normalize } from '../src/visibility.js';
 
@@ -52,6 +53,8 @@ const serpFetch = async (url) => {
 let server;
 let base;
 let created;
+let lastSuggest = null;
+
 before(async () => {
   created = createApp(openDb(':memory:'), {
     authLimit: { windowMs: 60e3, max: 1000 },
@@ -60,7 +63,10 @@ before(async () => {
     serp: createSerp({ apiKey: 'k', fetchImpl: serpFetch }),
     ai: {
       webAnswer: async () => ({ text: 'אני ממליץ על קפה לנדוור.', sources: [{ title: 'Landwer', link: 'https://landwer.co.il' }] }),
-      suggestQueries: async () => ['איפה יש בראנץ׳ טוב בתל אביב?', 'בית קפה שקט לעבודה בדיזנגוף'],
+      suggestQueries: async (input) => {
+        lastSuggest = input;
+        return ['איפה יש בראנץ׳ טוב בתל אביב?', 'בית קפה שקט לעבודה בדיזנגוף'];
+      },
     },
   });
   server = created.app.listen(0);
@@ -90,8 +96,17 @@ test('set the questions, run a check, see the results', async () => {
   assert.match(page.text, /נראות ב-AI/);
   assert.match(page.text, /href="\/admin\/ai-visibility"/);
 
-  const suggested = await req('/admin/ai-visibility/suggest', { method: 'POST', form: { _csrf: token, about: 'בית קפה' } });
+  // Suggestions are local: they get the business's place and as many questions as the plan allows.
+  const biz0 = created.store.businessesFor(created.store.userByEmail('vis@example.com').id)[0];
+  created.store.db.prepare("INSERT INTO google_locations (business_id, name, title, address, enabled, source) VALUES (?, 'serp:x', 'ג׳קו סטריט', 'דיזנגוף 120, תל אביב-יפו, ישראל', 1, 'serp')").run(biz0.id);
+  assert.match((await req('/admin/ai-visibility')).text, /name="city" value="תל אביב-יפו"/, 'the city comes from the Google address');
+  const suggested = await req('/admin/ai-visibility/suggest', { method: 'POST', form: { _csrf: token, about: 'בית קפה', city: '' } });
   assert.match(suggested.text, /value="איפה יש בראנץ׳ טוב בתל אביב\?"/);
+  assert.equal(lastSuggest.city, 'תל אביב-יפו');
+  assert.equal(lastSuggest.address, 'דיזנגוף 120, תל אביב-יפו, ישראל');
+  assert.equal(lastSuggest.about, 'בית קפה');
+  assert.ok(lastSuggest.count >= 5);
+  created.store.db.prepare("DELETE FROM google_locations WHERE name = 'serp:x'").run();
 
   const queries = new URLSearchParams({ _csrf: token, aliases: "Jacko's", site: 'jackos.co.il', city: 'תל אביב' });
   queries.append('queries', 'איפה יש ארוחת בוקר טובה בדיזנגוף?');
@@ -226,4 +241,11 @@ test('wider AI visibility: in "pro" and up, a gift on "basic", more engines and 
   } finally {
     srv.close();
   }
+});
+
+test('the city of a Google address', () => {
+  assert.equal(cityOf('דיזנגוף 120, תל אביב-יפו, ישראל'), 'תל אביב-יפו');
+  assert.equal(cityOf('HaYarkon St 5, Haifa, Israel'), 'Haifa');
+  assert.equal(cityOf('הרצל 1, ראשון לציון 7525101'), 'ראשון לציון');
+  assert.equal(cityOf('תל אביב'), '');
 });

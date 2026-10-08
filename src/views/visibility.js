@@ -168,6 +168,7 @@ function plusCard({ offer, can }) {
 export function visibilityView({
   business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
   maxQueries = 5, plus = false, plusOffer = null, runsLeft = null, notice = '', error = '', suggested = null,
+  cityGuess = '', suggestedCity = '',
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
@@ -212,20 +213,20 @@ export function visibilityView({
             <form method="post" action="/admin/ai-visibility/settings" class="stack">
               <input type="hidden" name="_csrf" value="${h(csrf)}">
               <div class="stack tight-stack"><span class="label-text">השאלות שלקוחות שואלים (עד ${maxQueries})</span>
-                ${inputs.map((q, i) => `<input name="queries" value="${h(q)}" maxlength="160" placeholder="${i === 0 ? 'למשל: איפה יש ארוחת בוקר טובה בדיזנגוף?' : ''}" aria-label="שאלה ${i + 1}">`).join('')}
-                <span class="muted small">כתבו את השאלות בלי שם העסק, כמו שלקוח חדש היה שואל.</span>
+                ${inputs.map((q, i) => `<input name="queries" value="${h(q)}" maxlength="160" placeholder="${i === 0 ? 'למשל: איפה יש ארוחת בוקר טובה בדיזנגוף?' : i === 1 ? 'למשל: בית קפה עם חניה ליד כיכר המדינה' : ''}" aria-label="שאלה ${i + 1}">`).join('')}
+                <span class="muted small">שאלות מקומיות עובדות הכי טוב: התחום + העיר, השכונה או הרחוב, כמו שלקוח בסביבה היה שואל ("איפה יש... ב...", "... קרוב ל..."). בלי שם העסק. אלה החיפושים שבהם ה-AI מציג עסקים מגוגל מפות.</span>
               </div>
               <div class="grid2 tight">
                 <label>שמות נוספים של העסק<input name="aliases" value="${h(business.ai_aliases)}" maxlength="300" placeholder="למשל: Jacko's Street, ג׳קוס"></label>
                 <label>אתר העסק<input name="site" value="${h(business.ai_site)}" dir="ltr" placeholder="jackos.co.il"></label>
-                <label>עיר או אזור<input name="city" value="${h(business.ai_city)}" maxlength="60" placeholder="תל אביב"></label>
+                <label>עיר, שכונה או אזור<input name="city" value="${h(suggestedCity || business.ai_city || cityGuess)}" maxlength="60" placeholder="למשל: תל אביב, הצפון הישן"></label>
               </div>
               <div class="row compact">
                 <button class="btn primary">שמירה</button>
                 ${
                   aiAvailable
                     ? `<button class="btn ai-btn" formaction="/admin/ai-visibility/suggest" formnovalidate>${icon('spark', 16)} <span>ה-AI יציע שאלות</span></button>
-                       <input name="about" class="inline-about" placeholder="תחום העסק, למשל: בית קפה" maxlength="120">`
+                       <input name="about" class="inline-about" placeholder="תחום ושירותים, למשל: מסעדת שף, אירועים פרטיים" maxlength="120">`
                     : ''
                 }
               </div>

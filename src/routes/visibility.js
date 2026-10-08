@@ -5,6 +5,22 @@ import { AI_PLUS, hasAiPlus } from '../plans.js';
 import { safeUrl } from '../util.js';
 import * as V from '../views/visibility.js';
 
+/** "דיזנגוף 120, תל אביב-יפו, ישראל" -> "תל אביב-יפו". */
+export function cityOf(address) {
+  const parts = String(address ?? '').split(',').map((p) => p.replace(/\d{5,7}/g, '').trim()).filter((p) => p && !/^(ישראל|israel)$/i.test(p));
+  if (parts.length < 2) return '';
+  return parts[parts.length - 1].replace(/\d+/g, '').trim();
+}
+
+/** Where the business is and what Google calls it: what local questions are built from. */
+function localContext(store, business) {
+  const loc = store.googleLocations(business.id).find((l) => l.enabled);
+  const audit = store.latestAudits(business.id).find((a) => !a.error);
+  const profile = audit ? parseJson(audit.profile, {}) : {};
+  const address = profile.address || loc?.address || '';
+  return { address, city: business.ai_city || cityOf(address), categories: (profile.types || []).slice(0, 4) };
+}
+
 /** AI visibility: the questions, the weekly results, and a check on demand. */
 export function visibilityRoutes(ctx, { visibility }) {
   const { store, render, requireRole } = ctx;
@@ -20,6 +36,7 @@ export function visibilityRoutes(ctx, { visibility }) {
       'נראות ב-AI',
       V.visibilityView({
         business: req.business,
+        cityGuess: req.business.ai_city ? '' : localContext(store, req.business).city,
         queries: parseJson(req.business.ai_queries, []),
         data: store.aiVisibility(req.business.id),
         engines: visibility.engines(req.business),
@@ -66,8 +83,17 @@ export function visibilityRoutes(ctx, { visibility }) {
     const over = ctx.usage.take(req.business, 'ai_draft');
     if (over) return page(req, res, { error: over });
     try {
-      const suggested = await ctx.ai.suggestQueries({ businessName: req.business.name, about: String(req.body.about ?? '').slice(0, 120), city: req.business.ai_city });
-      page(req, res, { suggested, notice: 'אלה שאלות מוצעות. אפשר לערוך, ואז לשמור.' });
+      const local = localContext(store, req.business);
+      const city = String(req.body.city ?? '').trim().slice(0, 60) || local.city;
+      const suggested = await ctx.ai.suggestQueries({
+        businessName: req.business.name,
+        about: String(req.body.about ?? '').slice(0, 120),
+        city,
+        address: local.address,
+        categories: local.categories,
+        count: visibility.maxQueries(req.business),
+      });
+      page(req, res, { suggested, suggestedCity: city, notice: 'אלה שאלות מקומיות מוצעות, לפי התחום והמיקום של העסק. אפשר לערוך, ואז לשמור.' });
     } catch {
       ctx.usage.give(req.business, 'ai_draft');
       page(req, res, { error: 'ה-AI לא הצליח להציע שאלות, נסו שוב.' });
