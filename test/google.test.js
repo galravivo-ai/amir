@@ -335,7 +335,9 @@ test('profile performance: views, calls, directions and searches from Google', a
   const biz = store.businessesFor(store.userByEmail('perf-owner@example.com').id)[0];
 
   // Not connected: the page asks to connect.
-  assert.match((await req('/admin/performance')).text, /צריך לחבר את פרופיל העסק בגוגל/);
+  const locked = (await req('/admin/performance')).text;
+  assert.match(locked, /כך זה ייראה אחרי החיבור לגוגל/);
+  assert.match(locked, /עוד לא עוקבים אחרי העסק בגוגל/);
 
   const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
   await req(`/admin/google/callback?code=abc&state=${new URL(start.location).searchParams.get('state')}`);
@@ -359,6 +361,11 @@ test('profile performance: views, calls, directions and searches from Google', a
   assert.match(page, /פחות מ-15/);
   assert.match(page, /מפות גוגל <b>900<\/b> \(75%\)/);
   assert.match((await req('/admin/performance?days=365')).text, /לפי שבוע/);
+
+  // Reputation from the reviews sits under the private numbers.
+  assert.match(page, /מוניטין בגוגל/);
+  assert.match(page, /דירוג בגוגל/);
+  assert.doesNotMatch(page, /התצוגה מאחור היא דוגמה/);
 
   // The dashboard shows the month's summary.
   assert.match((await req('/admin')).text, /הפרופיל בגוגל ב-30 הימים האחרונים/);

@@ -1098,6 +1098,18 @@ export function createStore(db) {
                 GROUP BY k.keyword ORDER BY value DESC, threshold DESC LIMIT ?`).all(businessId, ...months, ...(locationId ? [locationId] : []), limit);
     },
 
+    /** Google reviews per month (the last 12) and how many reviews in a range got a reply. */
+    reviewMonths(businessId, sinceMonth) {
+      return q(`SELECT substr(g.create_time, 1, 7) AS month, COUNT(*) AS n, SUM(g.rating < 4) AS neg, AVG(g.rating) AS avg
+                FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+                WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? GROUP BY month ORDER BY month`).all(businessId, `${sinceMonth}-01`);
+    },
+    replyRate(businessId, fromIso, toIso) {
+      const r = q(`SELECT COUNT(*) AS n, SUM(g.reply != '') AS replied FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
+                   WHERE l.business_id = ? AND l.enabled = 1 AND g.create_time >= ? AND g.create_time < ?`).get(businessId, fromIso, toIso);
+      return { n: r.n || 0, replied: r.replied || 0 };
+    },
+
     // ---------- map rank tracking ----------
     setLocationCoords: (id, lat, lng) => q('UPDATE google_locations SET lat = ?, lng = ? WHERE id = ?').run(lat, lng, id),
     rankKeywords: (businessId) =>

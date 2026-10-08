@@ -12,6 +12,57 @@ export function performanceRange(store, businessId, days) {
   return { from, to, prevFrom: shift(from, -days), prevTo: shift(from, -1) };
 }
 
+const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+/**
+ * What the public profile already shows, without the owner's Google login:
+ * rating and reviews (followed by link or by connection), replies, profile
+ * health and map rank.
+ */
+export function publicProfile(store, business, { from, to, prevFrom }) {
+  const locations = store.googleLocations(business.id).filter((l) => l.enabled);
+  if (!locations.length) return null;
+  const end = `${shift(to, 1)}T00:00:00Z`;
+  const stats = store.googleStats(business.id, { from: Date.parse(`${from}T00:00:00Z`), to: Date.parse(end) });
+  // Rating and total at the start of the range, from the daily snapshots.
+  let total0 = 0, weighted0 = 0, known = 0;
+  for (const l of locations) {
+    const snap = store.snapshotOnOrBefore('location', l.id, from);
+    if (snap?.total) {
+      total0 += snap.total;
+      weighted0 += (snap.rating || 0) * snap.total;
+      known++;
+    }
+  }
+  const replies = store.replyRate(business.id, `${from}T00:00:00Z`, end);
+  const prevReplies = store.replyRate(business.id, `${prevFrom}T00:00:00Z`, `${from}T00:00:00Z`);
+  const since = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 11, 1)).toISOString().slice(0, 7);
+  const audits = store.latestAudits(business.id).filter((a) => !a.error);
+  const ranks = store.rankKeywords(business.id).map((k) => store.rankChecks(k.id, 2).filter((c) => !c.error));
+  const rankNow = avg(ranks.map((c) => c[0]?.avg_rank).filter((v) => v != null));
+  const rankBefore = avg(ranks.map((c) => c[1]?.avg_rank).filter((v) => v != null));
+  return {
+    rating: stats.avg,
+    total: stats.total,
+    ratingBefore: known === locations.length && total0 ? weighted0 / total0 : null,
+    totalBefore: known === locations.length && total0 ? total0 : null,
+    newReviews: stats.count,
+    prevNew: stats.prevCount,
+    avgPeriod: stats.avgPeriod,
+    distribution: stats.distribution,
+    unanswered: stats.unanswered,
+    replyRate: replies.n ? (replies.replied / replies.n) * 100 : null,
+    prevReplyRate: prevReplies.n ? (prevReplies.replied / prevReplies.n) * 100 : null,
+    months: store.reviewMonths(business.id, since),
+    since,
+    health: audits.length ? Math.round(avg(audits.map((a) => a.score))) : null,
+    healthBefore: audits.some((a) => a.prev_score != null) ? Math.round(avg(audits.filter((a) => a.prev_score != null).map((a) => a.prev_score))) : null,
+    rank: rankNow,
+    rankBefore,
+    rankKeywords: ranks.filter((c) => c.length).length,
+  };
+}
+
 /** Views, calls, directions and clicks of the business's Google profile. */
 export function performanceRoutes(ctx, { sync }) {
   const { store, render, requireRole } = ctx;
@@ -46,6 +97,9 @@ export function performanceRoutes(ctx, { sync }) {
         keywordMonths: kwMonths.length > 1 ? `${monthLabel(kwMonths[kwMonths.length - 1])} עד ${monthLabel(kwMonths[0])}` : `ב${monthLabel(kwMonths[0])}`,
         lastSync: locations.map((l) => l.metrics_at).filter(Boolean).sort().pop() || null,
         errors: locations.map((l) => l.metrics_error).filter(Boolean),
+        pub: publicProfile(store, b, r),
+        googleReady: Boolean(ctx.google),
+        canConnect: req.can('manager'),
         csrf: req.user.csrf,
         canRefresh: Boolean(sync) && req.can('manager'),
         refreshing: running.has(b.id),

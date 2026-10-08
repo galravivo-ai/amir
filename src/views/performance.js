@@ -65,7 +65,7 @@ function buckets(daily, from, to) {
 const dm = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
 
 /** A bar chart; each bar is a stack of `series` ([key, label, color, value(row)]). */
-function barChart(rows, series, { label, weekly, w = 720, hgt = 220 }) {
+function barChart(rows, series, { label, weekly, w = 720, hgt = 220, tipLabel = null, tickLabel = null }) {
   const padX = 8, padTop = 16, padBottom = 24;
   const totals = rows.map((r) => series.reduce((a, s) => a + s[3](r), 0));
   const max = Math.max(4, ...totals);
@@ -98,13 +98,13 @@ function barChart(rows, series, { label, weekly, w = 720, hgt = 220 }) {
             : `<rect x="${x}" y="${y0 - hh}" width="${bw}" height="${hh}" fill="${s[2]}"/>`;
         })
         .join('');
-      const when = weekly ? `שבוע ${dm(r.date)}–${dm(r.end)}` : dm(r.date);
+      const when = tipLabel ? tipLabel(r) : weekly ? `שבוע ${dm(r.date)}–${dm(r.end)}` : dm(r.date);
       const tip = [when, ...series.filter((s, k) => vals[k] || series.length === 1).map((s, k) => `${s[1]}: ${num(s[3](r))}`)].join('\n');
       return `<g class="pf-bar"><title>${h(tip)}</title><rect class="hit" x="${padX + i * step}" y="${padTop}" width="${step}" height="${plotH}"/>${segs}</g>`;
     })
     .join('');
   const ticks = [0, Math.floor(rows.length / 2), rows.length - 1]
-    .map((i, k) => `<text class="tick" x="${padX + i * step + step / 2}" y="${hgt - 6}" text-anchor="${['start', 'middle', 'end'][k]}">${dm(rows[i].date)}</text>`)
+    .map((i, k) => `<text class="tick" x="${padX + i * step + step / 2}" y="${hgt - 6}" text-anchor="${['start', 'middle', 'end'][k]}">${tickLabel ? tickLabel(rows[i]) : dm(rows[i].date)}</text>`)
     .join('');
   return `<svg viewBox="0 0 ${w} ${hgt}" class="chart pf-chart" role="img" aria-label="${h(label)}" direction="ltr">
     ${grid}<line class="axis" x1="${padX}" x2="${w - padX}" y1="${y(0)}" y2="${y(0)}"/>${bars}${ticks}
@@ -123,37 +123,16 @@ function splitBar(a, b, la, lb) {
 
 const RANGES = [[7, '7 ימים'], [30, '30 יום'], [90, '3 חודשים'], [365, 'שנה']];
 
-export function performanceView({ connected, locations, locationId, days, from, to, totals, prev, daily, keywords, keywordMonths, lastSync, errors, csrf, canRefresh, refreshing, notice = '' }) {
-  const head = `<div class="page-head"><h1>${icon('chart', 24)} ביצועי הפרופיל בגוגל</h1>${
-    connected && canRefresh
-      ? `<form method="post" action="/admin/performance/refresh"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn" ${refreshing ? 'disabled' : ''}>${refreshing ? 'מעדכן…' : 'עדכון עכשיו'}</button></form>`
-      : ''
-  }</div>
-  <p class="page-intro">כמה אנשים ראו את העסק בחיפוש ובמפות של גוגל, ומה עשו אחר כך: התקשרו, ביקשו הגעה, נכנסו לאתר או שלחו הודעה. הנתונים מגיעים ישירות מגוגל ומתעדכנים פעם ביום.</p>
-  ${notice ? `<div class="flash">${h(notice)}</div>` : ''}`;
-
-  if (!connected) {
-    return `${head}<section class="card pf-empty">
-      <h3>צריך לחבר את פרופיל העסק בגוגל</h3>
-      <p>את נתוני הצפיות, השיחות, בקשות ההגעה והכניסות לאתר גוגל מוסרת רק לבעלים של הפרופיל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, והנתונים של 18 החודשים האחרונים נטענים אוטומטית.</p>
-      <a class="btn primary" href="/admin/google">חיבור לגוגל</a>
-    </section>`;
-  }
-
-  const has = daily.size > 0;
-  const errBox = errors.length
-    ? `<div class="warn">גוגל עוד לא מסרה נתונים: ${h(errors[0])}${/quota|403|PERMISSION|disabled|not been used/i.test(errors[0]) ? '<br><span class="small">ייתכן שהגישה של המערכת ל-API של גוגל עוד לא אושרה. ננסה שוב אוטומטית.</span>' : ''}</div>`
-    : '';
-  if (!has) {
-    return `${head}${errBox}<section class="card pf-empty"><h3>הנתונים בדרך</h3><p class="muted">החשבון מחובר. הטעינה הראשונה של הנתונים מגוגל לוקחת עד יום.${lastSync ? '' : ' אפשר גם ללחוץ "עדכון עכשיו".'}</p></section>`;
-  }
-
-  const filters = `<form class="pf-filters" method="get" action="/admin/performance">
+function filtersBar({ days, locations, locationId, from, to }) {
+  return `<form class="pf-filters" method="get" action="/admin/performance">
     <div class="pf-seg">${RANGES.map(([d, l]) => `<a class="${d === days ? 'on' : ''}" href="?days=${d}${locationId ? `&loc=${locationId}` : ''}">${l}</a>`).join('')}</div>
     ${locations.length > 1 ? `<select name="loc" onchange="this.form.submit()"><option value="">כל הסניפים</option>${locations.map((l) => `<option value="${l.id}" ${l.id === locationId ? 'selected' : ''}>${h(l.title)}</option>`).join('')}</select><input type="hidden" name="days" value="${days}">` : ''}
     <span class="muted small">${dm(from)}.${from.slice(0, 4)} – ${dm(to)}.${to.slice(0, 4)} · בהשוואה לתקופה שלפני</span>
   </form>`;
+}
 
+/** Views, actions, charts and search terms: the private numbers from the Performance API. */
+function metricsBlock({ totals, prev, daily, from, to, keywords, keywordMonths }) {
   const views = viewsOf(totals), actions = actionsOf(totals);
   const rate = views ? (actions / views) * 100 : 0;
   const prevRate = viewsOf(prev) ? (actionsOf(prev) / viewsOf(prev)) * 100 : 0;
@@ -164,11 +143,11 @@ export function performanceView({ connected, locations, locationId, days, from, 
     <div class="kpi pf-kpi"><span class="kpi-label">${icon('chart', 16)}אחוז המרה</span><span class="kpi-value">${rate.toFixed(1)}%</span>
       <span class="kpi-hint">${prevRate ? `<span class="muted">לפני: ${prevRate.toFixed(1)}%</span>` : '<span class="muted">פעולות מתוך צפיות</span>'}</span></div>
   </div>
-  <div class="kpis pf-kpis pf-actions">${shown.map(([k, l, ic, hint]) => tile(l, totals[k], prev[k], '', ic)).join('')}</div>`;
+  <div class="kpis pf-kpis pf-actions">${shown.map(([k, l, ic]) => tile(l, totals[k], prev[k], '', ic)).join('')}</div>`;
 
   const { rows, weekly } = buckets(daily, from, to);
   const actSeries = SERIES.map(([k, l, c]) => [k, l, c, k === 'OTHER' ? (r) => sum(r, ACTIONS.slice(3).map((a) => a[0])) : (r) => r[k] || 0]);
-  const usedSeries = actSeries.filter((s) => rows.some((r) => s[3](r)));
+  const usedSeries = actSeries.filter((x) => rows.some((r) => x[3](r)));
   const charts = `<div class="dash-grid pf-grid">
     <section class="card"><h3>פעולות של לקוחות ${weekly ? '<small class="muted">(לפי שבוע)</small>' : ''}</h3>
       ${legend(usedSeries.length ? usedSeries : actSeries.slice(0, 3))}
@@ -199,9 +178,141 @@ export function performanceView({ connected, locations, locationId, days, from, 
       })()}
       </tbody></table></div></section>`
     : '';
+  return kpis + charts + kw;
+}
 
-  return `${head}${errBox}${filters}${kpis}${charts}${kw}
-    <p class="muted small">עודכן לאחרונה: ${lastSync ? h(formatDate(`${lastSync.replace(' ', 'T')}Z`)) : '—'}. גוגל מעדכנת את הנתונים באיחור של כמה ימים, ולכן הימים האחרונים עוד לא מופיעים.</p>`;
+/** A tile whose change is shown in points or as a difference, not a percent. */
+function diffTile(label, value, before, { ic = '', fmt = (v) => v, unit = '', better = 'up', hint = '' } = {}) {
+  let chg = '';
+  if (value != null && before != null) {
+    const d = Math.round((value - before) * 10) / 10;
+    const good = better === 'up' ? d > 0 : d < 0;
+    chg = d ? `<span class="pf-chg ${good ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}${unit}</span>` : '<span class="pf-chg flat">ללא שינוי</span>';
+  }
+  return `<div class="kpi pf-kpi">
+    <span class="kpi-label">${ic ? icon(ic, 16) : ''}${h(label)}</span>
+    <span class="kpi-value">${value == null ? '—' : `${fmt(value)}${unit}`}</span>
+    <span class="kpi-hint">${chg}${hint ? ` <span class="muted">${h(hint)}</span>` : ''}</span>
+  </div>`;
+}
+
+const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+const monthName = (m) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`;
+
+/** Reputation on Google: what the public profile shows, available without the owner's login. */
+function publicBlock(pub, { days }) {
+  if (!pub) {
+    return `<section class="card pf-empty"><h3>עוד לא עוקבים אחרי העסק בגוגל</h3>
+      <p class="muted">מדביקים את הקישור לעסק בגוגל מפות בעמוד "ביקורות בגוגל", ומאותו רגע רואים כאן את הדירוג, הביקורות והמגמות.</p>
+      <a class="btn primary" href="/admin/google">הוספת העסק</a></section>`;
+  }
+  const one = (v) => v.toFixed(1);
+  const range = RANGES.find((r) => r[0] === days)?.[1] || `${days} ימים`;
+  const tiles = [
+    diffTile('דירוג בגוגל', pub.total ? pub.rating : null, pub.ratingBefore, { ic: 'star', fmt: one, hint: pub.ratingBefore == null ? `${num(pub.total)} ביקורות` : '' }),
+    diffTile('סה״כ ביקורות', pub.total || null, pub.totalBefore, { ic: 'chat', fmt: num }),
+    diffTile(`ביקורות חדשות (${range})`, pub.newReviews, pub.prevNew, { ic: 'spark', fmt: num, hint: pub.newReviews ? `ממוצע ${one(pub.avgPeriod)}★` : '' }),
+    diffTile('אחוז מענה לביקורות', pub.replyRate == null ? null : Math.round(pub.replyRate), pub.prevReplyRate == null ? null : Math.round(pub.prevReplyRate), { ic: 'check', unit: '%', hint: pub.unanswered ? `${pub.unanswered} ממתינות לתשובה` : '' }),
+    pub.health != null ? diffTile('בריאות הפרופיל', pub.health, pub.healthBefore, { ic: 'shield', hint: 'מתוך 100' }) : '',
+    pub.rank != null ? diffTile('מיקום ממוצע במפות', Math.round(pub.rank * 10) / 10, pub.rankBefore == null ? null : Math.round(pub.rankBefore * 10) / 10, { ic: 'pin', better: 'down', hint: `${pub.rankKeywords} חיפושים` }) : '',
+  ].filter(Boolean);
+
+  // The last 12 months, empty months included.
+  const rows = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(Number(pub.since.slice(0, 4)), Number(pub.since.slice(5, 7)) - 1 + i, 1));
+    const m = d.toISOString().slice(0, 7);
+    const row = pub.months.find((x) => x.month === m) || { n: 0, neg: 0 };
+    rows.push({ date: `${m}-01`, month: m, pos: row.n - (row.neg || 0), neg: row.neg || 0, avg: row.avg });
+  }
+  const series = [
+    ['pos', 'חיוביות (4–5★)', '#5b3df5', (r) => r.pos],
+    ['neg', 'שליליות (1–3★)', '#d6409f', (r) => r.neg],
+  ];
+  const dist = pub.distribution;
+  const distTotal = dist.reduce((a, b) => a + b, 0);
+  const missing = [pub.health == null && '<a href="/admin/profile">בריאות הפרופיל</a>', pub.rank == null && '<a href="/admin/rankings">מעקב מיקום במפות</a>'].filter(Boolean);
+  return `<h2 class="pf-section">${icon('star', 20)} מוניטין בגוגל</h2>
+    <div class="kpis pf-kpis pf-pub">${tiles.join('')}</div>
+    <div class="dash-grid pf-grid">
+      <section class="card"><h3>ביקורות חדשות בכל חודש</h3>
+        ${legend(series)}
+        ${barChart(rows, series, { label: 'ביקורות חדשות בגוגל בכל חודש', tipLabel: (r) => `${monthName(r.month)}${r.avg ? ` · ממוצע ${one(r.avg)}★` : ''}`, tickLabel: (r) => monthName(r.month) })}
+      </section>
+      <section class="card"><h3>הדירוגים בתקופה</h3>
+        ${
+          distTotal
+            ? [5, 4, 3, 2, 1]
+                .map((n) => `<div class="dist-row"><span class="dist-label">${n}★</span><span class="dist-bar"><span style="width:${(dist[n - 1] / distTotal) * 100}%" class="${n >= 4 ? 'good' : n === 3 ? 'mid' : 'bad'}"></span></span><span class="muted small">${dist[n - 1]}</span></div>`)
+                .join('')
+            : '<p class="muted">לא נכנסו ביקורות חדשות בתקופה הזו.</p>'
+        }
+        ${missing.length ? `<p class="muted small pf-tip">אפשר להוסיף לכאן גם ${missing.join(' ו')}.</p>` : ''}
+      </section>
+    </div>`;
+}
+
+/** Plausible numbers for the locked preview. */
+function sampleData(from, to) {
+  const daily = new Map();
+  let seed = 11;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const totals = {}, prev = {};
+  for (let t = Date.parse(`${from}T00:00:00Z`), i = 0; t <= Date.parse(`${to}T00:00:00Z`); t += 864e5, i++) {
+    const d = new Date(t).toISOString().slice(0, 10);
+    const wk = [0.8, 1, 1, 1.1, 1.3, 1.5, 0.6][new Date(t).getUTCDay()];
+    const row = { date: d };
+    for (const [m, base] of [['BUSINESS_IMPRESSIONS_MOBILE_MAPS', 60], ['BUSINESS_IMPRESSIONS_MOBILE_SEARCH', 35], ['BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 10], ['BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 15], ['CALL_CLICKS', 4], ['BUSINESS_DIRECTION_REQUESTS', 6], ['WEBSITE_CLICKS', 3], ['BUSINESS_CONVERSATIONS', 1]]) {
+      row[m] = Math.round(base * wk * (0.6 + rnd() * 0.8));
+      totals[m] = (totals[m] || 0) + row[m];
+      prev[m] = (prev[m] || 0) + Math.round(row[m] * (0.85 + rnd() * 0.2));
+    }
+    daily.set(d, row);
+  }
+  const keywords = [['שם העסק שלכם', 640], ['התחום שלכם + העיר', 310], ['התחום שלכם ליד', 190], ['שירות מומלץ באזור', 120]].map(([keyword, value]) => ({ keyword, value, threshold: 0 }));
+  return { totals, prev, daily, keywords, keywordMonths: 'בחודש האחרון' };
+}
+
+export function performanceView({
+  connected, locations, locationId, days, from, to, totals, prev, daily, keywords, keywordMonths, lastSync, errors,
+  pub = null, googleReady = true, canConnect = false, csrf, canRefresh, refreshing, notice = '',
+}) {
+  const has = daily.size > 0;
+  const head = `<div class="page-head"><h1>${icon('chart', 24)} ביצועי הפרופיל בגוגל</h1>${
+    connected && canRefresh
+      ? `<form method="post" action="/admin/performance/refresh"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn" ${refreshing ? 'disabled' : ''}>${refreshing ? 'מעדכן…' : 'עדכון עכשיו'}</button></form>`
+      : ''
+  }</div>
+  <p class="page-intro">כמה אנשים ראו את העסק בגוגל ומה עשו אחר כך, לצד הדירוג, הביקורות והמיקום במפות. הכול במקום אחד, ומתעדכן לבד.</p>
+  ${notice ? `<div class="flash">${h(notice)}</div>` : ''}`;
+  const filters = filtersBar({ days, locations: has ? locations : [], locationId, from, to });
+
+  if (has) {
+    return `${head}${filters}${metricsBlock({ totals, prev, daily, from, to, keywords, keywordMonths })}
+      ${publicBlock(pub, { days })}
+      <p class="muted small">עודכן לאחרונה: ${lastSync ? h(formatDate(`${lastSync.replace(' ', 'T')}Z`)) : '—'}. גוגל מעדכנת את נתוני הצפיות והפעולות באיחור של כמה ימים, ולכן הימים האחרונים עוד לא מופיעים.</p>`;
+  }
+
+  // No private numbers yet: what's already known, then a preview of what connecting adds.
+  const why = connected
+    ? errors.length
+      ? `<p>החשבון מחובר, אבל גוגל עוד לא מוסרת את הנתונים: <span class="muted">${h(errors[0])}</span>${/quota|403|429|PERMISSION|disabled|not been used/i.test(errors[0]) ? '<br>כנראה שהגישה של GoFive ל-API של גוגל עוד ממתינה לאישור. ננסה שוב לבד, ולא צריך לעשות כלום.' : ''}</p>`
+      : `<p>החשבון מחובר. הטעינה הראשונה מגוגל לוקחת עד יום.${lastSync ? '' : ' אפשר גם ללחוץ "עדכון עכשיו".'}</p>`
+    : `<p>צפיות, שיחות, בקשות הגעה וכניסות לאתר גוגל מוסרת רק לבעלים של הפרופיל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד.</p>
+       ${googleReady && canConnect ? '<a class="btn primary" href="/admin/google">חיבור לגוגל</a>' : googleReady ? '<p class="muted small">בעלי העסק או מנהל יכולים לחבר.</p>' : '<p class="muted small">החיבור לגוגל יופעל בקרוב.</p>'}`;
+  const s = sampleData(from, to);
+  return `${head}${filters}
+    ${publicBlock(pub, { days })}
+    <h2 class="pf-section">${icon('search', 20)} צפיות ופעולות של לקוחות</h2>
+    <section class="pf-preview">
+      <div class="pf-preview-body" aria-hidden="true" inert>${metricsBlock({ ...s, from, to })}</div>
+      <div class="pf-lock"><div class="card pf-lock-card">
+        <span class="pf-lock-icon">${icon('shield', 22)}</span>
+        <h3>${connected ? 'הנתונים בדרך' : 'כך זה ייראה אחרי החיבור לגוגל'}</h3>
+        ${why}
+        <span class="badge st-closed">התצוגה מאחור היא דוגמה</span>
+      </div></div>
+    </section>`;
 }
 
 /** A small card for the dashboard: the last 30 days. */
