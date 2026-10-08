@@ -98,7 +98,8 @@ export function createApp(db, options = {}) {
   const competitors = serp ? createCompetitors({ store, serp }) : null;
   const health = serp ? createHealth({ store, serp, ai }) : null;
   const rankings = serp ? createRankings({ store, serp }) : null;
-  const visibility = createVisibility({ store, serp, ai, extra: options.answerEngines ?? createAnswerEngines({ onCall: (name) => meter.record(name) }) });
+  const answerEngines = options.answerEngines ?? createAnswerEngines({ onCall: (name) => meter.record(name) });
+  const visibility = createVisibility({ store, serp, ai, extra: answerEngines });
   const cardcom = options.cardcom !== undefined ? options.cardcom : createCardcom();
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
   const ctx = createContext(store, { ...options, mailer, ai, notifier });
@@ -107,6 +108,7 @@ export function createApp(db, options = {}) {
   ctx.usage = createUsage(store);
   ctx.google = google;
   ctx.googleSync = googleSync;
+  ctx.answerEngines = answerEngines;
   ctx.metricsRunning = new Set();
   ctx.visibility = visibility;
   const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();

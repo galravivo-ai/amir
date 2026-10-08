@@ -103,10 +103,31 @@ export function superadminRoutes(ctx) {
   });
 
   // One small request to Anthropic, showing the exact answer or error.
+  let lastEngineTest = null;
+
   router.post('/ai-test', async (req, res) => {
     if (!ctx.ai?.ping) return res.redirect(303, '/superadmin?ai=err&t=' + encodeURIComponent('ANTHROPIC_API_KEY לא מוגדר בשרת (או שהשרת לא הופעל מחדש אחרי ההוספה).'));
     const r = await ctx.ai.ping();
     res.redirect(303, `/superadmin?ai=${r.ok ? 'ok' : 'err'}&t=${encodeURIComponent(r.ok ? r.text : r.error)}#ai`);
+  });
+
+  // One short question to each of ChatGPT, Gemini and Perplexity, with the answer or the exact error.
+  router.post('/engines-test', async (req, res) => {
+    const names = { chatgpt: 'ChatGPT', gemini: 'Gemini', perplexity: 'Perplexity' };
+    const results = await Promise.all(
+      Object.entries(names).map(async ([key, label]) => {
+        const engine = ctx.answerEngines?.[key];
+        if (!engine) return { label, ok: false, error: 'המפתח לא מוגדר ב-Railway' };
+        try {
+          const r = await engine('איזו עיר היא בירת ישראל? ענה במילה אחת.', { city: 'תל אביב' });
+          return { label, ok: Boolean(r.text), text: String(r.text || 'תשובה ריקה').replace(/\s+/g, ' ').slice(0, 60), sources: r.sources?.length || 0 };
+        } catch (err) {
+          return { label, ok: false, error: String(err.message).slice(0, 200) };
+        }
+      }),
+    );
+    lastEngineTest = { at: Date.now(), results };
+    res.redirect(303, '/superadmin/status#engines');
   });
 
   // Which connections are set up, the SerpApi account, and what each business costs.
@@ -138,7 +159,7 @@ export function superadminRoutes(ctx) {
       }
     }
     const month = monthKey();
-    render(req, res, 'מצב המערכת', statusView({ checks, serpAccount, usage: store.apiUsage(month), month, csrf: req.user.csrf }));
+    render(req, res, 'מצב המערכת', statusView({ checks, serpAccount, usage: store.apiUsage(month), month, csrf: req.user.csrf, engineTest: lastEngineTest && Date.now() - lastEngineTest.at < 10 * 60e3 ? lastEngineTest.results : null }));
   });
 
   // A fresh month of manual actions for one business (a mistake, or a good customer).

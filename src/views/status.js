@@ -18,7 +18,7 @@ const costOf = (row) => {
 };
 const ils = (usd) => `₪${(usd * RATE).toFixed(usd * RATE < 10 ? 2 : 0)}`;
 
-export function statusView({ checks, serpAccount, usage, month, csrf }) {
+export function statusView({ checks, serpAccount, usage, month, csrf, engineTest = null }) {
   // One row per business, a column per service.
   const byBiz = new Map();
   for (const r of usage) {
@@ -44,7 +44,17 @@ export function statusView({ checks, serpAccount, usage, month, csrf }) {
     <div class="table-wrap"><table class="table st-table"><thead><tr><th></th><th>חיבור</th><th>מצב</th><th>מה זה נותן</th></tr></thead><tbody>${checks
       .map((c) => `<tr><td>${mark(c.state)}</td><td><b>${h(c.name)}</b></td><td>${c.detail}</td><td class="muted small">${h(c.what)}</td></tr>`)
       .join('')}</tbody></table></div>
-    <form method="post" action="/superadmin/ai-test" class="row compact"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link">בדיקת חיבור ל-AI</button></form>
+    <div class="row compact" id="engines">
+      <form method="post" action="/superadmin/ai-test"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link">בדיקת חיבור ל-Claude</button></form>
+      <form method="post" action="/superadmin/engines-test"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link ai-btn"><span>בדיקת ChatGPT, Gemini ו-Perplexity</span></button></form>
+    </div>
+    ${
+      engineTest
+        ? `<ul class="engine-test">${engineTest
+            .map((r) => `<li>${r.ok ? '✅' : '❌'} <b>${h(r.label)}</b> ${r.ok ? `<span class="muted">ענה: "${h(r.text)}"${r.sources ? ` · ${r.sources} מקורות` : ''}</span>` : `<span class="danger-text">${h(r.error)}</span>`}</li>`)
+            .join('')}</ul>`
+        : ''
+    }
   </section>
 
   ${

@@ -15,7 +15,7 @@ test('usage is counted per business, and the status page shows connections and c
     return json({ local_results: [] });
   };
   const serp = createSerp({ apiKey: 'k', fetchImpl: serpFetch, onCall: () => meter.record('serp') });
-  const created = createApp(db, { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp });
+  const created = createApp(db, { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: { chatgpt: async () => ({ text: 'ירושלים', sources: [{ link: 'https://he.wikipedia.org' }] }), gemini: async () => { throw new Error('API key not valid'); } }, cardcom: null, whatsapp: null, serp });
   meter = createMeter(created.store);
   const server = created.app.listen(0);
   await new Promise((r) => server.once('listening', r));
@@ -57,6 +57,13 @@ test('usage is counted per business, and the status page shows connections and c
     assert.match(page, /ג׳קו סטריט<\/b>.*?<td>2<\/td>/s);
     assert.match(page, /מערכת \(בלי עסק\)/);
     assert.match((await req('/superadmin')).text, /href="\/superadmin\/status"/);
+
+    // The engines test asks each one a short question and shows what came back.
+    assert.equal((await req('/superadmin/engines-test', { _csrf: token })).status, 303);
+    const tested = (await req('/superadmin/status')).text;
+    assert.match(tested, /✅ <b>ChatGPT<\/b> <span class="muted">ענה: "ירושלים" · 1 מקורות/);
+    assert.match(tested, /❌ <b>Gemini<\/b> <span class="danger-text">API key not valid/);
+    assert.match(tested, /❌ <b>Perplexity<\/b> <span class="danger-text">המפתח לא מוגדר/);
   } finally {
     server.close();
   }
