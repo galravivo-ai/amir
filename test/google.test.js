@@ -197,9 +197,9 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
 
   // Dashboard and list show the Google rating and the unanswered review.
   const dash = (await req('/admin')).text;
-  assert.match(dash, /<b>4\.5<\/b><span class="cover-star">/);
+  assert.match(dash, /דירוג בגוגל<\/span><span class="st-value">4\.5<small>★<\/small>/);
   assert.match(dash, /חיכינו המון/, 'the negative Google review waits for handling on the dashboard');
-  assert.match(dash, /12 ביקורות בגוגל/);
+  assert.match(dash, /12 ביקורות/);
   const list = await req('/admin/google/reviews?filter=unanswered');
   assert.match(list.text, /חיכינו המון/);
   assert.doesNotMatch(list.text, /Invalid Date/);
@@ -337,8 +337,8 @@ test('profile performance: views, calls, directions and searches from Google', a
   // Not connected: the dashboard previews the numbers and asks to connect.
   assert.equal((await req('/admin/performance')).location, '/admin#google', 'the old page now lives on the dashboard');
   const locked = (await req('/admin')).text;
-  assert.match(locked, /כך זה ייראה אחרי החיבור לגוגל/);
-  assert.match(locked, /עוד לא עוקבים אחרי העסק בגוגל/);
+  assert.match(locked, /הגרף מאחור הוא דוגמה/);
+  assert.match(locked, /צפיות בפרופיל<\/span><span class="st-value"><span class="st-lock">—/);
 
   const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
   await req(`/admin/google/callback?code=abc&state=${new URL(start.location).searchParams.get('state')}`);
@@ -354,20 +354,17 @@ test('profile performance: views, calls, directions and searches from Google', a
   // 30 days: 40 views a day, 6 actions a day.
   const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   const page = (await req(`/admin?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
-  assert.match(page, /צפיות בפרופיל<\/span>\s*<span class="kpi-value">1,200</);
-  assert.match(page, /שיחות<\/span>\s*<span class="kpi-value">60</);
-  assert.match(page, /בקשות הגעה<\/span>\s*<span class="kpi-value">90</);
-  assert.match(page, /כניסות לאתר<\/span>\s*<span class="kpi-value">30</);
-  assert.match(page, /15\.0%/, 'conversion: actions out of views');
+  assert.match(page, /צפיות בפרופיל<\/span><span class="st-value">1,200</);
+  assert.match(page, /שיחות, הגעה ואתר<\/span><span class="st-value">180</, 'calls, directions and website clicks');
+  assert.match(page, /שיחות: 2/, 'per-day detail in the chart');
   assert.match(page, /בית קפה תל אביב/);
-  assert.match(page, /פחות מ-15/);
-  assert.match(page, /מפות גוגל <b>900<\/b> \(75%\)/);
+  assert.match(page, /&lt;15/);
+  assert.match(page, /מפות <b>900<\/b> \(75%\)/);
   assert.match((await req('/admin?range=365d')).text, /לפי שבוע/);
 
   // Reputation from the reviews sits next to the private numbers.
   assert.match(page, /דירוג בגוגל/);
-  assert.match(page, /אחוז מענה לביקורות/);
-  assert.doesNotMatch(page, /התצוגה מאחור היא דוגמה/);
+  assert.doesNotMatch(page, /הגרף מאחור הוא דוגמה/);
 
   // Later pulls only go back three weeks.
   const before = fakeGoogle.calls.length;

@@ -3,7 +3,7 @@ import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
 import { asset, DEFAULT_INVITE_TEMPLATE, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
-import { googleSection } from './performance.js';
+import { profileCard, viewsOf } from './performance.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -276,7 +276,6 @@ export function dashboardView({
   tasks = [],
 }) {
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
-  const hasGoogle = g.total > 0 || g.count > 0;
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
   const presetOptions = Object.entries(PRESETS)
@@ -301,7 +300,6 @@ export function dashboardView({
   // The executive cover: the business's own logo and color, the period and the filters.
   const brand = safeColor(business?.brand_color, '#4b2bd6');
   const logo = logoSrc(business);
-  const g0 = google || {};
   const cover = `<header class="dash-cover" style="--cover:${brand}">
       <div class="cover-top">
         <div class="cover-text">
@@ -314,7 +312,6 @@ export function dashboardView({
         }</span>
       </div>
       <div class="cover-bar">
-        ${g0.total ? `<a class="cover-google" href="/admin/google/reviews" title="הדירוג בגוגל"><b>${g0.avg.toFixed(1)}</b><span class="cover-star">★</span><span>${g0.total.toLocaleString('he-IL')} ביקורות בגוגל</span></a>` : ''}
         ${filter}
         ${can('manager') && campaigns.length ? `<button type="button" class="btn cover-wa" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} שליחה בוואטסאפ</button>` : ''}
         ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
@@ -325,23 +322,10 @@ export function dashboardView({
     ${waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
     ${waResult && !waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(waResult.error || 'שגיאה')}</div>` : ''}`;
 
-  const googleBlock = overview ? googleSection({ ...overview, refreshed }) : '';
-
-  if (!campaigns.length && !hasGoogle) {
-    return `${cover}
-      ${checklist}
-      ${tasksCard(tasks, csrf)}
-      ${googleBlock}`;
-  }
-
   // ---- everything customers said, surveys and Google together ----
   const total = stats.responses + g.count;
   const prevTotal = prev.responses + g.prevCount;
-  const sumRatings = stats.avgRating * stats.responses + g.avgPeriod * g.count;
-  const avgAll = total ? sumRatings / total : 0;
-  const prevAvg = prevTotal ? (prev.avgRating * prev.responses + g.prevAvg * g.prevCount) / prevTotal : 0;
   const [countHint, countTrend] = trendPct(total, prevTotal);
-  const [avgHint, avgTrend] = trendDiff(avgAll, prevAvg, prevTotal);
   const sources = [g.count ? `${g.count} בגוגל` : '', stats.responses ? `${stats.responses} בסקרים` : ''].filter(Boolean).join(' · ');
   const daily = stats.daily.map((d) => {
     const gd = g.daily.get(d.date) || { n: 0, neg: 0 };
@@ -349,9 +333,7 @@ export function dashboardView({
   });
   const dist = [0, 1, 2, 3, 4].map((i) => stats.distribution[i] + g.distribution[i]);
   const toHandle = stats.openIssues + g.unanswered;
-
-  const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 4);
-
+  const waitingItems = [...waiting.map(fromResponse), ...g.waiting.map(fromReview)].sort((a, b) => b.sortKey - a.sortKey).slice(0, 3);
   const handleLink = g.unanswered && !stats.openIssues ? '/admin/google/reviews?filter=unanswered' : '/admin/responses?sentiment=negative&status=new';
 
   const resolve =
@@ -364,7 +346,7 @@ export function dashboardView({
           : `${(stats.avgResolveHours / 24).toFixed(1)} ימים`;
 
   const surveySection = campaigns.length
-    ? `<h2 class="dash-section">סקרים ו-QR</h2>
+    ? `
     <div class="kpis">
       ${kpi('סריקות וכניסות', stats.scans.toLocaleString('he-IL'), `${stats.uniqueVisitors.toLocaleString('he-IL')} מבקרים ייחודיים`)}
       ${kpi('מילאו סקר', stats.responses.toLocaleString('he-IL'), `${pct(stats.responseRate)} מהסריקות`)}
@@ -398,10 +380,45 @@ export function dashboardView({
     ${Object.keys(stats.optionCounts).length ? `<section class="card"><h3>מה הלקוחות סימנו בשאלות</h3>${optionBreakdown(stats.optionCounts)}</section>` : ''}`
     : '';
 
+  // ---- the headline: six numbers, one row ----
+  const pub = overview?.pub || null;
+  const m = overview?.metrics || null;
+  const hasMetrics = Boolean(m && m.daily.size);
+  const t = m?.totals || {};
+  const pt = m?.prev || {};
+  const pctChange = (now, before) => {
+    if (!before || before < MIN_TREND_BASE) return ['', ''];
+    const c = Math.round(((now - before) / before) * 100);
+    return c ? [`${c > 0 ? '▲' : '▼'} ${Math.abs(c)}%`, c > 0 ? 'up' : 'down'] : ['ללא שינוי', ''];
+  };
+  const stat = (ic, label, value, hint = '', trend = '', href = '') => {
+    const body = `<span class="st-label">${icon(ic, 16)}${h(label)}</span><span class="st-value">${value}</span><span class="st-hint ${trend}">${hint}</span>`;
+    return href ? `<a class="stat" href="${href}">${body}</a>` : `<div class="stat">${body}</div>`;
+  };
+  const locked = (ic, label) => stat(ic, label, '<span class="st-lock">—</span>', 'אחרי חיבור לגוגל', 'muted', '#google');
+  const rating = pub?.total ? pub.rating : g.total ? g.avg : null;
+  const ratingDiff = pub?.ratingBefore != null && rating != null ? Math.round((rating - pub.ratingBefore) * 10) / 10 : null;
+  const views = viewsOf(t);
+  const actions = (t.CALL_CLICKS || 0) + (t.BUSINESS_DIRECTION_REQUESTS || 0) + (t.WEBSITE_CLICKS || 0) + (t.BUSINESS_CONVERSATIONS || 0);
+  const prevActions = (pt.CALL_CLICKS || 0) + (pt.BUSINESS_DIRECTION_REQUESTS || 0) + (pt.WEBSITE_CLICKS || 0) + (pt.BUSINESS_CONVERSATIONS || 0);
+  const lastStat =
+    pub?.rank != null
+      ? stat('pin', 'מיקום ממוצע במפות', (Math.round(pub.rank * 10) / 10).toString(), pub.rankBefore != null && Math.round((pub.rank - pub.rankBefore) * 10) ? `${pub.rank < pub.rankBefore ? '▲ עלה' : '▼ ירד'} ${Math.abs(Math.round((pub.rank - pub.rankBefore) * 10) / 10)} מקומות` : `${pub.rankKeywords} חיפושים`, pub.rankBefore != null ? (pub.rank < pub.rankBefore ? 'up' : pub.rank > pub.rankBefore ? 'down' : '') : '', '/admin/rankings')
+      : pub?.health != null
+        ? stat('shield', 'בריאות הפרופיל', `${pub.health}<small>/100</small>`, pub.healthBefore != null && pub.health !== pub.healthBefore ? `${pub.health > pub.healthBefore ? '▲' : '▼'} ${Math.abs(pub.health - pub.healthBefore)} נק׳` : '', pub.healthBefore != null ? (pub.health > pub.healthBefore ? 'up' : pub.health < pub.healthBefore ? 'down' : '') : '', '/admin/profile')
+        : stat('pin', 'מיקום במפות', '<span class="st-lock">—</span>', 'להתחיל מעקב ←', 'muted', '/admin/rankings');
+  const headline = `<div class="stats">
+    ${stat('star', 'דירוג בגוגל', rating != null ? `${rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', ratingDiff ? `${ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(ratingDiff).toFixed(1)}` : pub?.total || g.total ? `${(pub?.total || g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', ratingDiff ? (ratingDiff > 0 ? 'up' : 'down') : '', rating != null ? '/admin/google/reviews' : '/admin/google')}
+    ${stat('chat', 'ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint ? countHint.replace(' מהתקופה הקודמת', '') : sources || 'אין בתקופה', countTrend)}
+    ${stat('alert', 'מחכים לתשובה', toHandle.toLocaleString('he-IL'), toHandle ? [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} מסקרים` : ''].filter(Boolean).join(' · ') : 'הכול טופל ✓', toHandle ? 'warn-t' : 'up', handleLink)}
+    ${hasMetrics ? stat('search', 'צפיות בפרופיל', views.toLocaleString('he-IL'), ...pctChange(views, viewsOf(pt))) : locked('search', 'צפיות בפרופיל')}
+    ${hasMetrics ? stat('phone', 'שיחות, הגעה ואתר', actions.toLocaleString('he-IL'), ...pctChange(actions, prevActions)) : locked('phone', 'שיחות, הגעה ואתר')}
+    ${lastStat}
+  </div>`;
+
   return `${cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${checklist}
-    ${tasksCard(tasks, csrf)}
     ${
       stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
@@ -409,34 +426,29 @@ export function dashboardView({
           } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
-    <h2 class="dash-section">${icon('chat', 20)} ביקורות ודירוגים</h2>
-    <div class="kpis kpis-3">
-      ${kpi('ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint || sources || 'אין בתקופה הזו', countTrend)}
-      ${kpi('דירוג ממוצע בתקופה', avgAll ? `${avgAll.toFixed(1)} <span class="kpi-star">★</span>` : '—', avgHint || `${stats.positive + g.positive} מרוצים · ${stats.negative + g.negative} לא מרוצים`, avgTrend)}
-      ${kpi('מחכים לתשובה', `<a href="${handleLink}">${toHandle.toLocaleString('he-IL')}</a>`, [g.unanswered ? `${g.unanswered} בגוגל` : '', stats.openIssues ? `${stats.openIssues} לקוחות לא מרוצים מסקרים` : ''].filter(Boolean).join(' · ') || 'הכול נענה ✓', toHandle ? '' : 'up')}
-    </div>
-    <div class="dash-grid">
+    ${headline}
+    <div class="dash-main">
       <div class="dash-col">
-      <section class="card">
-        <div class="card-head"><h3>ביקורות ודירוגים לפי יום</h3>
-          <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
-        </div>
-        ${dailyChart(daily)}
-        <p class="muted small chart-note">גוגל וסקרים יחד. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
-      </section>
-      <section class="card"><h3>התפלגות כוכבים</h3>${distribution(dist)}
-        <p class="muted small">${sources ? `${sources} ${h(period.label)}` : 'אין בתקופה הזו'}</p></section>
+        <section class="card">
+          <div class="card-head"><h3>${icon('chat', 18)} ביקורות ודירוגים לפי יום</h3>
+            <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
+          </div>
+          ${dailyChart(daily)}
+          <p class="muted small chart-note">${sources ? `${sources} ${h(period.label)}` : 'גוגל וסקרים יחד'}. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
+        </section>
+        ${overview ? profileCard({ ...overview, refreshed }) : ''}
+        <section class="card"><h3>${icon('star', 18)} התפלגות כוכבים</h3>${distribution(dist)}</section>
       </div>
       <div class="dash-col">
-      <section class="card">
-        <div class="card-head"><h3>מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
-        ${feed(waitingItems, 'אין ביקורות שליליות או לקוחות לא מרוצים שמחכים. כל הכבוד!')}
-      </section>
-      ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3><p class="muted">כשעוזר ה-AI פעיל, הוא מסווג כל ביקורת והערה לנושאים (שירות, המתנה, מחיר...) ותראו כאן מה חוזר הכי הרבה.</p></section>`}
+        ${tasksCard(tasks, csrf)}
+        <section class="card">
+          <div class="card-head"><h3>${icon('alert', 18)} מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
+          ${feed(waitingItems, 'אין ביקורות שליליות או לקוחות לא מרוצים שמחכים. כל הכבוד!')}
+        </section>
+        ${topicsCard(topics)}
       </div>
     </div>
-    ${googleBlock}
-    ${surveySection}`;
+    ${surveySection ? `<details class="card dash-more"${stats.scans || stats.responses ? '' : ''}><summary><span>${icon('qr', 18)} סקרים ו-QR</span><span class="muted small">${stats.scans.toLocaleString('he-IL')} סריקות · ${stats.responses.toLocaleString('he-IL')} מילאו סקר · ${stats.reviewClicks.toLocaleString('he-IL')} הופנו לגוגל</span></summary>${surveySection}</details>` : ''}`;
 }
 
 // ---------------------------------------------------------------- responses
