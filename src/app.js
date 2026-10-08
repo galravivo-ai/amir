@@ -106,6 +106,8 @@ export function createApp(db, options = {}) {
   ctx.serp = serp;
   ctx.usage = createUsage(store);
   ctx.google = google;
+  ctx.googleSync = googleSync;
+  ctx.metricsRunning = new Set();
   ctx.visibility = visibility;
   const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
   ctx.whatsapp = whatsapp;

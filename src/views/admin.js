@@ -3,7 +3,7 @@ import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
 import { asset, DEFAULT_INVITE_TEMPLATE, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
-import { performanceCard } from './performance.js';
+import { googleSection } from './performance.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -254,7 +254,8 @@ function feed(items, empty) {
 }
 
 export function dashboardView({
-  profile = null,
+  overview = null,
+  refreshed = false,
   stats,
   prev,
   campaigns,
@@ -305,8 +306,8 @@ export function dashboardView({
       <div class="cover-top">
         <div class="cover-text">
           <span class="cover-greet">${h(greeting(userName))}</span>
-          <h1>${h(business?.name || 'לוח בקרה')}</h1>
-          <span class="cover-sub">מה הלקוחות אמרו ${h(period.label)}</span>
+          <h1>${h(business?.name || 'דשבורד ראשי')}</h1>
+          <span class="cover-sub">תמונת המצב של העסק ${h(period.label)}</span>
         </div>
         <span class="cover-logo">${
           logo ? `<img src="${h(logo)}" alt="${h(business?.name || '')}">` : `<span>${h(String(business?.name || '★').trim().charAt(0))}</span>`
@@ -324,10 +325,13 @@ export function dashboardView({
     ${waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
     ${waResult && !waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(waResult.error || 'שגיאה')}</div>` : ''}`;
 
+  const googleBlock = overview ? googleSection({ ...overview, refreshed }) : '';
+
   if (!campaigns.length && !hasGoogle) {
     return `${cover}
-      ${checklist || (profile ? '' : `<div class="card empty"><p class="muted">מנהל העסק עוד לא יצר קמפיין.</p></div>`)}
-      ${profile ? performanceCard(profile.totals, profile.prev) : ''}`;
+      ${checklist}
+      ${tasksCard(tasks, csrf)}
+      ${googleBlock}`;
   }
 
   // ---- everything customers said, surveys and Google together ----
@@ -398,7 +402,6 @@ export function dashboardView({
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${checklist}
     ${tasksCard(tasks, csrf)}
-    ${profile ? performanceCard(profile.totals, profile.prev) : ''}
     ${
       stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
@@ -406,6 +409,7 @@ export function dashboardView({
           } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
+    <h2 class="dash-section">${icon('chat', 20)} ביקורות ודירוגים</h2>
     <div class="kpis kpis-3">
       ${kpi('ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint || sources || 'אין בתקופה הזו', countTrend)}
       ${kpi('דירוג ממוצע בתקופה', avgAll ? `${avgAll.toFixed(1)} <span class="kpi-star">★</span>` : '—', avgHint || `${stats.positive + g.positive} מרוצים · ${stats.negative + g.negative} לא מרוצים`, avgTrend)}
@@ -431,6 +435,7 @@ export function dashboardView({
       ${topicsCard(topics) || `<section class="card"><h3>מה הלקוחות אומרים</h3><p class="muted">כשעוזר ה-AI פעיל, הוא מסווג כל ביקורת והערה לנושאים (שירות, המתנה, מחיר...) ותראו כאן מה חוזר הכי הרבה.</p></section>`}
       </div>
     </div>
+    ${googleBlock}
     ${surveySection}`;
 }
 

@@ -217,7 +217,7 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
       <dl class="dl small">
         <dt>בעלים</dt><dd>הכול, כולל הגדרות העסק, צוות ומחיקה</dd>
         <dt>מנהל</dt><dd>קמפיינים, טיפול בפניות, שליחת בקשות ו-AI</dd>
-        <dt>צפייה בלבד</dt><dd>לוח בקרה ותגובות, בלי לשנות דבר</dd>
+        <dt>צפייה בלבד</dt><dd>הדשבורד והתגובות, בלי לשנות דבר</dd>
       </dl>
     </section>
   </div>`;
@@ -582,7 +582,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
         .map((a) => `<option value="${a.id}" ${b.agency_id === a.id ? 'selected' : ''}>${h(a.name)}</option>`)
         .join('')}</select></form>`;
   return `<div class="page-head"><h1>ניהול מערכת</h1><a class="btn primary" href="/superadmin/status">מצב המערכת וצריכה</a></div>
-  <p class="muted">כאן מנהלים את GoFive כולה: כל העסקים שנרשמו, המסלולים והתשלומים, בקשות למסלול, פניות מהאתר, סוכנויות ומשתמשים. העסק שלך עצמו נמצא בתפריט תחת "לוח בקרה".</p>
+  <p class="muted">כאן מנהלים את GoFive כולה: כל העסקים שנרשמו, המסלולים והתשלומים, בקשות למסלול, פניות מהאתר, סוכנויות ומשתמשים. העסק שלך עצמו נמצא בתפריט תחת "דשבורד ראשי".</p>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">עסקים</div><div class="kpi-value">${businesses.length}</div></div>

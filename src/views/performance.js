@@ -121,15 +121,6 @@ function splitBar(a, b, la, lb) {
     <div class="pf-split-labels"><span><i class="a"></i>${h(la)} <b>${num(a)}</b> (${pa}%)</span><span><i class="b"></i>${h(lb)} <b>${num(b)}</b> (${100 - pa}%)</span></div></div>`;
 }
 
-const RANGES = [[7, '7 ימים'], [30, '30 יום'], [90, '3 חודשים'], [365, 'שנה']];
-
-function filtersBar({ days, locations, locationId, from, to }) {
-  return `<form class="pf-filters" method="get" action="/admin/performance">
-    <div class="pf-seg">${RANGES.map(([d, l]) => `<a class="${d === days ? 'on' : ''}" href="?days=${d}${locationId ? `&loc=${locationId}` : ''}">${l}</a>`).join('')}</div>
-    ${locations.length > 1 ? `<select name="loc" onchange="this.form.submit()"><option value="">כל הסניפים</option>${locations.map((l) => `<option value="${l.id}" ${l.id === locationId ? 'selected' : ''}>${h(l.title)}</option>`).join('')}</select><input type="hidden" name="days" value="${days}">` : ''}
-    <span class="muted small">${dm(from)}.${from.slice(0, 4)} – ${dm(to)}.${to.slice(0, 4)} · בהשוואה לתקופה שלפני</span>
-  </form>`;
-}
 
 /** Views, actions, charts and search terms: the private numbers from the Performance API. */
 function metricsBlock({ totals, prev, daily, from, to, keywords, keywordMonths }) {
@@ -196,60 +187,26 @@ function diffTile(label, value, before, { ic = '', fmt = (v) => v, unit = '', be
   </div>`;
 }
 
-const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
-const monthName = (m) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`;
-
-/** Reputation on Google: what the public profile shows, available without the owner's login. */
-function publicBlock(pub, { days }) {
+/** Reputation on Google at a glance: what the public profile shows, no owner login needed. */
+function reputationTiles(pub) {
   if (!pub) {
-    return `<section class="card pf-empty"><h3>עוד לא עוקבים אחרי העסק בגוגל</h3>
-      <p class="muted">מדביקים את הקישור לעסק בגוגל מפות בעמוד "ביקורות בגוגל", ומאותו רגע רואים כאן את הדירוג, הביקורות והמגמות.</p>
+    return `<section class="card pf-empty pf-empty-sm"><h3>עוד לא עוקבים אחרי העסק בגוגל</h3>
+      <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, ומאותו רגע רואים כאן את הדירוג, הביקורות, בריאות הפרופיל והמיקום במפות.</p>
       <a class="btn primary" href="/admin/google">הוספת העסק</a></section>`;
   }
   const one = (v) => v.toFixed(1);
-  const range = RANGES.find((r) => r[0] === days)?.[1] || `${days} ימים`;
   const tiles = [
-    diffTile('דירוג בגוגל', pub.total ? pub.rating : null, pub.ratingBefore, { ic: 'star', fmt: one, hint: pub.ratingBefore == null ? `${num(pub.total)} ביקורות` : '' }),
+    diffTile('דירוג בגוגל', pub.total ? pub.rating : null, pub.ratingBefore, { ic: 'star', fmt: one, hint: pub.ratingBefore == null && pub.total ? `${num(pub.total)} ביקורות` : '' }),
     diffTile('סה״כ ביקורות', pub.total || null, pub.totalBefore, { ic: 'chat', fmt: num }),
-    diffTile(`ביקורות חדשות (${range})`, pub.newReviews, pub.prevNew, { ic: 'spark', fmt: num, hint: pub.newReviews ? `ממוצע ${one(pub.avgPeriod)}★` : '' }),
-    diffTile('אחוז מענה לביקורות', pub.replyRate == null ? null : Math.round(pub.replyRate), pub.prevReplyRate == null ? null : Math.round(pub.prevReplyRate), { ic: 'check', unit: '%', hint: pub.unanswered ? `${pub.unanswered} ממתינות לתשובה` : '' }),
-    pub.health != null ? diffTile('בריאות הפרופיל', pub.health, pub.healthBefore, { ic: 'shield', hint: 'מתוך 100' }) : '',
-    pub.rank != null ? diffTile('מיקום ממוצע במפות', Math.round(pub.rank * 10) / 10, pub.rankBefore == null ? null : Math.round(pub.rankBefore * 10) / 10, { ic: 'pin', better: 'down', hint: `${pub.rankKeywords} חיפושים` }) : '',
-  ].filter(Boolean);
-
-  // The last 12 months, empty months included.
-  const rows = [];
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(Date.UTC(Number(pub.since.slice(0, 4)), Number(pub.since.slice(5, 7)) - 1 + i, 1));
-    const m = d.toISOString().slice(0, 7);
-    const row = pub.months.find((x) => x.month === m) || { n: 0, neg: 0 };
-    rows.push({ date: `${m}-01`, month: m, pos: row.n - (row.neg || 0), neg: row.neg || 0, avg: row.avg });
-  }
-  const series = [
-    ['pos', 'חיוביות (4–5★)', '#5b3df5', (r) => r.pos],
-    ['neg', 'שליליות (1–3★)', '#d6409f', (r) => r.neg],
+    diffTile('אחוז מענה לביקורות', pub.replyRate == null ? null : Math.round(pub.replyRate), pub.prevReplyRate == null ? null : Math.round(pub.prevReplyRate), { ic: 'check', unit: '%', hint: pub.unanswered ? `${pub.unanswered} ממתינות` : '' }),
+    pub.health != null
+      ? diffTile('בריאות הפרופיל', pub.health, pub.healthBefore, { ic: 'shield', hint: 'מתוך 100' })
+      : `<a class="kpi pf-kpi pf-add" href="/admin/profile"><span class="kpi-label">${icon('shield', 16)}בריאות הפרופיל</span><span class="pf-add-cta">לבדיקה ←</span></a>`,
+    pub.rank != null
+      ? diffTile('מיקום ממוצע במפות', Math.round(pub.rank * 10) / 10, pub.rankBefore == null ? null : Math.round(pub.rankBefore * 10) / 10, { ic: 'pin', better: 'down', hint: `${pub.rankKeywords} חיפושים` })
+      : `<a class="kpi pf-kpi pf-add" href="/admin/rankings"><span class="kpi-label">${icon('pin', 16)}מיקום במפות</span><span class="pf-add-cta">להתחיל מעקב ←</span></a>`,
   ];
-  const dist = pub.distribution;
-  const distTotal = dist.reduce((a, b) => a + b, 0);
-  const missing = [pub.health == null && '<a href="/admin/profile">בריאות הפרופיל</a>', pub.rank == null && '<a href="/admin/rankings">מעקב מיקום במפות</a>'].filter(Boolean);
-  return `<h2 class="pf-section">${icon('star', 20)} מוניטין בגוגל</h2>
-    <div class="kpis pf-kpis pf-pub">${tiles.join('')}</div>
-    <div class="dash-grid pf-grid">
-      <section class="card"><h3>ביקורות חדשות בכל חודש</h3>
-        ${legend(series)}
-        ${barChart(rows, series, { label: 'ביקורות חדשות בגוגל בכל חודש', tipLabel: (r) => `${monthName(r.month)}${r.avg ? ` · ממוצע ${one(r.avg)}★` : ''}`, tickLabel: (r) => monthName(r.month) })}
-      </section>
-      <section class="card"><h3>הדירוגים בתקופה</h3>
-        ${
-          distTotal
-            ? [5, 4, 3, 2, 1]
-                .map((n) => `<div class="dist-row"><span class="dist-label">${n}★</span><span class="dist-bar"><span style="width:${(dist[n - 1] / distTotal) * 100}%" class="${n >= 4 ? 'good' : n === 3 ? 'mid' : 'bad'}"></span></span><span class="muted small">${dist[n - 1]}</span></div>`)
-                .join('')
-            : '<p class="muted">לא נכנסו ביקורות חדשות בתקופה הזו.</p>'
-        }
-        ${missing.length ? `<p class="muted small pf-tip">אפשר להוסיף לכאן גם ${missing.join(' ו')}.</p>` : ''}
-      </section>
-    </div>`;
+  return `<div class="kpis pf-kpis pf-pub">${tiles.join('')}</div>`;
 }
 
 /** Plausible numbers for the locked preview. */
@@ -273,39 +230,34 @@ function sampleData(from, to) {
   return { totals, prev, daily, keywords, keywordMonths: 'בחודש האחרון' };
 }
 
-export function performanceView({
-  connected, locations, locationId, days, from, to, totals, prev, daily, keywords, keywordMonths, lastSync, errors,
-  pub = null, googleReady = true, canConnect = false, csrf, canRefresh, refreshing, notice = '',
-}) {
-  const has = daily.size > 0;
-  const head = `<div class="page-head"><h1>${icon('chart', 24)} ביצועי הפרופיל בגוגל</h1>${
-    connected && canRefresh
-      ? `<form method="post" action="/admin/performance/refresh"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn" ${refreshing ? 'disabled' : ''}>${refreshing ? 'מעדכן…' : 'עדכון עכשיו'}</button></form>`
-      : ''
-  }</div>
-  <p class="page-intro">כמה אנשים ראו את העסק בגוגל ומה עשו אחר כך, לצד הדירוג, הביקורות והמיקום במפות. הכול במקום אחד, ומתעדכן לבד.</p>
-  ${notice ? `<div class="flash">${h(notice)}</div>` : ''}`;
-  const filters = filtersBar({ days, locations: has ? locations : [], locationId, from, to });
+/** The dashboard's Google section: reputation, then views and actions (or a preview until they arrive). */
+export function googleSection({ connected, metrics, pub, lastSync, errors, googleReady, canConnect, canRefresh, refreshing, csrf, refreshed = false }) {
+  const has = metrics.daily.size > 0;
+  const refresh = connected && canRefresh
+    ? `<form method="post" action="/admin/performance/refresh"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn btn-sm" ${refreshing ? 'disabled' : ''}>${refreshing ? 'מעדכן…' : 'עדכון מגוגל'}</button></form>`
+    : '';
+  const head = `<div class="dash-section-head" id="google"><h2 class="dash-section">${icon('star', 20)} הפרופיל בגוגל</h2>${refresh}</div>
+    ${refreshed ? '<div class="flash">העדכון מגוגל התחיל. הנתונים יופיעו תוך דקה.</div>' : ''}`;
+  const reputation = reputationTiles(pub);
 
   if (has) {
-    return `${head}${filters}${metricsBlock({ totals, prev, daily, from, to, keywords, keywordMonths })}
-      ${publicBlock(pub, { days })}
-      <p class="muted small">עודכן לאחרונה: ${lastSync ? h(formatDate(`${lastSync.replace(' ', 'T')}Z`)) : '—'}. גוגל מעדכנת את נתוני הצפיות והפעולות באיחור של כמה ימים, ולכן הימים האחרונים עוד לא מופיעים.</p>`;
+    return `${head}${reputation}
+      <h3 class="pf-sub-head">${icon('search', 18)} צפיות ופעולות של לקוחות</h3>
+      ${metricsBlock(metrics)}
+      <p class="muted small">עודכן מגוגל: ${lastSync ? h(formatDate(`${lastSync.replace(' ', 'T')}Z`)) : '—'}. גוגל מוסרת את הצפיות והפעולות באיחור של כמה ימים, ולכן הימים האחרונים בתקופה עוד לא נספרים.</p>`;
   }
 
-  // No private numbers yet: what's already known, then a preview of what connecting adds.
   const why = connected
     ? errors.length
       ? `<p>החשבון מחובר, אבל גוגל עוד לא מוסרת את הנתונים: <span class="muted">${h(errors[0])}</span>${/quota|403|429|PERMISSION|disabled|not been used/i.test(errors[0]) ? '<br>כנראה שהגישה של GoFive ל-API של גוגל עוד ממתינה לאישור. ננסה שוב לבד, ולא צריך לעשות כלום.' : ''}</p>`
-      : `<p>החשבון מחובר. הטעינה הראשונה מגוגל לוקחת עד יום.${lastSync ? '' : ' אפשר גם ללחוץ "עדכון עכשיו".'}</p>`
+      : `<p>החשבון מחובר. הטעינה הראשונה מגוגל לוקחת עד יום.${lastSync ? '' : ' אפשר גם ללחוץ "עדכון מגוגל".'}</p>`
     : `<p>צפיות, שיחות, בקשות הגעה וכניסות לאתר גוגל מוסרת רק לבעלים של הפרופיל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד.</p>
        ${googleReady && canConnect ? '<a class="btn primary" href="/admin/google">חיבור לגוגל</a>' : googleReady ? '<p class="muted small">בעלי העסק או מנהל יכולים לחבר.</p>' : '<p class="muted small">החיבור לגוגל יופעל בקרוב.</p>'}`;
-  const s = sampleData(from, to);
-  return `${head}${filters}
-    ${publicBlock(pub, { days })}
-    <h2 class="pf-section">${icon('search', 20)} צפיות ופעולות של לקוחות</h2>
+  const s = sampleData(metrics.from, metrics.to);
+  return `${head}${reputation}
+    <h3 class="pf-sub-head">${icon('search', 18)} צפיות ופעולות של לקוחות</h3>
     <section class="pf-preview">
-      <div class="pf-preview-body" aria-hidden="true" inert>${metricsBlock({ ...s, from, to })}</div>
+      <div class="pf-preview-body" aria-hidden="true" inert>${metricsBlock({ ...s, from: metrics.from, to: metrics.to })}</div>
       <div class="pf-lock"><div class="card pf-lock-card">
         <span class="pf-lock-icon">${icon('shield', 22)}</span>
         <h3>${connected ? 'הנתונים בדרך' : 'כך זה ייראה אחרי החיבור לגוגל'}</h3>
@@ -313,18 +265,4 @@ export function performanceView({
         <span class="badge st-closed">התצוגה מאחור היא דוגמה</span>
       </div></div>
     </section>`;
-}
-
-/** A small card for the dashboard: the last 30 days. */
-export function performanceCard(totals, prev) {
-  const views = viewsOf(totals);
-  if (!views && !actionsOf(totals)) return '';
-  const item = (label, v, p) => `<div><span class="muted small">${h(label)}</span><b>${num(v)}</b>${change(v, p)}</div>`;
-  return `<section class="card pf-card"><div class="pf-card-head"><h3>${icon('chart', 18)} הפרופיל בגוגל ב-30 הימים האחרונים</h3><a href="/admin/performance">לכל הנתונים ←</a></div>
-    <div class="pf-card-row">
-      ${item('צפיות', views, viewsOf(prev))}
-      ${item('שיחות', totals.CALL_CLICKS, prev.CALL_CLICKS)}
-      ${item('בקשות הגעה', totals.BUSINESS_DIRECTION_REQUESTS, prev.BUSINESS_DIRECTION_REQUESTS)}
-      ${item('כניסות לאתר', totals.WEBSITE_CLICKS, prev.WEBSITE_CLICKS)}
-    </div></section>`;
 }

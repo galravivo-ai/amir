@@ -131,7 +131,7 @@ ${SKIP()}
   const role = business.role;
   // The menu in groups; a group can be folded, and remembers it (the active one stays open).
   const groups = [
-    { items: [['/admin', 'לוח בקרה', 'home']] },
+    { items: [['/admin', 'דשבורד ראשי', 'home']] },
     {
       key: 'reputation',
       label: 'מוניטין וביקורות',
@@ -148,7 +148,6 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
-        ['/admin/performance', 'ביצועי הפרופיל', 'chart'],
         ['/admin/profile', 'בריאות הפרופיל', 'shield'],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],

@@ -1432,3 +1432,16 @@ body.app .role-chip { color: #ffd23f; }
   .pf-lock { padding-top: 40px; }
   .pf-preview-body { max-height: 900px; }
 }
+.dash-section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; scroll-margin-top: 70px; }
+.dash-section-head .dash-section { margin-bottom: .8rem; }
+.dash-section { display: flex; align-items: center; gap: 8px; }
+.dash-section .icon, .pf-sub-head .icon { color: var(--purple); }
+.pf-sub-head { display: flex; align-items: center; gap: 8px; margin: 1.2rem 0 .7rem; font-size: 1.02rem; color: var(--ink-2); }
+.btn-sm { min-height: 32px; padding: .3em .8em; font-size: .86rem; }
+.pf-add { text-decoration: none; border-style: dashed; justify-content: space-between; }
+.pf-add:hover { border-color: var(--purple); }
+.pf-add-cta { color: var(--purple); font-weight: 700; margin-top: auto; }
+.pf-empty-sm { padding: 1.2rem; }
+.pf-preview-body { max-height: 560px; }
+.dash-section-head { margin: 2rem 0 .8rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.dash-section-head .dash-section { margin: 0; padding: 0; border: 0; }

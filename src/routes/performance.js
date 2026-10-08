@@ -1,16 +1,8 @@
 import express from 'express';
-import * as V from '../views/performance.js';
 
 const day = (ms) => new Date(ms).toISOString().slice(0, 10);
 const shift = (iso, n) => day(Date.parse(`${iso}T00:00:00Z`) + n * 864e5);
 const monthLabel = (m) => new Date(`${m}-15T00:00:00Z`).toLocaleDateString('he-IL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-
-/** The range ends on the last day Google has filled in (it lags a few days). */
-export function performanceRange(store, businessId, days) {
-  const to = store.profileMetricsLastDate(businessId) || day(Date.now() - 864e5);
-  const from = shift(to, -(days - 1));
-  return { from, to, prevFrom: shift(from, -days), prevTo: shift(from, -1) };
-}
 
 const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
@@ -63,61 +55,66 @@ export function publicProfile(store, business, { from, to, prevFrom }) {
   };
 }
 
-/** Views, calls, directions and clicks of the business's Google profile. */
-export function performanceRoutes(ctx, { sync }) {
-  const { store, render, requireRole } = ctx;
-  const router = express.Router();
-  const running = new Set();
+const ilDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(ms));
 
-  router.get('/performance', (req, res) => {
-    const b = req.business;
-    const days = [7, 30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
-    const locations = store.googleLocations(b.id).filter((l) => l.source === 'gbp' && l.enabled);
-    const locationId = locations.find((l) => l.id === Number(req.query.loc))?.id ?? null;
-    const r = performanceRange(store, b.id, days);
-    // Search terms come by month: the full months inside the range (at least the last one).
-    const months = [];
-    for (let m = r.to.slice(0, 7); m >= r.from.slice(0, 7) && months.length < 12; m = shift(`${m}-01`, -1).slice(0, 7)) months.push(m);
-    const kwMonths = months.length > 1 ? months.slice(1) : months;
-    render(
-      req,
-      res,
-      'ביצועי הפרופיל',
-      V.performanceView({
-        connected: Boolean(store.googleConnection(b.id)) && locations.length > 0,
-        locations,
-        locationId,
-        days,
-        from: r.from,
-        to: r.to,
-        totals: store.profileMetricTotals(b.id, r.from, r.to, locationId),
-        prev: store.profileMetricTotals(b.id, r.prevFrom, r.prevTo, locationId),
-        daily: store.profileMetricDaily(b.id, r.from, r.to, locationId),
-        keywords: store.profileKeywords(b.id, kwMonths, locationId),
-        keywordMonths: kwMonths.length > 1 ? `${monthLabel(kwMonths[kwMonths.length - 1])} עד ${monthLabel(kwMonths[0])}` : `ב${monthLabel(kwMonths[0])}`,
-        lastSync: locations.map((l) => l.metrics_at).filter(Boolean).sort().pop() || null,
-        errors: locations.map((l) => l.metrics_error).filter(Boolean),
-        pub: publicProfile(store, b, r),
-        googleReady: Boolean(ctx.google),
-        canConnect: req.can('manager'),
-        csrf: req.user.csrf,
-        canRefresh: Boolean(sync) && req.can('manager'),
-        refreshing: running.has(b.id),
-        notice: req.query.started ? 'העדכון התחיל. הנתונים יופיעו כאן תוך דקה.' : '',
-      }),
-    );
-  });
+/**
+ * Everything the dashboard's Google section shows for a period: the private
+ * numbers (which end on the last day Google filled in) and the public ones.
+ */
+export function googleOverview(ctx, req, period, { refreshing = false } = {}) {
+  const { store } = ctx;
+  const b = req.business;
+  const locations = store.googleLocations(b.id).filter((l) => l.source === 'gbp' && l.enabled);
+  const last = store.profileMetricsLastDate(b.id);
+  const from = ilDay(period.from);
+  const wanted = ilDay(period.to ? period.to - 1 : Date.now());
+  let to = last && last < wanted ? last : wanted;
+  if (to < from) to = from;
+  const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 864e5) + 1;
+  const r = { from, to, prevFrom: shift(from, -days), prevTo: shift(from, -1) };
+  // Search terms come by month: the full months inside the range (at least the last one).
+  const months = [];
+  for (let m = to.slice(0, 7); m >= from.slice(0, 7) && months.length < 12; m = shift(`${m}-01`, -1).slice(0, 7)) months.push(m);
+  const kwMonths = months.length > 1 ? months.slice(1) : months;
+  return {
+    connected: Boolean(store.googleConnection(b.id)) && locations.length > 0,
+    metrics: {
+      from: r.from,
+      to: r.to,
+      totals: store.profileMetricTotals(b.id, r.from, r.to),
+      prev: store.profileMetricTotals(b.id, r.prevFrom, r.prevTo),
+      daily: store.profileMetricDaily(b.id, r.from, r.to),
+      keywords: store.profileKeywords(b.id, kwMonths),
+      keywordMonths: kwMonths.length > 1 ? `${monthLabel(kwMonths[kwMonths.length - 1])} עד ${monthLabel(kwMonths[0])}` : `ב${monthLabel(kwMonths[0])}`,
+    },
+    pub: publicProfile(store, b, r),
+    lastSync: locations.map((l) => l.metrics_at).filter(Boolean).sort().pop() || null,
+    errors: locations.map((l) => l.metrics_error).filter(Boolean),
+    googleReady: Boolean(ctx.google),
+    canConnect: req.can('manager'),
+    canRefresh: Boolean(ctx.googleSync) && req.can('manager'),
+    refreshing,
+    csrf: req.user.csrf,
+  };
+}
+
+/** The profile's numbers live on the main dashboard; this keeps the old address and the refresh. */
+export function performanceRoutes(ctx, { sync }) {
+  const { store, requireRole } = ctx;
+  const router = express.Router();
+
+  router.get('/performance', (req, res) => res.redirect(301, '/admin#google'));
 
   router.post('/performance/refresh', requireRole('manager'), (req, res) => {
     const id = req.business.id;
-    if (sync && !running.has(id)) {
-      running.add(id);
+    if (sync && !ctx.metricsRunning.has(id)) {
+      ctx.metricsRunning.add(id);
       sync
         .syncMetrics(store.businessById(id))
         .catch((err) => console.warn('[google] metrics refresh failed:', err.message))
-        .finally(() => running.delete(id));
+        .finally(() => ctx.metricsRunning.delete(id));
     }
-    res.redirect(303, '/admin/performance?started=1');
+    res.redirect(303, '/admin?refreshed=1#google');
   });
 
   return router;
