@@ -24,7 +24,7 @@ const INCLUDED = [
  * `action(key)` returns the call to action for a plan: a link on the landing
  * page, a submit button inside the plan page's form.
  */
-export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
+export function pricingCards({ action, current = '', idPrefix = 'cycle', compact = false }) {
   const cards = Object.entries(PUBLIC_PLANS)
     .map(([key, p]) => {
       const yearly = annualPrice(p);
@@ -39,7 +39,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
         </div>
         <div class="plan-branches">${h(branchesLabel(p))}</div>
         <ul>
-          ${INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
+          ${compact ? '<li>✓ כל מה שכלול בכל המסלולים</li>' : INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
           ${waOn() ? `<li>✓ עד ${p.waMonthly.toLocaleString('he-IL')} בקשות דירוג בוואטסאפ בחודש, נשלחות אוטומטית</li>` : ''}
           <li class="${p.aiPlus ? 'plan-plus' : ''}">✓ ${p.aiPlus ? 'נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity' : 'נראות ב-AI בגוגל וב-Claude'}</li>
         </ul>
@@ -55,6 +55,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle' }) {
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
+    ${compact ? `<div class="pricing-all"><b>כלול בכל המסלולים</b><div>${INCLUDED.map((f) => `<span>✓ ${h(f)}</span>`).join('')}</div></div>` : ''}
     <p class="pricing-note">ההבדל בין המסלולים: מספר הסניפים, ומהמסלול המקצועי גם בדיקת נראות ב-ChatGPT, Gemini ו-Perplexity · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }

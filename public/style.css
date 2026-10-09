@@ -1931,3 +1931,58 @@ body.site .site-head { background: rgba(255, 255, 255, .9); border-bottom-color:
   .lp-faq { grid-template-columns: minmax(0, 1fr); gap: 1.6rem; }
   .lp-faq-side { position: static; }
 }
+
+/* landing: lighter rhythm */
+.lp-band { padding-top: 4.5rem; padding-bottom: 4.5rem; }
+.lp-head { margin-bottom: 2.2rem; }
+.lp-why-card .lp-why-body { padding: 20px 22px 22px; }
+.lp-more { margin-top: 1.4rem; }
+.lp-agency { max-width: 900px; margin: 1.6rem auto 0; background: #fff; border: 1px solid var(--line); border-radius: 18px; }
+.lp-agency > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 20px; cursor: pointer; list-style: none; }
+.lp-agency > summary::-webkit-details-marker { display: none; }
+.lp-agency > summary i { font-style: normal; color: var(--purple); font-weight: 700; white-space: nowrap; }
+.lp-agency[open] > summary { border-bottom: 1px solid var(--line-2); }
+.lp-agency .contact-form { border: 0; box-shadow: none; margin: 0; }
+.lp-agency .flash { margin: 16px 20px; }
+@media (max-width: 640px) {
+  .lp-band { padding-top: 2.8rem; padding-bottom: 2.8rem; }
+  .lp-head { margin-bottom: 1.4rem; }
+  .lp-head p { font-size: 1rem; }
+  .lp-hero { padding-top: 2rem; padding-bottom: 2.4rem; gap: 1.6rem; }
+  .lp-hero-text { gap: 1rem; }
+  .lp-lead { font-size: 1.02rem; }
+  .lp-checks { gap: .5rem 1rem; font-size: .85rem; }
+  .lp-float-alert { display: none; }
+  .lp-float-ai { bottom: -10px; inset-inline-start: 8px; }
+  .lp-visual { padding: 0 0 20px; }
+  .lp-mchart { display: none; }
+  .lp-app { min-height: 0; }
+  .lp-engines { padding: 1.4rem 16px; }
+  .lp-engines-row { gap: 6px 16px; }
+  .lp-why { gap: 14px; }
+  .lp-why-art { min-height: 0; height: auto; padding: 14px; }
+  .lp-why-card h3 { font-size: 1.1rem; }
+  .lp-bento { gap: 12px; }
+  .lp-tile { padding: 18px; }
+  .lp-tile.wide.accent { padding: 18px; }
+  .lp-dash-chart, .lp-dash-kw { display: none; }
+  .lp-more { gap: 6px; }
+  .lp-more span { padding: 5px 11px; font-size: .82rem; }
+  .ai-split { gap: 1.2rem; }
+  .ai-mock .ai-plan { display: none; }
+  .lp-steps { gap: 12px; }
+  .lp-step { padding: 18px; }
+  .lp-demo-shot { display: none; }
+  .lp-demo-list { display: none; }
+  .lp-faq-card { display: none; }
+  .lp-faq-list summary { padding: 14px 16px; font-size: .97rem; }
+  .lp-final { padding: 3rem 16px; }
+}
+.pricing-all { max-width: 980px; margin: 1.4rem auto 0; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+.pricing-all b { display: block; margin-bottom: 10px; }
+.pricing-all div { display: flex; flex-wrap: wrap; gap: 8px; }
+.pricing-all span { background: var(--bg); border-radius: 999px; padding: 5px 12px; font-size: .86rem; color: var(--ink-2); }
+@media (max-width: 640px) {
+  .lp-step-art { display: none; }
+  .pricing-all span { font-size: .8rem; padding: 4px 10px; }
+}

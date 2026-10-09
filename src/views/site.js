@@ -135,14 +135,9 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       'כן, GoFive עובדת על הפרופיל הקיים שלכם בגוגל מיי ביזנס. אם עוד אין לכם, פותחים אחד בחינם ב-business.google.com, ואנחנו נעזור לכם להשלים אותו בעזרת ציון הבריאות וההמלצות.',
     ],
     [
-      'במה זה שונה מכלי ביקורות רגיל?',
-      'ביקורות הן רק חלק אחד. GoFive מרכזת את כל הנוכחות של העסק בגוגל ובעוזרי AI: נתוני הפרופיל (צפיות, שיחות, הגעה), בריאות הפרופיל, מיקום במפות, מתחרים, ונראות ב-ChatGPT, Gemini, Perplexity, Claude וגוגל AI. ובכל שבוע, מה לעשות כדי לעלות.',
-    ],
-    [
       'מה זה "נראות ב-AI"?',
       'יותר ויותר אנשים שואלים עוזר AI "איפה יש מסעדה טובה ליד…" במקום לחפש. GoFive שואלת את עוזרי ה-AI בכל שבוע את השאלות המקומיות שהלקוחות שלכם שואלים, מראה אם ממליצים עליכם ועל מי ממליצים במקומכם, ונותנת תוכנית פעולה כדי להופיע.',
     ],
-    ['אפשר לראות את המערכת לפני שנרשמים?', 'כן. בדמו יש עסק לדוגמה עם נתונים מלאים של שלושה חודשים, ואפשר להסתובב בו חופשי בלי להירשם. <a href="/demo">לדמו</a>'],
     [
       'מאיפה מגיעים הנתונים של הצפיות והשיחות?',
       'ישירות מגוגל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד. ביקורות, דירוג, בריאות הפרופיל ומיקום במפות עובדים כבר מהרגע שמדביקים את הקישור לעסק.',
@@ -151,14 +146,11 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       'זה מותר לפי הכללים של גוגל?',
       'כן. גוגל אוסרת להסתיר את האפשרות לכתוב ביקורת מלקוחות לא מרוצים ("Review gating"). אצלנו כל לקוח יכול לכתוב ביקורת בגוגל. ההבדל הוא שללקוח לא מרוצה אנחנו מציעים קודם ערוץ ישיר אליכם, כדי שתוכלו לתקן.',
     ],
-    ['איך אדע אם משהו השתבש?', 'המערכת שולחת התראה למייל ולטלפון כשהדירוג בגוגל, המיקום במפות או הנראות ב-AI יורדים, וכשנכנסת ביקורת שלילית. ככה תופסים בעיה מוקדם.'],
     [
       `מה קורה אחרי ${TRIAL_DAYS} ימי הניסיון?`,
       'בוחרים מסלול וממשיכים בלי הפסקה. אם לא בוחרים, הסקרים ללקוחות מושהים, אבל כל הנתונים וההגדרות נשמרים ואפשר לחזור בכל רגע. אף אחד לא מחייב אתכם בלי שביקשתם.',
     ],
-    ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],
-    ['מה עם פרטיות הלקוחות שלי?', 'המידע שייך לכם, לא מוצג לאף אחד אחר ולא נמכר. פרטים מלאים ב<a href="/privacy">מדיניות הפרטיות</a>.'],
-  ];
+    ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
   const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל ${TRIAL_DAYS} ימים חינם</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
   const engines = ['Google', 'Google Maps', 'ChatGPT', 'Gemini', 'Perplexity', 'Claude', 'AI Overview'];
 
@@ -199,7 +191,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   <div class="lp-hero-text">
     <span class="lp-pill lp-pill-g">${G_LOGO}<span>בנויה על <b class="lp-gbp">Google Business Profile</b></span></span>
     <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
-    <p class="lp-lead">GoFive מתחברת לפרופיל העסק שלכם בגוגל ועושה ממנו מכונה להבאת לקוחות: ביקורות ותשובות בלחיצה, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות מול המתחרים, ובדיקה אם ChatGPT וגוגל AI ממליצים עליכם. הכול בדשבורד אחד, עם משימות שבועיות.</p>
+    <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
     <div class="lp-checks">
       <span>${icon('check', 16)}בלי כרטיס אשראי</span>
@@ -233,7 +225,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       </div>
       <div class="lp-why-body"><span class="lp-why-tag">${icon('pin', 15)} חיפוש ומפות</span>
         <h3>שם לקוחות מוצאים אתכם</h3>
-        <p>בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים של העסקים, עם הדירוג, התמונות, השעות וכפתורי התקשרות וניווט. מי שלמעלה מקבל את הלקוח.</p></div>
+        <p>בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.</p></div>
     </article>
     <article class="lp-why-card">
       <div class="lp-why-art lp-why-reviews" aria-hidden="true">
@@ -243,7 +235,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       </div>
       <div class="lp-why-body"><span class="lp-why-tag">${icon('star', 15)} ביקורות</span>
         <h3>ביקורות מכריעות</h3>
-        <p>כמה ביקורות יש, מה הדירוג, והאם העסק עונה להן: זה מה שלקוחות בודקים לפני שהם בוחרים, וזה גם חלק ממה שגוגל שוקלת בדירוג המקומי.</p></div>
+        <p>דירוג, כמות ומענה לביקורות: זה מה שלקוחות בודקים, וגם מה שגוגל שוקלת.</p></div>
     </article>
     <article class="lp-why-card">
       <div class="lp-why-art lp-why-ai" aria-hidden="true">
@@ -252,18 +244,10 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       </div>
       <div class="lp-why-body"><span class="lp-why-tag">${icon('spark', 15)} עוזרי AI</span>
         <h3>גם ה-AI קורא אותו</h3>
-        <p>כשמבקשים מ-ChatGPT או מגוגל AI המלצה על עסק באזור, הם נשענים על פרופילים, ביקורות ואתרים. פרופיל חזק ופעיל מופיע יותר בתשובות.</p></div>
+        <p>ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.</p></div>
     </article>
   </div>
 
-  <div class="lp-flow" aria-label="איך GoFive עובדת עם הפרופיל">
-    <div class="lp-flow-node"><span class="lp-flow-logo">${G_LOGO}</span><b>הפרופיל שלכם בגוגל מיי ביזנס</b><small>ביקורות · דירוג · צפיות · שיחות · הגעה · פוסטים</small></div>
-    <div class="lp-flow-arrow" aria-hidden="true">←</div>
-    <div class="lp-flow-node lp-flow-me"><span class="lp-flow-logo">G5</span><b>GoFive</b><small>מנתחת, משווה למתחרים, בודקת ב-AI ומנסחת</small></div>
-    <div class="lp-flow-arrow" aria-hidden="true">←</div>
-    <div class="lp-flow-node"><span class="lp-flow-logo">${icon('check', 20)}</span><b>מה אתם מקבלים</b><small>תשובות מוכנות · משימות שבועיות · התראות · דוח חודשי</small></div>
-  </div>
-  <p class="lp-flow-note">מתחברים עם חשבון הגוגל שמנהל את העסק, בהתחברות המאובטחת של גוגל. אפשר להתחיל גם רק עם קישור לעסק בגוגל מפות.</p>
 </section>
 
 <section class="lp-band alt" id="features">
@@ -276,20 +260,15 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     ${tile('wide accent', 'chart', 'כל נתוני גוגל מיי ביזנס בדשבורד אחד', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', dashArt)}
     ${tile('', 'star', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת שנשאר רק לאשר.', review)}
     ${tile('', 'pin', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות מ-9 נקודות סביב העסק, כל שבוע.', rankGrid)}
-    ${tile('', 'search', 'נראות ב-AI', 'האם ChatGPT, Gemini, Perplexity, Claude וגוגל ממליצים עליכם בשאלות מקומיות.', aiArt)}
-    ${tile('', 'rivals', 'על מי ממליצים במקומכם', 'המתחרים שה-AI וגוגל מעדיפים, ומה יש להם שאין לכם.', rivals)}
     ${tile('', 'shield', 'בריאות הפרופיל', 'ציון לפרופיל הגוגל, מה חסר, ותיאור מוכן להדבקה.', health)}
     ${tile('', 'qr', 'עוד ביקורות בגוגל', 'שלט QR מעוצב ובקשת דירוג בוואטסאפ, גם אוטומטית אחרי כל ביקור.', qr)}
-    ${tile('', 'bell', 'התראה כשמשהו יורד', 'דירוג, מיקום במפות או נראות ב-AI ירדו? תדעו באותו יום.', alert)}
   </div>
   <div class="lp-more">
-    <span>${icon('check', 16)} 3 משימות שבועיות</span>
-    <span>${icon('report', 16)} דוח חודשי ב-PDF</span>
-    <span>${icon('chat', 16)} פוסטים לגוגל עם AI</span>
-    <span>${icon('alert', 16)} תפיסת לקוחות כועסים בזמן</span>
-    <span>${icon('team', 16)} צוות, סניפים ודירוג עובדים</span>
-    <span>${icon('web', 16)} ווידג'ט ביקורות לאתר</span>
-    <span>${icon('gear', 16)} מיתוג לבן לסוכנויות</span>
+    <span>${icon('bell', 16)} התראה כשמשהו יורד</span>
+    <span>${icon('check', 16)} 3 משימות בשבוע</span>
+    <span>${icon('report', 16)} דוח חודשי</span>
+    <span>${icon('chat', 16)} פוסטים עם AI</span>
+    <span>${icon('team', 16)} סניפים וצוות</span>
   </div>
 </section>
 
@@ -300,9 +279,8 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       <h2>כשלקוח שואל את ChatGPT "איפה כדאי…", אתם בתשובה?</h2>
       <p>עוזרי AI הם גוגל החדש. הם עונים על שאלות מקומיות עם רשימה קצרה של עסקים, ומי שלא בה, לא קיים. GoFive בודקת את זה בשבילכם כל שבוע, ואומרת בדיוק מה לעשות.</p>
       <ul class="ai-list">
-        <li>${icon('check', 18)}שאלות מקומיות שה-AI מנסח לפי התחום והשכונה שלכם</li>
-        <li>${icon('check', 18)}ChatGPT, Gemini, Perplexity, Claude, AI Mode ו-AI Overview</li>
-        <li>${icon('check', 18)}על מי ממליצים במקומכם, ועל אילו אתרים ה-AI סומך</li>
+        <li>${icon('check', 18)}ChatGPT, Gemini, Perplexity, Claude וגוגל AI, בשאלות מקומיות</li>
+        <li>${icon('check', 18)}על מי ממליצים במקומכם</li>
         <li>${icon('check', 18)}תוכנית פעולה אחרי כל בדיקה: איפה להופיע ומה להוסיף</li>
       </ul>
     </div>
@@ -325,7 +303,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <div class="lp-step">
       <div class="lp-step-top"><span class="lp-step-n">1</span><em>דקה אחת</em></div>
       <h3>מחברים את גוגל מיי ביזנס</h3>
-      <p>מתחברים עם חשבון הגוגל של העסק, או פשוט מדביקים את הקישור לעסק בגוגל מפות. הביקורות, הדירוג והפרופיל נטענים לבד.</p>
+      <p>עם חשבון הגוגל של העסק, או בהדבקת קישור לגוגל מפות.</p>
       <div class="lp-step-art" aria-hidden="true">
         <span class="lp-gbtn">${G_LOGO} התחברות עם Google</span>
         <span class="lp-or">או</span>
@@ -335,7 +313,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <div class="lp-step">
       <div class="lp-step-top"><span class="lp-step-n">2</span><em>אוטומטי, כל שבוע</em></div>
       <h3>המערכת בודקת</h3>
-      <p>ציון לפרופיל, מיקום במפות, מתחרים, נראות ב-AI ומה הלקוחות אומרים. הכול רץ לבד, בלי שתצטרכו לזכור.</p>
+      <p>פרופיל, מפות, מתחרים ו-AI. הכול רץ לבד.</p>
       <div class="lp-step-art lp-checking" aria-hidden="true">
         <span class="done">${icon('check', 13)} בריאות הפרופיל: 84</span>
         <span class="done">${icon('check', 13)} מיקום במפות: 2.5</span>
@@ -346,7 +324,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <div class="lp-step">
       <div class="lp-step-top"><span class="lp-step-n">3</span><em>10 דקות בשבוע</em></div>
       <h3>עושים את מה שחשוב</h3>
-      <p>שלוש משימות בשבוע, תשובות ופוסטים שה-AI מנסח, שלטי QR ובקשות בוואטסאפ, והתראה כשמשהו יורד.</p>
+      <p>שלוש משימות בשבוע, ותשובות שה-AI כבר ניסח.</p>
       <div class="lp-step-art lp-todo" aria-hidden="true">
         <span class="ok"><i>✓</i> לענות ל-4 ביקורות</span>
         <span class="ok"><i>✓</i> להעלות 5 תמונות</span>
@@ -356,31 +334,11 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   </div>
 </section>
 
-<section class="lp-band" id="compare">
-  <div class="lp-head"><span class="lp-kicker">ההבדל</span><h2>לנהל את גוגל מיי ביזנס לבד, או עם GoFive</h2></div>
-  <div class="lp-compare">
-    <div class="lp-cmp lp-cmp-no"><h3>לבד</h3><ul>
-      <li>נכנסים לפרופיל כשנזכרים, ומגלים ביקורת שלילית בת שבוע</li>
-      <li>לא ברור כמה אנשים ראו את העסק ומה הם עשו</li>
-      <li>אין דרך לדעת איפה אתם בגוגל מפות מול המתחרים</li>
-      <li>אין מושג אם ChatGPT ממליץ עליכם, או על מי במקומכם</li>
-      <li>מנסחים כל תשובה מאפס</li>
-    </ul></div>
-    <div class="lp-cmp lp-cmp-yes"><h3>עם GoFive</h3><ul>
-      <li>התראה לטלפון על כל ביקורת, ותשובה מנוסחת שנשאר רק לאשר</li>
-      <li>צפיות, שיחות, בקשות הגעה וכניסות לאתר בדשבורד אחד</li>
-      <li>מפת מיקום מ-9 נקודות סביב העסק, כל שבוע</li>
-      <li>ציון נראות ב-AI, מי מומלץ במקומכם, ותוכנית פעולה</li>
-      <li>שלוש משימות בשבוע והתראה כשמשהו יורד</li>
-    </ul></div>
-  </div>
-</section>
-
 <section class="lp-demo">
   <div class="lp-demo-text">
     <span class="lp-pill"><b>חי</b>בלי הרשמה ובלי פרטים</span>
     <h2>רוצים לראות לפני שנרשמים?</h2>
-    <p>היכנסו לעסק לדוגמה עם שלושה חודשים של נתונים אמיתיים למראה, ותסתובבו בכל המסכים.</p>
+    <p>עסק לדוגמה עם שלושה חודשים של נתונים. נכנסים ומסתובבים בכל המסכים.</p>
     <ul class="lp-demo-list">
       <li>${icon('chart', 16)} דשבורד עם צפיות, שיחות והגעה מגוגל</li>
       <li>${icon('search', 16)} נראות ב-AI עם תוכנית פעולה</li>
@@ -404,17 +362,16 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p></div>
   ${pricingCards({
     idPrefix: 'lp',
+    compact: true,
     action: () =>
       signupOpen
         ? `<a class="btn primary plan-cta" href="/register">${TRIAL_DAYS} ימים חינם</a>`
         : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
   })}
-  ${customOffer('<a class="btn accent" href="#contact">לקבלת הצעת מחיר</a>')}
-</section>
-
-<section class="lp-band alt" id="contact">
-  <div class="lp-head"><h2>הצעת מחיר לסוכנויות ורשתות</h2><p>השאירו פרטים ונחזור אליכם תוך יום עסקים.</p></div>
-  ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
+  <details class="lp-agency" id="contact"${contactSent || contactError ? ' open' : ''}>
+    <summary><span><b>סוכנות או רשת עם הרבה סניפים?</b> נבנה לכם הצעת מחיר.</span><i>להשארת פרטים</i></summary>
+    ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
+  </details>
 </section>
 
 <section class="lp-band" id="faq">
