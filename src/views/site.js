@@ -165,6 +165,17 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   // The bento: each tile shows the feature itself, not just a sentence about it.
   const tile = (cls, ic, title, text, art = '') =>
     `<article class="lp-tile ${cls}"><div class="lp-tile-head"><span class="lp-tile-icon">${icon(ic, 20)}</span><h3>${h(title)}</h3></div><p>${h(text)}</p>${art}</article>`;
+  const dashArt = `<div class="lp-art lp-dash-art">
+    <div class="lp-dash-mini">${[['דירוג בגוגל', '4.7★', '▲ 0.1'], ['צפיות בפרופיל', '5,916', '▲ 12%'], ['שיחות והגעה', '708', '▲ 8%'], ['מיקום במפות', '2.5', '▲ 1.1']]
+      .map(([l, v, d]) => `<span><small>${l}</small><b>${v}</b><i>${d}</i></span>`)
+      .join('')}</div>
+    <div class="lp-dash-chart">
+      <div class="lp-dash-chart-head"><small>צפיות בפרופיל · 90 יום</small><em>▲ 34%</em></div>
+      <svg viewBox="0 0 520 90" preserveAspectRatio="none" direction="ltr"><defs><linearGradient id="lpArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd23f" stop-opacity=".45"/><stop offset="1" stop-color="#ffd23f" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="0,90 0.0,65.2 47.3,56.2 94.5,60.8 141.8,47.2 189.1,50.6 236.4,38.2 283.6,42.8 330.9,28.1 378.2,32.6 425.5,19.1 472.7,22.5 520.0,9.0 520,90" fill="url(#lpArea)"/><polyline points="0.0,65.2 47.3,56.2 94.5,60.8 141.8,47.2 189.1,50.6 236.4,38.2 283.6,42.8 330.9,28.1 378.2,32.6 425.5,19.1 472.7,22.5 520.0,9.0" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+    </div>
+    <div class="lp-dash-kw"><small>מה חיפשו כשמצאו אתכם:</small>${['ביסטרו הגפן', 'מסעדה בדיזנגוף', 'פסטה טרייה', 'מסעדה רומנטית'].map((k) => `<span>${k}</span>`).join('')}</div>
+  </div>`;
   const rankGrid = `<div class="lp-art lp-rank">${[3, 2, 4, 1, 1, 2, 5, 3, 7].map((n) => `<i class="r${n <= 3 ? 'g' : n <= 5 ? 'm' : 'b'}">${n}</i>`).join('')}</div>`;
   const review = `<div class="lp-art lp-review"><div class="lp-rv"><b>מיכל א.</b> <span>★★★★★</span><p>שירות מקסים, נחזור!</p></div>
     <div class="lp-rv lp-rv-reply"><small>${icon('spark', 12)} תשובה שה-AI ניסח</small><p>תודה מיכל! שמחנו לארח, מחכים לכם שוב 💜</p></div></div>`;
@@ -211,9 +222,38 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p>
   </div>
   <div class="lp-why">
-    <div class="lp-why-card"><span>${icon('pin', 22)}</span><h3>שם לקוחות מוצאים אתכם</h3><p>בחיפוש "ליד" ובגוגל מפות מוצגים פרופילים של עסקים, עם הדירוג, התמונות, השעות וכפתורי התקשרות וניווט.</p></div>
-    <div class="lp-why-card"><span>${icon('star', 22)}</span><h3>ביקורות מכריעות</h3><p>כמה ביקורות יש, מה הדירוג, והאם העסק עונה להן: זה מה שלקוחות בודקים, וזה גם חלק ממה שגוגל שוקלת בדירוג המקומי.</p></div>
-    <div class="lp-why-card"><span>${icon('spark', 22)}</span><h3>גם ה-AI קורא אותו</h3><p>כשמבקשים מ-ChatGPT או מגוגל AI המלצה על עסק באזור, הם נשענים על פרופילים, ביקורות ואתרים. פרופיל חזק מופיע יותר.</p></div>
+    <article class="lp-why-card">
+      <div class="lp-why-art lp-why-map" aria-hidden="true">
+        <div class="lp-wsearch">${icon('search', 14)} מסעדה איטלקית לידי</div>
+        <div class="lp-wpack">
+          <span class="me"><i>A</i><b>ביסטרו הגפן</b><em>4.7 ★ (412)</em><u>פתוח</u></span>
+          <span><i>B</i><b>פסטה דה לוקה</b><em>4.5 ★ (1.2K)</em><u>פתוח</u></span>
+          <span><i>C</i><b>מסעדת הנמל</b><em>4.3 ★ (2.1K)</em><u>נסגר בקרוב</u></span>
+        </div>
+      </div>
+      <div class="lp-why-body"><span class="lp-why-tag">${icon('pin', 15)} חיפוש ומפות</span>
+        <h3>שם לקוחות מוצאים אתכם</h3>
+        <p>בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים של העסקים, עם הדירוג, התמונות, השעות וכפתורי התקשרות וניווט. מי שלמעלה מקבל את הלקוח.</p></div>
+    </article>
+    <article class="lp-why-card">
+      <div class="lp-why-art lp-why-reviews" aria-hidden="true">
+        <div class="lp-wscore"><b>4.7</b><span>★★★★★</span><small>412 ביקורות</small></div>
+        <div class="lp-wdist">${[[5, 78], [4, 14], [3, 4], [2, 2], [1, 2]].map(([n, v]) => `<span><small>${n}</small><i><u style="width:${v}%"></u></i></span>`).join('')}</div>
+        <div class="lp-wreply">${icon('check', 13)} ענינו ל-96% מהביקורות</div>
+      </div>
+      <div class="lp-why-body"><span class="lp-why-tag">${icon('star', 15)} ביקורות</span>
+        <h3>ביקורות מכריעות</h3>
+        <p>כמה ביקורות יש, מה הדירוג, והאם העסק עונה להן: זה מה שלקוחות בודקים לפני שהם בוחרים, וזה גם חלק ממה שגוגל שוקלת בדירוג המקומי.</p></div>
+    </article>
+    <article class="lp-why-card">
+      <div class="lp-why-art lp-why-ai" aria-hidden="true">
+        <div class="lp-wbubble user">איפה כדאי לאכול ליד דיזנגוף?</div>
+        <div class="lp-wbubble bot">${icon('spark', 13)} אני ממליץ על <b>ביסטרו הגפן</b>: פסטה טרייה, דירוג 4.7 בגוגל ושירות מוערך.<span class="lp-wsrc">${G_LOGO} Google Maps</span></div>
+      </div>
+      <div class="lp-why-body"><span class="lp-why-tag">${icon('spark', 15)} עוזרי AI</span>
+        <h3>גם ה-AI קורא אותו</h3>
+        <p>כשמבקשים מ-ChatGPT או מגוגל AI המלצה על עסק באזור, הם נשענים על פרופילים, ביקורות ואתרים. פרופיל חזק ופעיל מופיע יותר בתשובות.</p></div>
+    </article>
   </div>
 
   <div class="lp-flow" aria-label="איך GoFive עובדת עם הפרופיל">
@@ -233,7 +273,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p>
   </div>
   <div class="lp-bento">
-    ${tile('wide accent', 'chart', 'כל נתוני גוגל מיי ביזנס בדשבורד אחד', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', `<div class="lp-art lp-dash-mini">${['4.7★', '5,916', '708', '2.5'].map((v, i) => `<span><small>${['דירוג', 'צפיות', 'פעולות', 'מיקום'][i]}</small><b>${v}</b></span>`).join('')}</div>`)}
+    ${tile('wide accent', 'chart', 'כל נתוני גוגל מיי ביזנס בדשבורד אחד', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', dashArt)}
     ${tile('', 'star', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת שנשאר רק לאשר.', review)}
     ${tile('', 'pin', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות מ-9 נקודות סביב העסק, כל שבוע.', rankGrid)}
     ${tile('', 'search', 'נראות ב-AI', 'האם ChatGPT, Gemini, Perplexity, Claude וגוגל ממליצים עליכם בשאלות מקומיות.', aiArt)}
@@ -282,9 +322,37 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 <section class="lp-band" id="how">
   <div class="lp-head"><span class="lp-kicker">מתחילים בכמה דקות</span><h2>איך זה עובד</h2></div>
   <div class="lp-steps">
-    <div class="lp-step"><span>1</span><h3>מחברים את גוגל מיי ביזנס</h3><p>מתחברים עם חשבון הגוגל של העסק, או פשוט מדביקים את הקישור לעסק בגוגל מפות. תוך דקה הביקורות, הדירוג והפרופיל נטענים.</p></div>
-    <div class="lp-step"><span>2</span><h3>המערכת בודקת</h3><p>ציון לפרופיל, מיקום במפות, מתחרים, נראות ב-AI ומה הלקוחות אומרים. כל שבוע מחדש, לבד.</p></div>
-    <div class="lp-step"><span>3</span><h3>עושים את מה שחשוב</h3><p>שלוש משימות בשבוע, תשובות ופוסטים שה-AI מנסח, שלטי QR ובקשות בוואטסאפ, והתראה כשמשהו יורד.</p></div>
+    <div class="lp-step">
+      <div class="lp-step-top"><span class="lp-step-n">1</span><em>דקה אחת</em></div>
+      <h3>מחברים את גוגל מיי ביזנס</h3>
+      <p>מתחברים עם חשבון הגוגל של העסק, או פשוט מדביקים את הקישור לעסק בגוגל מפות. הביקורות, הדירוג והפרופיל נטענים לבד.</p>
+      <div class="lp-step-art" aria-hidden="true">
+        <span class="lp-gbtn">${G_LOGO} התחברות עם Google</span>
+        <span class="lp-or">או</span>
+        <span class="lp-link-in">maps.app.goo.gl/…<b>הוספה</b></span>
+      </div>
+    </div>
+    <div class="lp-step">
+      <div class="lp-step-top"><span class="lp-step-n">2</span><em>אוטומטי, כל שבוע</em></div>
+      <h3>המערכת בודקת</h3>
+      <p>ציון לפרופיל, מיקום במפות, מתחרים, נראות ב-AI ומה הלקוחות אומרים. הכול רץ לבד, בלי שתצטרכו לזכור.</p>
+      <div class="lp-step-art lp-checking" aria-hidden="true">
+        <span class="done">${icon('check', 13)} בריאות הפרופיל: 84</span>
+        <span class="done">${icon('check', 13)} מיקום במפות: 2.5</span>
+        <span class="done">${icon('check', 13)} 5 מתחרים נבדקו</span>
+        <span class="run"><i class="spinner"></i> נראות ב-AI: 38 מתוך 60</span>
+      </div>
+    </div>
+    <div class="lp-step">
+      <div class="lp-step-top"><span class="lp-step-n">3</span><em>10 דקות בשבוע</em></div>
+      <h3>עושים את מה שחשוב</h3>
+      <p>שלוש משימות בשבוע, תשובות ופוסטים שה-AI מנסח, שלטי QR ובקשות בוואטסאפ, והתראה כשמשהו יורד.</p>
+      <div class="lp-step-art lp-todo" aria-hidden="true">
+        <span class="ok"><i>✓</i> לענות ל-4 ביקורות</span>
+        <span class="ok"><i>✓</i> להעלות 5 תמונות</span>
+        <span><i></i> לפרסם פוסט על המבצע</span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -309,11 +377,27 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 </section>
 
 <section class="lp-demo">
-  <div>
+  <div class="lp-demo-text">
+    <span class="lp-pill"><b>חי</b>בלי הרשמה ובלי פרטים</span>
     <h2>רוצים לראות לפני שנרשמים?</h2>
-    <p>עסק לדוגמה עם שלושה חודשים של נתונים: ביקורות, צפיות ושיחות מגוגל, מיקום במפות, מתחרים ונראות ב-AI. בלי הרשמה, בלי פרטים.</p>
+    <p>היכנסו לעסק לדוגמה עם שלושה חודשים של נתונים אמיתיים למראה, ותסתובבו בכל המסכים.</p>
+    <ul class="lp-demo-list">
+      <li>${icon('chart', 16)} דשבורד עם צפיות, שיחות והגעה מגוגל</li>
+      <li>${icon('search', 16)} נראות ב-AI עם תוכנית פעולה</li>
+      <li>${icon('pin', 16)} מפת מיקום מול המתחרים</li>
+      <li>${icon('report', 16)} דוח חודשי מוכן להדפסה</li>
+    </ul>
+    <a class="btn lp-cta" href="/demo">לדמו החי ←</a>
   </div>
-  <a class="btn lp-cta" href="/demo">לדמו החי ←</a>
+  <a class="lp-demo-shot" href="/demo" aria-label="לדמו החי">
+    <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/demo</span></span>
+    <span class="lp-demo-screen">
+      <span class="lp-demo-cover"><b>ביסטרו הגפן</b><small>חשבון דמו</small></span>
+      <span class="lp-demo-stats">${[['4.7★', 'דירוג'], ['5,916', 'צפיות'], ['62', 'נראות AI']].map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</span>
+      <span class="lp-demo-bars">${[40, 55, 48, 66, 60, 74, 70, 85, 80, 92].map((v) => `<i style="height:${v}%"></i>`).join('')}</span>
+    </span>
+    <span class="lp-demo-play">▶ לצפייה</span>
+  </a>
 </section>
 
 <section class="lp-band alt" id="pricing">
@@ -334,9 +418,23 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 </section>
 
 <section class="lp-band" id="faq">
-  <div class="lp-head"><h2>שאלות נפוצות</h2></div>
-  <div class="faq">
-    ${faq.map(([q, a]) => `<details><summary>${h(q)}</summary><p>${a}</p></details>`).join('')}
+  <div class="lp-faq">
+    <aside class="lp-faq-side">
+      <span class="lp-kicker">שאלות נפוצות</span>
+      <h2>כל מה שרציתם לשאול</h2>
+      <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? כתבו לנו.</p>
+      <div class="lp-faq-card">
+        <b>עדיין מתלבטים?</b>
+        <span>הכי פשוט להסתכל בעצמכם על עסק לדוגמה, או לנסות ${TRIAL_DAYS} ימים בחינם.</span>
+        <div class="lp-faq-actions">
+          <a class="btn primary" href="/demo">לדמו החי</a>
+          ${operatorInfo().email ? `<a class="btn" href="mailto:${h(operatorInfo().email)}">${icon('chat', 16)} כתבו לנו</a>` : ''}
+        </div>
+      </div>
+    </aside>
+    <div class="lp-faq-list">
+      ${faq.map(([q, a], i) => `<details${i === 0 ? ' open' : ''}><summary><span>${h(q)}</span><i aria-hidden="true"></i></summary><div class="lp-faq-a">${a}</div></details>`).join('')}
+    </div>
   </div>
 </section>
 
