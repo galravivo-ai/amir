@@ -123,8 +123,23 @@ test('set the questions, run a check, see the results', async () => {
   assert.deepEqual(JSON.parse(fresh.ai_queries), ['איפה יש ארוחת בוקר טובה בדיזנגוף?', 'איפה לאכול ארוחת ערב?']);
   assert.equal(fresh.ai_site, 'https://jackos.co.il/');
 
-  // Run synchronously for the test (the button runs it in the background).
-  const r = await created.visibility.runBusiness(fresh);
+  // The button runs the check in the background; the page shows live progress and reloads when it ends.
+  const started = await fetch(`${base}/admin/ai-visibility/run`, {
+    method: 'POST', redirect: 'manual',
+    headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '), 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ _csrf: token }).toString(),
+  });
+  assert.equal(started.status, 303);
+  const prog = async () => (await fetch(`${base}/admin/ai-visibility/progress`, { headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ') } })).json();
+  for (let i = 0; i < 50 && (await prog()).running; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(await prog(), { running: false });
+  assert.match((await req('/admin/ai-visibility?done=1')).text, /הבדיקה הסתיימה/);
+  created.store.db.prepare('DELETE FROM ai_checks WHERE business_id = ?').run(biz.id);
+
+  // Run synchronously for the test, with the progress it reports.
+  const steps = [];
+  const r = await created.visibility.runBusiness(fresh, (done, total) => steps.push(`${done}/${total}`));
+  assert.deepEqual([steps[0], steps.at(-1)], ['0/6', '6/6']);
   assert.equal(r.mentioned, 2, 'Google AI Mode mentions the business for both questions');
   const { latest, runs } = created.store.aiVisibility(biz.id);
   assert.equal(latest.length, 6, '2 questions × 3 engines');

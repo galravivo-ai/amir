@@ -28,7 +28,7 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
     return extra[engine](question, { city: business.ai_city });
   }
 
-  async function runBusinessUnscoped(business) {
+  async function runBusinessUnscoped(business, onProgress = null) {
     const queries = parseJson(business.ai_queries, []).slice(0, maxQueries(business));
     if (!queries.length || !engines(business).length) return null;
     const names = namesOf({
@@ -37,21 +37,33 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
       places: store.googleLocations(business.id).map((l) => l.title),
     });
     const runAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const list = engines(business);
+    const total = queries.length * list.length;
     let mentioned = 0;
+    let done = 0;
+    onProgress?.(0, total);
     for (const query of queries) {
-      for (const engine of engines(business)) {
-        try {
-          const a = await answer(engine, query, business);
-          if (!a) {
-            // Google showed no AI Overview for this search: not an error, just nothing to check.
-            store.saveAiCheck(business.id, runAt, { query, engine, error: 'no_answer' });
-            continue;
+      // The engines are independent: ask them all at once, one question at a time.
+      const results = await Promise.all(
+        list.map(async (engine) => {
+          try {
+            const a = await answer(engine, query, business);
+            // No answer: Google showed no AI Overview for this search, not an error.
+            return { engine, a };
+          } catch (err) {
+            return { engine, error: String(err.message).slice(0, 200) };
+          } finally {
+            onProgress?.(++done, total);
           }
+        }),
+      );
+      for (const { engine, a, error } of results) {
+        if (error) store.saveAiCheck(business.id, runAt, { query, engine, error });
+        else if (!a) store.saveAiCheck(business.id, runAt, { query, engine, error: 'no_answer' });
+        else {
           const m = matchAnswer(a, { names, site: business.ai_site });
           if (m.mentioned) mentioned++;
           store.saveAiCheck(business.id, runAt, { query, engine, ...m, sources: a.sources.slice(0, 8) });
-        } catch (err) {
-          store.saveAiCheck(business.id, runAt, { query, engine, error: String(err.message).slice(0, 200) });
         }
       }
     }
@@ -69,7 +81,7 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
   }
 
   // Searches and AI requests made here are counted against the business.
-  const runBusiness = (business) => withBusiness(business.id, () => runBusinessUnscoped(business));
+  const runBusiness = (business, onProgress) => withBusiness(business.id, () => runBusinessUnscoped(business, onProgress));
 
   return { engines, maxQueries, runBusiness, runDue };
 }

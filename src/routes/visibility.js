@@ -27,7 +27,8 @@ export function visibilityRoutes(ctx, { visibility }) {
   const router = express.Router();
   const manager = requireRole('manager');
   // Checks run in the background: a full run asks several engines several questions.
-  const running = new Set();
+  // business id -> { done, total, startedAt }
+  const running = new Map();
 
   const page = (req, res, extra = {}) =>
     render(
@@ -45,15 +46,15 @@ export function visibilityRoutes(ctx, { visibility }) {
         plus: hasAiPlus(req.business),
         // The upgrade is offered once at least one of the wider engines is set up.
         plusOffer: visibility.engines().some((e) => PLUS_ENGINES.includes(e)) ? AI_PLUS : null,
-        running: running.has(req.business.id),
+        running: running.get(req.business.id) || null,
         runsLeft: ctx.usage.left(req.business, 'visibility_run'),
         aiAvailable: Boolean(ctx.ai?.suggestQueries) && req.plan.ai,
         csrf: req.user.csrf,
         can: req.can,
         notice: req.query.saved
           ? 'נשמר.'
-          : req.query.started
-            ? 'הבדיקה התחילה. היא לוקחת כמה דקות, אפשר לרענן את הדף.'
+          : req.query.done
+            ? 'הבדיקה הסתיימה. הנה התוצאות.'
             : '',
         ...extra,
       }),
@@ -100,14 +101,21 @@ export function visibilityRoutes(ctx, { visibility }) {
     }
   });
 
+  // Polled by the page while a check runs.
+  router.get('/ai-visibility/progress', (req, res) => {
+    const r = running.get(req.business.id);
+    res.json(r ? { running: true, done: r.done, total: r.total } : { running: false });
+  });
+
   router.post('/ai-visibility/run', manager, (req, res) => {
     const id = req.business.id;
     if (!running.has(id) && parseJson(req.business.ai_queries, []).length && visibility.engines(req.business).length) {
       const over = ctx.usage.take(req.business, 'visibility_run');
       if (over) return page(req, res, { error: over });
-      running.add(id);
+      const state = { done: 0, total: 0, startedAt: Date.now() };
+      running.set(id, state);
       visibility
-        .runBusiness(store.businessById(id))
+        .runBusiness(store.businessById(id), (done, total) => Object.assign(state, { done, total }))
         .catch((err) => console.warn('[visibility] run failed:', err.message))
         .finally(() => running.delete(id));
     }

@@ -1532,3 +1532,10 @@ a.stat:hover { border-color: #cfc6ff; box-shadow: var(--shadow-sm); }
   .ai-band h2 { font-size: 1.55rem; }
 }
 .engine-test { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: 6px; font-size: .92rem; }
+.vis-progress { border-color: #d9d2ff; background: linear-gradient(135deg, #fff 60%, var(--purple-soft)); }
+.vis-progress-head { display: flex; align-items: center; gap: 14px; }
+.vis-progress-head > div { display: flex; flex-direction: column; gap: 2px; }
+.spinner { width: 28px; height: 28px; flex: none; border-radius: 50%; border: 3px solid var(--purple-soft); border-top-color: var(--purple); animation: ai-spin .9s linear infinite; }
+.vis-progress-bar { height: 8px; border-radius: 6px; background: var(--line-2); overflow: hidden; margin-top: 14px; }
+.vis-progress-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--purple), #a594ff); border-radius: 6px; transition: width .4s ease; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }

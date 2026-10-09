@@ -156,6 +156,22 @@ function dashboard({ runs, latest, shownEngines, allEngines, byQuery, business }
     ${matrix(byQuery, shownEngines, allEngines)}`;
 }
 
+/** While a check runs: a live progress bar; the page reloads by itself when it ends. */
+function progressCard(r) {
+  const p = r.total ? Math.round((r.done / r.total) * 100) : 0;
+  return `<section class="card vis-progress" id="vis-progress" role="status" aria-live="polite">
+    <div class="vis-progress-head"><span class="spinner" aria-hidden="true"></span>
+      <div><b>הבדיקה רצה עכשיו</b><span class="muted small" id="vis-progress-text">${r.total ? `${r.done} מתוך ${r.total} תשובות` : 'מתחילים…'} · בדרך כלל לוקח 1–3 דקות. אפשר להישאר כאן או לחזור אחר כך, הדף יתעדכן לבד.</span></div></div>
+    <div class="vis-progress-bar"><span id="vis-progress-bar" style="width:${p}%"></span></div>
+  </section>
+  <script>(function(){var t=document.getElementById('vis-progress-text'),b=document.getElementById('vis-progress-bar');
+  function tick(){fetch('/admin/ai-visibility/progress',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){
+    if(!d.running){location.replace('/admin/ai-visibility?done=1');return}
+    if(d.total){b.style.width=Math.round(d.done/d.total*100)+'%';(t.textContent=d.done+' מתוך '+d.total+' תשובות · בדרך כלל לוקח 1–3 דקות. אפשר להישאר כאן או לחזור אחר כך, הדף יתעדכן לבד.')}
+    setTimeout(tick,3000)}).catch(function(){setTimeout(tick,6000)})}
+  setTimeout(tick,2000)})();</script>`;
+}
+
 function plusCard({ offer, can }) {
   return `<section class="card vis-plus">
     <span class="badge st-in_progress">במסלול מקצועי ומעלה</span><h3>${h(offer.label)}</h3>
@@ -192,7 +208,7 @@ export function visibilityView({
     <p class="page-intro">יותר ויותר לקוחות שואלים עוזר AI "איפה כדאי…" במקום לחפש בגוגל. כאן רואים אם התשובות ממליצות עליכם, ואם הן מצטטות את האתר או את פרופיל הגוגל שלכם. הבדיקה רצה לבד פעם בשבוע.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
-    ${running ? '<div class="warn">הבדיקה רצה עכשיו. התוצאות יופיעו כאן בעוד כמה דקות.</div>' : ''}
+    ${running ? progressCard(running) : ''}
     ${
       engines.length
         ? ''
