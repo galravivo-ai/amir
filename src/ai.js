@@ -230,7 +230,10 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
         }
       } catch (err) {
         if (err instanceof AiError) throw err;
-        if (err instanceof Anthropic.APIError) throw new AiError(`שגיאה בשירות ה-AI (${err.status ?? 'רשת'}).`);
+        if (err instanceof Anthropic.APIError) {
+          console.warn('[ai] web answer failed:', err.status, err.message);
+          throw new AiError(`שגיאה בשירות ה-AI (${err.status ?? 'רשת'}): ${String(err.error?.error?.message || err.message).slice(0, 200)}`);
+        }
         throw err;
       }
       const seen = new Set();
