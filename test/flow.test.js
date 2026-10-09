@@ -507,7 +507,7 @@ test('landing, privacy and terms pages are public', async () => {
   const anon = client();
   const landing = await anon.req('/');
   assert.equal(landing.status, 200);
-  assert.match(landing.text, /שימצאו אתכם בגוגל/);
+  assert.match(landing.text, /גוגל מיי ביזנס/);
   assert.match(landing.text, /id="pricing"/);
   assert.match((await anon.req('/privacy')).text, /מדיניות פרטיות/);
   assert.match((await anon.req('/terms')).text, /תנאי שימוש/);

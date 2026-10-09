@@ -63,6 +63,8 @@ ${body}
 
 // ---------------------------------------------------------------- landing
 
+const G_LOGO = '<svg class="lp-g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+
 /** The product, drawn in HTML: the main dashboard, with an AI score and an alert floating over it. */
 function heroVisual() {
   const bars = [38, 52, 44, 61, 70, 58, 49, 66, 74, 63, 80, 72, 88, 95];
@@ -70,7 +72,7 @@ function heroVisual() {
     `<span class="lp-mstat"><small>${label}</small><b>${value}</b><i class="${up ? 'up' : 'down'}">${hint}</i></span>`;
   return `<div class="lp-visual" aria-hidden="true">
     <div class="lp-browser">
-      <div class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/admin</span></div>
+      <div class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/admin</span><em class="lp-linked">${G_LOGO} מחובר לגוגל מיי ביזנס ✓</em></div>
       <div class="lp-app">
         <div class="lp-app-side"><b></b><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="lp-app-main">
@@ -125,6 +127,14 @@ function contactForm(error = '', v = {}) {
 export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {} }) {
   const faq = [
     [
+      'מה זה גוגל מיי ביזנס?',
+      'גוגל מיי ביזנס (היום נקרא Google Business Profile) הוא הפרופיל החינמי של העסק בגוגל: מה שמופיע בחיפוש ובגוגל מפות, עם הכתובת, השעות, התמונות, הביקורות וכפתורי ההתקשרות. GoFive מתחברת לפרופיל הזה ועוזרת לנהל ולקדם אותו.',
+    ],
+    [
+      'צריך שיהיה לעסק פרופיל בגוגל?',
+      'כן, GoFive עובדת על הפרופיל הקיים שלכם בגוגל מיי ביזנס. אם עוד אין לכם, פותחים אחד בחינם ב-business.google.com, ואנחנו נעזור לכם להשלים אותו בעזרת ציון הבריאות וההמלצות.',
+    ],
+    [
       'במה זה שונה מכלי ביקורות רגיל?',
       'ביקורות הן רק חלק אחד. GoFive מרכזת את כל הנוכחות של העסק בגוגל ובעוזרי AI: נתוני הפרופיל (צפיות, שיחות, הגעה), בריאות הפרופיל, מיקום במפות, מתחרים, ונראות ב-ChatGPT, Gemini, Perplexity, Claude וגוגל AI. ובכל שבוע, מה לעשות כדי לעלות.',
     ],
@@ -169,16 +179,16 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   const qr = `<div class="lp-art lp-qr"><span class="lp-qr-code">${'<i></i>'.repeat(9)}</span><span class="lp-wa">וואטסאפ ✓✓<small>נו, איך היה אצלנו?</small></span></div>`;
 
   return sitePage({
-    title: `${operatorInfo().brand} · הנוכחות של העסק בגוגל וב-AI`,
-    description: 'מערכת לניהול הנוכחות של העסק בגוגל ובעוזרי AI: ביקורות, נתוני הפרופיל (צפיות, שיחות, הגעה), מיקום במפות, מתחרים, נראות ב-ChatGPT, Gemini ו-Perplexity, תוכנית פעולה והתראות.',
+    title: `${operatorInfo().brand} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI`,
+    description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית פעולה שבועית והתראות.',
     signupOpen,
     body: `
 <section class="lp-hero">
   <div class="lp-hero-glow" aria-hidden="true"></div>
   <div class="lp-hero-text">
-    <a class="lp-pill" href="#ai"><b>חדש</b>נראות ב-ChatGPT, Gemini ו-Perplexity ←</a>
-    <h1>שימצאו אתכם בגוגל, יבחרו בכם <em>וימליצו עליכם גם ב-AI</em></h1>
-    <p class="lp-lead">מערכת אחת לכל הנוכחות של העסק: ביקורות, פרופיל גוגל, מיקום במפות, מתחרים ונראות בעוזרי AI. הכול בדשבורד אחד, עם תוכנית פעולה שבועית והתראה כשמשהו יורד.</p>
+    <span class="lp-pill lp-pill-g">${G_LOGO}<span>בנויה על <b class="lp-gbp">Google Business Profile</b></span></span>
+    <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
+    <p class="lp-lead">GoFive מתחברת לפרופיל העסק שלכם בגוגל ועושה ממנו מכונה להבאת לקוחות: ביקורות ותשובות בלחיצה, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות מול המתחרים, ובדיקה אם ChatGPT וגוגל AI ממליצים עליכם. הכול בדשבורד אחד, עם משימות שבועיות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
     <div class="lp-checks">
       <span>${icon('check', 16)}בלי כרטיס אשראי</span>
@@ -190,18 +200,40 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 </section>
 
 <section class="lp-engines" aria-label="איפה אנחנו בודקים">
-  <span class="lp-engines-label">בודקים אתכם בכל מקום שלקוחות מחפשים</span>
+  <span class="lp-engines-label">מתחילים מהפרופיל בגוגל מיי ביזנס, ובודקים אתכם בכל מקום שלקוחות מחפשים</span>
   <div class="lp-engines-row">${engines.map((e) => `<span>${e}</span>`).join('')}</div>
 </section>
 
-<section class="lp-band" id="features">
+<section class="lp-band" id="why">
+  <div class="lp-head">
+    <span class="lp-kicker">למה דווקא גוגל מיי ביזנס</span>
+    <h2>הפרופיל בגוגל הוא חלון הראווה של העסק</h2>
+    <p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p>
+  </div>
+  <div class="lp-why">
+    <div class="lp-why-card"><span>${icon('pin', 22)}</span><h3>שם לקוחות מוצאים אתכם</h3><p>בחיפוש "ליד" ובגוגל מפות מוצגים פרופילים של עסקים, עם הדירוג, התמונות, השעות וכפתורי התקשרות וניווט.</p></div>
+    <div class="lp-why-card"><span>${icon('star', 22)}</span><h3>ביקורות מכריעות</h3><p>כמה ביקורות יש, מה הדירוג, והאם העסק עונה להן: זה מה שלקוחות בודקים, וזה גם חלק ממה שגוגל שוקלת בדירוג המקומי.</p></div>
+    <div class="lp-why-card"><span>${icon('spark', 22)}</span><h3>גם ה-AI קורא אותו</h3><p>כשמבקשים מ-ChatGPT או מגוגל AI המלצה על עסק באזור, הם נשענים על פרופילים, ביקורות ואתרים. פרופיל חזק מופיע יותר.</p></div>
+  </div>
+
+  <div class="lp-flow" aria-label="איך GoFive עובדת עם הפרופיל">
+    <div class="lp-flow-node"><span class="lp-flow-logo">${G_LOGO}</span><b>הפרופיל שלכם בגוגל מיי ביזנס</b><small>ביקורות · דירוג · צפיות · שיחות · הגעה · פוסטים</small></div>
+    <div class="lp-flow-arrow" aria-hidden="true">←</div>
+    <div class="lp-flow-node lp-flow-me"><span class="lp-flow-logo">G5</span><b>GoFive</b><small>מנתחת, משווה למתחרים, בודקת ב-AI ומנסחת</small></div>
+    <div class="lp-flow-arrow" aria-hidden="true">←</div>
+    <div class="lp-flow-node"><span class="lp-flow-logo">${icon('check', 20)}</span><b>מה אתם מקבלים</b><small>תשובות מוכנות · משימות שבועיות · התראות · דוח חודשי</small></div>
+  </div>
+  <p class="lp-flow-note">מתחברים עם חשבון הגוגל שמנהל את העסק, בהתחברות המאובטחת של גוגל. אפשר להתחיל גם רק עם קישור לעסק בגוגל מפות.</p>
+</section>
+
+<section class="lp-band alt" id="features">
   <div class="lp-head">
     <span class="lp-kicker">הכול במקום אחד</span>
-    <h2>כל מה שעסק מקומי צריך כדי לבלוט</h2>
-    <p>במקום עשרה כלים ואקסל, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p>
+    <h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2>
+    <p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p>
   </div>
   <div class="lp-bento">
-    ${tile('wide accent', 'chart', 'דשבורד ראשי', 'הדירוג, הביקורות, כמה ראו את העסק בגוגל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם. הכול במסך אחד.', `<div class="lp-art lp-dash-mini">${['4.7★', '5,916', '708', '2.5'].map((v, i) => `<span><small>${['דירוג', 'צפיות', 'פעולות', 'מיקום'][i]}</small><b>${v}</b></span>`).join('')}</div>`)}
+    ${tile('wide accent', 'chart', 'כל נתוני גוגל מיי ביזנס בדשבורד אחד', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', `<div class="lp-art lp-dash-mini">${['4.7★', '5,916', '708', '2.5'].map((v, i) => `<span><small>${['דירוג', 'צפיות', 'פעולות', 'מיקום'][i]}</small><b>${v}</b></span>`).join('')}</div>`)}
     ${tile('', 'star', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת שנשאר רק לאשר.', review)}
     ${tile('', 'pin', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות מ-9 נקודות סביב העסק, כל שבוע.', rankGrid)}
     ${tile('', 'search', 'נראות ב-AI', 'האם ChatGPT, Gemini, Perplexity, Claude וגוגל ממליצים עליכם בשאלות מקומיות.', aiArt)}
@@ -250,9 +282,29 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 <section class="lp-band" id="how">
   <div class="lp-head"><span class="lp-kicker">מתחילים בכמה דקות</span><h2>איך זה עובד</h2></div>
   <div class="lp-steps">
-    <div class="lp-step"><span>1</span><h3>מחברים את העסק</h3><p>מדביקים את הקישור לעסק בגוגל מפות. תוך דקה הביקורות, הדירוג והפרופיל נטענים. חיבור לחשבון הגוגל מוסיף צפיות, שיחות ובקשות הגעה.</p></div>
+    <div class="lp-step"><span>1</span><h3>מחברים את גוגל מיי ביזנס</h3><p>מתחברים עם חשבון הגוגל של העסק, או פשוט מדביקים את הקישור לעסק בגוגל מפות. תוך דקה הביקורות, הדירוג והפרופיל נטענים.</p></div>
     <div class="lp-step"><span>2</span><h3>המערכת בודקת</h3><p>ציון לפרופיל, מיקום במפות, מתחרים, נראות ב-AI ומה הלקוחות אומרים. כל שבוע מחדש, לבד.</p></div>
     <div class="lp-step"><span>3</span><h3>עושים את מה שחשוב</h3><p>שלוש משימות בשבוע, תשובות ופוסטים שה-AI מנסח, שלטי QR ובקשות בוואטסאפ, והתראה כשמשהו יורד.</p></div>
+  </div>
+</section>
+
+<section class="lp-band" id="compare">
+  <div class="lp-head"><span class="lp-kicker">ההבדל</span><h2>לנהל את גוגל מיי ביזנס לבד, או עם GoFive</h2></div>
+  <div class="lp-compare">
+    <div class="lp-cmp lp-cmp-no"><h3>לבד</h3><ul>
+      <li>נכנסים לפרופיל כשנזכרים, ומגלים ביקורת שלילית בת שבוע</li>
+      <li>לא ברור כמה אנשים ראו את העסק ומה הם עשו</li>
+      <li>אין דרך לדעת איפה אתם בגוגל מפות מול המתחרים</li>
+      <li>אין מושג אם ChatGPT ממליץ עליכם, או על מי במקומכם</li>
+      <li>מנסחים כל תשובה מאפס</li>
+    </ul></div>
+    <div class="lp-cmp lp-cmp-yes"><h3>עם GoFive</h3><ul>
+      <li>התראה לטלפון על כל ביקורת, ותשובה מנוסחת שנשאר רק לאשר</li>
+      <li>צפיות, שיחות, בקשות הגעה וכניסות לאתר בדשבורד אחד</li>
+      <li>מפת מיקום מ-9 נקודות סביב העסק, כל שבוע</li>
+      <li>ציון נראות ב-AI, מי מומלץ במקומכם, ותוכנית פעולה</li>
+      <li>שלוש משימות בשבוע והתראה כשמשהו יורד</li>
+    </ul></div>
   </div>
 </section>
 
@@ -288,10 +340,12 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   </div>
 </section>
 
+<div class="lp-sticky" aria-hidden="false">${trial}<a class="btn lp-ghost-dark" href="/demo">דמו</a></div>
+
 <section class="lp-final">
   <div class="lp-hero-glow" aria-hidden="true"></div>
-  <h2>מתחילים לבלוט בגוגל וב-AI עוד היום</h2>
-  <p>${TRIAL_DAYS} ימים עם כל הפיצ'רים, בלי כרטיס אשראי.</p>
+  <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
+  <p>מחברים את גוגל מיי ביזנס תוך דקה. ${TRIAL_DAYS} ימים עם כל הפיצ'רים, בלי כרטיס אשראי.</p>
   <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="/demo">לצפייה בדמו</a></div>
 </section>`,
   });

@@ -1738,3 +1738,58 @@ body.site .site-head { background: rgba(255, 255, 255, .9); border-bottom-color:
   .lp-engines-row span { font-size: 1rem; }
 }
 .lp-tile.accent h3 { color: #fff; }
+
+/* landing: Google Business Profile emphasis */
+.lp-pill-g { gap: 8px; padding: 6px 14px; }
+.lp-pill-g .lp-g { flex: none; background: #fff; border-radius: 50%; padding: 2px; width: 22px; height: 22px; }
+.lp-gbp { background: none !important; color: #fff !important; padding: 0 !important; font-size: inherit !important; }
+.lp-hero h1 { font-size: clamp(2rem, 4.1vw, 3.25rem); }
+.lp-linked { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 5px; font-style: normal; font-size: .68rem; font-weight: 700; color: #067647; background: #ecfdf3; border: 1px solid #abefc6; border-radius: 999px; padding: 2px 9px 2px 6px; direction: rtl; }
+.lp-linked .lp-g { width: 13px; height: 13px; }
+.lp-browser-bar span { flex: 0 1 auto; }
+.lp-why { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.lp-why-card { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+.lp-why-card > span { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, #e8f0fe, #fef7e0); color: #1a73e8; margin-bottom: 12px; }
+.lp-why-card h3 { margin: 0 0 6px; font-size: 1.15rem; }
+.lp-why-card p { margin: 0; color: var(--ink-2); line-height: 1.65; }
+.lp-flow { display: flex; align-items: stretch; justify-content: center; gap: 14px; margin: 2.6rem auto 0; max-width: 1000px; }
+.lp-flow-node { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; background: #f7f6fc; border: 1px solid var(--line); border-radius: 18px; padding: 20px 16px; }
+.lp-flow-node b { font-size: 1.02rem; }
+.lp-flow-node small { color: var(--muted); line-height: 1.5; }
+.lp-flow-logo { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #fff; border: 1px solid var(--line); font-weight: 800; color: var(--purple); }
+.lp-flow-logo .lp-g { width: 26px; height: 26px; }
+.lp-flow-me { background: linear-gradient(135deg, #1c1650, #3b2a99); border: 0; color: #fff; }
+.lp-flow-me small { color: #cfc9f2; }
+.lp-flow-me .lp-flow-logo { background: #ffd23f; border: 0; color: #1c1650; }
+.lp-flow-arrow { display: grid; place-items: center; color: var(--purple); font-size: 1.6rem; font-weight: 800; }
+.lp-flow-note { text-align: center; color: var(--muted); font-size: .92rem; margin: 1rem auto 0; max-width: 640px; }
+.lp-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 980px; margin: 0 auto; }
+.lp-cmp { border-radius: 20px; padding: 26px; }
+.lp-cmp h3 { margin: 0 0 12px; font-size: 1.25rem; }
+.lp-cmp ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.lp-cmp li { display: flex; gap: 10px; line-height: 1.5; }
+.lp-cmp-no { background: #f7f7f9; border: 1px solid var(--line); color: var(--ink-2); }
+.lp-cmp-no li::before { content: '✕'; color: #b42318; font-weight: 800; flex: none; }
+.lp-cmp-yes { background: linear-gradient(135deg, #1c1650, #3b2a99); color: #fff; box-shadow: 0 24px 50px -24px rgba(59, 42, 153, .7); }
+.lp-cmp-yes h3 { color: #ffd23f; }
+.lp-cmp-yes li::before { content: '✓'; color: #4ade80; font-weight: 800; flex: none; }
+.lp-sticky { display: none; }
+@media (max-width: 1000px) {
+  .lp-why { grid-template-columns: minmax(0, 1fr); }
+  .lp-flow { flex-direction: column; }
+  .lp-flow-arrow { transform: rotate(-90deg); }
+  .lp-compare { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .lp-linked { display: none; }
+  .lp-sticky { display: flex; position: fixed; inset-inline: 0; bottom: 0; z-index: 40; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); }
+  .lp-sticky .btn { min-height: 46px; font-size: 1rem; }
+  .lp-sticky .btn.lp-cta { flex: 1; justify-content: center; }
+  .lp-ghost-dark { border-color: #d0d5dd; }
+  body.site { padding-bottom: 70px; }
+  body.site .cookie-bar { bottom: 80px; }
+}
+@media (max-width: 640px) {
+  body.site .a11y-root { bottom: 84px; }
+  .lp-sticky .lp-ghost-dark { background: #fff; color: var(--ink); }
+}
