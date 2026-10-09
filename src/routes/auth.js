@@ -6,7 +6,8 @@ import { operatorInfo } from '../views/site.js';
 import { errorPage, hashPassword, isEmail, sha256, verifyPassword } from '../util.js';
 import * as V from '../views/auth.js';
 import { rateLimiter } from './public.js';
-import { SESSION_COOKIE } from './context.js';
+import { BIZ_COOKIE, SESSION_COOKIE } from './context.js';
+import { ensureDemo } from '../demo.js';
 
 const CHALLENGE_COOKIE = 'l2';
 
@@ -41,6 +42,14 @@ export function authRoutes(ctx) {
   }
 
   // ---------- login ----------
+  // A look around a sample business, without signing up (read-only).
+  router.get('/demo', (req, res) => {
+    const { userId, businessId } = ensureDemo(store);
+    ctx.startSession(res, userId);
+    res.cookie(BIZ_COOKIE, String(businessId), { ...ctx.cookieOpts, maxAge: 864e5 });
+    res.redirect(303, '/admin');
+  });
+
   router.get('/login', (req, res) => {
     if (req.user) return res.redirect('/admin');
     const notice = req.query.reset ? 'הסיסמה עודכנה, אפשר להיכנס' : '';

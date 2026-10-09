@@ -174,7 +174,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <span class="hero-pill"><b>גו פייב</b>קדימה ל-5 כוכבים</span>
     <h1>שימצאו אתכם בגוגל, יבחרו בכם <em>וימליצו עליכם גם ב-AI</em></h1>
     <p class="lead">מערכת אחת לכל הנוכחות של העסק: ביקורות ולקוחות מרוצים, פרופיל גוגל מלא ופעיל, מיקום במפות ומול המתחרים, ונראות ב-ChatGPT ובגוגל AI. הכול בדשבורד אחד, ובכל שבוע שלוש משימות שמזיזות את המחט.</p>
-    <div class="actions">${cta}<a class="btn big-inline" href="#how">איך זה עובד</a></div>
+    <div class="actions">${cta}<a class="btn big-inline" href="/demo">לצפייה בדמו</a></div>
     <div class="checks">
       <span>${icon('check', 18)}בלי כרטיס אשראי</span>
       <span>${icon('check', 18)}בעברית מלאה</span>

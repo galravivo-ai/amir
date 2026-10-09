@@ -231,7 +231,7 @@ export function visibilityView({
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
-  const shownEngines = engines.length ? engines : Object.keys(allEngines).filter((e) => plus || !PLUS_ENGINES.includes(e));
+  const shownEngines = engines.length && !business.is_demo ? engines : Object.keys(allEngines).filter((e) => plus || !PLUS_ENGINES.includes(e));
   const byQuery = new Map();
   for (const r of latest) {
     if (!byQuery.has(r.query)) byQuery.set(r.query, {});
@@ -253,7 +253,7 @@ export function visibilityView({
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     ${running ? progressCard(running) : ''}
     ${
-      engines.length
+      engines.length || business.is_demo
         ? ''
         : '<div class="warn">כדי לבדוק צריך לפחות מנוע אחד: SerpApi (לגוגל) או מפתח Anthropic (ל-Claude). מנהל המערכת מגדיר אותם ב-Railway.</div>'
     }

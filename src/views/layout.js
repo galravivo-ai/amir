@@ -99,6 +99,7 @@ export function adminPage({
   brand: brandInfo = null,
   isAgency = false,
   access = null,
+  demo = false,
 }) {
   const b0 = brandInfo || { name: operatorInfo().brand, color: '', logo: '' };
   const brand = b0.name;
@@ -253,7 +254,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList
   </form>
 </aside>
 <main class="app-main" id="main">
-  ${accessBanner(access, current)}
+  ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">להתחיל ניסיון חינם</a></div>` : accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
 </main>

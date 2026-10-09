@@ -1543,3 +1543,7 @@ a.stat:hover { border-color: #cfc6ff; box-shadow: var(--shadow-sm); }
 .vis-plan h3 .icon { color: var(--purple); }
 .vis-plan h2, .vis-plan h4 { font-size: 1rem; margin: 1rem 0 .4rem; }
 .vis-rivals .vis-src-bar span { background: #d6409f; }
+.demo-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: linear-gradient(90deg, #1c1650, #3b2a99); color: #fff; border-radius: 12px; padding: .6rem .9rem; margin-bottom: 1rem; font-size: .93rem; }
+.demo-bar .icon { color: #ffd23f; flex: none; }
+.demo-bar span { flex: 1; min-width: 200px; }
+.demo-bar .btn { background: #ffd23f; border-color: #ffd23f; color: #1c1650; }

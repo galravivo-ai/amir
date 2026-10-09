@@ -1,3 +1,4 @@
+import { isDemoUser } from '../demo.js';
 import { accessOf, planOf, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import { roleAtLeast } from '../store.js';
 import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
@@ -47,6 +48,10 @@ export function createContext(
       if (req.method === 'POST' && req.user && sent !== req.user.csrf) {
         return res.status(403).send(errorPage('פג תוקף הטופס. רעננו את הדף ונסו שוב'));
       }
+      // The demo is for looking around: nothing in it can be changed.
+      if (req.method === 'POST' && isDemoUser(req.user) && req.path !== '/logout') {
+        return res.status(403).send(errorPage('זה חשבון דמו לצפייה בלבד. כדי לשמור שינויים, פותחים חשבון ניסיון חינם ב-/register'));
+      }
       next();
     },
 
@@ -85,6 +90,7 @@ export function createContext(
               }
             : null,
           access: req.access,
+          demo: Boolean(b?.is_demo),
           body,
           ...extra,
         }),

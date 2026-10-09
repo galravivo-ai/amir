@@ -315,7 +315,7 @@ export function createStore(db) {
       ) || null,
     usePasswordReset: (raw) =>
       q("UPDATE password_resets SET used_at = datetime('now') WHERE token_hash = ?").run(sha256(raw)),
-    countUsers: () => q('SELECT COUNT(*) AS n FROM users').get().n,
+    countUsers: () => q("SELECT COUNT(*) AS n FROM users WHERE email != 'demo@gofive.demo'").get().n,
 
     createSession(userId, days = 30) {
       const id = token(32);
@@ -430,7 +430,7 @@ export function createStore(db) {
            (SELECT COUNT(*) FROM memberships m WHERE m.business_id = b.id) AS members,
            (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id
               WHERE c.business_id = b.id AND r.created_at >= datetime('now', 'start of month')) AS month_responses
-         FROM businesses b LEFT JOIN users u ON u.id = b.user_id ORDER BY b.id DESC`).all(),
+         FROM businesses b LEFT JOIN users u ON u.id = b.user_id WHERE b.is_demo = 0 ORDER BY b.id DESC`).all(),
     openIssuesCount: (businessId) =>
       q(`SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
          WHERE c.business_id = ? AND r.sentiment = 'negative' AND r.status = 'new'`).get(businessId).n,
@@ -868,7 +868,7 @@ export function createStore(db) {
     overdueUnalerted: () =>
       q(`SELECT r.*, c.name AS campaign_name, c.business_id, b.sla_hours
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
-         WHERE r.sentiment = 'negative' AND r.status = 'new' AND r.sla_alerted_at IS NULL AND b.sla_hours > 0
+         WHERE r.sentiment = 'negative' AND r.status = 'new' AND r.sla_alerted_at IS NULL AND b.sla_hours > 0 AND b.is_demo = 0
            AND r.created_at <= datetime('now', '-' || b.sla_hours || ' hours')
            AND r.created_at >= datetime('now', '-30 days')`).all(),
     markSlaAlerted: (id) => q("UPDATE responses SET sla_alerted_at = datetime('now') WHERE id = ?").run(id),
@@ -1030,7 +1030,7 @@ export function createStore(db) {
     /** Competitors not checked for `hours`, of businesses that aren't paused. */
     competitorsDue: (hours) =>
       q(`SELECT c.* FROM competitors c JOIN businesses b ON b.id = c.business_id
-         WHERE b.billing != 'paused' AND (c.checked_at IS NULL OR c.checked_at <= ?) ORDER BY c.checked_at IS NOT NULL, c.checked_at`).all(sqlTime(-hours * 3600e3)),
+         WHERE b.billing != 'paused' AND b.is_demo = 0 AND (c.checked_at IS NULL OR c.checked_at <= ?) ORDER BY c.checked_at IS NOT NULL, c.checked_at`).all(sqlTime(-hours * 3600e3)),
     /** One rating / count reading a day, for trends ("competitor" or "location"). */
     snapshot: (kind, refId, { rating, total }, day = sqlTime().slice(0, 10)) =>
       q('INSERT OR REPLACE INTO place_snapshots (kind, ref_id, day, rating, total) VALUES (?, ?, ?, ?, ?)').run(kind, refId, day, rating, total),
@@ -1060,7 +1060,7 @@ export function createStore(db) {
     /** Followed places not checked for `days`, of businesses that aren't paused. */
     auditsDue: (days) =>
       q(`SELECT l.* FROM google_locations l JOIN businesses b ON b.id = l.business_id
-         WHERE l.enabled = 1 AND b.billing != 'paused'
+         WHERE l.enabled = 1 AND b.billing != 'paused' AND b.is_demo = 0
            AND COALESCE((SELECT MAX(run_at) FROM profile_audits a WHERE a.location_id = l.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
 
     // ---------- profile performance (Business Profile Performance API) ----------
@@ -1139,7 +1139,7 @@ export function createStore(db) {
     rankKeywordsDue: (days) =>
       q(`SELECT k.*, l.lat, l.lng, l.data_id, l.place_id, l.title AS location_title, l.address FROM rank_keywords k
          JOIN google_locations l ON l.id = k.location_id JOIN businesses b ON b.id = k.business_id
-         WHERE l.enabled = 1 AND b.billing != 'paused'
+         WHERE l.enabled = 1 AND b.billing != 'paused' AND b.is_demo = 0
            AND COALESCE((SELECT MAX(run_at) FROM rank_checks c WHERE c.keyword_id = k.id), '') < datetime('now', ?)`).all(`-${Number(days) || 7} days`),
 
     // ---------- usage limits ----------
@@ -1195,7 +1195,7 @@ export function createStore(db) {
     },
     /** Businesses whose report for `month` wasn't sent yet. */
     monthlyReportsDue: (month) =>
-      q("SELECT * FROM businesses WHERE monthly_report = 1 AND billing != 'paused' AND (last_monthly_report IS NULL OR last_monthly_report < ?)").all(month),
+      q("SELECT * FROM businesses WHERE monthly_report = 1 AND billing != 'paused' AND is_demo = 0 AND (last_monthly_report IS NULL OR last_monthly_report < ?)").all(month),
 
     // ---------- outbox ----------
     recentOutbox: (limit = 100) => q('SELECT * FROM outbox ORDER BY id DESC LIMIT ?').all(limit),
