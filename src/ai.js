@@ -201,15 +201,14 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
           const message = await anthropic.beta.messages.create({
             model,
             max_tokens: 16000,
-            system: WEB_ANSWER_SYSTEM,
+            system: WEB_ANSWER_SYSTEM + (city ? ` המשתמש נמצא ב${city}.` : ''),
             output_config: { effort: 'low' },
             tools: [
               {
                 type: 'web_search_20260209',
                 name: 'web_search',
                 max_uses: 5,
-                // Claude's web search doesn't take Israel as a country code; the city and time zone still place the user.
-                user_location: { type: 'approximate', timezone: 'Asia/Jerusalem', ...(city ? { city } : {}) },
+                // Claude's web search doesn't accept an Israeli user location, so the place goes in the prompt.
               },
             ],
             betas: ['server-side-fallback-2026-07-01'],
