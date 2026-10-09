@@ -45,8 +45,7 @@ export function statusView({ checks, serpAccount, usage, month, csrf, engineTest
       .map((c) => `<tr><td>${mark(c.state)}</td><td><b>${h(c.name)}</b></td><td>${c.detail}</td><td class="muted small">${h(c.what)}</td></tr>`)
       .join('')}</tbody></table></div>
     <div class="row compact" id="engines">
-      <form method="post" action="/superadmin/ai-test"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link">בדיקת חיבור ל-Claude</button></form>
-      <form method="post" action="/superadmin/engines-test"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link ai-btn"><span>בדיקת ChatGPT, Gemini ו-Perplexity</span></button></form>
+      <form method="post" action="/superadmin/engines-test"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link ai-btn"><span>בדיקת מנועי ה-AI: Claude, ChatGPT, Gemini ו-Perplexity</span></button></form>
     </div>
     ${
       engineTest

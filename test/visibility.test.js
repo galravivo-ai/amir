@@ -171,10 +171,20 @@ test('ChatGPT, Gemini and Perplexity read their answers and sources', async () =
     if (url.includes('openai.com')) {
       return json({ output: [{ type: 'web_search_call' }, { type: 'message', content: [{ type: 'output_text', text: 'נסו את ג׳קו סטריט.', annotations: [{ type: 'url_citation', url: 'https://jackos.co.il/', title: 'Jacko' }] }] }] });
     }
+    if (url.includes('googleapis.com') && url.includes('gemini-old')) {
+      return { ok: false, status: 404, text: async () => JSON.stringify({ error: { message: 'This model models/gemini-old is no longer available to new users. Please update your code to use models/gemini-9-flash for the latest features.' } }) };
+    }
     if (url.includes('googleapis.com')) {
       return json({ candidates: [{ content: { parts: [{ text: 'קפה לנדוור' }] }, groundingMetadata: { groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/x', title: 'landwer.co.il' } }] } }] });
     }
-    if (url.includes('perplexity.ai')) return json({ choices: [{ message: { content: 'ג׳קו סטריט' } }], citations: ['https://www.timeout.co.il/a'] });
+    if (url.includes('perplexity.ai')) {
+      return json({
+        output: [
+          { type: 'search_results', results: [{ url: 'https://www.timeout.co.il/a', title: 'Time Out' }] },
+          { type: 'message', content: [{ type: 'output_text', text: 'ג׳קו סטריט', annotations: [{ type: 'url_citation', url: 'https://www.timeout.co.il/a', title: 'Time Out' }] }] },
+        ],
+      });
+    }
     return { ok: false, status: 404, text: async () => '{}' };
   };
   assert.deepEqual(Object.keys(createAnswerEngines({ env: {}, fetchImpl })), []);
@@ -185,7 +195,19 @@ test('ChatGPT, Gemini and Perplexity read their answers and sources', async () =
   assert.equal(calls[0].headers.authorization, 'Bearer o');
   assert.deepEqual((await e.gemini('q')).sources, [{ title: 'landwer.co.il', link: 'https://landwer.co.il' }], 'the redirect is replaced by the site');
   assert.equal(calls[1].headers['x-goog-api-key'], 'g');
-  assert.deepEqual(await e.perplexity('q'), { text: 'ג׳קו סטריט', sources: [{ title: '', link: 'https://www.timeout.co.il/a' }] });
+  assert.deepEqual(await e.perplexity('q', { city: 'חיפה' }), { text: 'ג׳קו סטריט', sources: [{ title: 'Time Out', link: 'https://www.timeout.co.il/a' }] });
+  const pplx = calls.at(-1);
+  assert.equal(pplx.url, 'https://api.perplexity.ai/v1/responses', 'the Agent API, not the retired Sonar chat completions');
+  assert.equal(pplx.body.preset, 'fast');
+  assert.deepEqual(pplx.body.tools, [{ type: 'web_search' }]);
+  assert.match(pplx.body.instructions, /חיפה/);
+
+  // A retired Gemini model: switch to the one Google names, and keep using it.
+  const old = createAnswerEngines({ env: { GEMINI_API_KEY: 'g', GEMINI_MODEL: 'gemini-old' }, fetchImpl });
+  assert.equal((await old.gemini('q')).text, 'קפה לנדוור');
+  assert.match(calls.at(-1).url, /models\/gemini-9-flash:generateContent/);
+  await old.gemini('q');
+  assert.match(calls.at(-1).url, /gemini-9-flash/);
 });
 
 test('wider AI visibility: in "pro" and up, a gift on "basic", more engines and questions', async () => {

@@ -113,11 +113,11 @@ export function superadminRoutes(ctx) {
 
   // One short question to each of ChatGPT, Gemini and Perplexity, with the answer or the exact error.
   router.post('/engines-test', async (req, res) => {
-    const names = { chatgpt: 'ChatGPT', gemini: 'Gemini', perplexity: 'Perplexity' };
+    const names = { claude: 'Claude', chatgpt: 'ChatGPT', gemini: 'Gemini', perplexity: 'Perplexity' };
     const results = await Promise.all(
       Object.entries(names).map(async ([key, label]) => {
-        const engine = ctx.answerEngines?.[key];
-        if (!engine) return { label, ok: false, error: 'המפתח לא מוגדר ב-Railway' };
+        const engine = key === 'claude' ? ctx.ai?.webAnswer && ((q, o) => ctx.ai.webAnswer(q, o)) : ctx.answerEngines?.[key];
+        if (!engine) return { label, ok: false, error: key === 'claude' ? 'ANTHROPIC_API_KEY לא מוגדר ב-Railway' : 'המפתח לא מוגדר ב-Railway' };
         try {
           const r = await engine('איזו עיר היא בירת ישראל? ענה במילה אחת.', { city: 'תל אביב' });
           return { label, ok: Boolean(r.text), text: String(r.text || 'תשובה ריקה').replace(/\s+/g, ' ').slice(0, 60), sources: r.sources?.length || 0 };
