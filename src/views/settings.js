@@ -88,6 +88,7 @@ export function businessView({ business, csrf, plan, error = '' }) {
       ${csrfField(csrf)}
       <h3>התראות וזמני טיפול</h3>
       <label class="check"><input type="checkbox" name="alert_negative" value="1" ${checked(business.alert_negative)}> מייל מיידי על כל לקוח לא מרוצה</label>
+      <label class="check"><input type="checkbox" name="alert_drops" value="1" ${checked(business.alert_drops)}> התראה כשהדירוג בגוגל, המיקום במפות או הנראות ב-AI יורדים</label>
       <label class="check"><input type="checkbox" name="weekly_report" value="1" ${checked(business.weekly_report)}> דוח שבועי במייל (ימי ראשון בבוקר)</label>
       <label class="check"><input type="checkbox" name="monthly_report" value="1" ${checked(business.monthly_report)}> דוח חודשי במייל (בתחילת כל חודש)</label>
       <label class="check"><input type="checkbox" name="followup_auto" value="1" ${checked(business.followup_auto)}> כשפנייה מסומנת "טופל", לשלוח ללקוח במייל שאלה אם הטיפול עזר</label>

@@ -224,6 +224,11 @@ export function createStore(db) {
         : [];
       return { runs: runs.reverse(), latest };
     },
+    /** Records a drop alert once; false when it was already sent. */
+    markDropAlert: (businessId, kind, ref) =>
+      q('INSERT OR IGNORE INTO drop_alerts (business_id, kind, ref) VALUES (?, ?, ?)').run(businessId, kind, ref).changes > 0,
+    dropAlertBusinesses: () =>
+      q("SELECT * FROM businesses WHERE alert_drops = 1 AND is_demo = 0 AND billing != 'paused'").all(),
     setAiRecommended: (businessId, runAt, query, engine, names) =>
       q('UPDATE ai_checks SET recommended = ? WHERE business_id = ? AND run_at = ? AND query = ? AND engine = ?').run(JSON.stringify(names), businessId, runAt, query, engine),
     saveAiPlan: (businessId, runAt, plan) =>
@@ -359,7 +364,7 @@ export function createStore(db) {
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
-        'monthly_report', 'last_monthly_report',
+        'monthly_report', 'last_monthly_report', 'alert_drops',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;

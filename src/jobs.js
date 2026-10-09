@@ -1,3 +1,4 @@
+import { sendDropAlerts } from './drops.js';
 import { backupDb, lastBackupAge } from './backup.js';
 import { accessOf, planOf, PLANS } from './plans.js';
 import { buildReport, lastMonth, monthRange } from './report.js';
@@ -155,6 +156,11 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return connected + byLink;
   }
 
+  /** Daily: tell the business when its rating, map rank or AI visibility went down. */
+  async function dropAlerts() {
+    return sendDropAlerts({ store, notifier });
+  }
+
   /** Daily: the profile's views, calls, directions and clicks from Google. */
   async function profileMetrics() {
     return googleSync ? googleSync.syncAllMetrics() : 0;
@@ -190,7 +196,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, weeklyReports, monthlyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, dropAlerts, weeklyReports, monthlyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -206,6 +212,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     competitorChecks,
     profileHealth,
     profileMetrics,
+    dropAlerts,
     mapRankings,
     monthlyReports,
     scheduledInvites,

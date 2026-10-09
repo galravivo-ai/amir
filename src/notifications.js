@@ -145,6 +145,30 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** Something went down: the rating, the map rank or the AI visibility score. */
+    async dropsAlert({ business, drops }) {
+      const first = drops[0];
+      pusher
+        ?.sendToBusiness(business.id, { title: first.title, body: first.detail.slice(0, 140), url: first.href, tag: `drop-${first.kind}` })
+        .catch((err) => console.warn('[push]', err.message));
+      const color = safeColor(business.brand_color);
+      return mailer.send({
+        kind: 'drop_alert',
+        businessId: business.id,
+        to: recipients(business),
+        subject: drops.length === 1 ? `${first.title} · ${business.name}` : `${drops.length} דברים ירדו השבוע · ${business.name}`,
+        html: emailLayout({
+          color,
+          title: drops.length === 1 ? first.title : 'כמה דברים ירדו, כדאי להציץ',
+          body: `${drops
+            .map((d) => `<p style="margin:0 0 14px"><b>${h(d.title)}</b><br>${h(d.detail)}<br><a href="${h(url(d.href))}" style="color:${color}">לפרטים ←</a></p>`)
+            .join('')}
+            <p style="color:#6b7280;font-size:13px">ירידה קטנה קורית. מה שחשוב הוא לתפוס אותה מוקדם. אפשר לכבות את ההתראות האלה בהגדרות העסק.</p>`,
+          footer: h(business.name),
+        }),
+      });
+    },
+
     async recoveryFailed(business, response) {
       const color = safeColor(business.brand_color);
       pusher

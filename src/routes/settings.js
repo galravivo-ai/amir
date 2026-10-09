@@ -60,6 +60,7 @@ export function settingsRoutes(ctx) {
   router.post('/business/notifications', owner, (req, res) => {
     store.updateBusiness(req.business.id, {
       alert_negative: req.body.alert_negative === '1',
+      alert_drops: req.body.alert_drops === '1',
       weekly_report: req.body.weekly_report === '1',
       monthly_report: req.body.monthly_report === '1',
       followup_auto: req.body.followup_auto === '1',
