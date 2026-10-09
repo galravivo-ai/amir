@@ -35,6 +35,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#how">איך זה עובד</a>
     <a href="/#features">פיצ'רים</a>
     <a href="/#ai">נראות ב-AI</a>
+    <a href="/demo">דמו</a>
     <a href="/#pricing">מחירים</a>
     <a href="/#faq">שאלות</a>
   </nav>
@@ -62,30 +63,39 @@ ${body}
 
 // ---------------------------------------------------------------- landing
 
+/** The product, drawn in HTML: the main dashboard, with an AI score and an alert floating over it. */
 function heroVisual() {
-  const bars = [60, 78, 52, 96, 110, 84, 70, 66, 100, 120, 94, 88, 104, 124];
-  const max = Math.max(...bars);
-  return `<div class="hero-visual" aria-hidden="true">
-    <div class="mock-dash">
-      <div class="mock-side"><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="mock-main">
-        <b>דשבורד ראשי</b>
-        <div class="mock-kpis">
-          <span>דירוג בגוגל<strong>4.6</strong></span>
-          <span>צפיות בפרופיל<strong>5.5K</strong></span>
-          <span>מיקום במפות<strong>#2</strong></span>
-        </div>
-        <div class="mock-bars">${bars.map((v) => `<i style="height:${Math.round((v / max) * 100)}%"></i>`).join('')}</div>
-        <div class="mock-rows">
-          <span><span>אבי · ★★</span><span class="badge st-late">באיחור</span></span>
-          <span><span>מיכל · ★</span><span class="badge st-new">חדש</span></span>
+  const bars = [38, 52, 44, 61, 70, 58, 49, 66, 74, 63, 80, 72, 88, 95];
+  const stat = (label, value, hint, up = true) =>
+    `<span class="lp-mstat"><small>${label}</small><b>${value}</b><i class="${up ? 'up' : 'down'}">${hint}</i></span>`;
+  return `<div class="lp-visual" aria-hidden="true">
+    <div class="lp-browser">
+      <div class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/admin</span></div>
+      <div class="lp-app">
+        <div class="lp-app-side"><b></b><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="lp-app-main">
+          <div class="lp-app-cover"><div><small>בוקר טוב, דנה</small><b>ביסטרו הגפן</b></div><span>30 ימים אחרונים ▾</span></div>
+          <div class="lp-mstats">
+            ${stat('דירוג בגוגל', '4.7★', '▲ 0.1')}
+            ${stat('צפיות בפרופיל', '5,916', '▲ 12%')}
+            ${stat('שיחות והגעה', '708', '▲ 8%')}
+            ${stat('מיקום במפות', '2.5', '▲ 1.1')}
+          </div>
+          <div class="lp-mchart">
+            <small>פעולות של לקוחות בפרופיל</small>
+            <div class="lp-mbars">${bars.map((v) => `<i style="height:${v}%"><u style="height:${Math.round(v * 0.45)}%"></u></i>`).join('')}</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="mock-phone"><div>
-      <div class="top">נו, איך היה?</div>
-      <div class="nums"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-    </div></div>
+    <div class="lp-float lp-float-ai">
+      <span class="lp-ring" style="--p:62"><b>62</b></span>
+      <span><small>נראות ב-AI</small><b>ממליצים עליכם</b><i class="up">▲ 21 נק׳ החודש</i></span>
+    </div>
+    <div class="lp-float lp-float-alert">
+      <span class="lp-float-icon">★</span>
+      <span><b>ביקורת חדשה 5★ בגוגל</b><small>"הפסטה הכי טובה בעיר"</small></span>
+    </div>
   </div>`;
 }
 
@@ -113,129 +123,149 @@ function contactForm(error = '', v = {}) {
 }
 
 export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {} }) {
-  // The four pillars: reputation, the Google profile, visibility, growth.
-  const pillars = [
-    ['מוניטין וביקורות', [
-      ['star', 'כל הביקורות במקום אחד', 'ביקורות גוגל וסקרי לקוחות במסך אחד, התראה על כל ביקורת חדשה, ותשובה שה-AI מנסח בלחיצה.'],
-      ['qr', 'יותר ביקורות בגוגל', 'שלט QR מעוצב לכל שולחן וקופה, ובקשת דירוג בוואטסאפ אחרי כל ביקור, גם אוטומטית. לקוחות מרוצים מגיעים ישר לגוגל.'],
-      ['bell', 'תופסים לקוח כועס בזמן', 'לקוח לא מרוצה מגיע קודם אליכם, עם התראה לטלפון, כדי שתתקנו לפני שהוא כותב ביקורת.'],
-    ]],
-    ['פרופיל הגוגל', [
-      ['chart', 'כל הנתונים בדשבורד אחד', 'כמה ראו את העסק בגוגל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם. ישירות מגוגל.'],
-      ['shield', 'ציון בריאות לפרופיל', 'בדיקה של כל מה שחסר בפרופיל (שעות, תמונות, תיאור, קטגוריות, מענה), עם המלצות AI ותיאור מוכן להדבקה.'],
-      ['chat', 'פוסטים לגוגל עם AI', 'מבצעים, אירועים ועדכונים שמתפרסמים בפרופיל, כשה-AI כותב את הטקסט מרעיון של שורה.'],
-    ]],
-    ['נראות ומתחרים', [
-      ['pin', 'מיקום במפות', 'איפה העסק מופיע בגוגל מפות כשמחפשים "בית קפה" או "שיפוצניק", מ-9 נקודות סביב העסק. רואים איפה חזקים ואיפה לא.'],
-      ['rivals', 'השוואה למתחרים', 'איפה אתם מול העסקים באזור: דירוג, כמות ביקורות ומי מקבל יותר ביקורות חדשות.'],
-      ['search', 'נראות ב-ChatGPT ובגוגל AI', 'בודקים כל שבוע אם ChatGPT, Gemini, Perplexity וגוגל ממליצים עליכם בשאלות מקומיות, ועל אילו אתרים הם סומכים.'],
-    ]],
-    ['צמיחה וניהול', [
-      ['check', 'המשימות השבוע', 'בלי להתעמק בנתונים: שלוש פעולות קונקרטיות בכל שבוע, לפי מה שהכי חשוב עכשיו.'],
-      ['report', 'דוח חודשי ב-PDF', 'כל חודש במייל: מה השתנה, מה הלקוחות אמרו, איפה אתם מול המתחרים, ובשורה התחתונה מה-AI.'],
-      ['team', 'צוות, סניפים וסוכנויות', 'כמה סניפים ועסקים בחשבון אחד, הרשאות לכל עובד, ומיתוג לבן לסוכנויות.'],
-    ]],
-  ];
   const faq = [
     [
       'במה זה שונה מכלי ביקורות רגיל?',
-      'ביקורות הן רק חלק אחד. GoFive בודקת גם את פרופיל הגוגל שלכם, משווה אתכם למתחרים, עוקבת אם ChatGPT ממליץ עליכם, ונותנת לכם כל שבוע מה לעשות כדי לעלות. הכול במקום אחד ובעברית.',
+      'ביקורות הן רק חלק אחד. GoFive מרכזת את כל הנוכחות של העסק בגוגל ובעוזרי AI: נתוני הפרופיל (צפיות, שיחות, הגעה), בריאות הפרופיל, מיקום במפות, מתחרים, ונראות ב-ChatGPT, Gemini, Perplexity, Claude וגוגל AI. ובכל שבוע, מה לעשות כדי לעלות.',
+    ],
+    [
+      'מה זה "נראות ב-AI"?',
+      'יותר ויותר אנשים שואלים עוזר AI "איפה יש מסעדה טובה ליד…" במקום לחפש. GoFive שואלת את עוזרי ה-AI בכל שבוע את השאלות המקומיות שהלקוחות שלכם שואלים, מראה אם ממליצים עליכם ועל מי ממליצים במקומכם, ונותנת תוכנית פעולה כדי להופיע.',
+    ],
+    ['אפשר לראות את המערכת לפני שנרשמים?', 'כן. בדמו יש עסק לדוגמה עם נתונים מלאים של שלושה חודשים, ואפשר להסתובב בו חופשי בלי להירשם. <a href="/demo">לדמו</a>'],
+    [
+      'מאיפה מגיעים הנתונים של הצפיות והשיחות?',
+      'ישירות מגוגל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד. ביקורות, דירוג, בריאות הפרופיל ומיקום במפות עובדים כבר מהרגע שמדביקים את הקישור לעסק.',
     ],
     [
       'זה מותר לפי הכללים של גוגל?',
       'כן. גוגל אוסרת להסתיר את האפשרות לכתוב ביקורת מלקוחות לא מרוצים ("Review gating"). אצלנו כל לקוח יכול לכתוב ביקורת בגוגל. ההבדל הוא שללקוח לא מרוצה אנחנו מציעים קודם ערוץ ישיר אליכם, כדי שתוכלו לתקן.',
     ],
-    [
-      'מה זה "נראות ב-AI"?',
-      'יותר ויותר אנשים שואלים את ChatGPT או את גוגל "איפה יש מסעדה טובה ליד…" במקום לחפש. GoFive שואלת את עוזרי ה-AI בכל שבוע את השאלות המקומיות שלקוחות שלכם שואלים, ומראה אם ממליצים עליכם, אם מצטטים את האתר או הפרופיל שלכם, ועל אילו אתרים התשובות נשענות.',
-    ],
-    [
-      'מאיפה מגיעים הנתונים של הצפיות והשיחות?',
-      'ישירות מגוגל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד. ביקורות, דירוג, בריאות הפרופיל ומיקום במפות עובדים כבר מהרגע שמדביקים את הקישור לעסק, גם בלי חיבור.',
-    ],
-    ['הלקוח צריך להוריד אפליקציה?', 'לא. סורקים QR או לוחצים על קישור, והסקר נפתח בדפדפן. זה לוקח פחות מדקה.'],
+    ['איך אדע אם משהו השתבש?', 'המערכת שולחת התראה למייל ולטלפון כשהדירוג בגוגל, המיקום במפות או הנראות ב-AI יורדים, וכשנכנסת ביקורת שלילית. ככה תופסים בעיה מוקדם.'],
     [
       `מה קורה אחרי ${TRIAL_DAYS} ימי הניסיון?`,
       'בוחרים מסלול וממשיכים בלי הפסקה. אם לא בוחרים, הסקרים ללקוחות מושהים, אבל כל הנתונים וההגדרות נשמרים ואפשר לחזור בכל רגע. אף אחד לא מחייב אתכם בלי שביקשתם.',
     ],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],
-    ['כמה זמן לוקח להתחיל?', 'כמה דקות: נרשמים, מדביקים את הקישור לעסק בגוגל מפות, ומדפיסים את שלט ה-QR. הבדיקות הראשונות רצות לבד.'],
-    ['אפשר לשנות את השאלות?', 'כן. בוחרים שאלות, סוגי תשובות, ולמי כל שאלה מוצגת: לכולם, רק למרוצים או רק ללא מרוצים.'],
     ['מה עם פרטיות הלקוחות שלי?', 'המידע שייך לכם, לא מוצג לאף אחד אחר ולא נמכר. פרטים מלאים ב<a href="/privacy">מדיניות הפרטיות</a>.'],
   ];
-  const cta = signupOpen ? `<a class="btn accent big-inline" href="/register">להתחיל ${TRIAL_DAYS} ימים חינם</a>` : '<a class="btn accent big-inline" href="/login">כניסה</a>';
+  const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל ${TRIAL_DAYS} ימים חינם</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
+  const engines = ['Google', 'Google Maps', 'ChatGPT', 'Gemini', 'Perplexity', 'Claude', 'AI Overview'];
+
+  // The bento: each tile shows the feature itself, not just a sentence about it.
+  const tile = (cls, ic, title, text, art = '') =>
+    `<article class="lp-tile ${cls}"><div class="lp-tile-head"><span class="lp-tile-icon">${icon(ic, 20)}</span><h3>${h(title)}</h3></div><p>${h(text)}</p>${art}</article>`;
+  const rankGrid = `<div class="lp-art lp-rank">${[3, 2, 4, 1, 1, 2, 5, 3, 7].map((n) => `<i class="r${n <= 3 ? 'g' : n <= 5 ? 'm' : 'b'}">${n}</i>`).join('')}</div>`;
+  const review = `<div class="lp-art lp-review"><div class="lp-rv"><b>מיכל א.</b> <span>★★★★★</span><p>שירות מקסים, נחזור!</p></div>
+    <div class="lp-rv lp-rv-reply"><small>${icon('spark', 12)} תשובה שה-AI ניסח</small><p>תודה מיכל! שמחנו לארח, מחכים לכם שוב 💜</p></div></div>`;
+  const aiArt = `<div class="lp-art lp-ai-mini">${[['ChatGPT', 'yes'], ['Gemini', 'yes'], ['Perplexity', 'no'], ['Claude', 'yes']]
+    .map(([n, s]) => `<span><b>${n}</b><i class="${s}">${s === 'yes' ? '✓ הוזכרתם' : '✗ לא'}</i></span>`)
+    .join('')}</div>`;
+  const rivals = `<div class="lp-art lp-bars">${[['אתם', 82, 'me'], ['ביסטרו 61', 64, ''], ['פסטה דה לוקה', 51, '']]
+    .map(([n, v, c]) => `<span class="${c}"><b>${n}</b><i><u style="width:${v}%"></u></i></span>`)
+    .join('')}</div>`;
+  const health = `<div class="lp-art lp-health"><span class="lp-ring big" style="--p:84"><b>84</b></span><ul><li class="ok">שעות פתיחה</li><li class="ok">תמונות</li><li class="no">תיאור קצר מדי</li></ul></div>`;
+  const alert = `<div class="lp-art lp-toast"><span>⚠</span><div><b>המיקום במפות ירד</b><small>"ביסטרו": מ-2.4 ל-3.6</small></div></div>`;
+  const qr = `<div class="lp-art lp-qr"><span class="lp-qr-code">${'<i></i>'.repeat(9)}</span><span class="lp-wa">וואטסאפ ✓✓<small>נו, איך היה אצלנו?</small></span></div>`;
+
   return sitePage({
     title: `${operatorInfo().brand} · הנוכחות של העסק בגוגל וב-AI`,
-    description: 'מערכת לניהול הנוכחות של העסק בגוגל ובעוזרי AI: ביקורות, נתוני הפרופיל (צפיות, שיחות, הגעה), מיקום במפות, מתחרים, נראות ב-ChatGPT ומשימות שבועיות לקידום אורגני.',
+    description: 'מערכת לניהול הנוכחות של העסק בגוגל ובעוזרי AI: ביקורות, נתוני הפרופיל (צפיות, שיחות, הגעה), מיקום במפות, מתחרים, נראות ב-ChatGPT, Gemini ו-Perplexity, תוכנית פעולה והתראות.',
     signupOpen,
     body: `
-<section class="hero">
-  <div class="hero-text">
-    <span class="hero-pill"><b>גו פייב</b>קדימה ל-5 כוכבים</span>
+<section class="lp-hero">
+  <div class="lp-hero-glow" aria-hidden="true"></div>
+  <div class="lp-hero-text">
+    <a class="lp-pill" href="#ai"><b>חדש</b>נראות ב-ChatGPT, Gemini ו-Perplexity ←</a>
     <h1>שימצאו אתכם בגוגל, יבחרו בכם <em>וימליצו עליכם גם ב-AI</em></h1>
-    <p class="lead">מערכת אחת לכל הנוכחות של העסק: ביקורות ולקוחות מרוצים, פרופיל גוגל מלא ופעיל, מיקום במפות ומול המתחרים, ונראות ב-ChatGPT ובגוגל AI. הכול בדשבורד אחד, ובכל שבוע שלוש משימות שמזיזות את המחט.</p>
-    <div class="actions">${cta}<a class="btn big-inline" href="/demo">לצפייה בדמו</a></div>
-    <div class="checks">
-      <span>${icon('check', 18)}בלי כרטיס אשראי</span>
-      <span>${icon('check', 18)}בעברית מלאה</span>
-      <span>${icon('check', 18)}עומד בכללי גוגל</span>
-      <span>${icon('check', 18)}לעסקים בישראל</span>
+    <p class="lp-lead">מערכת אחת לכל הנוכחות של העסק: ביקורות, פרופיל גוגל, מיקום במפות, מתחרים ונראות בעוזרי AI. הכול בדשבורד אחד, עם תוכנית פעולה שבועית והתראה כשמשהו יורד.</p>
+    <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
+    <div class="lp-checks">
+      <span>${icon('check', 16)}בלי כרטיס אשראי</span>
+      <span>${icon('check', 16)}בעברית מלאה</span>
+      <span>${icon('check', 16)}עומד בכללי גוגל</span>
     </div>
   </div>
   ${heroVisual()}
 </section>
 
-<section class="band" id="how">
-  <h2>איך זה עובד</h2>
-  <div class="steps">
-    <div class="step"><div class="step-n">1</div><h3>מחברים את העסק</h3><p>מדביקים את הקישור לעסק בגוגל מפות. תוך דקה הביקורות, הדירוג והפרופיל נטענים. חיבור לחשבון הגוגל מוסיף גם צפיות, שיחות ובקשות הגעה.</p></div>
-    <div class="step"><div class="step-n">2</div><h3>המערכת בודקת</h3><p>ציון לפרופיל, מיקום במפות, השוואה למתחרים, נראות ב-AI, ומה הלקוחות אומרים עליכם. כל שבוע מחדש, בדשבורד אחד.</p></div>
-    <div class="step"><div class="step-n">3</div><h3>עושים את מה שחשוב</h3><p>שלוש משימות בשבוע, שלטי QR ובקשות בוואטסאפ לעוד ביקורות, תשובות ופוסטים שה-AI מנסח, ודוח חודשי במייל.</p></div>
+<section class="lp-engines" aria-label="איפה אנחנו בודקים">
+  <span class="lp-engines-label">בודקים אתכם בכל מקום שלקוחות מחפשים</span>
+  <div class="lp-engines-row">${engines.map((e) => `<span>${e}</span>`).join('')}</div>
+</section>
+
+<section class="lp-band" id="features">
+  <div class="lp-head">
+    <span class="lp-kicker">הכול במקום אחד</span>
+    <h2>כל מה שעסק מקומי צריך כדי לבלוט</h2>
+    <p>במקום עשרה כלים ואקסל, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p>
+  </div>
+  <div class="lp-bento">
+    ${tile('wide accent', 'chart', 'דשבורד ראשי', 'הדירוג, הביקורות, כמה ראו את העסק בגוגל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם. הכול במסך אחד.', `<div class="lp-art lp-dash-mini">${['4.7★', '5,916', '708', '2.5'].map((v, i) => `<span><small>${['דירוג', 'צפיות', 'פעולות', 'מיקום'][i]}</small><b>${v}</b></span>`).join('')}</div>`)}
+    ${tile('', 'star', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת שנשאר רק לאשר.', review)}
+    ${tile('', 'pin', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות מ-9 נקודות סביב העסק, כל שבוע.', rankGrid)}
+    ${tile('', 'search', 'נראות ב-AI', 'האם ChatGPT, Gemini, Perplexity, Claude וגוגל ממליצים עליכם בשאלות מקומיות.', aiArt)}
+    ${tile('', 'rivals', 'על מי ממליצים במקומכם', 'המתחרים שה-AI וגוגל מעדיפים, ומה יש להם שאין לכם.', rivals)}
+    ${tile('', 'shield', 'בריאות הפרופיל', 'ציון לפרופיל הגוגל, מה חסר, ותיאור מוכן להדבקה.', health)}
+    ${tile('', 'qr', 'עוד ביקורות בגוגל', 'שלט QR מעוצב ובקשת דירוג בוואטסאפ, גם אוטומטית אחרי כל ביקור.', qr)}
+    ${tile('', 'bell', 'התראה כשמשהו יורד', 'דירוג, מיקום במפות או נראות ב-AI ירדו? תדעו באותו יום.', alert)}
+  </div>
+  <div class="lp-more">
+    <span>${icon('check', 16)} 3 משימות שבועיות</span>
+    <span>${icon('report', 16)} דוח חודשי ב-PDF</span>
+    <span>${icon('chat', 16)} פוסטים לגוגל עם AI</span>
+    <span>${icon('alert', 16)} תפיסת לקוחות כועסים בזמן</span>
+    <span>${icon('team', 16)} צוות, סניפים ודירוג עובדים</span>
+    <span>${icon('web', 16)} ווידג'ט ביקורות לאתר</span>
+    <span>${icon('gear', 16)} מיתוג לבן לסוכנויות</span>
   </div>
 </section>
 
-<section class="band alt" id="features">
-  <h2>כל מה שצריך כדי לבלוט בגוגל</h2>
-  <p class="band-sub">ארבעה תחומים, מערכת אחת. כל מה שעסק מקומי צריך כדי שימצאו אותו, יבחרו בו וימליצו עליו.</p>
-  ${pillars
-    .map(
-      ([title, items], i) => `<div class="pillar">
-    <h3 class="pillar-title"><span>${i + 1}</span>${h(title)}</h3>
-    <div class="features">${items.map(([ic, t, d]) => `<div class="feature"><div class="f-icon">${icon(ic, 22)}</div><h3>${h(t)}</h3><p>${h(d)}</p></div>`).join('')}</div>
-  </div>`,
-    )
-    .join('')}
-</section>
-
-<section class="band ai-band" id="ai">
+<section class="lp-band ai-band" id="ai">
   <div class="ai-split">
     <div class="ai-text">
       <span class="hero-pill"><b>חדש</b>נראות ב-AI</span>
       <h2>כשלקוח שואל את ChatGPT "איפה כדאי…", אתם בתשובה?</h2>
-      <p>עוזרי AI הם גוגל החדש. הם עונים על שאלות מקומיות עם רשימה קצרה של עסקים, ומי שלא בה, לא קיים. GoFive בודקת את זה בשבילכם כל שבוע.</p>
+      <p>עוזרי AI הם גוגל החדש. הם עונים על שאלות מקומיות עם רשימה קצרה של עסקים, ומי שלא בה, לא קיים. GoFive בודקת את זה בשבילכם כל שבוע, ואומרת בדיוק מה לעשות.</p>
       <ul class="ai-list">
         <li>${icon('check', 18)}שאלות מקומיות שה-AI מנסח לפי התחום והשכונה שלכם</li>
-        <li>${icon('check', 18)}ChatGPT, Gemini, Perplexity, AI Mode ו-AI Overview של גוגל</li>
-        <li>${icon('check', 18)}ציון נראות, מגמה לאורך זמן ומה השתנה מהשבוע שעבר</li>
-        <li>${icon('check', 18)}על אילו אתרים ה-AI סומך, כדי לדעת איפה כדאי להופיע</li>
+        <li>${icon('check', 18)}ChatGPT, Gemini, Perplexity, Claude, AI Mode ו-AI Overview</li>
+        <li>${icon('check', 18)}על מי ממליצים במקומכם, ועל אילו אתרים ה-AI סומך</li>
+        <li>${icon('check', 18)}תוכנית פעולה אחרי כל בדיקה: איפה להופיע ומה להוסיף</li>
       </ul>
     </div>
     <div class="ai-mock" aria-hidden="true">
-      <div class="ai-q">${icon('search', 16)} איפה יש מסעדת שף כשרה ליד שוק מחנה יהודה?</div>
-      <div class="ai-score"><b>60</b><span>ציון נראות<small>מופיעים ברוב התשובות</small></span></div>
+      <div class="ai-q">${icon('search', 16)} איפה יש ביסטרו טוב בדיזנגוף?</div>
+      <div class="ai-score"><b>62</b><span>ציון נראות<small>ממליצים עליכם ברוב השאלות</small></span></div>
       <div class="ai-rows">
         <span><b>ChatGPT</b><i class="yes">✓ הוזכרתם</i></span>
         <span><b>Gemini</b><i class="yes">✓ הוזכרתם וצוטטתם</i></span>
         <span><b>Perplexity</b><i class="no">✗ לא הוזכרתם</i></span>
-        <span><b>Google AI Mode</b><i class="yes">✓ הוזכרתם</i></span>
       </div>
+      <div class="ai-plan"><b>${icon('spark', 14)} מה לעשות</b><p>להשלים את העמוד ב-Rest ולבקש שם ביקורות. זה המקור שה-AI מצטט הכי הרבה.</p></div>
     </div>
   </div>
 </section>
 
-<section class="band" id="pricing">
-  <h2>מחירים פשוטים, בלי הפתעות</h2>
-  <p class="band-sub">מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p>
+<section class="lp-band" id="how">
+  <div class="lp-head"><span class="lp-kicker">מתחילים בכמה דקות</span><h2>איך זה עובד</h2></div>
+  <div class="lp-steps">
+    <div class="lp-step"><span>1</span><h3>מחברים את העסק</h3><p>מדביקים את הקישור לעסק בגוגל מפות. תוך דקה הביקורות, הדירוג והפרופיל נטענים. חיבור לחשבון הגוגל מוסיף צפיות, שיחות ובקשות הגעה.</p></div>
+    <div class="lp-step"><span>2</span><h3>המערכת בודקת</h3><p>ציון לפרופיל, מיקום במפות, מתחרים, נראות ב-AI ומה הלקוחות אומרים. כל שבוע מחדש, לבד.</p></div>
+    <div class="lp-step"><span>3</span><h3>עושים את מה שחשוב</h3><p>שלוש משימות בשבוע, תשובות ופוסטים שה-AI מנסח, שלטי QR ובקשות בוואטסאפ, והתראה כשמשהו יורד.</p></div>
+  </div>
+</section>
+
+<section class="lp-demo">
+  <div>
+    <h2>רוצים לראות לפני שנרשמים?</h2>
+    <p>עסק לדוגמה עם שלושה חודשים של נתונים: ביקורות, צפיות ושיחות מגוגל, מיקום במפות, מתחרים ונראות ב-AI. בלי הרשמה, בלי פרטים.</p>
+  </div>
+  <a class="btn lp-cta" href="/demo">לדמו החי ←</a>
+</section>
+
+<section class="lp-band alt" id="pricing">
+  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p></div>
   ${pricingCards({
     idPrefix: 'lp',
     action: () =>
@@ -246,23 +276,23 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   ${customOffer('<a class="btn accent" href="#contact">לקבלת הצעת מחיר</a>')}
 </section>
 
-<section class="band alt" id="contact">
-  <h2>הצעת מחיר לסוכנויות ורשתות</h2>
-  <p class="band-sub">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
+<section class="lp-band alt" id="contact">
+  <div class="lp-head"><h2>הצעת מחיר לסוכנויות ורשתות</h2><p>השאירו פרטים ונחזור אליכם תוך יום עסקים.</p></div>
   ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
 </section>
 
-<section class="band alt" id="faq">
-  <h2>שאלות נפוצות</h2>
+<section class="lp-band" id="faq">
+  <div class="lp-head"><h2>שאלות נפוצות</h2></div>
   <div class="faq">
     ${faq.map(([q, a]) => `<details><summary>${h(q)}</summary><p>${a}</p></details>`).join('')}
   </div>
 </section>
 
-<section class="band final">
+<section class="lp-final">
+  <div class="lp-hero-glow" aria-hidden="true"></div>
   <h2>מתחילים לבלוט בגוגל וב-AI עוד היום</h2>
-  <p class="final-sub">${TRIAL_DAYS} ימים עם כל הפיצ'רים, בלי כרטיס אשראי.</p>
-  ${cta}
+  <p>${TRIAL_DAYS} ימים עם כל הפיצ'רים, בלי כרטיס אשראי.</p>
+  <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="/demo">לצפייה בדמו</a></div>
 </section>`,
   });
 }
