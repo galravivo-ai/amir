@@ -1539,3 +1539,7 @@ a.stat:hover { border-color: #cfc6ff; box-shadow: var(--shadow-sm); }
 .vis-progress-bar { height: 8px; border-radius: 6px; background: var(--line-2); overflow: hidden; margin-top: 14px; }
 .vis-progress-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--purple), #a594ff); border-radius: 6px; transition: width .4s ease; }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.vis-plan { border-color: #d9d2ff; background: linear-gradient(135deg, #fff 60%, var(--purple-soft)); }
+.vis-plan h3 .icon { color: var(--purple); }
+.vis-plan h2, .vis-plan h4 { font-size: 1rem; margin: 1rem 0 .4rem; }
+.vis-rivals .vis-src-bar span { background: #d6409f; }

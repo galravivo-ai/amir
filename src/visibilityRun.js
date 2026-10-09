@@ -41,6 +41,7 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
     const total = queries.length * list.length;
     let mentioned = 0;
     let done = 0;
+    const answered = [];
     onProgress?.(0, total);
     for (const query of queries) {
       // The engines are independent: ask them all at once, one question at a time.
@@ -64,11 +65,36 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
           const m = matchAnswer(a, { names, site: business.ai_site });
           if (m.mentioned) mentioned++;
           store.saveAiCheck(business.id, runAt, { query, engine, ...m, sources: a.sources.slice(0, 8) });
+          if (a.text) answered.push({ i: answered.length + 1, query, engine: ENGINES[engine], key: engine, text: a.text, mentioned: m.mentioned, sources: a.sources });
         }
       }
     }
     store.updateBusiness(business.id, { ai_checked_at: runAt });
+    if (answered.length && ai?.visibilityPlan) onProgress?.(done, total, 'plan');
+    if (answered.length && ai?.visibilityPlan) await planFor(business, runAt, answered, mentioned).catch((err) => console.warn('[visibility] plan failed:', err.message));
     return { runAt, mentioned };
+  }
+
+  /** Who the answers recommend instead, and what to do to show up: one AI request per check. */
+  async function planFor(business, runAt, answered, mentioned) {
+    const hosts = new Map();
+    for (const a of answered) {
+      for (const host of new Set(a.sources.map((x) => { try { return new URL(x.link).hostname.replace(/^www\./, ''); } catch { return ''; } }).filter(Boolean))) {
+        hosts.set(host, (hosts.get(host) || 0) + 1);
+      }
+    }
+    const top = [...hosts].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([h, n]) => `${h} (${n})`).join(', ');
+    const facts = [
+      `שם העסק: ${business.name}`,
+      business.ai_aliases ? `שמות נוספים: ${business.ai_aliases}` : '',
+      `אתר: ${business.ai_site || 'אין'}`,
+      `עיר או אזור: ${business.ai_city || 'לא צוין'}`,
+      `הוזכר ב-${mentioned} מתוך ${answered.length} תשובות`,
+      `המקורות שהתשובות נשענו עליהם (כמה תשובות): ${top || 'אין'}`,
+    ].filter(Boolean).join('\n');
+    const { names, plan } = await ai.visibilityPlan({ facts, answers: answered });
+    for (const a of answered) store.setAiRecommended(business.id, runAt, a.query, a.key, names.get(a.i) || []);
+    if (plan) store.saveAiPlan(business.id, runAt, plan);
   }
 
   async function runDue() {

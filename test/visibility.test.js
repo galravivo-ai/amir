@@ -54,6 +54,7 @@ let server;
 let base;
 let created;
 let lastSuggest = null;
+let planInput = null;
 
 before(async () => {
   created = createApp(openDb(':memory:'), {
@@ -63,6 +64,10 @@ before(async () => {
     serp: createSerp({ apiKey: 'k', fetchImpl: serpFetch }),
     ai: {
       webAnswer: async () => ({ text: 'אני ממליץ על קפה לנדוור.', sources: [{ title: 'Landwer', link: 'https://landwer.co.il' }] }),
+      visibilityPlan: async ({ facts, answers }) => {
+        planInput = { facts, answers };
+        return { names: new Map(answers.map((a) => [a.i, a.engine === 'Claude' ? ['קפה לנדוור', 'ארומה'] : ['קפה לנדוור']])), plan: '## איפה אתם עומדים\nממליצים על לנדוור.\n## מה לעשות\n- להופיע ב-Rest' };
+      },
       suggestQueries: async (input) => {
         lastSuggest = input;
         return ['איפה יש בראנץ׳ טוב בתל אביב?', 'בית קפה שקט לעבודה בדיזנגוף'];
@@ -155,6 +160,14 @@ test('set the questions, run a check, see the results', async () => {
   assert.match(view, /40%/, '2 of 5 answers mention the business');
   assert.match(view, /כדאי לנסות את ג׳קו סטריט/);
   assert.match(view, /אין תשובת AI/);
+
+  // One AI request after the check: who the answers recommend instead, and a plan.
+  assert.match(planInput.facts, /הוזכר ב-2 מתוך/);
+  assert.ok(planInput.answers.every((a) => a.text && a.query));
+  assert.match(view, /איך להופיע ב-AI/);
+  assert.match(view, /להופיע ב-Rest/);
+  assert.match(view, /על מי ממליצים במקומכם/);
+  assert.match(view, /קפה לנדוור<\/span>/);
 
   // Due once a week.
   assert.equal(created.store.aiVisibilityDue(7).some((b) => b.id === biz.id), false);

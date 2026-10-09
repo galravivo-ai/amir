@@ -40,6 +40,8 @@ export function visibilityRoutes(ctx, { visibility }) {
         cityGuess: req.business.ai_city ? '' : localContext(store, req.business).city,
         queries: parseJson(req.business.ai_queries, []),
         data: store.aiVisibility(req.business.id),
+        plan: store.latestAiPlan(req.business.id),
+        planOn: Boolean(ctx.ai?.visibilityPlan),
         engines: visibility.engines(req.business),
         allEngines: ENGINES,
         maxQueries: visibility.maxQueries(req.business),
@@ -104,7 +106,7 @@ export function visibilityRoutes(ctx, { visibility }) {
   // Polled by the page while a check runs.
   router.get('/ai-visibility/progress', (req, res) => {
     const r = running.get(req.business.id);
-    res.json(r ? { running: true, done: r.done, total: r.total } : { running: false });
+    res.json(r ? { running: true, done: r.done, total: r.total, phase: r.phase || '' } : { running: false });
   });
 
   router.post('/ai-visibility/run', manager, (req, res) => {
@@ -115,7 +117,7 @@ export function visibilityRoutes(ctx, { visibility }) {
       const state = { done: 0, total: 0, startedAt: Date.now() };
       running.set(id, state);
       visibility
-        .runBusiness(store.businessById(id), (done, total) => Object.assign(state, { done, total }))
+        .runBusiness(store.businessById(id), (done, total, phase = '') => Object.assign(state, { done, total, phase }))
         .catch((err) => console.warn('[visibility] run failed:', err.message))
         .finally(() => running.delete(id));
     }

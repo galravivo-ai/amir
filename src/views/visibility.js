@@ -2,6 +2,7 @@ import { parseJson } from '../db.js';
 import { formatDate, h } from '../util.js';
 import { PLUS_ENGINES, siteHost as siteHostOf } from '../visibility.js';
 import { icon } from './icons.js';
+import { renderInsight } from './settings.js';
 
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
 
@@ -137,6 +138,47 @@ function sourcesCard(latest, business) {
       .join('')}</ul></section>`;
 }
 
+/** The AI's plan from the latest check. */
+function planCard(plan, last, planOn) {
+  if (!plan) {
+    return planOn
+      ? `<section class="card vis-plan"><h3>${icon('spark', 18)} איך להופיע ב-AI</h3><p class="muted">אחרי הבדיקה הבאה, ה-AI יכין כאן תוכנית פעולה: על מי ממליצים במקומכם, באילו אתרים כדאי להופיע ומה להוסיף לאתר ולפרופיל.</p></section>`
+      : '';
+  }
+  const stale = plan.run_at !== last.run_at;
+  return `<section class="card vis-plan"><h3>${icon('spark', 18)} איך להופיע ב-AI</h3>
+    ${renderInsight(plan.plan)}
+    <p class="muted small">לפי הבדיקה מ-${h(when(plan.run_at))}${stale ? ' (התוכנית לבדיקה האחרונה לא הוכנה)' : ''}. כדאי לבצע פעולה או שתיים בשבוע ולראות את המגמה.</p>
+  </section>`;
+}
+
+/** The businesses the answers recommend instead, most mentioned first. */
+function rivalsCard(latest, allEngines) {
+  const count = new Map();
+  for (const r of latest) {
+    for (const name of parseJson(r.recommended, [])) {
+      const key = name.replace(/\s+/g, ' ').trim();
+      const k = key.toLowerCase();
+      if (!count.has(k)) count.set(k, { name: key, n: 0, engines: new Set() });
+      const c = count.get(k);
+      c.n++;
+      c.engines.add(allEngines[r.engine] || r.engine);
+    }
+  }
+  const top = [...count.values()].sort((a, b) => b.n - a.n).slice(0, 8);
+  if (!top.length) return '';
+  const answered = latest.filter((r) => !r.error).length || 1;
+  const max = top[0].n;
+  return `<section class="card"><h3>${icon('rivals', 18)} על מי ממליצים במקומכם</h3>
+    <p class="muted small">העסקים שהתשובות המליצו עליהם הכי הרבה בבדיקה האחרונה.</p>
+    <ul class="vis-src-list vis-rivals">${top
+      .map((c) => `<li><span class="vis-src-host" title="${h([...c.engines].join(', '))}">${h(c.name)}</span>
+        <span class="vis-src-bar"><span style="width:${(c.n / max) * 100}%"></span></span><span class="vis-src-n">${Math.round((c.n / answered) * 100)}%</span></li>`)
+      .join('')}</ul>
+    <p class="muted small">האחוז: בכמה מהתשובות העסק הומלץ.</p>
+  </section>`;
+}
+
 function matrix(byQuery, shownEngines, allEngines) {
   return `<section class="card">
     <h3>התשובות לכל שאלה</h3>
@@ -148,10 +190,11 @@ function matrix(byQuery, shownEngines, allEngines) {
   </section>`;
 }
 
-function dashboard({ runs, latest, shownEngines, allEngines, byQuery, business }) {
+function dashboard({ runs, latest, shownEngines, allEngines, byQuery, business, plan, planOn }) {
   const last = runs.at(-1);
   return `<div class="vis-top">${hero(last, runs.at(-2))}<section class="card vis-eng-card"><h3>לפי מנוע</h3>${engineCards(latest, shownEngines, allEngines)}</section></div>
     ${kpis(last, latest, byQuery)}
+    <div class="dash-grid vis-grid">${planCard(plan, last, planOn)}${rivalsCard(latest, allEngines)}</div>
     <div class="dash-grid vis-grid">${trend(runs)}${sourcesCard(latest, business)}</div>
     ${matrix(byQuery, shownEngines, allEngines)}`;
 }
@@ -167,7 +210,7 @@ function progressCard(r) {
   <script>(function(){var t=document.getElementById('vis-progress-text'),b=document.getElementById('vis-progress-bar');
   function tick(){fetch('/admin/ai-visibility/progress',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){
     if(!d.running){location.replace('/admin/ai-visibility?done=1');return}
-    if(d.total){b.style.width=Math.round(d.done/d.total*100)+'%';(t.textContent=d.done+' מתוך '+d.total+' תשובות · בדרך כלל לוקח 1–3 דקות. אפשר להישאר כאן או לחזור אחר כך, הדף יתעדכן לבד.')}
+    if(d.phase==='plan'){b.style.width='100%';t.textContent='כל התשובות התקבלו. ה-AI מכין תוכנית פעולה ובודק על מי ממליצים במקומכם…'}else if(d.total){b.style.width=Math.round(d.done/d.total*100)+'%';t.textContent=d.done+' מתוך '+d.total+' תשובות · בדרך כלל לוקח 1–3 דקות. אפשר להישאר כאן או לחזור אחר כך, הדף יתעדכן לבד.'}
     setTimeout(tick,3000)}).catch(function(){setTimeout(tick,6000)})}
   setTimeout(tick,2000)})();</script>`;
 }
@@ -184,7 +227,7 @@ function plusCard({ offer, can }) {
 export function visibilityView({
   business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
   maxQueries = 5, plus = false, plusOffer = null, runsLeft = null, notice = '', error = '', suggested = null,
-  cityGuess = '', suggestedCity = '',
+  cityGuess = '', suggestedCity = '', plan = null, planOn = false,
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
@@ -216,7 +259,7 @@ export function visibilityView({
     }
     ${
       last
-        ? dashboard({ runs, latest, shownEngines, allEngines, byQuery, business })
+        ? dashboard({ runs, latest, shownEngines, allEngines, byQuery, business, plan, planOn })
         : queries.length
           ? '<div class="card empty"><p class="muted">עוד לא בוצעה בדיקה. לחצו "בדיקה עכשיו", או חכו לבדיקה השבועית.</p></div>'
           : ''

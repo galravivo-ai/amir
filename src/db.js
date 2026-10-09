@@ -597,6 +597,26 @@ const MIGRATIONS = [
   ALTER TABLE google_locations ADD COLUMN metrics_at TEXT;
   ALTER TABLE google_locations ADD COLUMN metrics_error TEXT;
   `,
+  // v29: who AI answers recommend instead, the plan to show up, and alerts on drops
+  `
+  ALTER TABLE ai_checks ADD COLUMN recommended TEXT NOT NULL DEFAULT '[]';
+  CREATE TABLE ai_plans (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    run_at TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, run_at)
+  );
+  CREATE TABLE drop_alerts (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, kind, ref)
+  );
+  ALTER TABLE businesses ADD COLUMN alert_drops INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE businesses ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function migrate(db) {

@@ -224,8 +224,13 @@ export function createStore(db) {
         : [];
       return { runs: runs.reverse(), latest };
     },
+    setAiRecommended: (businessId, runAt, query, engine, names) =>
+      q('UPDATE ai_checks SET recommended = ? WHERE business_id = ? AND run_at = ? AND query = ? AND engine = ?').run(JSON.stringify(names), businessId, runAt, query, engine),
+    saveAiPlan: (businessId, runAt, plan) =>
+      q('INSERT OR REPLACE INTO ai_plans (business_id, run_at, plan) VALUES (?, ?, ?)').run(businessId, runAt, plan),
+    latestAiPlan: (businessId) => q('SELECT * FROM ai_plans WHERE business_id = ? ORDER BY run_at DESC LIMIT 1').get(businessId) || null,
     aiVisibilityDue: (days) =>
-      q(`SELECT * FROM businesses WHERE ai_queries != '[]'
+      q(`SELECT * FROM businesses WHERE ai_queries != '[]' AND is_demo = 0
            AND (ai_checked_at IS NULL OR ai_checked_at < datetime('now', ?))`).all(`-${Number(days) || 7} days`),
 
     // ---------- leads (quote requests) ----------
