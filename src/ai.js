@@ -208,7 +208,8 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
                 type: 'web_search_20260209',
                 name: 'web_search',
                 max_uses: 5,
-                user_location: { type: 'approximate', country: 'IL', timezone: 'Asia/Jerusalem', ...(city ? { city } : {}) },
+                // Claude's web search doesn't take Israel as a country code; the city and time zone still place the user.
+                user_location: { type: 'approximate', timezone: 'Asia/Jerusalem', ...(city ? { city } : {}) },
               },
             ],
             betas: ['server-side-fallback-2026-07-01'],
