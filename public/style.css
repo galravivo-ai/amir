@@ -2111,8 +2111,18 @@ label.g-tpl select { width: auto; margin: 0; }
 .lp-video-band { background: linear-gradient(180deg, #120d33, #1c1650); color: #fff; }
 .lp-video-band .lp-head h2 { color: #fff; }
 .lp-video-band .lp-kicker { background: rgba(255,255,255,.1); color: #ffd23f; }
-.lp-video { max-width: 1040px; margin: 0 auto; border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.12); background: #000; aspect-ratio: 16 / 9; }
+.lp-video { width: 100%; max-width: 680px; margin: 0 auto; border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.12); background: #000; aspect-ratio: 16 / 9; }
 .lp-video video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lp-video-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); gap: 3.5rem; align-items: center; max-width: 1080px; margin: 0 auto; }
+.lp-video-text h2 { color: #fff; font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.2; margin: .6rem 0 1.2rem; letter-spacing: -.02em; }
+.lp-video-text ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .7rem; }
+.lp-video-text li { position: relative; padding-inline-start: 1.6rem; color: rgba(255,255,255,.82); font-size: 1.05rem; }
+.lp-video-text li::before { content: ""; position: absolute; inset-inline-start: 0; top: .5em; width: .55rem; height: .55rem; border-radius: 50%; background: #ffd23f; }
+@media (max-width: 900px) {
+  .lp-video-wrap { grid-template-columns: 1fr; gap: 1.6rem; text-align: center; }
+  .lp-video-text ul { display: none; }
+  .lp-video-text h2 { margin-bottom: 0; }
+}
 .lp-watch { display: inline-flex; align-items: center; gap: 12px; margin-top: 18px; color: inherit; text-decoration: none; }
 .lp-watch-play { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--purple); color: #fff; font-size: 16px; padding-left: 3px; box-shadow: 0 0 0 8px rgba(91,61,245,.15); transition: transform .15s; }
 .lp-watch:hover .lp-watch-play { transform: scale(1.08); }
