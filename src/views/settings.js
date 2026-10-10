@@ -1,4 +1,4 @@
-import { accessOf, AI_PLUS, CYCLES, FEATURE_LABELS, limitLabel, PLANS } from '../plans.js';
+import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, PLANS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
@@ -294,8 +294,8 @@ export function widgetView({ business, baseUrl, csrf, available, published, pend
 export function integrationsView({ keys, newKey, csrf, baseUrl, available, campaign }) {
   if (!available) {
     return `<h1>חיבורים</h1>
-      <div class="card empty"><p>שליחה אוטומטית מהקופה, ממערכת התורים או מהחנות אינה כלולה במסלול הנוכחי.</p>
-      <a class="btn" href="/admin/plan">פרטים על התוכניות</a></div>`;
+      <div class="card empty"><p>שליחה אוטומטית מהקופה, ממערכת התורים או מהחנות היא תוספת שאנחנו מקימים יחד איתכם.</p>
+      <a class="btn" href="/admin/plan">לפנייה אלינו</a></div>`;
   }
   const slug = campaign?.slug || 'my-campaign';
   const curl = `curl -X POST ${baseUrl}/api/v1/invites \\
@@ -593,6 +593,15 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
               ${csrfField(csrf)}
               ${b.ai_plus ? `<b>${h(AI_PLUS.label)} פעילה במתנה</b>` : ''}
               <button class="btn-link" name="on" value="${b.ai_plus ? '0' : '1'}">${b.ai_plus ? 'כיבוי' : `${h(AI_PLUS.label)} במתנה`}</button>
+            </form>`
+      }
+      ${
+        PLANS[b.plan]?.api
+          ? ''
+          : `<form method="post" action="/superadmin/businesses/${b.id}/api" class="row compact small">
+              ${csrfField(csrf)}
+              ${b.api_on ? `<b>${h(INTEGRATIONS.label)} פעילים</b>` : ''}
+              <button class="btn-link" name="on" value="${b.api_on ? '0' : '1'}">${b.api_on ? 'כיבוי' : `הפעלת ${h(INTEGRATIONS.label)}`}</button>
             </form>`
       }
     </div>`;

@@ -102,6 +102,13 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1#businesses');
   });
 
+  // Integrations (the API) for one business: a paid add-on, set up together with the owner.
+  router.post('/businesses/:id/api', (req, res) => {
+    const business = store.businessById(Number(req.params.id));
+    if (business) store.updateBusiness(business.id, { api_on: req.body.on === '1' });
+    res.redirect(303, '/superadmin?ok=1#businesses');
+  });
+
   // One small request to Anthropic, showing the exact answer or error.
   let lastEngineTest = null;
 

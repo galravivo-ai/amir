@@ -631,6 +631,11 @@ const MIGRATIONS = [
   );
   CREATE INDEX idx_reply_templates_business ON reply_templates(business_id);
   `,
+  // v31: integrations (the API) become an add-on; businesses already using a key keep it
+  `
+  ALTER TABLE businesses ADD COLUMN api_on INTEGER NOT NULL DEFAULT 0;
+  UPDATE businesses SET api_on = 1 WHERE id IN (SELECT business_id FROM api_keys WHERE revoked_at IS NULL);
+  `,
 ];
 
 function migrate(db) {
