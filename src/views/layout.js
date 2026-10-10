@@ -1,5 +1,5 @@
 import { PUBLIC_TEXTS } from '../i18n.js';
-import { limitLabel } from '../plans.js';
+import { hasApi, limitLabel } from '../plans.js';
 import { asset, h, logoSrc, safeColor } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { branchNav } from './network.js';
@@ -184,7 +184,7 @@ ${SKIP()}
       items: [
         ['/admin/business', 'הגדרות', 'gear'],
         ['/admin/team', 'צוות', 'team'],
-        ['/admin/integrations', 'חיבורים', 'plug'],
+        hasApi(business) && ['/admin/integrations', 'חיבורים', 'plug'],
         ['/admin/plan', 'התוכנית שלי', 'report'],
       ],
     },

@@ -724,13 +724,19 @@ test('public API: automatic survey requests', async () => {
     }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
+  assert.equal((await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } })).status, 403, 'an add-on, off by default');
+  assert.doesNotMatch((await owner.req('/admin')).text, /href="\/admin\/integrations"/, 'not in the menu while off');
+  store.updateBusiness(campaign.business_id, { api_on: true });
+  assert.match((await owner.req('/admin')).text, /href="\/admin\/integrations"/);
   const created = await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } });
   const key = decodeURIComponent(created.location.match(/key=([^&]+)/)[1]);
   assert.match(key, /^rk_/);
   store.updateBusiness(campaign.business_id, { plan: 'basic', billing: 'paused' });
   assert.equal((await api('/ping', { key })).status, 402);
-  store.updateBusiness(campaign.business_id, { plan: 'basic', billing: 'active' });
-  assert.equal((await api('/ping', { key })).status, 200, 'every plan includes the API');
+  store.updateBusiness(campaign.business_id, { plan: 'basic', billing: 'active', api_on: false });
+  assert.equal((await api('/ping', { key })).status, 403, 'turned off: the key stops working');
+  store.updateBusiness(campaign.business_id, { api_on: true });
+  assert.equal((await api('/ping', { key })).status, 200, 'the add-on works on any plan');
 
   assert.equal((await api('/ping', { key: 'rk_wrong' })).status, 401);
   assert.equal((await api('/ping', { key })).json.business.name, 'Test Cafe');
