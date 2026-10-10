@@ -425,8 +425,6 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   </a>
 </section>
 
-${networkSection()}
-
 <section class="lp-band alt" id="pricing">
   <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>משלמים לפי מספר הפרופילים בגוגל. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
   ${pricingCards({
@@ -442,6 +440,10 @@ ${networkSection()}
     ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
   </details>
 </section>
+
+${networkSection()}
+
+
 
 <section class="lp-band" id="faq">
   <div class="lp-faq">
