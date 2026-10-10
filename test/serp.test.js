@@ -134,7 +134,7 @@ test('follow a place by link or by name, get alerts, answer on Google', async ()
   }
   const fourth = await req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: '0x5:0x6', place_id: 'ChIJxxxxxxxxxx', title: 'x' } });
   assert.equal(fourth.location, '/admin/google?added=1');
-  assert.match((await req('/admin/plan')).text, /<b>4<\/b> פרופילי גוגל בחשבון/);
+  assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>4<\/dd>.*<b>₪676<\/b> <small>4 × ₪169/s);
   for (const d of ['0x3:0x4', '0x5:0x6']) {
     const extra = store.googleLocations(biz.id).find((l) => l.data_id === d);
     await req(`/admin/google/locations/${extra.id}/delete`, { method: 'POST', form: { _csrf: token } });

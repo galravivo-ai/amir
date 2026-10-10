@@ -361,6 +361,22 @@ export function integrationsView({ keys, newKey, csrf, baseUrl, available, campa
 
 const PAYMENT_KINDS = { checkout: 'תשלום', renewal: 'חידוש', upgrade: 'שדרוג' };
 
+const day = (sql) => (sql ? formatDate(`${String(sql).replace(' ', 'T')}Z`).split(',')[0] : '');
+const money = (n) => `₪${Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
+
+export const CANCEL_REASONS = {
+  price: 'המחיר גבוה מדי',
+  value: 'לא ראיתי מספיק תועלת',
+  missing: 'חסר לי משהו במערכת',
+  time: 'אין לי זמן להשתמש בזה',
+  closed: 'העסק נסגר או נמכר',
+  other: 'סיבה אחרת',
+};
+
+/**
+ * "My plan": the subscription at a glance with its actions (upgrade, switch,
+ * cancel or resume), then the plans, this month's usage and the payments.
+ */
 export function planView({
   business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false,
   cardBilling = false, payments = [], notice = '', error = '', actionUsage = null, profiles = 1,
@@ -373,40 +389,62 @@ export function planView({
     return `<div class="meter-row"><div class="meter-head"><span>${h(label)}</span><span>${used} / ${limitLabel(max)}</span></div>
       <div class="dist-bar"><span class="${pct >= 100 ? 'bad' : pct >= 80 ? 'mid' : 'good'}" style="width:${pct}%"></span></div></div>`;
   };
-  const cycle = CYCLES[business.billing_cycle] || CYCLES.monthly;
-  let status;
-  if (access?.state === 'trial') {
-    status = `<div class="plan-status trial"><b>תקופת ניסיון במסלול ${h(plan.label)}</b>
-      <span>${access.daysLeft === 1 ? 'היום האחרון' : `נשארו ${access.daysLeft} ימים`}, עד ${h(formatDate(access.endsAt).split(',')[0])}. אחרי זה הסקרים יושהו עד שתבחרו מסלול.</span></div>`;
-  } else if (access?.reason === 'new') {
-    status = `<div class="plan-status welcome"><b>ברוכים הבאים ל-GoFive! בוחרים מסלול ומתחילים</b>
+  const owner = can('owner');
+  const cycleKey = business.billing_cycle === 'annual' ? 'annual' : 'monthly';
+  const cycle = CYCLES[cycleKey];
+  const paying = Boolean(business.card_token && business.paid_until && access?.state === 'active');
+  const active = access?.state === 'active';
+  const canceled = active && paying && !business.auto_renew;
+  const next = PLANS[business.next_plan];
+  const until = day(business.paid_until);
+  const perPeriod = plan.price != null ? (cycleKey === 'annual' ? plan.price * 10 : plan.price) * profiles : null;
+  const other = business.plan === 'basic' ? 'pro' : business.plan === 'pro' ? 'basic' : null;
+  const changeLink = (p, c, label, cls = 'btn') => `<a class="${cls}" href="/admin/plan/change?plan=${p}&cycle=${c}">${label}</a>`;
+
+  // ---- the subscription at a glance ----
+  const facts = [
+    ['מסלול', `<b>${h(plan.label)}</b>${access?.state === 'trial' ? ' <small>ניסיון</small>' : ''}`],
+    ['תשלום', h(cycle)],
+    ['פרופילים בגוגל', `${profiles}`],
+    plan.price != null ? [cycleKey === 'annual' ? 'לשנה' : 'לחודש', `<b>${money(perPeriod)}</b> <small>${profiles > 1 ? `${profiles} × ₪${cycleKey === 'annual' ? plan.price * 10 : plan.price}, ` : ''}כולל מע״מ</small>`] : null,
+    paying ? [!business.auto_renew ? 'פעיל עד' : 'החידוש הבא', h(until)] : null,
+    paying ? ['כרטיס', `<span dir="ltr">•••• ${h(business.card_last4 || '····')}</span>`] : null,
+  ].filter(Boolean);
+  const factsHtml = `<dl class="sub-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+  let head;
+  if (access?.reason === 'new') {
+    head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! בוחרים מסלול ומתחילים</b>
       <span>מיד אחרי התשלום מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד. בלי התחייבות, מבטלים בכל רגע.
-      רוצים להסתכל קודם? <a href="/demo">לחשבון הדמו</a></span></div>`;
+      רוצים להסתכל קודם? <a href="/demo">לחשבון הדמו</a></span></div></div>`;
+  } else if (access?.state === 'trial') {
+    head = `<div class="sub-head trial"><div><b>תקופת ניסיון במסלול ${h(plan.label)}</b>
+      <span>${access.daysLeft === 1 ? 'היום האחרון' : `נשארו ${access.daysLeft} ימים`}, עד ${h(formatDate(access.endsAt).split(',')[0])}. אחרי זה הסקרים יושהו עד שתבחרו מסלול.</span></div></div>${factsHtml}`;
   } else if (access?.state === 'paused') {
-    status = `<div class="plan-status paused"><b>${access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה'}</b>
-      <span>הסקרים ללקוחות לא פעילים. כל הנתונים שמורים, ואחרי בחירת מסלול הכול חוזר לעבוד כמו קודם.</span></div>`;
-  } else if (business.card_token && business.paid_until) {
-    const until = h(formatDate(`${business.paid_until.replace(' ', 'T')}Z`).split(',')[0]);
-    const next = PLANS[business.next_plan];
-    status = `<div class="plan-status active"><b>מסלול ${h(plan.label)} · ${h(cycle)}</b>
-      <span>${
-        business.auto_renew
-          ? `החידוש הבא ב-${until}${next ? `, למסלול ${h(next.label)} (${h(CYCLES[business.next_cycle] || cycle)})` : ''}, בכרטיס שמסתיים ב-${h(business.card_last4 || '····')}.`
-          : `פעיל עד ${until}, בלי חידוש אוטומטי.`
-      }</span>
-      ${
-        can('owner')
-          ? `<form method="post" action="/admin/billing/auto-renew" class="inline">${csrfField(csrf)}
-              <button class="btn-link ${business.auto_renew ? 'danger-text' : ''}" name="on" value="${business.auto_renew ? '0' : '1'}"
-                ${business.auto_renew ? `onclick="return confirm('לבטל את החידוש האוטומטי? המסלול יישאר פעיל עד ${until}.')"` : ''}>${
-                  business.auto_renew ? 'ביטול החידוש האוטומטי' : 'חידוש אוטומטי מחדש'
-                }</button></form>`
-          : ''
-      }</div>`;
+    head = `<div class="sub-head paused"><div><b>${access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'המנוי לא פעיל'}</b>
+      <span>הסקרים וההתראות מושהים. כל הנתונים שמורים, ואחרי בחירת מסלול הכול חוזר לעבוד כמו קודם.</span></div></div>${factsHtml}`;
   } else {
-    status = `<div class="plan-status active"><b>מסלול ${h(plan.label)} · ${h(cycle)}</b><span>החשבון פעיל.</span></div>`;
+    const actions = [];
+    if (owner && !canceled) {
+      if (other === 'pro') actions.push(changeLink('pro', cycleKey, `שדרוג ל${h(PLANS.pro.label)}`, 'btn accent'));
+      if (other === 'basic') actions.push(changeLink('basic', cycleKey, `מעבר ל${h(PLANS.basic.label)}`));
+      if (other) actions.push(changeLink(business.plan, cycleKey === 'annual' ? 'monthly' : 'annual', cycleKey === 'annual' ? 'מעבר לתשלום חודשי' : 'מעבר לשנתי · חודשיים חינם'));
+    }
+    head = `<div class="sub-head ${canceled ? 'canceled' : 'active'}">
+        <div><b>${canceled ? 'המנוי בוטל' : 'המנוי פעיל'}</b>
+          <span>${canceled ? `המסלול נשאר פעיל עד ${h(until)}, ולא תחויבו יותר. אפשר לחדש בכל רגע.` : paying ? `מתחדש אוטומטית ב-${h(until)}.` : 'החשבון פעיל.'}</span></div>
+        ${canceled && owner ? `<form method="post" action="/admin/billing/auto-renew">${csrfField(csrf)}<button class="btn primary" name="on" value="1">חידוש המנוי</button></form>` : ''}
+      </div>
+      ${factsHtml}
+      ${
+        next && !canceled
+          ? `<div class="sub-next">${icon('clock', 16)}<span>ב-${h(until)} תעברו ל<b>${h(next.label)}</b>${business.next_cycle && business.next_cycle !== cycleKey ? `, בתשלום ${h(CYCLES[business.next_cycle])}` : ''}.</span>
+              ${owner ? `<form method="post" action="/admin/plan/keep" class="inline">${csrfField(csrf)}<button class="btn-link">ביטול השינוי</button></form>` : ''}</div>`
+          : ''
+      }
+      ${actions.length ? `<div class="row compact sub-actions">${actions.join('')}</div>` : ''}
+      ${owner && paying && !canceled ? `<p class="sub-cancel"><a href="/admin/plan/cancel">ביטול המנוי</a></p>` : ''}`;
   }
-  const paying = Boolean(business.card_token && access?.state === 'active');
+
   const pending =
     request && PLANS[request.plan]
       ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}${
@@ -416,54 +454,37 @@ export function planView({
         }</div>`
       : '';
   const op = operatorInfo();
+  // The plan cards lead to the confirmation page (GET), which says what happens before anything is charged.
   const action = (key) =>
-    can('owner')
-      ? `<button class="btn ${key === 'pro' ? 'accent' : 'primary'} plan-cta" name="plan" value="${key}">${
-          access?.state === 'active' && key === business.plan
-            ? 'להחליף תדירות תשלום'
-            : cardBilling && !paying
-              ? `תשלום ומעבר ל${h(PLANS[key].label)}`
-              : `בחירה ב${h(PLANS[key].label)}`
-        }</button>`
+    owner
+      ? active && key === business.plan
+        ? '<span class="btn plan-cta" aria-disabled="true">המסלול שלכם</span>'
+        : `<button class="btn ${key === 'pro' ? 'accent' : 'primary'} plan-cta" name="plan" value="${key}">${
+            paying ? (PLANS[key].price > plan.price ? `שדרוג ל${h(PLANS[key].label)}` : `מעבר ל${h(PLANS[key].label)}`) : `בחירה ב${h(PLANS[key].label)}`
+          }</button>`
       : '';
   const history = payments.length
-    ? `<section class="card"><h3>תשלומים</h3><div class="table-wrap"><table class="table"><thead><tr><th>תאריך</th><th>מה</th><th>סכום</th><th>סטטוס</th></tr></thead><tbody>${payments
+    ? `<section class="card"><h3>תשלומים וחשבוניות</h3><div class="table-wrap"><table class="table"><thead><tr><th>תאריך</th><th>מה</th><th>סכום</th><th>סטטוס</th></tr></thead><tbody>${payments
         .map(
           (p) => `<tr><td>${h(formatDate(`${String(p.paid_at || p.created_at).replace(' ', 'T')}Z`).split(',')[0])}</td>
-            <td>${h(PAYMENT_KINDS[p.kind] || p.kind)} · ${h(PLANS[p.plan]?.label || p.plan)}</td><td>₪${h(String(p.amount))}</td>
+            <td>${h(PAYMENT_KINDS[p.kind] || p.kind)} · ${h(PLANS[p.plan]?.label || p.plan)}</td><td>${money(p.amount)}</td>
             <td>${p.status === 'paid' ? '<span class="badge st-resolved">שולם</span>' : `<span class="badge st-new" title="${h(p.error || '')}">נכשל</span>`}</td></tr>`,
         )
-        .join('')}</tbody></table></div><p class="muted small">החשבוניות נשלחות במייל מחברת הסליקה.</p></section>`
+        .join('')}</tbody></table></div><p class="muted small">החשבוניות נשלחות במייל מחברת הסליקה אחרי כל חיוב.</p></section>`
     : '';
   return `<h1>התוכנית שלי</h1>
   ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${pending}
-  <section class="card stack">
-    ${status}
-    ${access?.reason === 'new' ? '' : `<div class="plan-profiles">
-      <span><b>${profiles}</b> ${profiles === 1 ? 'פרופיל גוגל' : 'פרופילי גוגל'} בחשבון</span>
-      ${plan.price != null ? `<span>החיוב: ${profiles > 1 ? `${profiles} × ₪${plan.price} = ` : ''}<b>₪${(plan.price * profiles).toLocaleString('he-IL')}</b> לחודש, כולל מע״מ</span>` : ''}
-      <span class="muted small">כל פרופיל גוגל שמחוברים אליו נספר בנפרד. קמפיינים, משתמשים ודירוגים: ללא הגבלה.</span>
-    </div>`}
-  </section>
-  ${
-    actionUsage && access?.reason !== 'new'
-      ? `<section class="card stack"><h3>שימוש החודש</h3>
-          <p class="muted small">פעולות שמפעילים בלחיצה. מה שרץ לבד (בדיקות שבועיות, סנכרון ביקורות) לא נספר כאן. מתאפס ב-1 לכל חודש.</p>
-          ${Object.entries(ACTION_LABELS).map(([k, label]) => meter(label, actionUsage[k].used, actionUsage[k].limit)).join('')}
-        </section>`
-      : ''
-  }
-  <section class="card stack">
-    <h3>המסלולים</h3>
-    ${can('owner') ? '' : '<p class="muted">רק בעלי העסק יכולים לבחור מסלול.</p>'}
-    <form method="post" action="/admin/plan/request">
-      <input type="hidden" name="_csrf" value="${h(csrf)}">
-      ${pricingCards({ action, current: access?.state === 'active' ? business.plan : '' })}
+  <section class="card stack sub-card">${head}</section>
+  <section class="card stack" id="plans">
+    <h3>${paying ? 'השוואת המסלולים' : 'המסלולים'}</h3>
+    ${owner ? '' : '<p class="muted">רק בעלי העסק יכולים לבחור או לשנות מסלול.</p>'}
+    <form method="get" action="/admin/plan/change">
+      ${pricingCards({ action, current: active ? business.plan : '' })}
     </form>
     ${
-      can('owner')
+      owner
         ? customOffer(`<form method="post" action="/admin/plan/request">
             <input type="hidden" name="_csrf" value="${h(csrf)}">
             <button class="btn accent" name="plan" value="enterprise">בקשת הצעת מחיר</button>
@@ -473,12 +494,77 @@ export function planView({
     <p class="muted small">${
       cardBilling
         ? paying
-          ? 'שדרוג נכנס לתוקף מיד, ומחויב רק על הימים שנשארו עד החידוש. מעבר למסלול זול יותר או לתדירות אחרת נכנס לתוקף בחידוש הבא.'
+          ? 'לפני כל שינוי תראו בדיוק מה ייכנס לתוקף ומה יחויב. שדרוג נכנס לתוקף מיד ומחויב רק על הימים שנשארו; מעבר למסלול זול יותר או לתדירות אחרת נכנס לתוקף בחידוש הבא.'
           : 'התשלום בכרטיס אשראי, בדף המאובטח של קארדקום. המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.'
         : 'התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.'
-    }${op.email ? ` שאלות? <span dir="ltr">${h(op.email)}</span>` : ''}</p>
+    } <a href="/terms#billing">התנאים המלאים: תשלום, שינוי וביטול</a>${op.email ? ` · שאלות? <span dir="ltr">${h(op.email)}</span>` : ''}</p>
   </section>
+  ${
+    actionUsage && access?.reason !== 'new'
+      ? `<details class="card stack sub-usage"><summary><h3>שימוש החודש</h3><span class="muted small">פעולות ידניות, מתאפס ב-1 לכל חודש</span></summary>
+          ${Object.entries(ACTION_LABELS).map(([k, label]) => meter(label, actionUsage[k].used, actionUsage[k].limit)).join('')}
+          <p class="muted small">מה שרץ לבד (בדיקות שבועיות, סנכרון ביקורות) לא נספר כאן.</p>
+        </details>`
+      : ''
+  }
   ${history}`;
+}
+
+/** Before a plan change: what happens and what is charged, then confirm. */
+export function planChangeView({ business, current, access, plan, cycle, quote, csrf }) {
+  const p = PLANS[plan];
+  const per = cycle === 'annual' ? 'לשנה' : 'לחודש';
+  const lines = {
+    checkout: [`תועברו לדף התשלום המאובטח של קארדקום, לתשלום של <b>${money(quote.amount)}</b> ${per} (${quote.profiles > 1 ? `${quote.profiles} פרופילים, ` : ''}כולל מע״מ).`, 'המסלול נפתח מיד אחרי התשלום, ומתחדש אוטומטית עד שמבטלים.'],
+    upgrade: [`השדרוג נכנס לתוקף <b>מיד</b>.`, quote.charge ? `תחויבו עכשיו ב-<b>${money(quote.charge)}</b>: ההפרש היחסי על הימים שנשארו עד ${h(day(business.paid_until))}.` : 'אין חיוב נוסף עד החידוש הבא.', `מהחידוש הבא: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`],
+    scheduled: [`השינוי ייכנס לתוקף <b>בחידוש הבא, ב-${h(day(quote.at))}</b>. עד אז הכול נשאר כמו שהוא, בלי חיוב נוסף.`, `מהחידוש: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`, 'אפשר לבטל את השינוי בעמוד "התוכנית שלי" עד יום החידוש.'],
+    kept: ['זה המסלול הנוכחי שלכם. המנוי ימשיך להתחדש כרגיל.'],
+    request: ['נקבל את הבקשה ונחזור אליכם להשלמת התשלום ולהפעלת המסלול.'],
+  }[quote.kind];
+  const lose = current.aiPlus && !p.aiPlus ? '<div class="warn">במסלול גוגל אין בדיקה ב-ChatGPT, Gemini, Perplexity ו-Claude, ואין תוכנית פעולה אחרי כל בדיקה. הנתונים שכבר נאספו נשמרים.</div>' : '';
+  const gain = !current.aiPlus && p.aiPlus ? `<ul class="sub-gain">${['נראות ב-ChatGPT, Gemini, Perplexity ו-Claude', 'תוכנית פעולה ו"על מי ממליצים במקומכם"', `מיקום במפות: ${p.rankKeywords} חיפושים · ${p.competitors} מתחרים`].map((x) => `<li>${icon('check', 16)}${h(x)}</li>`).join('')}</ul>` : '';
+  const button = { checkout: 'להמשך לתשלום', upgrade: quote.charge ? `אישור ותשלום ${money(quote.charge)}` : 'אישור השדרוג', scheduled: 'אישור השינוי', kept: 'חזרה', request: 'שליחת הבקשה' }[quote.kind];
+  return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
+  <h1>${quote.kind === 'upgrade' ? 'שדרוג' : 'מעבר'} למסלול ${h(p.label)}</h1>
+  <section class="card stack sub-confirm">
+    <div class="sub-from-to"><span>${h(current.label)}${access?.state === 'active' ? ` · ${h(CYCLES[business.billing_cycle] || CYCLES.monthly)}` : ''}</span><b>←</b><span><b>${h(p.label)}</b> · ${h(CYCLES[cycle])}</span></div>
+    ${gain}${lose}
+    <ul class="sub-lines">${lines.map((l) => `<li>${l}</li>`).join('')}</ul>
+    ${
+      quote.kind === 'kept'
+        ? '<a class="btn" href="/admin/plan">חזרה</a>'
+        : `<form method="post" action="/admin/plan/request" class="row compact">
+            <input type="hidden" name="_csrf" value="${h(csrf)}"><input type="hidden" name="plan" value="${h(plan)}"><input type="hidden" name="cycle" value="${h(cycle)}">
+            <button class="btn primary">${button}</button><a class="btn" href="/admin/plan">ביטול</a>
+          </form>`
+    }
+    <p class="muted small">המחירים כוללים מע״מ. <a href="/terms#billing">התנאים המלאים</a></p>
+  </section>`;
+}
+
+/** Cancelling the subscription: what happens, an optional reason, and confirm. */
+export function cancelView({ business, plan, access, csrf }) {
+  const until = day(business.paid_until);
+  const annual = business.billing_cycle === 'annual';
+  return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
+  <h1>ביטול המנוי</h1>
+  <section class="card stack sub-confirm">
+    <p>לפני שמבטלים, כדאי לדעת מה קורה:</p>
+    <ul class="sub-lines">
+      <li>המסלול <b>${h(plan.label)}</b> נשאר פעיל ${until ? `עד <b>${h(until)}</b>` : 'עד סוף התקופה ששולמה'}, ולא תחויבו יותר.</li>
+      <li>${annual ? 'במסלול שנתי מגיע לכם <b>החזר יחסי</b> על החודשים המלאים שנותרו, לפי המחיר החודשי הרגיל של המסלול. ההחזר יבוצע לכרטיס בתוך 14 יום.' : 'במסלול חודשי אין החזר על החודש הנוכחי, והחיוב פשוט נעצר.'}</li>
+      <li>אחרי סוף התקופה הסקרים, ההתראות והבדיקות מושהים. <b>הנתונים נשמרים</b> ואפשר לחזור בכל רגע, בדיוק מאיפה שהפסקתם.</li>
+      <li>צרכנים (לא לצורכי עסק) רשאים לבטל עסקה בתוך 14 יום לפי חוק הגנת הצרכן. <a href="/terms#cancel">פרטים בתנאי השימוש</a></li>
+    </ul>
+    <form method="post" action="/admin/plan/cancel" class="stack">
+      <input type="hidden" name="_csrf" value="${h(csrf)}">
+      <label>למה אתם מבטלים? <span class="muted small">(לא חובה, ועוזר לנו להשתפר)</span>
+        <select name="reason"><option value="">בחירה…</option>${Object.entries(CANCEL_REASONS).map(([k, v]) => `<option value="${k}">${h(v)}</option>`).join('')}</select></label>
+      <label>משהו שתרצו להוסיף? <textarea name="details" rows="3" maxlength="400"></textarea></label>
+      <div class="row compact"><button class="btn danger">ביטול המנוי</button><a class="btn primary" href="/admin/plan">השארת המנוי</a></div>
+    </form>
+    ${PLANS.basic && business.plan === 'pro' ? `<p class="muted small">רוצים לשלם פחות? אפשר במקום זה <a href="/admin/plan/change?plan=basic&cycle=${business.billing_cycle || 'monthly'}">לעבור למסלול ${h(PLANS.basic.label)}</a> (₪${PLANS.basic.price} לפרופיל).</p>` : ''}
+  </section>`;
 }
 
 // ---------------------------------------------------------------- AI insights

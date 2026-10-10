@@ -636,6 +636,11 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN api_on INTEGER NOT NULL DEFAULT 0;
   UPDATE businesses SET api_on = 1 WHERE id IN (SELECT business_id FROM api_keys WHERE revoked_at IS NULL);
   `,
+  // v31: why and when a subscription was cancelled
+  `
+  ALTER TABLE businesses ADD COLUMN cancel_reason TEXT;
+  ALTER TABLE businesses ADD COLUMN canceled_at TEXT;
+  `,
 ];
 
 function migrate(db) {

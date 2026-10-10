@@ -122,8 +122,37 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     return { status: 'upgraded', charged: charge >= 1 ? charge : 0 };
   }
 
+  /**
+   * What choosing a plan would do, before doing it: 'checkout' (a payment page),
+   * 'kept', 'scheduled' (at the renewal) or 'upgrade' (charged now for the rest of the period).
+   */
+  function quote(business, plan, cycle) {
+    const profiles = profilesOf(store, business.id);
+    const amount = amountFor(plan, cycle, profiles);
+    if (!hasCardPlan(business)) return { kind: 'checkout', amount, profiles };
+    if (plan === business.plan && cycle === business.billing_cycle) return { kind: 'kept', amount, profiles };
+    const oldAmount = amountFor(business.plan, business.billing_cycle, profiles);
+    if (cycle !== business.billing_cycle || amount <= oldAmount) return { kind: 'scheduled', amount, profiles, at: business.paid_until };
+    const periodDays = business.billing_cycle === 'annual' ? 365 : 30;
+    const left = Math.max(0, fromSql(business.paid_until) - now()) / DAY;
+    const charge = Math.round((amount - oldAmount) * Math.min(1, left / periodDays) * 100) / 100;
+    return { kind: 'upgrade', amount, profiles, charge: charge >= 1 ? charge : 0 };
+  }
+
   /** Stops (or restarts) the automatic renewal; the paid period stays. */
-  const setAutoRenew = (business, on) => store.updateBusiness(business.id, { auto_renew: on });
+  const setAutoRenew = (business, on) =>
+    store.updateBusiness(business.id, on ? { auto_renew: true, cancel_reason: null, canceled_at: null } : { auto_renew: false });
+
+  /** Cancels the subscription: no more renewals, the paid period stays. */
+  function cancel(business, reason = '') {
+    store.updateBusiness(business.id, {
+      auto_renew: false,
+      next_plan: null,
+      next_cycle: null,
+      cancel_reason: String(reason).slice(0, 500) || null,
+      canceled_at: toSql(now()),
+    });
+  }
 
   /** Charges every subscription whose period ended. Runs with the other jobs. */
   async function renewDue() {
@@ -172,5 +201,5 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     return renewed;
   }
 
-  return { hasCardPlan, startCheckout, complete, changePlan, setAutoRenew, renewDue };
+  return { hasCardPlan, startCheckout, complete, changePlan, quote, setAutoRenew, cancel, renewDue };
 }
