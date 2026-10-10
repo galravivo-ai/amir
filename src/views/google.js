@@ -215,8 +215,14 @@ export function googleReviewsView({ reviews, locations, filters, summary }) {
   }`;
 }
 
-export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, canPublish = true, error = '', saved = false }) {
+export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, canPublish = true, error = '', saved = false, templates = [] }) {
   const text = draft || review.reply || '';
+  // Shared reply templates: picking one puts its text in the box, for editing.
+  const templatePick = templates.length
+    ? `<label class="g-tpl">${icon('chat', 16)}<span>תבנית:</span><select aria-label="תבנית תשובה" onchange="if(this.value){var t=document.getElementById('g-draft');t.value=this.options[this.selectedIndex].dataset.t;t.focus()}">
+        <option value="">בחירת תבנית…</option>${templates.map((t, i) => `<option value="${i + 1}" data-t="${h(t.text)}">${h(t.title)}</option>`).join('')}</select>
+        <a class="small" href="/admin/reply-templates">ניהול</a></label>`
+    : can('manager') ? '<p class="muted small"><a href="/admin/reply-templates">תבניות תשובה</a>: נוסחים קבועים לכל הסניפים, בלחיצה.</p>' : '';
   const aiForm = aiAvailable
     ? `<form method="post" action="/admin/google/reviews/${review.id}/draft"><input type="hidden" name="_csrf" value="${h(csrf)}">
         <button class="btn ai-btn">${icon('spark', 16)} <span>${draft ? 'טיוטה אחרת' : 'טיוטה מה-AI'}</span></button></form>`
@@ -229,7 +235,8 @@ export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, c
       <p class="muted small">התשובה מופיעה בגוגל מתחת לביקורת, וכל מי שמחפש את העסק רואה אותה.</p>
       <form method="post" action="/admin/google/reviews/${review.id}/reply" class="stack">
         <input type="hidden" name="_csrf" value="${h(csrf)}">
-        <textarea name="reply" rows="5" maxlength="4000" required>${h(text)}</textarea>
+        ${templatePick}
+        <textarea id="g-draft" name="reply" rows="5" maxlength="4000" required aria-label="נוסח התשובה">${h(text)}</textarea>
         <div class="row compact"><button class="btn primary">${review.reply ? 'עדכון התשובה בגוגל' : 'פרסום התשובה בגוגל'}</button></div>
       </form>
       ${aiForm}
@@ -239,6 +246,7 @@ export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, c
     <section class="card stack">
       <h3>${review.reply ? 'עדכון התשובה' : 'מענה לביקורת'}</h3>
       <p class="muted small">כותבים או מבקשים טיוטה מה-AI, מעתיקים, ולוחצים "מענה בגוגל" כדי להדביק שם. אחרי הבדיקה הבאה, התשובה תופיע גם כאן.</p>
+      ${templatePick}
       <textarea id="g-draft" rows="5" maxlength="4000" aria-label="טיוטת תשובה">${h(draft)}</textarea>
       <div class="row compact">
         <button type="button" class="btn" onclick="var t=document.getElementById('g-draft');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(function(){this.textContent='הועתק ✓'}.bind(this)).catch(function(){document.execCommand('copy')})">העתקה</button>

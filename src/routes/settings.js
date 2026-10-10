@@ -1,4 +1,5 @@
 import express from 'express';
+import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
@@ -90,6 +91,7 @@ export function settingsRoutes(ctx) {
       V.teamView({
         members: store.membersOf(req.business.id),
         invites: store.pendingTeamInvites(req.business.id),
+        branches: branchesOf(store, req.business.id),
         csrf: req.user.csrf,
         me: req.user,
         plan: req.plan,
@@ -109,7 +111,8 @@ export function settingsRoutes(ctx) {
       return fail(`בתוכנית ${req.plan.label} אפשר עד ${limitLabel(req.plan.teamMembers)} משתמשים`);
     }
     if (store.membersOf(req.business.id).some((m) => m.email === email)) return fail('המשתמש כבר בצוות');
-    const raw = store.createTeamInvite(req.business.id, { email, role, invitedBy: req.user.id });
+    const branch = branchesOf(store, req.business.id).find((b) => b.id === Number(req.body.location));
+    const raw = store.createTeamInvite(req.business.id, { email, role, invitedBy: req.user.id, locationId: branch?.id || null });
     await ctx.notifier.teamInvite({
       business: req.business,
       inviter: req.user,
@@ -135,6 +138,9 @@ export function settingsRoutes(ctx) {
     if (req.body.action === 'remove') {
       if (lastOwner) return fail('אי אפשר להסיר את הבעלים האחרון');
       store.removeMember(req.business.id, userId);
+    } else if (req.body.action === 'branch') {
+      const branch = branchesOf(store, req.business.id).find((b) => b.id === Number(req.body.location));
+      store.setMemberBranch(req.business.id, userId, branch?.id || null);
     } else {
       const role = Object.hasOwn(ROLES, req.body.role) ? req.body.role : member.role;
       if (lastOwner && role !== 'owner') return fail('חייב להישאר לפחות בעלים אחד');

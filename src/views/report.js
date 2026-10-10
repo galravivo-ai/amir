@@ -110,6 +110,19 @@ export function monthlyReportView({ business, range, months, report: r, summary 
     }
 
     ${
+      r.branches?.length
+        ? `<section class="r-box"><h3>הסניפים החודש</h3><div class="table-wrap"><table class="table r-branches">
+            <thead><tr><th>סניף</th><th>דירוג</th><th>ביקורות חדשות</th><th>מענה</th><th>ממתינות</th><th>צפיות</th><th>שיחות</th></tr></thead>
+            <tbody>${r.branches
+              .map(
+                (b) => `<tr><th scope="row">${h(b.title)}</th><td>${b.rating ? `${b.rating.toFixed(1)}★` : '—'}</td><td>${b.newReviews}${b.newAvg != null ? ` <small>(${b.newAvg.toFixed(1)}★)</small>` : ''}</td>
+                  <td>${b.replyRate == null ? '—' : `${b.replyRate}%`}</td><td>${b.unanswered}</td><td>${b.views == null ? '—' : b.views.toLocaleString('he-IL')}</td><td>${b.calls == null ? '—' : b.calls.toLocaleString('he-IL')}</td></tr>`,
+              )
+              .join('')}</tbody></table></div></section>`
+        : ''
+    }
+
+    ${
       r.visibility
         ? `<section class="r-box r-vis"><h3>נראות ב-AI</h3><p>העסק הוזכר ב-<b>${r.visibility.mentioned}%</b> מתשובות עוזרי ה-AI שנבדקו, וצוטט כמקור ב-<b>${r.visibility.cited}%</b>.</p></section>`
         : ''

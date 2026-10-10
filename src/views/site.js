@@ -1,9 +1,60 @@
-import { TRIAL_DAYS } from '../plans.js';
+import { PLANS, TRIAL_DAYS } from '../plans.js';
 import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
+import { NETWORK_TOOLS } from './network.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
+
+/** Networks of branches: the tools a second profile opens, and the price per branch. */
+function networkSection() {
+  const rows = [
+    ['סניף דיזנגוף', '4.8', 38, '100%', '1,240'],
+    ['סניף רמת החייל', '4.6', 24, '92%', '860'],
+    ['סניף חיפה', '4.3', 11, '64%', '410'],
+  ];
+  const max = 38;
+  const price = (k) => PLANS[k].price;
+  return `<section class="lp-band net-band" id="network">
+  <div class="net-split">
+    <div class="net-text">
+      <span class="hero-pill"><b>לרשתות</b>כמה סניפים, חשבון אחד</span>
+      <h2>כל הסניפים שלכם בגוגל, במסך אחד</h2>
+      <p>יש לכם יותר מסניף אחד? מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת. משלמים לפי מספר הפרופילים, וכל כלי הרשת כלולים בלי תוספת.</p>
+      <ul class="net-lp-list">${NETWORK_TOOLS.map(([ic, t, d]) => `<li><span>${icon(ic, 18)}</span><div><b>${h(t)}</b><small>${h(d)}</small></div></li>`).join('')}</ul>
+    </div>
+    <div class="net-side">
+      <div class="net-mock" aria-hidden="true">
+        <div class="net-mock-head"><b>${icon('branches', 16)} רשת הסניפים</b><small>30 ימים</small></div>
+        <div class="net-mock-stats"><span><b>4.6★</b><small>דירוג הרשת</small></span><span><b>73</b><small>ביקורות חדשות</small></span><span><b>2,510</b><small>שיחות</small></span></div>
+        <div class="net-mock-rows">${rows
+          .map(([n, r, c, rep, calls], i) => `<span class="${i === 2 ? 'warn' : ''}"><b>${n}</b><em>${r}★</em><i style="--w:${(c / max) * 100}%"></i><small>${c} ביקורות · מענה ${rep}</small></span>`)
+          .join('')}</div>
+        <div class="net-mock-alert">${icon('alert', 14)} סניף חיפה: 6 ביקורות מחכות לתשובה</div>
+      </div>
+      <div class="net-calc" data-p1="${price('basic')}" data-p2="${price('pro')}">
+        <div class="net-calc-row">
+          <span class="net-calc-q">כמה סניפים?</span>
+          <span class="net-calc-n"><button type="button" data-d="-1" aria-label="פחות">−</button><output id="net-n-out">3</output><button type="button" data-d="1" aria-label="יותר">+</button></span>
+        </div>
+        <div class="net-calc-plans" role="radiogroup" aria-label="מסלול">
+          <label><input type="radio" name="net-plan" value="1"><span>${h(PLANS.basic.label)}<small>₪${price('basic')} לסניף</small></span></label>
+          <label><input type="radio" name="net-plan" value="2" checked><span>${h(PLANS.pro.label)}<small>₪${price('pro')} לסניף</small></span></label>
+        </div>
+        <div class="net-calc-total"><span>לחודש, כולל מע״מ</span><b id="net-total">₪${(price('pro') * 3).toLocaleString('he-IL')}</b></div>
+        <p class="net-calc-note">כל כלי הרשת כלולים. בלי דמי הקמה, בלי התחייבות.</p>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function(){var c=document.querySelector('.net-calc');if(!c)return;var n=3,out=c.querySelector('#net-n-out'),tot=c.querySelector('#net-total');
+  function draw(){var p=c.querySelector('input[name=net-plan]:checked').value==='1'?+c.dataset.p1:+c.dataset.p2;out.textContent=n;tot.textContent='₪'+(n*p).toLocaleString('he-IL')}
+  c.querySelectorAll('button[data-d]').forEach(function(b){b.addEventListener('click',function(){n=Math.min(50,Math.max(1,n+ +b.dataset.d));draw()})});
+  c.querySelectorAll('input[name=net-plan]').forEach(function(r){r.addEventListener('change',draw)});})();
+  </script>
+</section>`;
+}
+
 export function operatorInfo() {
   return {
     name: process.env.OPERATOR_NAME || 'מפעיל המערכת',
@@ -35,6 +86,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#how">איך זה עובד</a>
     <a href="/#features">פיצ'רים</a>
     <a href="/#ai">נראות ב-AI</a>
+    <a href="/#network">רשתות וסניפים</a>
     <a href="/demo">דמו</a>
     <a href="/#pricing">מחירים</a>
     <a href="/#faq">שאלות</a>
@@ -272,7 +324,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <span>${icon('check', 16)} 3 משימות בשבוע</span>
     <span>${icon('report', 16)} דוח חודשי</span>
     <span>${icon('chat', 16)} פוסטים עם AI</span>
-    <span>${icon('team', 16)} סניפים וצוות</span>
+    <a href="#network">${icon('branches', 16)} רשתות וסניפים</a>
   </div>
 </section>
 
@@ -362,6 +414,8 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   </a>
 </section>
 
+${networkSection()}
+
 <section class="lp-band alt" id="pricing">
   <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p></div>
   ${pricingCards({
@@ -373,7 +427,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
         : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
   })}
   <details class="lp-agency" id="contact"${contactSent || contactError ? ' open' : ''}>
-    <summary><span><b>סוכנות או רשת עם הרבה סניפים?</b> נבנה לכם הצעת מחיר.</span><i>להשארת פרטים</i></summary>
+    <summary><span><b>סוכנות, או רשת עם עשרות סניפים?</b> נבנה לכם הצעת מחיר.</span><i>להשארת פרטים</i></summary>
     ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
   </details>
 </section>

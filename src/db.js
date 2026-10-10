@@ -617,6 +617,20 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN alert_drops INTEGER NOT NULL DEFAULT 1;
   ALTER TABLE businesses ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0;
   `,
+  // v30: networks of branches: a member limited to one branch, and shared reply templates
+  `
+  ALTER TABLE memberships ADD COLUMN location_id INTEGER REFERENCES google_locations(id) ON DELETE CASCADE;
+  ALTER TABLE team_invites ADD COLUMN location_id INTEGER REFERENCES google_locations(id) ON DELETE CASCADE;
+  CREATE TABLE reply_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    stars TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_reply_templates_business ON reply_templates(business_id);
+  `,
 ];
 
 function migrate(db) {

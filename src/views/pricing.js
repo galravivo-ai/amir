@@ -56,6 +56,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
+    <a class="pricing-network" href="${compact ? '/#network' : '/admin/network'}"><span class="pn-ic">◆</span><span><b>כמה סניפים? חשבון רשת בלי תוספת</b><small>מהפרופיל השני: השוואה בין הסניפים, מנהל לכל סניף, תבניות תשובה משותפות, דוח חודשי מאוחד וחשבונית אחת.</small></span></a>
     ${compact ? `<div class="pricing-all"><b>כלול בכל המסלולים</b><div>${INCLUDED.map((f) => `<span>✓ ${h(f)}</span>`).join('')}</div></div>` : ''}
     <p class="pricing-note">המחיר הוא לכל פרופיל בגוגל: עסק עם שני סניפים משלם פעמיים · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
@@ -66,7 +67,7 @@ export function customOffer(cta) {
   return `<div class="custom-offer">
     <div class="custom-items">
       <div><b>סוכנות, משווק או יועץ?</b><span>מנהלים את כל העסקים של הלקוחות ממסך אחד, עם המיתוג שלכם במקום שלנו.</span></div>
-      <div><b>רשת גדולה?</b><span>כל הסניפים בחשבון אחד, עם השוואה ודירוג בין הסניפים.</span></div>
+      <div><b>רשת עם עשרות סניפים?</b><span>כל כלי הרשת, עם ליווי בהקמה ומחיר לפי היקף.</span></div>
     </div>
     <div class="custom-cta"><span>מחיר בהצעה אישית</span>${cta}</div>
   </div>`;

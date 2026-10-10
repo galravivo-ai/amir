@@ -123,14 +123,14 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `${review.reviewer || 'לקוח'}: ${review.comment || 'בלי טקסט'}`.slice(0, 140),
           url: `/admin/google/reviews/${review.id}`,
           tag: `g-${review.id}`,
-        })
+        }, review.location_id)
         .catch((err) => console.warn('[push]', err.message));
       if (review.rating > 3) return false;
       const color = safeColor(business.brand_color);
       return mailer.send({
         kind: 'google_review',
         businessId: business.id,
-        to: recipients(business),
+        to: [...new Set([...recipients(business), ...store.branchRecipients(review.location_id)])],
         subject: `ביקורת ${review.rating}★ בגוגל · ${review.location_title || business.name}`,
         html: emailLayout({
           color,
@@ -250,6 +250,15 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
               ${r.competitors.position ? row('מול המתחרים', `מקום ${r.competitors.position.rank} מתוך ${r.competitors.position.of}`) : ''}
               ${r.visibility ? row('נראות ב-AI', `הוזכרתם ב-${r.visibility.mentioned}% מהתשובות`) : ''}
             </table>
+            ${
+              r.branches?.length
+                ? `<h3 style="margin:18px 0 6px">הסניפים</h3><table style="width:100%;border-collapse:collapse;font-size:14px">
+                    <tr style="color:#6b7280"><td>סניף</td><td>דירוג</td><td>חדשות</td><td>ממתינות</td></tr>
+                    ${r.branches
+                      .map((b) => `<tr><td style="padding:5px 0;font-weight:bold">${h(b.title)}</td><td>${one(b.rating)} ★</td><td>${b.newReviews}</td><td>${b.unanswered}</td></tr>`)
+                      .join('')}</table>`
+                : ''
+            }
             ${emailButton(url(`/admin/reports/monthly?month=${range.month}`), 'לדוח המלא (אפשר לשמור כ-PDF)', color)}`,
         }),
       });

@@ -163,11 +163,16 @@ export function businessView({ business, csrf, plan, error = '' }) {
 
 // ---------------------------------------------------------------- team
 
-export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLink, error }) {
+export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLink, error, branches = [] }) {
   const roleOptions = (current) =>
     Object.entries(ROLES)
       .map(([k, v]) => `<option value="${k}" ${current === k ? 'selected' : ''}>${h(v)}</option>`)
       .join('');
+  // From the second branch, a member can be limited to one branch.
+  const network = branches.length >= 2;
+  const branchName = (id) => branches.find((b) => b.id === id)?.title || 'סניף';
+  const branchOptions = (current) =>
+    `<option value="">כל הסניפים</option>${branches.map((b) => `<option value="${b.id}" ${current === b.id ? 'selected' : ''}>${h(b.title || 'סניף')}</option>`).join('')}`;
   return `<h1>צוות</h1>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${
@@ -179,7 +184,7 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
     <section class="card">
       <h3>חברי צוות (${plan.teamMembers === Infinity ? seatsUsed : `${seatsUsed} מתוך ${limitLabel(plan.teamMembers)}`})</h3>
       <table class="table">
-        <thead><tr><th>שם</th><th>תפקיד</th><th></th></tr></thead>
+        <thead><tr><th>שם</th><th>תפקיד</th>${network ? '<th>סניף</th>' : ''}<th></th></tr></thead>
         <tbody>${members
           .map(
             (m) => `<tr>
@@ -188,6 +193,16 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
                 ${csrfField(csrf)}
                 <select name="role" onchange="this.form.submit()" aria-label="תפקיד">${roleOptions(m.role)}</select>
               </form></td>
+              ${
+                network
+                  ? `<td>${
+                      m.role === 'owner'
+                        ? '<span class="muted small">כל הסניפים</span>'
+                        : `<form method="post" action="/admin/team/members/${m.id}" class="inline">${csrfField(csrf)}<input type="hidden" name="action" value="branch">
+                            <select name="location" onchange="this.form.submit()" aria-label="סניף">${branchOptions(m.location_id)}</select></form>`
+                    }</td>`
+                  : ''
+              }
               <td><form method="post" action="/admin/team/members/${m.id}" data-name="${h(m.name)}" onsubmit="return confirm('להסיר את ' + this.dataset.name + ' מהצוות?')">
                 ${csrfField(csrf)}<input type="hidden" name="action" value="remove">
                 <button class="btn-link danger-text">הסרה</button>
@@ -200,7 +215,7 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
         invites.length
           ? `<h4>הזמנות ממתינות</h4><table class="table"><tbody>${invites
               .map(
-                (i) => `<tr><td dir="ltr">${h(i.email)}</td><td>${h(ROLES[i.role])}</td>
+                (i) => `<tr><td dir="ltr">${h(i.email)}</td><td>${h(ROLES[i.role])}${i.location_id ? ` · ${h(branchName(i.location_id))}` : ''}</td>
                   <td><form method="post" action="/admin/team/invites/${i.id}/delete">${csrfField(csrf)}<button class="btn-link">ביטול</button></form></td></tr>`,
               )
               .join('')}</tbody></table>`
@@ -213,13 +228,16 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
         ${csrfField(csrf)}
         <label>אימייל<input name="email" type="email" required dir="ltr"></label>
         <label>תפקיד<select name="role">${roleOptions('manager')}</select></label>
+        ${network ? `<label>סניף<select name="location">${branchOptions(null)}</select><span class="muted small">מנהל סניף רואה ועונה רק על הביקורות של הסניף שלו, ומקבל עליהן התראות.</span></label>` : ''}
         <button class="btn primary">שליחת הזמנה</button>
       </form>
       <dl class="dl small">
         <dt>בעלים</dt><dd>הכול, כולל הגדרות העסק, צוות ומחיקה</dd>
         <dt>מנהל</dt><dd>קמפיינים, טיפול בפניות, שליחת בקשות ו-AI</dd>
         <dt>צפייה בלבד</dt><dd>הדשבורד והתגובות, בלי לשנות דבר</dd>
+        ${network ? '<dt>מנהל סניף</dt><dd>מנהל או צפייה, מוגבל לסניף אחד: רואה את הסניף שלו בלבד</dd>' : ''}
       </dl>
+      ${network ? '' : '<p class="muted small">מהסניף השני אפשר להגביל משתמש לסניף אחד (מנהל סניף). <a href="/admin/network">על חשבון רשת</a></p>'}
     </section>
   </div>`;
 }

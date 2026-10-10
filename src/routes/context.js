@@ -91,6 +91,8 @@ export function createContext(
             : null,
           access: req.access,
           demo: Boolean(b?.is_demo),
+          branchId: req.branchId || null,
+          network: b ? store.db.prepare('SELECT COUNT(*) AS n FROM google_locations WHERE business_id = ? AND enabled = 1').get(b.id).n >= 2 : false,
           body,
           ...extra,
         }),
@@ -115,6 +117,8 @@ export function createContext(
         req.business = { ...req.business, billing: 'active', plan: 'business', trial_ends_at: null };
       }
       req.role = req.business.role;
+      // A member limited to one branch (see branchGate).
+      req.branchId = req.business.role !== 'owner' && req.business.branch_id ? req.business.branch_id : null;
       req.plan = planOf(req.business);
       req.access = accessOf(req.business);
       req.can = (min) => roleAtLeast(req.role, min);

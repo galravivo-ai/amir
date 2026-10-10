@@ -2,6 +2,7 @@ import { PUBLIC_TEXTS } from '../i18n.js';
 import { limitLabel } from '../plans.js';
 import { asset, h, logoSrc, safeColor } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
+import { branchNav } from './network.js';
 import { operatorInfo } from './site.js';
 
 const HEAD = (title) => `<meta charset="utf-8">
@@ -100,6 +101,8 @@ export function adminPage({
   isAgency = false,
   access = null,
   demo = false,
+  branchId = null,
+  network = false,
 }) {
   const b0 = brandInfo || { name: operatorInfo().brand, color: '', logo: '' };
   const brand = b0.name;
@@ -131,8 +134,11 @@ ${SKIP()}
 
   const role = business.role;
   // The menu in groups; a group can be folded, and remembers it (the active one stays open).
-  const groups = [
-    { items: [['/admin', 'דשבורד ראשי', 'home']] },
+  // A member limited to one branch gets only that branch's pages.
+  const groups = branchId
+    ? [{ items: branchNav(branchId) }]
+    : [
+    { items: [['/admin', 'דשבורד ראשי', 'home'], (network || role !== 'viewer') && ['/admin/network', 'רשת הסניפים', 'branches']] },
     {
       key: 'reputation',
       label: 'מוניטין וביקורות',
@@ -183,7 +189,8 @@ ${SKIP()}
       ],
     },
     { items: [isAgency && ['/agency', 'הלקוחות שלי', 'chart'], isSuperadmin && ['/superadmin', 'ניהול מערכת', 'shield']] },
-  ]
+  ];
+  const menu = groups
     .filter(Boolean)
     .map((g) => ({ ...g, items: g.items.filter(Boolean) }))
     .filter((g) => g.items.length);
@@ -235,7 +242,7 @@ ${SKIP()}
   </div>
   ${bizBlock}
   <nav class="side-nav" aria-label="ניווט ראשי">
-    ${groups.map((g) => navGroup(g, current)).join('')}
+    ${menu.map((g) => navGroup(g, current)).join('')}
   </nav>
   <script>(function(){var s={};try{s=JSON.parse(localStorage.getItem('gf-nav')||'{}')}catch(e){}
 document.querySelectorAll('.nav-group[data-g]').forEach(function(g){var k=g.getAttribute('data-g'),b=g.querySelector('.nav-group-title');

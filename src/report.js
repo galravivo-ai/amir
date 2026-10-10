@@ -1,4 +1,5 @@
 import { comparison } from './competitors.js';
+import { branchesOf, branchRows } from './network.js';
 import { midnight } from './period.js';
 
 // The monthly report: one calendar month (Israel time) of Google reviews,
@@ -79,6 +80,8 @@ export function buildReport(store, business, range, now = Date.now()) {
 
   const vis = store.aiVisibility(id).runs.filter((r) => Date.parse(`${r.run_at.replace(' ', 'T')}Z`) < to).at(-1) || null;
   const competitors = comparison(store, id, until);
+  // A network: one table with every branch.
+  const branches = branchesOf(store, id).length >= 2 ? branchRows(store, id, { from, to: until }, now) : [];
 
   return {
     google,
@@ -90,6 +93,7 @@ export function buildReport(store, business, range, now = Date.now()) {
     weeks,
     visibility: vis && vis.answered ? { mentioned: Math.round((vis.mentioned / vis.answered) * 100), cited: Math.round((vis.cited / vis.answered) * 100), answered: vis.answered } : null,
     competitors,
+    branches,
     empty: google.count === 0 && surveys.responses === 0 && google.total === 0,
   };
 }
@@ -105,6 +109,9 @@ export function reportFacts(business, range, r) {
     r.quotes.bad.length ? `ציטוטים שליליים: ${r.quotes.bad.map((q) => `"${String(q.text).slice(0, 200)}"`).join(' | ')}` : '',
     r.competitors.position ? `מקום בדירוג מול המתחרים: ${r.competitors.position.rank} מתוך ${r.competitors.position.of}.` : '',
     r.visibility ? `הוזכר ב-${r.visibility.mentioned}% מתשובות ה-AI שנבדקו.` : '',
+    r.branches?.length
+      ? `סניפים: ${r.branches.map((b) => `${b.title}: דירוג ${b.rating ? b.rating.toFixed(1) : '—'}, ${b.newReviews} ביקורות חדשות, ${b.unanswered} ממתינות לתשובה${b.calls != null ? `, ${b.calls} שיחות` : ''}`).join('; ')}.`
+      : '',
   ];
   return lines.filter(Boolean).join('\n');
 }

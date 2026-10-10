@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import multer from 'multer';
+import { fillTemplate, templatesFor } from '../network.js';
 import { CTA_TYPES, googlePostBody, POST_TOPICS, readPost } from '../posts.js';
 import { AiError } from '../ai.js';
 import { GoogleError } from '../google.js';
@@ -313,11 +314,19 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     res.redirect(303, '/admin/google');
   });
 
+  // The rating of one branch, for a member limited to it.
+  const branchSummary = (businessId, locationId, locations) => {
+    const l = locations.find((x) => x.id === locationId) || {};
+    const unanswered = store.googleReviews(businessId, { locationId, filter: 'unanswered', limit: 1000 }).length;
+    return l.total_reviews ? { total: l.total_reviews, avg: l.avg_rating, unanswered } : { total: 0, avg: 0, unanswered };
+  };
+
   router.get('/google/reviews', (req, res) => {
-    const locations = store.googleLocations(req.business.id).filter((l) => l.enabled);
+    const locations = store.googleLocations(req.business.id).filter((l) => l.enabled && (!req.branchId || l.id === req.branchId));
+    const wanted = req.branchId || Number(req.query.location);
     const filters = {
       filter: ['unanswered', 'negative'].includes(req.query.filter) ? req.query.filter : '',
-      location: locations.some((l) => l.id === Number(req.query.location)) ? Number(req.query.location) : '',
+      location: locations.some((l) => l.id === wanted) ? wanted : '',
     };
     if (!store.googleLocations(req.business.id).length) return res.redirect(303, '/admin/google');
     render(
@@ -328,14 +337,17 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         reviews: store.googleReviews(req.business.id, { locationId: filters.location || null, filter: filters.filter }),
         locations,
         filters,
-        summary: store.googleSummary(req.business.id),
+        summary: req.branchId ? branchSummary(req.business.id, req.branchId, locations) : store.googleSummary(req.business.id),
       }),
     );
   });
 
   function loadReview(req, res) {
     const r = store.googleReview(Number(req.params.id), req.business.id);
-    if (!r) notFound(res);
+    if (!r || (req.branchId && r.location_id !== req.branchId)) {
+      notFound(res);
+      return null;
+    }
     return r;
   }
   const reviewPage = (req, res, review, extra = {}) =>
@@ -350,6 +362,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         aiAvailable: Boolean(ctx.ai) && req.plan.ai,
         // Replies go through Google only for a connected Business Profile.
         canPublish: review.source === 'gbp' && Boolean(google && store.googleConnection(req.business.id)),
+        templates: templatesFor(store.replyTemplates(req.business.id), review.rating).map((t) => ({ title: t.title, text: fillTemplate(t.body, review) })),
         ...extra,
       }),
     );

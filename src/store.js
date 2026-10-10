@@ -338,11 +338,12 @@ export function createStore(db) {
 
     // ---------- businesses ----------
     /** Businesses the user belongs to, with their role in each. */
+    // branch_id: a member limited to one branch (a Google profile) sees only it.
     businessesFor: (userId) =>
-      q(`SELECT b.*, m.role FROM businesses b JOIN memberships m ON m.business_id = b.id
+      q(`SELECT b.*, m.role, m.location_id AS branch_id FROM businesses b JOIN memberships m ON m.business_id = b.id
          WHERE m.user_id = ? ORDER BY b.id`).all(userId),
     business: (id, userId) =>
-      q(`SELECT b.*, m.role FROM businesses b JOIN memberships m ON m.business_id = b.id
+      q(`SELECT b.*, m.role, m.location_id AS branch_id FROM businesses b JOIN memberships m ON m.business_id = b.id
          WHERE b.id = ? AND m.user_id = ?`).get(id, userId) || null,
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
     businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
@@ -440,25 +441,33 @@ export function createStore(db) {
 
     // ---------- team ----------
     membersOf: (businessId) =>
-      q(`SELECT u.id, u.email, u.name, m.role, m.created_at FROM memberships m JOIN users u ON u.id = m.user_id
+      q(`SELECT u.id, u.email, u.name, m.role, m.location_id, m.created_at FROM memberships m JOIN users u ON u.id = m.user_id
          WHERE m.business_id = ? ORDER BY m.created_at`).all(businessId),
     /** Emails of people who should get operational alerts (owners + managers). */
     alertRecipients: (businessId) =>
       q(`SELECT u.email FROM memberships m JOIN users u ON u.id = m.user_id
-         WHERE m.business_id = ? AND m.role IN ('owner', 'manager')`).all(businessId).map((r) => r.email),
+         WHERE m.business_id = ? AND m.role IN ('owner', 'manager') AND m.location_id IS NULL`).all(businessId).map((r) => r.email),
+    /** Managers of one branch, for that branch's alerts. */
+    branchRecipients: (locationId) =>
+      q(`SELECT u.email FROM memberships m JOIN users u ON u.id = m.user_id
+         WHERE m.location_id = ? AND m.role = 'manager'`).all(locationId).map((r) => r.email),
+    /** Limits a member to one branch (null: all branches). Owners always see everything. */
+    setMemberBranch: (businessId, userId, locationId) =>
+      q(`UPDATE memberships SET location_id = ? WHERE business_id = ? AND user_id = ? AND role != 'owner'`).run(locationId || null, businessId, userId),
     addMember(businessId, userId, role) {
       q('INSERT OR IGNORE INTO memberships (business_id, user_id, role) VALUES (?, ?, ?)').run(businessId, userId, role);
     },
     setMemberRole: (businessId, userId, role) =>
-      q('UPDATE memberships SET role = ? WHERE business_id = ? AND user_id = ?').run(role, businessId, userId),
+      q(`UPDATE memberships SET role = ?, location_id = CASE WHEN ? = 'owner' THEN NULL ELSE location_id END
+         WHERE business_id = ? AND user_id = ?`).run(role, role, businessId, userId),
     removeMember: (businessId, userId) =>
       q('DELETE FROM memberships WHERE business_id = ? AND user_id = ?').run(businessId, userId),
     countOwners: (businessId) =>
       q("SELECT COUNT(*) AS n FROM memberships WHERE business_id = ? AND role = 'owner'").get(businessId).n,
-    createTeamInvite(businessId, { email, role, invitedBy }) {
+    createTeamInvite(businessId, { email, role, invitedBy, locationId = null }) {
       const raw = token(24);
-      q(`INSERT INTO team_invites (business_id, email, role, token_hash, invited_by, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?)`).run(businessId, email.toLowerCase(), role, sha256(raw), invitedBy, sqlTime(7 * 864e5));
+      q(`INSERT INTO team_invites (business_id, email, role, token_hash, invited_by, expires_at, location_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`).run(businessId, email.toLowerCase(), role, sha256(raw), invitedBy, sqlTime(7 * 864e5), role === 'owner' ? null : locationId || null);
       return raw;
     },
     teamInviteByToken: (raw) =>
@@ -466,16 +475,24 @@ export function createStore(db) {
          WHERE t.token_hash = ? AND t.accepted_at IS NULL AND t.expires_at > ?`).get(sha256(raw), sqlTime()) || null,
     acceptTeamInvite(invite, userId) {
       q("UPDATE team_invites SET accepted_at = datetime('now') WHERE id = ?").run(invite.id);
-      q('INSERT OR REPLACE INTO memberships (business_id, user_id, role) VALUES (?, ?, ?)').run(
+      q('INSERT OR REPLACE INTO memberships (business_id, user_id, role, location_id) VALUES (?, ?, ?, ?)').run(
         invite.business_id,
         userId,
         invite.role,
+        invite.role === 'owner' ? null : invite.location_id ?? null,
       );
     },
     pendingTeamInvites: (businessId) =>
       q(`SELECT * FROM team_invites WHERE business_id = ? AND accepted_at IS NULL AND expires_at > ?
          ORDER BY id DESC`).all(businessId, sqlTime()),
     deleteTeamInvite: (businessId, id) => q('DELETE FROM team_invites WHERE business_id = ? AND id = ?').run(businessId, id),
+    // ---------- reply templates, shared by every branch ----------
+    replyTemplates: (businessId) => q('SELECT * FROM reply_templates WHERE business_id = ? ORDER BY id').all(businessId),
+    addReplyTemplate: (businessId, { title, body, stars = '' }) =>
+      Number(q('INSERT INTO reply_templates (business_id, title, body, stars) VALUES (?, ?, ?, ?)').run(businessId, title, body, stars).lastInsertRowid),
+    updateReplyTemplate: (businessId, id, { title, body, stars = '' }) =>
+      q('UPDATE reply_templates SET title = ?, body = ?, stars = ? WHERE id = ? AND business_id = ?').run(title, body, stars, id, businessId),
+    deleteReplyTemplate: (businessId, id) => q('DELETE FROM reply_templates WHERE id = ? AND business_id = ?').run(id, businessId),
     deleteBusiness: (id) => q('DELETE FROM businesses WHERE id = ?').run(id),
 
     // ---------- campaigns ----------
@@ -960,10 +977,10 @@ export function createStore(db) {
     },
     deletePushSubscription: (endpoint) => q('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint),
     pushSubscriptionsForUser: (userId) => q('SELECT * FROM push_subscriptions WHERE user_id = ?').all(userId),
-    /** Devices of the owners and managers of a business. */
-    pushSubscriptionsForBusiness: (businessId) =>
+    /** Devices of the owners and managers of a business; a branch's managers only for their branch. */
+    pushSubscriptionsForBusiness: (businessId, locationId = null) =>
       q(`SELECT p.* FROM push_subscriptions p JOIN memberships m ON m.user_id = p.user_id
-         WHERE m.business_id = ? AND m.role IN ('owner', 'manager')`).all(businessId),
+         WHERE m.business_id = ? AND m.role IN ('owner', 'manager') AND (m.location_id IS NULL OR m.location_id = ?)`).all(businessId, locationId ?? -1),
 
     // ---------- payments ----------
     createPayment(businessId, { kind, plan, cycle, amount, createdBy = '' }) {

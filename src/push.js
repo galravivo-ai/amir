@@ -39,7 +39,7 @@ export function createPusher(store, { webpush = webpushLib, subject } = {}) {
 
   return {
     publicKey,
-    sendToBusiness: (businessId, payload) => sendTo(store.pushSubscriptionsForBusiness(businessId), payload),
+    sendToBusiness: (businessId, payload, locationId = null) => sendTo(store.pushSubscriptionsForBusiness(businessId, locationId), payload),
     sendToUser: (userId, payload) => sendTo(store.pushSubscriptionsForUser(userId), payload),
   };
 }
