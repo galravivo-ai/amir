@@ -83,7 +83,10 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   const fresh = () => created.store.businessById(biz.id);
 
   const planPage = await req('/admin/plan');
-  assert.match(planPage.text, /תשלום ומעבר לגוגל \+ AI/);
+  assert.match(planPage.text, /בחירה בגוגל \+ AI/);
+  // Choosing a plan first shows what happens.
+  const confirm = (await req('/admin/plan/change?plan=basic&cycle=monthly')).text;
+  assert.match(confirm, /תועברו לדף התשלום המאובטח של קארדקום, לתשלום של <b>₪99<\/b> לחודש/);
   assert.match(planPage.text, /קארדקום/);
 
   // Checkout: off to Cardcom's page with the right amount and a document.
@@ -120,7 +123,17 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   back = await req(`/admin/billing/done?p=${paymentId}`);
   assert.equal(back.location, '/admin/plan?paid=1');
   assert.equal(fresh().paid_until, paidUntil);
-  assert.match((await req('/admin/plan?paid=1')).text, /החידוש הבא ב-.*4242/);
+  assert.match((await req('/admin/plan?paid=1')).text, /החידוש הבא<\/dt><dd>[\d.]+<\/dd>.*•••• 4242/s);
+
+  // The plan page: the subscription at a glance, with an upgrade and a cancel link.
+  const mine = (await req('/admin/plan')).text;
+  assert.match(mine, /המנוי פעיל/);
+  assert.match(mine, /href="\/admin\/plan\/change\?plan=pro&cycle=monthly">שדרוג לגוגל \+ AI/);
+  assert.match(mine, /href="\/admin\/plan\/cancel"/);
+  // Before upgrading: the prorated charge, said up front.
+  const upQuote = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
+  assert.match(upQuote, /השדרוג נכנס לתוקף <b>מיד<\/b>/);
+  assert.match(upQuote, /תחויבו עכשיו ב-<b>₪(6\d|70)(\.\d+)?<\/b>/);
 
   // Upgrade: charged now for the rest of the month, no new page.
   const up = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'monthly' } });
@@ -132,9 +145,14 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   assert.equal(fresh().plan, 'pro');
   assert.equal(fresh().paid_until, paidUntil, 'the billing day stays');
 
-  // Downgrade waits for the renewal.
-  const down = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'basic', cycle: 'monthly' } });
+  // Downgrade waits for the renewal, and can be undone.
+  assert.match((await req('/admin/plan/change?plan=basic&cycle=monthly')).text, /השינוי ייכנס לתוקף <b>בחידוש הבא/);
+  let down = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'basic', cycle: 'monthly' } });
   assert.equal(down.location, '/admin/plan?change=scheduled');
+  assert.match((await req('/admin/plan')).text, /תעברו ל<b>גוגל<\/b>/);
+  await req('/admin/plan/keep', { method: 'POST', form: { _csrf: token } });
+  assert.equal(fresh().next_plan, null);
+  down = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'basic', cycle: 'monthly' } });
   assert.equal(fresh().plan, 'pro');
   assert.equal(fresh().next_plan, 'basic');
 
@@ -175,10 +193,20 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   b = fresh();
   assert.deepEqual([b.billing, b.plan, b.billing_cycle, b.pay_failures], ['active', 'pro', 'annual', 0]);
 
-  // Cancelling keeps the paid year, then pauses without charging.
-  await req('/admin/billing/auto-renew', { method: 'POST', form: { _csrf: token, on: '0' } });
+  // Cancelling: what happens first, then a reason; the paid year stays, the operator hears (a yearly refund).
+  const cancelPage = (await req('/admin/plan/cancel')).text;
+  assert.match(cancelPage, /החזר יחסי/);
+  assert.equal((await req('/admin/plan/cancel', { method: 'POST', form: { _csrf: token, reason: 'price', details: 'יקר לי' } })).location, '/admin/plan?canceled=1');
   assert.equal(fresh().auto_renew, 0);
-  assert.match((await req('/admin/plan')).text, /בלי חידוש אוטומטי/);
+  assert.equal(fresh().cancel_reason, 'המחיר גבוה מדי · יקר לי');
+  assert.ok(fresh().canceled_at);
+  assert.match((await req('/admin/plan?canceled=1')).text, /המנוי בוטל/);
+  assert.equal(created.store.db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE kind = 'subscription_cancelled'").get().n, 1);
+  // Resuming before the end undoes it.
+  await req('/admin/billing/auto-renew', { method: 'POST', form: { _csrf: token, on: '1' } });
+  assert.equal(fresh().auto_renew, 1);
+  assert.equal(fresh().cancel_reason, null);
+  await req('/admin/plan/cancel', { method: 'POST', form: { _csrf: token } });
   const before = charges.length;
   created.store.updateBusiness(biz.id, { paid_until: '2026-01-01 00:00:00' });
   await created.jobs.renewals();

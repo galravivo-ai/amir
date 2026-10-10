@@ -380,8 +380,8 @@ test('no branch limit: campaigns are unlimited, the price is per Google profile'
   assert.equal(second.status, 303);
   assert.equal(store.campaignsFor(bizOf('free@example.com').id).length, 2);
   const plan = (await owner.req('/admin/plan')).text;
-  assert.match(plan, /<b>1<\/b> פרופיל גוגל בחשבון/);
-  assert.match(plan, /<b>₪99<\/b> לחודש, כולל מע״מ/);
+  assert.match(plan, /פרופילים בגוגל<\/dt><dd>1</);
+  assert.match(plan, /<b>₪99<\/b> <small>כולל מע״מ/);
 });
 
 test('publish consent and testimonials widget', async () => {

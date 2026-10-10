@@ -636,7 +636,12 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN api_on INTEGER NOT NULL DEFAULT 0;
   UPDATE businesses SET api_on = 1 WHERE id IN (SELECT business_id FROM api_keys WHERE revoked_at IS NULL);
   `,
-  // v32: where a sign-up or a lead came from (UTM parameters or an ad click), as JSON
+  // v32: why and when a subscription was cancelled
+  `
+  ALTER TABLE businesses ADD COLUMN cancel_reason TEXT;
+  ALTER TABLE businesses ADD COLUMN canceled_at TEXT;
+  `,
+  // v33: where a sign-up or a lead came from (UTM parameters or an ad click), as JSON
   `
   ALTER TABLE businesses ADD COLUMN source TEXT;
   ALTER TABLE leads ADD COLUMN source TEXT;

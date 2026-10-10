@@ -254,6 +254,37 @@ export function settingsRoutes(ctx) {
     }
   });
 
+  // Before choosing: what the change does and costs, then a confirm button.
+  router.get('/plan/change', owner, (req, res) => {
+    const plan = Object.hasOwn(PLANS, req.query.plan) && !PLANS[req.query.plan].hidden ? req.query.plan : null;
+    const cycle = Object.hasOwn(CYCLES, req.query.cycle) ? req.query.cycle : req.business.billing_cycle || 'monthly';
+    if (!plan) return res.redirect(303, '/admin/plan');
+    const quote = ctx.billing ? ctx.billing.quote(req.business, plan, cycle) : { kind: 'request', amount: null, profiles: profilesOf(store, req.business.id) };
+    render(req, res, 'שינוי מסלול', V.planChangeView({ business: req.business, current: req.plan, access: req.access, plan, cycle, quote, csrf: req.user.csrf }));
+  });
+
+  // Cancelling: what happens, an optional reason, then a confirm button.
+  router.get('/plan/cancel', owner, (req, res) => {
+    render(req, res, 'ביטול המנוי', V.cancelView({ business: req.business, plan: req.plan, access: req.access, csrf: req.user.csrf }));
+  });
+
+  router.post('/plan/cancel', owner, async (req, res) => {
+    const reason = [V.CANCEL_REASONS[req.body.reason], String(req.body.details ?? '').trim()].filter(Boolean).join(' · ').slice(0, 500);
+    const b = req.business;
+    if (ctx.billing) ctx.billing.cancel(b, reason);
+    else store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    await ctx.notifier
+      ?.subscriptionCancelled({ business: b, user: req.user, reason, until: b.paid_until ? b.paid_until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, admins: ctx.adminEmails() })
+      .catch((err) => console.error('[notify] cancellation failed:', err.message));
+    res.redirect(303, '/admin/plan?canceled=1');
+  });
+
+  // Undo a change scheduled for the renewal.
+  router.post('/plan/keep', owner, (req, res) => {
+    store.updateBusiness(req.business.id, { next_plan: null, next_cycle: null });
+    res.redirect(303, '/admin/plan?change=kept');
+  });
+
   router.post('/billing/auto-renew', owner, (req, res) => {
     if (ctx.billing) ctx.billing.setAutoRenew(req.business, req.body.on === '1');
     res.redirect(303, '/admin/plan?renew=' + (req.body.on === '1' ? 'on' : 'off'));
@@ -278,7 +309,8 @@ export function settingsRoutes(ctx) {
         notice: req.query.paid
           ? 'התשלום עבר. המסלול פעיל, והחשבונית נשלחה למייל.'
           : { upgraded: 'המסלול שודרג.', scheduled: 'השינוי ייכנס לתוקף בחידוש הבא.', kept: 'המסלול נשאר כמו שהוא.' }[req.query.change] ||
-            { on: 'החידוש האוטומטי פעיל.', off: 'החידוש האוטומטי בוטל. המסלול פעיל עד סוף התקופה ששולמה.' }[req.query.renew] ||
+            { on: 'המנוי חודש: הוא יתחדש אוטומטית כרגיל.', off: 'החידוש האוטומטי בוטל. המסלול פעיל עד סוף התקופה ששולמה.' }[req.query.renew] ||
+            (req.query.canceled ? 'המנוי בוטל. הוא נשאר פעיל עד סוף התקופה ששולמה, ולא תחויבו יותר. אפשר לחדש בכל רגע.' : '') ||
             '',
         error: String(req.query.err ?? '').slice(0, 300),
         profiles: profilesOf(store, req.business.id),
