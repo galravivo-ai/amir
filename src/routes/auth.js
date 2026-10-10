@@ -8,6 +8,7 @@ import * as V from '../views/auth.js';
 import { rateLimiter } from './public.js';
 import { BIZ_COOKIE, SESSION_COOKIE } from './context.js';
 import { ensureDemo } from '../demo.js';
+import { flagConversion, sourceOf } from '../tracking.js';
 
 const CHALLENGE_COOKIE = 'l2';
 
@@ -129,7 +130,9 @@ export function authRoutes(ctx) {
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
-    store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
+    const businessId = store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
+    store.updateBusiness(businessId, { source: sourceOf(req) });
+    if (!admin) flagConversion(res, 'signup', 0, { secure: ctx.cookieOpts.secure });
     ctx.startSession(res, userId);
     res.redirect(303, admin ? '/superadmin' : '/admin');
   });

@@ -3,6 +3,7 @@ import { monthKey } from '../usage.js';
 import { lastBackupAge } from '../backup.js';
 import { statusView } from '../views/status.js';
 import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
+import { pixelsOn, sourceLabel } from '../tracking.js';
 import * as V from '../views/settings.js';
 
 /** System-wide administration: businesses, plans, users and the email outbox. */
@@ -18,6 +19,7 @@ export function superadminRoutes(ctx) {
       'ניהול מערכת',
       V.superadminView({
         leads: store.recentLeads(),
+        sources: { days: [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30, pixels: pixelsOn() },
         businesses: store.allBusinesses(),
         users: store.allUsers(),
         outbox: store.recentOutbox(50),
@@ -28,6 +30,7 @@ export function superadminRoutes(ctx) {
         aiEnabled: Boolean(ctx.ai),
         aiTest: req.query.ai === 'ok' ? { ok: true, text: String(req.query.t ?? '').slice(0, 80) } : req.query.ai === 'err' ? { ok: false, error: String(req.query.t ?? '').slice(0, 300) } : null,
         meId: req.user.id,
+        sourceRows: store.sourceReport([7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30, sourceLabel),
       }),
     );
   });

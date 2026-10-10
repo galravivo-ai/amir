@@ -240,10 +240,36 @@ export function createStore(db) {
 
     // ---------- leads (quote requests) ----------
     createLead(f) {
-      const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-        f.kind, f.name, f.phone, f.email, f.company, f.size, f.message,
+      const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+        f.kind, f.name, f.phone, f.email, f.company, f.size, f.message, f.source || null,
       );
       return Number(r.lastInsertRowid);
+    },
+    /**
+     * Leads, sign-ups, paying businesses and money paid in the last `days`,
+     * per source (`label` turns a stored source into "source / campaign").
+     */
+    sourceReport(days, label) {
+      const since = `-${Math.max(1, Math.min(365, Number(days) || 30))} days`;
+      const rows = new Map();
+      const row = (src) => {
+        const key = label(src);
+        if (!rows.has(key)) rows.set(key, { source: key, leads: 0, signups: 0, paying: 0, paid: 0 });
+        return rows.get(key);
+      };
+      for (const l of q('SELECT source FROM leads WHERE created_at >= datetime(\'now\', ?)').all(since)) row(l.source).leads++;
+      const businesses = q(
+        `SELECT b.source, b.billing, (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.business_id = b.id AND p.status = 'paid') AS paid
+         FROM businesses b WHERE b.created_at >= datetime('now', ?) AND b.is_demo = 0
+           AND b.user_id NOT IN (SELECT id FROM users WHERE is_superadmin = 1)`,
+      ).all(since);
+      for (const b of businesses) {
+        const r = row(b.source);
+        r.signups++;
+        if (b.billing === 'active') r.paying++;
+        r.paid += Number(b.paid) || 0;
+      }
+      return [...rows.values()].sort((a, b) => b.paid - a.paid || b.signups - a.signups || b.leads - a.leads);
     },
     recentLeads: (limit = 50) => q('SELECT * FROM leads ORDER BY handled_at IS NOT NULL, id DESC LIMIT ?').all(limit),
     markLeadHandled: (id, handled) =>
@@ -363,7 +389,7 @@ export function createStore(db) {
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
-        'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
+        'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on', 'source',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at',
       ];

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { errorPage, isEmail } from '../util.js';
 import { accessibilityView, cookiesView, landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
+import { sourceOf } from '../tracking.js';
 
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
 
@@ -24,6 +25,7 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
       company: clean('company', 100),
       size: clean('size', 40),
       message: String(req.body.message ?? '').trim().slice(0, 1000),
+      source: sourceOf(req),
     };
     // Bots fill the hidden field; pretend it worked.
     if (req.body.website) return res.redirect(303, '/?sent=1#contact');
