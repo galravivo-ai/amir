@@ -1,4 +1,4 @@
-import { PLANS, TRIAL_DAYS } from '../plans.js';
+import { PLANS } from '../plans.js';
 import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
@@ -93,7 +93,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
   </nav>
   <div class="site-cta">
     <a href="/login">כניסה לחשבון</a>
-    ${signupOpen ? '<a class="btn primary" href="/register">ניסיון חינם</a>' : ''}
+    ${signupOpen ? '<a class="btn primary" href="/register">פתיחת חשבון</a>' : ''}
   </div>
 </header>
 <div id="main">
@@ -199,15 +199,15 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       'כן. גוגל אוסרת להסתיר את האפשרות לכתוב ביקורת מלקוחות לא מרוצים ("Review gating"). אצלנו כל לקוח יכול לכתוב ביקורת בגוגל. ההבדל הוא שללקוח לא מרוצה אנחנו מציעים קודם ערוץ ישיר אליכם, כדי שתוכלו לתקן.',
     ],
     [
-      `מה קורה אחרי ${TRIAL_DAYS} ימי הניסיון?`,
-      'בוחרים מסלול וממשיכים בלי הפסקה. אם לא בוחרים, הסקרים ללקוחות מושהים, אבל כל הנתונים וההגדרות נשמרים ואפשר לחזור בכל רגע. אף אחד לא מחייב אתכם בלי שביקשתם.',
+      'אפשר לראות את המערכת לפני שמשלמים?',
+      'כן. בחשבון הדמו יש עסק לדוגמה עם כל המסכים והנתונים, פתוח לכולם בלי הרשמה. כשמחליטים להתחיל, בוחרים מסלול, ותוך דקות רואים את הנתונים של העסק שלכם. בלי התחייבות: מבטלים בכל רגע.',
     ],
     [
       'יש לי כמה סניפים. כמה זה עולה?',
       'המחיר הוא לכל פרופיל בגוגל, כולל מע״מ. עסק עם שלושה סניפים משלם שלוש פעמים את מחיר המסלול, ומקבל את כל הפיצ\'רים בכל סניף: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים באמצע החודש מחויב רק מהחידוש הבא.',
     ],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
-  const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל ${TRIAL_DAYS} ימים חינם</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
+  const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל עכשיו</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
   const engines = ['Google', 'Google Maps', 'ChatGPT', 'Gemini', 'Perplexity', 'Claude', 'AI Overview'];
 
   // The bento: each tile shows the feature itself, not just a sentence about it.
@@ -417,13 +417,13 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 ${networkSection()}
 
 <section class="lp-band alt" id="pricing">
-  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מתחילים ב-${TRIAL_DAYS} ימי ניסיון עם כל הפיצ'רים. בלי כרטיס אשראי ובלי התחייבות.</p></div>
+  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>משלמים לפי מספר הפרופילים בגוגל. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
   ${pricingCards({
     idPrefix: 'lp',
     compact: true,
     action: () =>
       signupOpen
-        ? `<a class="btn primary plan-cta" href="/register">${TRIAL_DAYS} ימים חינם</a>`
+        ? `<a class="btn primary plan-cta" href="/register">להתחיל עכשיו</a>`
         : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
   })}
   <details class="lp-agency" id="contact"${contactSent || contactError ? ' open' : ''}>
@@ -440,7 +440,7 @@ ${networkSection()}
       <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? כתבו לנו.</p>
       <div class="lp-faq-card">
         <b>עדיין מתלבטים?</b>
-        <span>הכי פשוט להסתכל בעצמכם על עסק לדוגמה, או לנסות ${TRIAL_DAYS} ימים בחינם.</span>
+        <span>הכי פשוט להסתכל בעצמכם על עסק לדוגמה, עם כל המסכים והנתונים.</span>
         <div class="lp-faq-actions">
           <a class="btn primary" href="/demo">לדמו החי</a>
           ${operatorInfo().email ? `<a class="btn" href="mailto:${h(operatorInfo().email)}">${icon('chat', 16)} כתבו לנו</a>` : ''}
@@ -458,7 +458,7 @@ ${networkSection()}
 <section class="lp-final">
   <div class="lp-hero-glow" aria-hidden="true"></div>
   <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
-  <p>מחברים את גוגל מיי ביזנס תוך דקה. ${TRIAL_DAYS} ימים עם כל הפיצ'רים, בלי כרטיס אשראי.</p>
+  <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
   <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="/demo">לצפייה בדמו</a></div>
 </section>`,
   });
@@ -565,7 +565,7 @@ export function privacyView({ signupOpen }) {
         `<ul>
           <li>משובים וביקורות נשמרים כל עוד העסק משתמש בשירות, או עד שהעסק מוחק אותם.</li>
           <li>כשחשבון נסגר, המידע שלו נמחק בתוך 30 יום, למעט גיבויים שנמחקים במחזור הרגיל שלהם (עד 30 יום נוספים), ומידע שחובה לשמור לפי דין, כמו מסמכי חיוב.</li>
-          <li>חשבון בתקופת ניסיון שלא הופעל ולא היה בו שימוש במשך 12 חודשים עשוי להימחק, אחרי הודעה במייל.</li>
+          <li>חשבון שלא הופעל (לא נבחר בו מסלול) ולא היה בו שימוש במשך 12 חודשים עשוי להימחק, אחרי הודעה במייל.</li>
         </ul>`,
       ],
       [
@@ -627,10 +627,10 @@ export function termsView({ signupOpen }) {
         </ul>`,
       ],
       [
-        'מסלולים, ניסיון ותשלום',
+        'מסלולים ותשלום',
         `<ul>
           <li>המחירים מפורטים ב<a href="/#pricing">עמוד המחירים</a>, בשקלים וכוללים מע״מ. המחיר הוא לכל פרופיל עסק בגוגל שהחשבון עוקב אחריו; פרופיל שנוסף באמצע תקופה מחויב מהחידוש הבא. המסלולים נבדלים בבדיקת הנראות ב-ChatGPT, Gemini, Perplexity ו-Claude, הכלולה במסלול "גוגל + AI".</li>
-          <li>חשבון חדש מקבל ${TRIAL_DAYS} ימי ניסיון בלי תשלום ובלי פרטי אשראי. בסוף הניסיון, אם לא נבחר מסלול, הסקרים וההתראות מושהים והנתונים נשמרים.</li>
+          <li>השירות מתחיל אחרי בחירת מסלול ותשלום. אפשר להתרשם מהמערכת לפני כן בחשבון הדמו.</li>
           <li>התשלום בכרטיס אשראי, בדף התשלום המאובטח של חברת הסליקה קארדקום. אנחנו לא שומרים את פרטי הכרטיס: נשמר אצלנו רק אסימון (טוקן) שמאפשר לחייב את המנוי, ו-4 הספרות האחרונות.</li>
           <li>מסלול חודשי מתחדש כל חודש, ומסלול שנתי כל שנה, עד שמבטלים, והכרטיס מחויב אוטומטית ביום החידוש. בתשלום שנתי משלמים על 10 חודשים ומקבלים 12. חשבונית נשלחת במייל אחרי כל חיוב.</li>
           <li>שדרוג למסלול יקר יותר נכנס לתוקף מיד, ומחויב רק ההפרש היחסי עד יום החידוש. מעבר למסלול זול יותר או לתדירות תשלום אחרת נכנס לתוקף בחידוש הבא.</li>

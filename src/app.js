@@ -143,7 +143,7 @@ export function createApp(db, options = {}) {
   app.use(pushRoutes(ctx, pusher));
   // Work done for a page of the business's admin is counted against that business.
   const businessScope = (req, _res, next) => (req.business ? withBusiness(req.business.id, next) : next());
-  app.use('/admin', ctx.requireAuth, businessScope, branchGate, networkRoutes(ctx), adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), healthRoutes(ctx, { health }), performanceRoutes(ctx, { sync: googleSync }), rankingRoutes(ctx, { rankings }));
+  app.use('/admin', ctx.requireAuth, ctx.requirePaid, businessScope, branchGate, networkRoutes(ctx), adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), healthRoutes(ctx, { health }), performanceRoutes(ctx, { sync: googleSync }), rankingRoutes(ctx, { rankings }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 

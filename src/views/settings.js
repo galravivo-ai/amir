@@ -378,6 +378,10 @@ export function planView({
   if (access?.state === 'trial') {
     status = `<div class="plan-status trial"><b>תקופת ניסיון במסלול ${h(plan.label)}</b>
       <span>${access.daysLeft === 1 ? 'היום האחרון' : `נשארו ${access.daysLeft} ימים`}, עד ${h(formatDate(access.endsAt).split(',')[0])}. אחרי זה הסקרים יושהו עד שתבחרו מסלול.</span></div>`;
+  } else if (access?.reason === 'new') {
+    status = `<div class="plan-status welcome"><b>ברוכים הבאים ל-GoFive! בוחרים מסלול ומתחילים</b>
+      <span>מיד אחרי התשלום מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד. בלי התחייבות, מבטלים בכל רגע.
+      רוצים להסתכל קודם? <a href="/demo">לחשבון הדמו</a></span></div>`;
   } else if (access?.state === 'paused') {
     status = `<div class="plan-status paused"><b>${access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה'}</b>
       <span>הסקרים ללקוחות לא פעילים. כל הנתונים שמורים, ואחרי בחירת מסלול הכול חוזר לעבוד כמו קודם.</span></div>`;
@@ -437,14 +441,14 @@ export function planView({
   ${pending}
   <section class="card stack">
     ${status}
-    <div class="plan-profiles">
+    ${access?.reason === 'new' ? '' : `<div class="plan-profiles">
       <span><b>${profiles}</b> ${profiles === 1 ? 'פרופיל גוגל' : 'פרופילי גוגל'} בחשבון</span>
       ${plan.price != null ? `<span>החיוב: ${profiles > 1 ? `${profiles} × ₪${plan.price} = ` : ''}<b>₪${(plan.price * profiles).toLocaleString('he-IL')}</b> לחודש, כולל מע״מ</span>` : ''}
       <span class="muted small">כל פרופיל גוגל שמחוברים אליו נספר בנפרד. קמפיינים, משתמשים ודירוגים: ללא הגבלה.</span>
-    </div>
+    </div>`}
   </section>
   ${
-    actionUsage
+    actionUsage && access?.reason !== 'new'
       ? `<section class="card stack"><h3>שימוש החודש</h3>
           <p class="muted small">פעולות שמפעילים בלחיצה. מה שרץ לבד (בדיקות שבועיות, סנכרון ביקורות) לא נספר כאן. מתאפס ב-1 לכל חודש.</p>
           ${Object.entries(ACTION_LABELS).map(([k, label]) => meter(label, actionUsage[k].used, actionUsage[k].limit)).join('')}
@@ -559,7 +563,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
-    if (a.state === 'paused') return `<span class="badge st-new">${a.reason === 'trial' ? 'הניסיון נגמר' : 'מושהה'}</span>`;
+    if (a.state === 'paused') return `<span class="badge st-new">${a.reason === 'trial' ? 'הניסיון נגמר' : a.reason === 'new' ? 'ממתין לתשלום' : 'מושהה'}</span>`;
     return `<span class="badge st-resolved">פעיל · ${h(CYCLES[b.billing_cycle] || '')}</span>`;
   };
   const planSelect = (b) => {

@@ -3,7 +3,7 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { CYCLES, limitLabel, PLANS, profilesOf, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
+import { CYCLES, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -75,7 +75,7 @@ export function settingsRoutes(ctx) {
   router.post('/businesses', (req, res) => {
     const name = String(req.body.name ?? '').trim().slice(0, 100);
     if (!name) return res.redirect(303, '/admin/business');
-    const id = store.createBusiness(req.user.id, { name: name, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+    const id = store.createBusiness(req.user.id, newBusiness(name));
     res.cookie(BIZ_COOKIE, String(id), { ...ctx.cookieOpts, maxAge: 365 * 864e5 });
     res.redirect(303, '/admin/campaigns/new');
   });

@@ -1,5 +1,5 @@
 import express from 'express';
-import { TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
+import { newBusiness } from '../plans.js';
 import QRCode from 'qrcode';
 import { generateBackupCodes, generateSecret, otpauthUri, verifyCode } from '../totp.js';
 import { operatorInfo } from '../views/site.js';
@@ -129,7 +129,7 @@ export function authRoutes(ctx) {
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
-    store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : { name: v.business, plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+    store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
     ctx.startSession(res, userId);
     res.redirect(303, admin ? '/superadmin' : '/admin');
   });

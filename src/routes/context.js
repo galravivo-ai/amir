@@ -1,5 +1,5 @@
 import { isDemoUser } from '../demo.js';
-import { accessOf, planOf, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
+import { accessOf, newBusiness, planOf } from '../plans.js';
 import { roleAtLeast } from '../store.js';
 import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
 import { operatorInfo } from '../views/site.js';
@@ -50,7 +50,7 @@ export function createContext(
       }
       // The demo is for looking around: nothing in it can be changed.
       if (req.method === 'POST' && isDemoUser(req.user) && req.path !== '/logout') {
-        return res.status(403).send(errorPage('זה חשבון דמו לצפייה בלבד. כדי לשמור שינויים, פותחים חשבון ניסיון חינם ב-/register'));
+        return res.status(403).send(errorPage('זה חשבון דמו לצפייה בלבד. כדי לשמור שינויים, פותחים חשבון ב-/register'));
       }
       next();
     },
@@ -86,7 +86,7 @@ export function createContext(
             ? {
                 used: store.monthlyResponseCount(b.id),
                 limit: req.plan.monthlyResponses,
-                planLabel: req.access?.state === 'trial' ? `${req.plan.label} · ניסיון` : req.access?.state === 'paused' ? `${req.plan.label} · מושהה` : req.plan.label,
+                planLabel: req.access?.state === 'trial' ? `${req.plan.label} · ניסיון` : req.access?.reason === 'new' ? 'ממתין לבחירת מסלול' : req.access?.state === 'paused' ? `${req.plan.label} · מושהה` : req.plan.label,
               }
             : null,
           access: req.access,
@@ -107,12 +107,12 @@ export function createContext(
       req.business = req.businesses.find((b) => b.id === wanted) || req.businesses[0];
       if (!req.business) {
         // A user whose last business was removed gets a fresh one.
-        const id = store.createBusiness(req.user.id, { name: 'העסק שלי', plan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+        const id = store.createBusiness(req.user.id, newBusiness('העסק שלי'));
         req.business = store.business(id, req.user.id);
         req.businesses = [req.business];
       }
       // A system admin's own businesses are never on a trial (fixes accounts made before this rule).
-      if (req.business.billing === 'trial' && req.business.user_id === req.user.id && ctx.isSuperadmin(req.user)) {
+      if (['trial', 'unpaid'].includes(req.business.billing) && req.business.user_id === req.user.id && ctx.isSuperadmin(req.user)) {
         store.updateBusiness(req.business.id, { billing: 'active', plan: 'business', trial_ends_at: null });
         req.business = { ...req.business, billing: 'active', plan: 'business', trial_ends_at: null };
       }
@@ -124,6 +124,17 @@ export function createContext(
       req.can = (min) => roleAtLeast(req.role, min);
       res.locals.can = req.can;
       next();
+    },
+
+    /**
+     * A new account that hasn't paid yet: only the plan page and checkout
+     * (and switching to another business). Everything starts after the first payment.
+     */
+    requirePaid(req, res, next) {
+      if (req.access?.reason !== 'new') return next();
+      if (/^\/(plan|billing)(\/|$)/.test(req.path) || req.path === '/switch') return next();
+      if (req.method === 'GET') return res.redirect(303, '/admin/plan');
+      res.status(402).send(errorPage('כדי להתחיל, בוחרים מסלול בעמוד "התוכנית שלי"'));
     },
 
     requireRole(min) {

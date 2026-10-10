@@ -1,4 +1,4 @@
-import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS, TRIAL_DAYS } from '../plans.js';
+import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
@@ -58,7 +58,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
     <div class="plans">${cards}</div>
     <a class="pricing-network" href="${compact ? '/#network' : '/admin/network'}"><span class="pn-ic">◆</span><span><b>כמה סניפים? חשבון רשת בלי תוספת</b><small>מהפרופיל השני: השוואה בין הסניפים, מנהל לכל סניף, תבניות תשובה משותפות, דוח חודשי מאוחד וחשבונית אחת.</small></span></a>
     ${compact ? `<div class="pricing-all"><b>כלול בכל המסלולים</b><div>${INCLUDED.map((f) => `<span>✓ ${h(f)}</span>`).join('')}</div></div>` : ''}
-    <p class="pricing-note">המחיר הוא לכל פרופיל בגוגל: עסק עם שני סניפים משלם פעמיים · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
+    <p class="pricing-note">המחיר הוא לכל פרופיל בגוגל: עסק עם שני סניפים משלם פעמיים · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · בלי התחייבות, מבטלים בכל רגע · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }
 

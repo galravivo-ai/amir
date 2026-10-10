@@ -2104,3 +2104,5 @@ a.net-tool:hover { border-color: #cfc6ff; background: #fff; }
 .net-calc-plans input:checked + span { color: var(--night); }
 label.g-tpl { flex-direction: row; align-items: center; justify-content: flex-start; margin: 0; }
 label.g-tpl select { width: auto; margin: 0; }
+.plan-status.welcome { background: linear-gradient(135deg, #f2efff, #fff); border: 1px solid #ddd5ff; }
+.plan-status.welcome a { font-weight: 700; }

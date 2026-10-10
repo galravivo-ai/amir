@@ -347,12 +347,12 @@ export function createStore(db) {
          WHERE b.id = ? AND m.user_id = ?`).get(id, userId) || null,
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
     businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
-    /** `trialDays` starts a free trial; without it the business is active right away. */
-    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'basic', trialDays = 0 }) {
+    /** `trialDays` starts a free trial; billing 'unpaid' waits for the first payment; otherwise active right away. */
+    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'basic', trialDays = 0, billing = 'active' }) {
       const r = q(
         `INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key, billing, trial_ends_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(userId, name, logo_url, brand_color, plan, token(12), trialDays ? 'trial' : 'active', trialDays ? sqlTime(trialDays * 864e5) : null);
+      ).run(userId, name, logo_url, brand_color, plan, token(12), trialDays ? 'trial' : billing, trialDays ? sqlTime(trialDays * 864e5) : null);
       const id = Number(r.lastInsertRowid);
       q("INSERT INTO memberships (business_id, user_id, role) VALUES (?, ?, 'owner')").run(id, userId);
       return id;

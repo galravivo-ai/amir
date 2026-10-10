@@ -12,7 +12,7 @@
     "start": "node --no-warnings=ExperimentalWarning src/server.js",
     "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js",
     "seed": "node --no-warnings=ExperimentalWarning src/seed.js",
-    "test": "node --no-warnings=ExperimentalWarning --test test/*.test.js",
+    "test": "SIGNUP_TRIAL_DAYS=7 node --no-warnings=ExperimentalWarning --test test/*.test.js",
     "backup": "node --no-warnings=ExperimentalWarning src/backup.js"
   },
   "dependencies": {

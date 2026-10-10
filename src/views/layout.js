@@ -80,7 +80,7 @@ function accessBanner(access, current) {
     const left = access.daysLeft === 1 ? 'יום אחרון' : `עוד ${access.daysLeft} ימים`;
     return `<a class="trial-bar" href="/admin/plan">${icon('clock', 18)}<span><b>תקופת ניסיון: ${left}.</b> כל הפיצ'רים פתוחים.</span><span class="trial-cta">בחירת מסלול ←</span></a>`;
   }
-  const why = access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : 'החשבון מושהה';
+  const why = access.reason === 'trial' ? 'תקופת הניסיון הסתיימה' : access.reason === 'new' ? 'החשבון עוד לא הופעל' : 'החשבון מושהה';
   return `<a class="trial-bar paused" href="/admin/plan">${icon('alert', 18)}<span><b>${why}.</b> הסקרים ללקוחות לא פעילים עד שתבחרו מסלול. כל הנתונים שמורים.</span><span class="trial-cta">בחירת מסלול ←</span></a>`;
 }
 

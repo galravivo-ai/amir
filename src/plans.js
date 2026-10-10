@@ -83,9 +83,20 @@ export const hasAiPlus = (business) => Boolean(planOf(business).aiPlus || busine
 /** Plans shown on the price list. */
 export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));
 
-/** New businesses try this plan for TRIAL_DAYS, then pick a plan or pause. */
+/**
+ * A trial runs on this plan for TRIAL_DAYS. New accounts don't get one: they
+ * pick a plan and pay before starting (the demo is there to look around).
+ * A system admin can still give a business a trial, and SIGNUP_TRIAL_DAYS
+ * turns one on for every new account.
+ */
 export const TRIAL_PLAN = 'pro';
 export const TRIAL_DAYS = 7;
+export const signupTrialDays = () => Math.max(0, Math.min(60, Number(process.env.SIGNUP_TRIAL_DAYS) || 0));
+/** How a new account starts: on a trial when there is one, otherwise waiting for its first payment. */
+export const newBusiness = (name) => {
+  const days = signupTrialDays();
+  return days ? { name, plan: TRIAL_PLAN, trialDays: days } : { name, plan: TRIAL_PLAN, billing: 'unpaid' };
+};
 /** Yearly billing: pay for this many months, get twelve. */
 export const ANNUAL_MONTHS = 10;
 
@@ -105,6 +116,7 @@ export const ils = (n) => `₪${Number(n).toLocaleString('he-IL')}`;
 export function accessOf(business, now = Date.now()) {
   if (!business || business.billing === 'active' || !business.billing) return { state: 'active' };
   if (business.billing === 'paused') return { state: 'paused', reason: 'stopped' };
+  if (business.billing === 'unpaid') return { state: 'paused', reason: 'new' };
   const ends = business.trial_ends_at ? Date.parse(`${business.trial_ends_at.replace(' ', 'T')}Z`) : 0;
   const msLeft = ends - now;
   if (msLeft <= 0) return { state: 'paused', reason: 'trial' };
