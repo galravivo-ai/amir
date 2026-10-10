@@ -363,7 +363,7 @@ export function createStore(db) {
         'name', 'logo_url', 'brand_color', 'webhook_url', 'alert_emails', 'alert_negative',
         'weekly_report', 'sla_hours', 'widget_auto_publish', 'plan', 'last_weekly_report_at', 'followup_auto',
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
-        'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request',
+        'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops',
       ];

@@ -1,5 +1,5 @@
 import express from 'express';
-import { accessOf, planOf } from '../plans.js';
+import { accessOf, hasApi, planOf } from '../plans.js';
 import { isEmail, sqlTime, waNumber } from '../util.js';
 import { sendWhatsAppInvite } from '../whatsapp.js';
 import { rateLimiter } from './public.js';
@@ -21,7 +21,7 @@ export function apiRoutes(store, { notifier, whatsapp = null, baseUrl = (req) =>
     const raw = header.startsWith('Bearer ') ? header.slice(7).trim() : String(req.get('x-api-key') ?? '');
     const found = raw ? store.businessByApiKey(raw) : null;
     if (!found) return fail(res, 401, 'unauthorized', 'Missing or invalid API key');
-    if (!planOf(found.business).api) return fail(res, 403, 'plan', 'The API is not included in this plan');
+    if (!hasApi(found.business)) return fail(res, 403, 'plan', 'Integrations are not enabled for this account');
     if (accessOf(found.business).state === 'paused') return fail(res, 402, 'paused', 'The account is paused until a plan is chosen');
     req.business = found.business;
     next();

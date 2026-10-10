@@ -11,7 +11,6 @@ const ALL_FEATURES = {
   ai: true,
   widget: true,
   emailInvites: true,
-  api: true,
 };
 
 export const PLANS = {
@@ -20,6 +19,7 @@ export const PLANS = {
     price: 99,
     tagline: 'כל מה שצריך לנהל את גוגל מיי ביזנס',
     ...ALL_FEATURES,
+    api: false,
     aiPlus: false,
     waMonthly: 100,
     competitors: 5,
@@ -31,6 +31,7 @@ export const PLANS = {
     price: 169,
     tagline: 'גוגל מיי ביזנס, וגם ההמלצות של עוזרי ה-AI',
     ...ALL_FEATURES,
+    api: false,
     aiPlus: true,
     waMonthly: 300,
     competitors: 10,
@@ -44,6 +45,7 @@ export const PLANS = {
     hidden: true,
     tagline: 'המסלול הקודם לרשתות',
     ...ALL_FEATURES,
+    api: true,
     aiPlus: true,
     waMonthly: 1000,
     competitors: 10,
@@ -57,6 +59,7 @@ export const PLANS = {
     hidden: true,
     tagline: 'רשתות גדולות וסוכנויות, בהצעת מחיר',
     ...ALL_FEATURES,
+    api: true,
     aiPlus: true,
     waMonthly: 3000,
     competitors: 20,
@@ -79,6 +82,17 @@ export const AI_PLUS = {
   features: ['בדיקה שבועית ב-ChatGPT, Gemini, Perplexity ו-Claude, בנוסף לגוגל', 'תוכנית פעולה ו"על מי ממליצים במקומכם" אחרי כל בדיקה', 'עד 10 שאלות במקום 5'],
 };
 export const hasAiPlus = (business) => Boolean(planOf(business).aiPlus || business?.ai_plus);
+
+/**
+ * Integrations (the public API: a POS, booking system or store sends us the
+ * customer after a visit). Off the price list for now: a paid add-on a system
+ * admin turns on per business. The hidden chain plans include it.
+ */
+export const INTEGRATIONS = {
+  label: 'חיבורים לקופה ולמערכות',
+  tagline: 'שליחה אוטומטית של בקשת דירוג מהקופה, ממערכת התורים או מהחנות',
+};
+export const hasApi = (business) => Boolean(planOf(business).api || business?.api_on);
 
 /** Plans shown on the price list. */
 export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));
@@ -127,7 +141,6 @@ export const FEATURE_LABELS = {
   emailInvites: 'בקשות ותזכורות ללקוחות במייל',
   ai: 'עוזר AI: תשובות ללקוחות, סיכומים ותיוג',
   widget: 'ווידג\'ט המלצות לאתר',
-  api: 'שליחה אוטומטית מהקופה ומהמערכות שלכם (API)',
 };
 
 export function limitLabel(n) {

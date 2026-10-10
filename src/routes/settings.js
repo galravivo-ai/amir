@@ -3,7 +3,7 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { CYCLES, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
+import { CYCLES, hasApi, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -188,14 +188,14 @@ export function settingsRoutes(ctx) {
         newKey: req.query.key ? String(req.query.key).slice(0, 80) : '',
         csrf: req.user.csrf,
         baseUrl: ctx.baseUrl(req),
-        available: req.plan.api,
+        available: hasApi(req.business),
         campaign: campaigns.find((c) => c.active) || campaigns[0] || null,
       }),
     );
   });
 
   router.post('/integrations/keys', owner, (req, res) => {
-    if (!req.plan.api) return res.status(403).send(errorPage('החיבורים אינם כלולים במסלול הנוכחי'));
+    if (!hasApi(req.business)) return res.status(403).send(errorPage('החיבורים לא פעילים בחשבון הזה'));
     const name = String(req.body.name ?? '').trim().slice(0, 60) || 'מפתח';
     const raw = store.createApiKey(req.business.id, { name, createdBy: req.user.id });
     // Shown exactly once, right after creation.

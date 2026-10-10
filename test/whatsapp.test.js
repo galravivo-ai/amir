@@ -116,6 +116,7 @@ test('rating requests go out by WhatsApp: from the dashboard, a campaign and the
   assert.equal((await req('/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=nope&hub.challenge=42')).status, 403);
 
   // From the API (a POS): two hours later, by the job.
+  created.store.updateBusiness(biz.id, { api_on: true });
   const raw = created.store.createApiKey(biz.id, { name: 'קופה', createdBy: null });
   const api = await fetch(`${base}/api/v1/invites`, {
     method: 'POST',
