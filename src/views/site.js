@@ -264,7 +264,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 </section>
 
 <section class="lp-band lp-video-band" id="video">
-  <div class="lp-head"><span class="lp-kicker">GoFive ב-30 שניות</span><h2>ככה עסקים נמצאים בגוגל וב-AI</h2></div>
+  <div class="lp-head"><span class="lp-kicker">GoFive ב-36 שניות</span><h2>ככה עסקים נמצאים בגוגל וב-AI</h2></div>
   <div class="lp-video">
     <video controls playsinline preload="none" poster="/static/media/gofive-intro.jpg" aria-label="סרטון הכרות עם GoFive">
       <source src="/static/media/gofive-intro.mp4" type="video/mp4">
