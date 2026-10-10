@@ -369,7 +369,7 @@ test('team invites and roles', async () => {
   assert.match(demote.location, /err=/);
 });
 
-test('plan limits: basic plan has one branch', async () => {
+test('no branch limit: campaigns are unlimited, the price is per Google profile', async () => {
   const owner = await registeredOwner('free@example.com');
   store.updateBusiness(bizOf('free@example.com').id, { plan: 'basic', billing: 'active' });
   await createCampaign(owner);
@@ -377,9 +377,11 @@ test('plan limits: basic plan has one branch', async () => {
     method: 'POST',
     form: { _csrf: await csrfOf(owner), name: 'Second', threshold: '4', lang: 'he' },
   });
-  assert.equal(second.status, 422);
-  assert.equal(store.campaignsFor(bizOf('free@example.com').id).length, 1);
-  assert.match(second.text, /במסלול בסיסי אפשר עד 1 סניף/);
+  assert.equal(second.status, 303);
+  assert.equal(store.campaignsFor(bizOf('free@example.com').id).length, 2);
+  const plan = (await owner.req('/admin/plan')).text;
+  assert.match(plan, /<b>1<\/b> פרופיל גוגל בחשבון/);
+  assert.match(plan, /<b>₪99<\/b> לחודש, כולל מע״מ/);
 });
 
 test('publish consent and testimonials widget', async () => {
@@ -1030,23 +1032,23 @@ test('trial, plan request and activation', async () => {
   assert.match((await owner.req('/admin')).text, /תקופת הניסיון הסתיימה/);
 
   // The owner asks for a plan; admins are told.
-  const req = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'business', cycle: 'annual' } });
+  const req = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'pro', cycle: 'annual' } });
   assert.equal(req.location, '/admin/plan?requested=1');
   const page = await owner.req(req.location);
-  assert.match(page.text, /ביקשת את מסלול <b>עסקי<\/b> \(שנתי\)/);
-  assert.match(page.text, /₪3,990/);
-  assert.match(page.text, /₪159/);
+  assert.match(page.text, /ביקשת את מסלול <b>גוגל \+ AI<\/b> \(שנתי\)/);
+  assert.match(page.text, /₪1,690/);
+  assert.match(page.text, /₪169/);
 
   // A system admin sees the request and activates it.
   const root = await registeredOwner('billing-admin@example.com');
   store.setSuperadmin(store.userByEmail('billing-admin@example.com').id, true);
-  assert.match((await root.req('/superadmin')).text, /ביקש: עסקי שנתי/);
+  assert.match((await root.req('/superadmin')).text, /ביקש: גוגל \+ AI שנתי/);
   await root.req(`/superadmin/businesses/${biz().id}/plan`, {
     method: 'POST',
-    form: { _csrf: await csrfOf(root), plan: 'business', cycle: 'annual', do: 'activate' },
+    form: { _csrf: await csrfOf(root), plan: 'pro', cycle: 'annual', do: 'activate' },
   });
   assert.equal(biz().billing, 'active');
-  assert.equal(biz().plan, 'business');
+  assert.equal(biz().plan, 'pro');
   assert.equal(biz().plan_request, null);
   assert.equal((await client().req(`/r/${campaign.slug}`)).status, 200);
   assert.doesNotMatch((await client().req(`/r/${campaign.slug}`)).text, /לא פעיל כרגע/);

@@ -88,13 +88,15 @@ test('follow a search: a grid of ranks, the average, and who leads', async () =>
   assert.match(page, /קפה לנדוור <span class="muted small">\(9 מתוך 9\)/);
   assert.match(page, /<b>20\+<\/b><small>צפון<\/small>/);
 
-  // The plan's limit (basic: 1 search).
+  // The plan's limit (basic: 2 searches).
   created.store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
-  const over = await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'ארוחת בוקר', location: String(loc.id), radius: '1000' } });
-  assert.match(over.text, /עד 1 חיפושים/);
+  assert.equal((await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'ארוחת בוקר', location: String(loc.id), radius: '1000' } })).location, '/admin/rankings?added=1');
+  for (let i = 0; i < 50 && created.store.rankKeywords(biz.id).some((x) => !created.store.rankChecks(x.id, 1).length); i++) await new Promise((r) => setTimeout(r, 20));
+  const over = await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'בראנץ׳', location: String(loc.id), radius: '1000' } });
+  assert.match(over.text, /עד 2 חיפושים/);
 
   assert.equal(await created.jobs.mapRankings(), 0, 'weekly, not again right away');
-  await req(`/admin/rankings/${k.id}/delete`, { method: 'POST', form: { _csrf: token } });
+  for (const x of created.store.rankKeywords(biz.id)) await req(`/admin/rankings/${x.id}/delete`, { method: 'POST', form: { _csrf: token } });
   assert.equal(created.store.rankKeywords(biz.id).length, 0);
 });
 

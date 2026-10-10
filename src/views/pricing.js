@@ -5,17 +5,17 @@ const FEATURED = 'pro';
 // Automatic WhatsApp sending is listed only once the platform's number is set up.
 const waOn = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 
-const branchesLabel = (p) =>
-  p.campaigns === Infinity ? 'סניפים ללא הגבלה' : p.campaigns === 1 ? 'סניף אחד' : `עד ${p.campaigns} סניפים`;
 
-// Every plan includes these; the branches and the AI engines change.
+// Every plan includes these; what changes is AI visibility beyond Google.
 const INCLUDED = [
-  'משתמשים ודירוגים ללא הגבלה',
-  'QR, סקר והפניה לביקורת בגוגל',
-  'טיפול בלקוחות לא מרוצים והתראות לטלפון',
-  'ציון בריאות לפרופיל הגוגל ומשימות שבועיות',
-  'השוואה למתחרים ודוח חודשי',
-  'דירוג עובדים ודוח שבועי',
+  'דשבורד גוגל מיי ביזנס: ביקורות, צפיות, שיחות והגעה',
+  'התראה על כל ביקורת, ותשובות AI בלחיצה',
+  'ציון בריאות לפרופיל ומשימות שבועיות',
+  'מיקום בגוגל מפות והשוואה למתחרים',
+  'נראות בתשובות ה-AI של גוגל',
+  'QR, סקרים ובקשות דירוג בוואטסאפ',
+  'התראה כשמשהו יורד, ודוח חודשי',
+  'משתמשים, קמפיינים ודירוגים ללא הגבלה',
   ...Object.values(FEATURE_LABELS),
 ];
 
@@ -37,11 +37,12 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
           <span class="when-annual"><span class="price">${ils(yearly)}</span><span class="muted"> לשנה</span>
             <small class="save">חיסכון של ${ils(p.price * 12 - yearly)}</small></span>
         </div>
-        <div class="plan-branches">${h(branchesLabel(p))}</div>
+        <div class="plan-branches">לכל פרופיל בגוגל</div>
         <ul>
           ${compact ? '<li>✓ כל מה שכלול בכל המסלולים</li>' : INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
           ${waOn() ? `<li>✓ עד ${p.waMonthly.toLocaleString('he-IL')} בקשות דירוג בוואטסאפ בחודש, נשלחות אוטומטית</li>` : ''}
-          <li class="${p.aiPlus ? 'plan-plus' : ''}">✓ ${p.aiPlus ? 'נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity' : 'נראות ב-AI בגוגל וב-Claude'}</li>
+          <li>✓ מיקום במפות: ${p.rankKeywords} חיפושים · ${p.competitors} מתחרים</li>
+          ${p.aiPlus ? '<li class="plan-plus">✓ נראות ב-ChatGPT, Gemini, Perplexity ו-Claude</li><li class="plan-plus">✓ תוכנית פעולה ו"על מי ממליצים במקומכם"</li>' : '<li class="plan-no">— בלי ChatGPT, Gemini, Perplexity ו-Claude</li>'}
         </ul>
         ${action(key, p)}
       </div>`;
@@ -56,7 +57,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
     </div>
     <div class="plans">${cards}</div>
     ${compact ? `<div class="pricing-all"><b>כלול בכל המסלולים</b><div>${INCLUDED.map((f) => `<span>✓ ${h(f)}</span>`).join('')}</div></div>` : ''}
-    <p class="pricing-note">ההבדל בין המסלולים: מספר הסניפים, ומהמסלול המקצועי גם בדיקת נראות ב-ChatGPT, Gemini ו-Perplexity · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
+    <p class="pricing-note">המחיר הוא לכל פרופיל בגוגל: עסק עם שני סניפים משלם פעמיים · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · ${TRIAL_DAYS} ימי ניסיון חינם, בלי כרטיס אשראי · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }
 
@@ -65,7 +66,7 @@ export function customOffer(cta) {
   return `<div class="custom-offer">
     <div class="custom-items">
       <div><b>סוכנות, משווק או יועץ?</b><span>מנהלים את כל העסקים של הלקוחות ממסך אחד, עם המיתוג שלכם במקום שלנו.</span></div>
-      <div><b>רשת עם יותר מ-10 סניפים?</b><span>כל הסניפים בחשבון אחד, עם השוואה ודירוג בין הסניפים.</span></div>
+      <div><b>רשת גדולה?</b><span>כל הסניפים בחשבון אחד, עם השוואה ודירוג בין הסניפים.</span></div>
     </div>
     <div class="custom-cta"><span>מחיר בהצעה אישית</span>${cta}</div>
   </div>`;

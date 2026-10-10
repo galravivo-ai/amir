@@ -229,7 +229,7 @@ export function teamView({ members, invites, csrf, me, plan, seatsUsed, inviteLi
 export function widgetView({ business, baseUrl, csrf, available, published, pending, canEdit }) {
   if (!available) {
     return `<h1>ווידג'ט ביקורות לאתר</h1>
-      <div class="card empty"><p>הצגת המלצות של לקוחות באתר העסק זמינה בתוכנית מקצועי ומעלה.</p>
+      <div class="card empty"><p>הצגת המלצות של לקוחות באתר העסק אינה כלולה במסלול הנוכחי.</p>
       <a class="btn" href="/admin/plan">פרטים על התוכניות</a></div>`;
   }
   const snippet = `<div id="reviews-widget"></div>\n<script src="${baseUrl}/widget/${business.widget_key}.js" async></script>`;
@@ -276,7 +276,7 @@ export function widgetView({ business, baseUrl, csrf, available, published, pend
 export function integrationsView({ keys, newKey, csrf, baseUrl, available, campaign }) {
   if (!available) {
     return `<h1>חיבורים</h1>
-      <div class="card empty"><p>שליחה אוטומטית מהקופה, ממערכת התורים או מהחנות זמינה בתוכנית מקצועי ומעלה.</p>
+      <div class="card empty"><p>שליחה אוטומטית מהקופה, ממערכת התורים או מהחנות אינה כלולה במסלול הנוכחי.</p>
       <a class="btn" href="/admin/plan">פרטים על התוכניות</a></div>`;
   }
   const slug = campaign?.slug || 'my-campaign';
@@ -345,7 +345,7 @@ const PAYMENT_KINDS = { checkout: 'תשלום', renewal: 'חידוש', upgrade: 
 
 export function planView({
   business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false,
-  cardBilling = false, payments = [], notice = '', error = '', actionUsage = null,
+  cardBilling = false, payments = [], notice = '', error = '', actionUsage = null, profiles = 1,
 }) {
   const meter = (label, used, max) => {
     if (max === Infinity) {
@@ -419,9 +419,11 @@ export function planView({
   ${pending}
   <section class="card stack">
     ${status}
-    ${meter('סניפים (קמפיינים)', usage.campaigns, plan.campaigns)}
-    ${meter('משתמשים בצוות', usage.members, plan.teamMembers)}
-    ${meter('דירוגים החודש', usage.responses, plan.monthlyResponses)}
+    <div class="plan-profiles">
+      <span><b>${profiles}</b> ${profiles === 1 ? 'פרופיל גוגל' : 'פרופילי גוגל'} בחשבון</span>
+      ${plan.price != null ? `<span>החיוב: ${profiles > 1 ? `${profiles} × ₪${plan.price} = ` : ''}<b>₪${(plan.price * profiles).toLocaleString('he-IL')}</b> לחודש, כולל מע״מ</span>` : ''}
+      <span class="muted small">כל פרופיל גוגל שמחוברים אליו נספר בנפרד. קמפיינים, משתמשים ודירוגים: ללא הגבלה.</span>
+    </div>
   </section>
   ${
     actionUsage
@@ -490,7 +492,7 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
   if (!aiConfigured) {
     form = `<p class="muted">עוזר ה-AI עוד לא הופעל במערכת. מנהל המערכת יכול להפעיל אותו, ואז יופיע כאן כפתור לסיכום המשובים.</p>`;
   } else if (!planAllows) {
-    form = `<p class="muted">תובנות AI זמינות בתוכנית מקצועי ומעלה. <a href="/admin/plan">פרטים</a></p>`;
+    form = `<p class="muted">תובנות AI אינן כלולות במסלול הנוכחי. <a href="/admin/plan">פרטים</a></p>`;
   } else if (canGenerate) {
     form = `<form method="post" action="/admin/insights" class="row">
       ${csrfField(csrf)}

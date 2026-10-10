@@ -182,7 +182,7 @@ export function adminRoutes(ctx) {
         can: req.can,
         aiAvailable: Boolean(ctx.ai) && req.plan.ai,
         aiReason: !req.plan.ai
-          ? 'ניסוח תשובה עם AI זמין בתוכנית מקצועי ומעלה.'
+          ? 'ניסוח תשובה עם AI אינו כלול במסלול הנוכחי.'
           : 'עוזר ה-AI עוד לא הופעל בשרת. מנהל המערכת צריך להגדיר מפתח AI.',
         widgetAvailable: req.plan.widget,
         aiError: req.query.aierr ? String(req.query.aierr).slice(0, 200) : '',
@@ -298,7 +298,7 @@ export function adminRoutes(ctx) {
 
   const campaignLimitReached = (req) => store.campaignsFor(req.business.id).length >= req.plan.campaigns;
   const limitMessage = (req) =>
-    `במסלול ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} ${req.plan.campaigns === 1 ? 'סניף (קמפיין)' : 'סניפים (קמפיינים)'}. למסלול עם יותר סניפים: "התוכנית שלי" בתפריט.`;
+    `במסלול ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} ${req.plan.campaigns === 1 ? 'סניף (קמפיין)' : 'סניפים (קמפיינים)'}. לפרטים: "התוכנית שלי" בתפריט.`;
 
   admin.get('/campaigns', (req, res) => {
     render(

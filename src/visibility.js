@@ -10,8 +10,8 @@ export const ENGINES = {
   perplexity: 'Perplexity',
 };
 
-/** Engines that come only with the "AI visibility plus" add-on. */
-export const PLUS_ENGINES = ['chatgpt', 'gemini', 'perplexity'];
+/** Engines that come only with "Google + AI": everything beyond Google's own answers. */
+export const PLUS_ENGINES = ['claude', 'chatgpt', 'gemini', 'perplexity'];
 
 /** Questions per business: the plans include 5, the add-on raises it. */
 export const MAX_QUERIES = 5;

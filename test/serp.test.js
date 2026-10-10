@@ -128,15 +128,17 @@ test('follow a place by link or by name, get alerts, answer on Google', async ()
   // The first load is history: no alerts.
   assert.equal(store.db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE kind = 'google_review'").get().n, 0);
 
-  // The trial plan allows 3 branches; a 4th is refused.
+  // No branch limit: each followed profile is billed at the plan's price.
   for (const [d, p] of [['0x1:0x2', 'ChIJzzzzzzzzzz'], ['0x3:0x4', 'ChIJyyyyyyyyyy']]) {
     assert.equal((await req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: d, place_id: p, title: 'x', address: '' } })).location, '/admin/google?added=1');
   }
-  const over = await req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: '0x5:0x6', place_id: 'ChIJxxxxxxxxxx', title: 'x' } });
-  assert.match(over.text, /עד 3 סניפים/);
-  // Removing a place frees the slot.
-  const extra = store.googleLocations(biz.id).find((l) => l.data_id === '0x3:0x4');
-  await req(`/admin/google/locations/${extra.id}/delete`, { method: 'POST', form: { _csrf: token } });
+  const fourth = await req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: '0x5:0x6', place_id: 'ChIJxxxxxxxxxx', title: 'x' } });
+  assert.equal(fourth.location, '/admin/google?added=1');
+  assert.match((await req('/admin/plan')).text, /<b>4<\/b> פרופילי גוגל בחשבון/);
+  for (const d of ['0x3:0x4', '0x5:0x6']) {
+    const extra = store.googleLocations(biz.id).find((l) => l.data_id === d);
+    await req(`/admin/google/locations/${extra.id}/delete`, { method: 'POST', form: { _csrf: token } });
+  }
   assert.equal(store.serpLocationCount(biz.id), 2);
 
   // A new 2-star review: stored, alerted by email; the background job skips places checked recently.

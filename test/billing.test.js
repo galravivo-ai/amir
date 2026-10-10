@@ -83,7 +83,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   const fresh = () => created.store.businessById(biz.id);
 
   const planPage = await req('/admin/plan');
-  assert.match(planPage.text, /תשלום ומעבר למקצועי/);
+  assert.match(planPage.text, /תשלום ומעבר לגוגל \+ AI/);
   assert.match(planPage.text, /קארדקום/);
 
   // Checkout: off to Cardcom's page with the right amount and a document.
@@ -128,7 +128,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   assert.equal(charges.length, 1);
   assert.equal(charges[0].Token, 'tok-1');
   assert.equal(charges[0].CardExpirationMMYY, '0729');
-  assert.ok(charges[0].Amount > 50 && charges[0].Amount <= 60, `prorated ${charges[0].Amount}`);
+  assert.ok(charges[0].Amount > 58 && charges[0].Amount <= 70, `prorated ${charges[0].Amount}`);
   assert.equal(fresh().plan, 'pro');
   assert.equal(fresh().paid_until, paidUntil, 'the billing day stays');
 
@@ -169,7 +169,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   declineCharges = false;
   const again = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'annual' } });
   const lp = again.location.split('/').at(-1);
-  assert.equal(pages.get(lp).body.Amount, 1590);
+  assert.equal(pages.get(lp).body.Amount, 1690);
   pages.get(lp).paid = true;
   await req(`/admin/billing/done?p=${pages.get(lp).body.ReturnValue}`);
   b = fresh();
@@ -189,4 +189,12 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
 test('periods keep the day of the month', () => {
   assert.equal(new Date(addPeriod(Date.UTC(2026, 0, 15), 'monthly')).toISOString().slice(0, 10), '2026-02-15');
   assert.equal(new Date(addPeriod(Date.UTC(2026, 0, 15), 'annual')).toISOString().slice(0, 10), '2027-01-15');
+});
+
+test('the price is per Google profile', async () => {
+  const { amountFor } = await import('../src/billing.js');
+  assert.equal(amountFor('basic', 'monthly'), 99);
+  assert.equal(amountFor('pro', 'monthly', 3), 507);
+  assert.equal(amountFor('pro', 'annual', 2), 3380);
+  assert.equal(amountFor('enterprise', 'monthly', 4), null);
 });

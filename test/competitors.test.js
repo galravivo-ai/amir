@@ -115,12 +115,12 @@ test('compare with competitors: rank, new reviews and trends', async () => {
   assert.match(page.text, /▲ 0\.1/);
   assert.ok(created.store.snapshotOnOrBefore('location', loc.id, '9999-12-31'), 'own place snapshot recorded');
 
-  // The plan's limit (basic: 3).
+  // The plan's limit (basic: 5).
   created.store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
-  created.store.addCompetitor(biz.id, { dataId: '0x2:0x1', title: 'שלישי' });
-  const over = await req('/admin/competitors/add', { method: 'POST', form: { _csrf: token, data_id: '0x2:0x2', title: 'רביעי' } });
-  assert.match(over.text, /עד 3 מתחרים/);
+  for (const n of [1, 3, 4]) created.store.addCompetitor(biz.id, { dataId: `0x2:0x${n}`, title: `עוד ${n}` });
+  const over = await req('/admin/competitors/add', { method: 'POST', form: { _csrf: token, data_id: '0x2:0x2', title: 'שישי' } });
+  assert.match(over.text, /עד 5 מתחרים/);
 
   await req(`/admin/competitors/${aroma.id}/delete`, { method: 'POST', form: { _csrf: token } });
-  assert.equal(created.store.competitorsFor(biz.id).length, 2);
+  assert.equal(created.store.competitorsFor(biz.id).length, 4);
 });

@@ -1986,3 +1986,5 @@ body.site .site-head { background: rgba(255, 255, 255, .9); border-bottom-color:
   .lp-step-art { display: none; }
   .pricing-all span { font-size: .8rem; padding: 4px 10px; }
 }
+.plan-profiles { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--bg); border-radius: 12px; }
+.plan .plan-no { color: var(--muted); }

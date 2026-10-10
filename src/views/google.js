@@ -67,6 +67,7 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
   return `<section class="card stack">
     <h2>מעקב אחרי הביקורות בגוגל</h2>
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
+    ${places.length ? '<p class="muted small">המחיר הוא לכל פרופיל גוגל שעוקבים אחריו. אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף מחויב במחיר המסלול מהחידוש הבא.</p>' : ''}
     ${
       can('manager') && !full
         ? `<form method="post" action="/admin/google/places/find" class="row compact g-find">

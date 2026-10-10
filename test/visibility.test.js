@@ -223,7 +223,7 @@ test('ChatGPT, Gemini and Perplexity read their answers and sources', async () =
   assert.match(calls.at(-1).url, /gemini-9-flash/);
 });
 
-test('wider AI visibility: in "pro" and up, a gift on "basic", more engines and questions', async () => {
+test('AI assistants beyond Google: in "Google + AI", a gift on "Google", more engines and questions', async () => {
   const asked = [];
   const app = createApp(openDb(':memory:'), {
     authLimit: { windowMs: 60e3, max: 1000 },
@@ -268,12 +268,12 @@ test('wider AI visibility: in "pro" and up, a gift on "basic", more engines and 
     assert.deepEqual(app.visibility.engines(fresh()), []);
 
     const pricing = (await req('/admin/plan')).text;
-    assert.match(pricing, /נראות ב-AI בגוגל וב-Claude/);
-    assert.match(pricing, /נראות ב-AI גם ב-ChatGPT, Gemini ו-Perplexity/);
+    assert.match(pricing, /— בלי ChatGPT, Gemini, Perplexity ו-Claude/);
+    assert.match(pricing, /✓ נראות ב-ChatGPT, Gemini, Perplexity ו-Claude/);
 
     // A system admin can give it to one basic business.
     app.store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('plus@example.com');
-    assert.match((await req('/superadmin')).text, /נראות ב-AI מורחבת במתנה/);
+    assert.match((await req('/superadmin')).text, /נראות בעוזרי AI במתנה/);
     assert.equal((await req(`/superadmin/businesses/${biz.id}/ai-plus`, { method: 'POST', form: { _csrf: token, on: '1' } })).status, 303);
     assert.equal(fresh().ai_plus, 1);
 

@@ -70,8 +70,9 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
       }
     }
     store.updateBusiness(business.id, { ai_checked_at: runAt });
-    if (answered.length && ai?.visibilityPlan) onProgress?.(done, total, 'plan');
-    if (answered.length && ai?.visibilityPlan) await planFor(business, runAt, answered, mentioned).catch((err) => console.warn('[visibility] plan failed:', err.message));
+    const withPlan = answered.length && ai?.visibilityPlan && hasAiPlus(business);
+    if (withPlan) onProgress?.(done, total, 'plan');
+    if (withPlan) await planFor(business, runAt, answered, mentioned).catch((err) => console.warn('[visibility] plan failed:', err.message));
     return { runAt, mentioned };
   }
 

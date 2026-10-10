@@ -217,7 +217,7 @@ function progressCard(r) {
 
 function plusCard({ offer, can }) {
   return `<section class="card vis-plus">
-    <span class="badge st-in_progress">במסלול מקצועי ומעלה</span><h3>${h(offer.label)}</h3>
+    <span class="badge st-in_progress">במסלול גוגל + AI</span><h3>${h(offer.label)}</h3>
     <p class="muted">${h(offer.tagline)}</p>
     <ul class="vis-plus-list">${offer.features.map((f) => `<li>✓ ${h(f)}</li>`).join('')}</ul>
     ${can('owner') ? '<a class="btn accent" href="/admin/plan">לשדרוג המסלול</a>' : '<p class="muted small">בעלי העסק יכולים לשדרג את המסלול.</p>'}

@@ -2,7 +2,7 @@ import express from 'express';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { CYCLES, limitLabel, PLANS, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
+import { CYCLES, limitLabel, PLANS, profilesOf, TRIAL_DAYS, TRIAL_PLAN } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -189,7 +189,7 @@ export function settingsRoutes(ctx) {
   });
 
   router.post('/integrations/keys', owner, (req, res) => {
-    if (!req.plan.api) return res.status(403).send(errorPage('החיבורים זמינים בתוכנית מקצועי ומעלה'));
+    if (!req.plan.api) return res.status(403).send(errorPage('החיבורים אינם כלולים במסלול הנוכחי'));
     const name = String(req.body.name ?? '').trim().slice(0, 60) || 'מפתח';
     const raw = store.createApiKey(req.business.id, { name, createdBy: req.user.id });
     // Shown exactly once, right after creation.
@@ -271,6 +271,7 @@ export function settingsRoutes(ctx) {
             { on: 'החידוש האוטומטי פעיל.', off: 'החידוש האוטומטי בוטל. המסלול פעיל עד סוף התקופה ששולמה.' }[req.query.renew] ||
             '',
         error: String(req.query.err ?? '').slice(0, 300),
+        profiles: profilesOf(store, req.business.id),
         usage: {
           campaigns: store.campaignsFor(req.business.id).length,
           members: store.membersOf(req.business.id).length,

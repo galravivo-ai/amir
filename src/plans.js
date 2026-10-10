@@ -1,11 +1,13 @@
-// Subscription plans and their limits. Online payment is not wired up yet: a
-// business asks for a plan from /admin/plan and a system admin activates it
-// from /superadmin. `Infinity` = unlimited. Prices are monthly, in ILS,
-// including VAT. Plans differ in the number of branches (campaigns), and from
-// "pro" up AI visibility also covers ChatGPT, Gemini and Perplexity (aiPlus).
+// Subscription plans and their limits. `Infinity` = unlimited. Prices are
+// monthly, in ILS, including VAT, and per Google profile: a business with
+// three profiles pays three times its plan. Two plans on the price list:
+// "Google" (everything about the Google Business Profile, AI visibility in
+// Google's own answers) and "Google + AI" (also Claude, ChatGPT, Gemini and
+// Perplexity, with an action plan after each check).
 const ALL_FEATURES = {
   teamMembers: Infinity,
   monthlyResponses: Infinity,
+  campaigns: Infinity,
   ai: true,
   widget: true,
   emailInvites: true,
@@ -14,34 +16,33 @@ const ALL_FEATURES = {
 
 export const PLANS = {
   basic: {
-    label: 'בסיסי',
+    label: 'גוגל',
     price: 99,
-    tagline: 'לעסק עם נקודה אחת',
-    campaigns: 1,
+    tagline: 'כל מה שצריך לנהל את גוגל מיי ביזנס',
     ...ALL_FEATURES,
     aiPlus: false,
     waMonthly: 100,
-    competitors: 3,
-    rankKeywords: 1,
+    competitors: 5,
+    rankKeywords: 2,
     limits: { ai_draft: 50, insights: 4, health_run: 2, visibility_run: 2, rank_run: 2 },
   },
   pro: {
-    label: 'מקצועי',
-    price: 159,
-    tagline: 'לעסק שגדל',
-    campaigns: 3,
+    label: 'גוגל + AI',
+    price: 169,
+    tagline: 'גוגל מיי ביזנס, וגם ההמלצות של עוזרי ה-AI',
     ...ALL_FEATURES,
     aiPlus: true,
     waMonthly: 300,
-    competitors: 5,
-    rankKeywords: 3,
+    competitors: 10,
+    rankKeywords: 4,
     limits: { ai_draft: 200, insights: 10, health_run: 5, visibility_run: 4, rank_run: 4 },
   },
+  // Off the price list since the per-profile prices; kept for businesses already on it.
   business: {
     label: 'עסקי',
     price: 399,
-    tagline: 'לרשתות וזכיינים',
-    campaigns: 10,
+    hidden: true,
+    tagline: 'המסלול הקודם לרשתות',
     ...ALL_FEATURES,
     aiPlus: true,
     waMonthly: 1000,
@@ -49,14 +50,12 @@ export const PLANS = {
     rankKeywords: 6,
     limits: { ai_draft: 500, insights: 30, health_run: 10, visibility_run: 10, rank_run: 10 },
   },
-  // Not on the price list: chains above 10 branches get a personal quote and
-  // a system admin assigns this plan.
+  // Large chains and agencies get a personal quote; a system admin assigns this plan.
   enterprise: {
     label: 'רשת',
     price: null,
     hidden: true,
-    tagline: 'יותר מ-10 סניפים, בהצעת מחיר',
-    campaigns: Infinity,
+    tagline: 'רשתות גדולות וסוכנויות, בהצעת מחיר',
     ...ALL_FEATURES,
     aiPlus: true,
     waMonthly: 3000,
@@ -66,14 +65,18 @@ export const PLANS = {
   },
 };
 
+/** How many Google profiles a business pays for: its followed places, at least one. */
+export const profilesOf = (store, businessId) =>
+  Math.max(1, store.db.prepare('SELECT COUNT(*) AS n FROM google_locations WHERE business_id = ? AND enabled = 1').get(businessId).n);
+
 /**
- * Wider AI visibility: ChatGPT, Gemini and Perplexity too, with more questions.
- * Included from "pro" up; a system admin may also turn it on for one business.
+ * AI visibility beyond Google's answers: Claude, ChatGPT, Gemini and Perplexity,
+ * more questions and the action plan. In "Google + AI"; a system admin may also turn it on for one business.
  */
 export const AI_PLUS = {
-  label: 'נראות ב-AI מורחבת',
-  tagline: 'בודקים אם ממליצים עליכם גם ב-ChatGPT, ב-Gemini וב-Perplexity',
-  features: ['בדיקה שבועית ב-ChatGPT, Gemini ו-Perplexity, בנוסף לגוגל ול-Claude', 'עד 10 שאלות במקום 5', 'השוואה בין כל המנועים לאורך זמן'],
+  label: 'נראות בעוזרי AI',
+  tagline: 'בודקים אם ממליצים עליכם גם ב-ChatGPT, Gemini, Perplexity ו-Claude',
+  features: ['בדיקה שבועית ב-ChatGPT, Gemini, Perplexity ו-Claude, בנוסף לגוגל', 'תוכנית פעולה ו"על מי ממליצים במקומכם" אחרי כל בדיקה', 'עד 10 שאלות במקום 5'],
 };
 export const hasAiPlus = (business) => Boolean(planOf(business).aiPlus || business?.ai_plus);
 

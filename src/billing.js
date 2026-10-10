@@ -1,4 +1,4 @@
-import { annualPrice, PLANS } from './plans.js';
+import { annualPrice, PLANS, profilesOf } from './plans.js';
 
 // Subscriptions paid by card through Cardcom: the first payment on Cardcom's
 // page saves a token, and the token pays every renewal. Upgrades are charged
@@ -10,7 +10,11 @@ const MAX_FAILURES = 3;
 const toSql = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
 const fromSql = (s) => (s ? Date.parse(`${String(s).replace(' ', 'T')}Z`) : 0);
 
-export const amountFor = (plan, cycle) => (cycle === 'annual' ? annualPrice(PLANS[plan]) : PLANS[plan].price);
+/** The price of a plan for a period, for `profiles` Google profiles (each one pays the plan). */
+export const amountFor = (plan, cycle, profiles = 1) => {
+  const one = cycle === 'annual' ? annualPrice(PLANS[plan]) : PLANS[plan].price;
+  return one == null ? null : one * Math.max(1, profiles);
+};
 
 /** One month or one year after `ms`, on the same day of the month. */
 export function addPeriod(ms, cycle) {
@@ -19,7 +23,7 @@ export function addPeriod(ms, cycle) {
   return d.getTime();
 }
 
-const describe = (plan, cycle) => `GoFive · מסלול ${PLANS[plan].label} · ${cycle === 'annual' ? 'שנתי' : 'חודשי'}`;
+const describe = (plan, cycle, profiles = 1) => `GoFive · מסלול ${PLANS[plan].label} · ${cycle === 'annual' ? 'שנתי' : 'חודשי'}${profiles > 1 ? ` · ${profiles} פרופילים` : ''}`;
 
 export function createBilling({ store, cardcom, notifier = null, now = () => Date.now() }) {
   const customer = (business) => ({ name: business.name, email: business.owner_email || '' });
@@ -29,11 +33,12 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
 
   /** Opens Cardcom's payment page; returns its address. */
   async function startCheckout({ business, email, plan, cycle, baseUrl }) {
-    const amount = amountFor(plan, cycle);
+    const profiles = profilesOf(store, business.id);
+    const amount = amountFor(plan, cycle, profiles);
     const id = store.createPayment(business.id, { kind: 'checkout', plan, cycle, amount, createdBy: email });
     const page = await cardcom.createPage({
       amount,
-      description: describe(plan, cycle),
+      description: describe(plan, cycle, profiles),
       returnValue: String(id),
       successUrl: `${baseUrl}/admin/billing/done?p=${id}`,
       failedUrl: `${baseUrl}/admin/billing/done?p=${id}&failed=1`,
@@ -90,8 +95,9 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
       store.updateBusiness(business.id, { next_plan: null, next_cycle: null, auto_renew: true });
       return { status: 'kept' };
     }
-    const oldAmount = amountFor(business.plan, business.billing_cycle);
-    const newAmount = amountFor(plan, cycle);
+    const profiles = profilesOf(store, business.id);
+    const oldAmount = amountFor(business.plan, business.billing_cycle, profiles);
+    const newAmount = amountFor(plan, cycle, profiles);
     if (cycle !== business.billing_cycle || newAmount <= oldAmount) {
       store.updateBusiness(business.id, { next_plan: plan, next_cycle: cycle, auto_renew: true });
       return { status: 'scheduled', at: business.paid_until };
@@ -105,7 +111,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         amount: charge,
         token: business.card_token,
         expiry: business.card_expiry,
-        description: `${describe(plan, cycle)} · שדרוג עד סוף התקופה`,
+        description: `${describe(plan, cycle, profiles)} · שדרוג עד סוף התקופה`,
         uniqueId: `upgrade-${id}`,
         customer: { name: business.name, email },
       });
@@ -135,7 +141,9 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
 
       const plan = PLANS[b.next_plan] && !PLANS[b.next_plan].hidden ? b.next_plan : b.plan;
       const cycle = b.next_cycle || b.billing_cycle || 'monthly';
-      const amount = amountFor(plan, cycle);
+      // Profiles added during the period are charged from the renewal on.
+      const profiles = profilesOf(store, b.id);
+      const amount = amountFor(plan, cycle, profiles);
       if (amount == null) continue;
       const id = store.createPayment(b.id, { kind: 'renewal', plan, cycle, amount });
       // The same id for the same period and attempt, so a crash can't charge twice.
@@ -143,7 +151,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         amount,
         token: b.card_token,
         expiry: b.card_expiry,
-        description: describe(plan, cycle),
+        description: describe(plan, cycle, profiles),
         uniqueId: `renew-${b.id}-${String(b.paid_until).replace(/\D/g, '')}-${b.pay_failures}`,
         customer: customer(b),
       });
