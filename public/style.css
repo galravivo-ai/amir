@@ -2113,3 +2113,9 @@ label.g-tpl select { width: auto; margin: 0; }
 .lp-video-band .lp-kicker { background: rgba(255,255,255,.1); color: #ffd23f; }
 .lp-video { max-width: 1040px; margin: 0 auto; border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.12); background: #000; aspect-ratio: 16 / 9; }
 .lp-video video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lp-watch { display: inline-flex; align-items: center; gap: 12px; margin-top: 18px; color: inherit; text-decoration: none; }
+.lp-watch-play { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--purple); color: #fff; font-size: 16px; padding-left: 3px; box-shadow: 0 0 0 8px rgba(91,61,245,.15); transition: transform .15s; }
+.lp-watch:hover .lp-watch-play { transform: scale(1.08); }
+.lp-watch b { display: block; font-size: 1rem; }
+.lp-watch small { color: var(--muted); }
+html { scroll-behavior: smooth; }

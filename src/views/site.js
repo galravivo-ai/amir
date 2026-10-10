@@ -87,6 +87,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#features">פיצ'רים</a>
     <a href="/#ai">נראות ב-AI</a>
     <a href="/#network">רשתות וסניפים</a>
+    <a href="/#video">סרטון</a>
     <a href="/demo">דמו</a>
     <a href="/#pricing">מחירים</a>
     <a href="/#faq">שאלות</a>
@@ -249,6 +250,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
+    <a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>
     <div class="lp-checks">
       <span>${icon('check', 16)}בלי התחייבות</span>
       <span>${icon('check', 16)}בעברית מלאה</span>
