@@ -2106,3 +2106,10 @@ label.g-tpl { flex-direction: row; align-items: center; justify-content: flex-st
 label.g-tpl select { width: auto; margin: 0; }
 .plan-status.welcome { background: linear-gradient(135deg, #f2efff, #fff); border: 1px solid #ddd5ff; }
 .plan-status.welcome a { font-weight: 700; }
+
+/* ---------- landing: the intro video ---------- */
+.lp-video-band { background: linear-gradient(180deg, #120d33, #1c1650); color: #fff; }
+.lp-video-band .lp-head h2 { color: #fff; }
+.lp-video-band .lp-kicker { background: rgba(255,255,255,.1); color: #ffd23f; }
+.lp-video { max-width: 1040px; margin: 0 auto; border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.12); background: #000; aspect-ratio: 16 / 9; }
+.lp-video video { display: block; width: 100%; height: 100%; object-fit: cover; }

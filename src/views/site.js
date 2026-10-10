@@ -250,7 +250,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
     <div class="lp-checks">
-      <span>${icon('check', 16)}בלי כרטיס אשראי</span>
+      <span>${icon('check', 16)}בלי התחייבות</span>
       <span>${icon('check', 16)}בעברית מלאה</span>
       <span>${icon('check', 16)}עומד בכללי גוגל</span>
     </div>
@@ -261,6 +261,15 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 <section class="lp-engines" aria-label="איפה אנחנו בודקים">
   <span class="lp-engines-label">מתחילים מהפרופיל בגוגל מיי ביזנס, ובודקים אתכם בכל מקום שלקוחות מחפשים</span>
   <div class="lp-engines-row">${engines.map((e) => `<span>${e}</span>`).join('')}</div>
+</section>
+
+<section class="lp-band lp-video-band" id="video">
+  <div class="lp-head"><span class="lp-kicker">GoFive ב-36 שניות</span><h2>ככה עסקים נמצאים בגוגל וב-AI</h2></div>
+  <div class="lp-video">
+    <video controls playsinline preload="none" poster="/static/media/gofive-intro.jpg" aria-label="סרטון הכרות עם GoFive">
+      <source src="/static/media/gofive-intro.mp4" type="video/mp4">
+    </video>
+  </div>
 </section>
 
 <section class="lp-band" id="why">
