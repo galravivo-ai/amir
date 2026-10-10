@@ -4,6 +4,7 @@ import { roleAtLeast } from '../store.js';
 import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
 import { operatorInfo } from '../views/site.js';
 import { adminPage } from '../views/layout.js';
+import { pixelTags, takeConversion } from '../tracking.js';
 
 export const SESSION_COOKIE = 'sid';
 export const BIZ_COOKIE = 'biz';
@@ -68,6 +69,10 @@ export function createContext(
 
     render(req, res, title, body, extra = {}) {
       const b = req.business;
+      const brand = ctx.brandFor(req);
+      // Ad pixels: on the platform's own sign-up and login pages, and inside the
+      // app only on the page right after a sign-up or a payment. Never under an agency's brand.
+      const tracking = brand.name !== operatorInfo().brand ? '' : b ? takeConversion(req, res) : pixelTags();
       res.send(
         adminPage({
           title,
@@ -78,7 +83,8 @@ export function createContext(
           flash: req.query?.ok ? 'נשמר בהצלחה' : '',
           isSuperadmin: ctx.isSuperadmin(req.user),
           current: req.originalUrl,
-          brand: ctx.brandFor(req),
+          brand,
+          tracking,
           isAgency: req.user ? store.agenciesForUser(req.user.id).length > 0 : false,
           openCount: b ? store.openIssuesCount(b.id) : 0,
           googlePending: b ? store.googleSummary(b.id).unanswered : 0,

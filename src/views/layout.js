@@ -103,6 +103,7 @@ export function adminPage({
   demo = false,
   branchId = null,
   network = false,
+  tracking = '',
 }) {
   const b0 = brandInfo || { name: operatorInfo().brand, color: '', logo: '' };
   const brand = b0.name;
@@ -120,7 +121,7 @@ export function adminPage({
   if (!user || !business) {
     return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}${tracking}</head>
 <body class="auth-page">
 ${SKIP()}
 <a class="auth-brand" href="/">${mark(40)}<span>${wordmark(brand)}</span></a>
@@ -226,7 +227,7 @@ ${SKIP()}
 
   return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
+<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}${tracking}</head>
 <body class="app">
 ${SKIP()}
 <header class="m-top">

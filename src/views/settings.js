@@ -7,6 +7,7 @@ import { icon } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { LEAD_KINDS, operatorInfo } from './site.js';
 import { ACTIONS as ACTION_LABELS } from '../usage.js';
+import { sourceLabel } from '../tracking.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const checked = (on) => (on ? 'checked' : '');
@@ -559,7 +560,7 @@ const MAIL_KINDS = {
   password_reset: 'איפוס סיסמה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', sources = { days: 30, pixels: false }, sourceRows = [] }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
@@ -647,6 +648,23 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
       .join('')}</tbody></table>
   </section>
   ${agenciesAdminBlock({ agencies, csrf })}
+  <section class="card" id="sources">
+    <div class="page-head"><h3>מאיפה מגיעים (${sources.days} ימים אחרונים)</h3>
+      <form method="get" action="/superadmin#sources" class="inline"><select name="days" aria-label="תקופה" onchange="this.form.submit()">${[7, 30, 90]
+        .map((d) => `<option value="${d}" ${d === sources.days ? 'selected' : ''}>${d} ימים</option>`)
+        .join('')}</select></form></div>
+    <p class="muted small">לפי פרמטרי ה-UTM בקישור של המודעה (utm_source, utm_campaign), או לחיצה על מודעה של גוגל או מטא. ${sources.pixels ? 'פיקסלים פעילים באתר.' : 'הפיקסלים כבויים: מוסיפים META_PIXEL_ID או GOOGLE_TAG_ID במשתני הסביבה.'}</p>
+    ${
+      sourceRows.length
+        ? `<table class="table responsive"><thead><tr><th>מקור / קמפיין</th><th>פניות</th><th>נרשמו</th><th>משלמים</th><th>שולם (₪)</th></tr></thead><tbody>${sourceRows
+            .map(
+              (r) => `<tr><td data-l="מקור"><b>${h(r.source)}</b></td><td data-l="פניות">${r.leads}</td><td data-l="נרשמו">${r.signups}</td>
+                <td data-l="משלמים">${r.paying}</td><td data-l="שולם">${Math.round(r.paid).toLocaleString('he-IL')}</td></tr>`,
+            )
+            .join('')}</tbody></table>`
+        : '<p class="muted">עוד אין פניות או הרשמות בתקופה הזאת.</p>'
+    }
+  </section>
   <section class="card" id="leads">
     <h3>פניות מהאתר (הצעות מחיר)</h3>
     ${
@@ -655,7 +673,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
             .map(
               (l) => `<tr class="${l.handled_at ? 'unranked' : ''}"><td data-l="מתי" class="small">${h(formatDate(l.created_at))}</td>
                 <td data-l="סוג">${h(LEAD_KINDS[l.kind] || l.kind)}</td>
-                <td data-l="פרטים"><b>${h(l.name)}</b>${l.company ? ` · ${h(l.company)}` : ''}<div class="small" dir="ltr">${h(l.phone)} ${h(l.email)}</div></td>
+                <td data-l="פרטים"><b>${h(l.name)}</b>${l.company ? ` · ${h(l.company)}` : ''}<div class="small" dir="ltr">${h(l.phone)} ${h(l.email)}</div>${l.source ? `<div class="small muted">מקור: ${h(sourceLabel(l.source))}</div>` : ''}</td>
                 <td data-l="היקף">${h(l.size || '—')}</td>
                 <td data-l="הודעה" class="clip">${h(l.message || '')}</td>
                 <td><form method="post" action="/superadmin/leads/${l.id}" class="inline">${csrfField(csrf)}

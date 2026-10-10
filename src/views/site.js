@@ -1,5 +1,6 @@
 import { PLANS } from '../plans.js';
 import { asset, h } from '../util.js';
+import { pixelsOn, pixelTags } from '../tracking.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { NETWORK_TOOLS } from './network.js';
@@ -63,7 +64,7 @@ export function operatorInfo() {
   };
 }
 
-function sitePage({ title, description = '', body, signupOpen = true }) {
+function sitePage({ title, description = '', body, signupOpen = true, events = [] }) {
   const op = operatorInfo();
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -77,6 +78,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <script src="${asset('assist.js')}"></script>
+${pixelTags(events)}
 </head>
 <body class="site">
 <a class="skip-link" href="#main">דלג לתוכן</a>
@@ -239,6 +241,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   const qr = `<div class="lp-art lp-qr"><span class="lp-qr-code">${'<i></i>'.repeat(9)}</span><span class="lp-wa">וואטסאפ ✓✓<small>נו, איך היה אצלנו?</small></span></div>`;
 
   return sitePage({
+    events: contactSent ? [{ name: 'lead' }] : [],
     title: `${operatorInfo().brand} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI`,
     description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית פעולה שבועית והתראות.',
     signupOpen,
@@ -566,7 +569,9 @@ export function privacyView({ signupOpen }) {
       ],
       [
         'עוגיות',
-        '<p>האתר משתמש רק בעוגיות הכרחיות להפעלתו, בלי עוגיות פרסום או מעקב של צד שלישי. הפירוט המלא ב<a href="/cookies">מדיניות העוגיות</a>.</p>',
+        pixelsOn()
+          ? '<p>מערכת הניהול והסקרים משתמשים רק בעוגיות הכרחיות. באתר השיווקי ובדפי ההרשמה פועלים גם כלי מדידה של Meta ו/או Google, כדי לדעת אילו מודעות מביאות נרשמים. הפירוט המלא ב<a href="/cookies">מדיניות העוגיות</a>.</p>'
+          : '<p>האתר משתמש רק בעוגיות הכרחיות להפעלתו, בלי עוגיות פרסום או מעקב של צד שלישי. הפירוט המלא ב<a href="/cookies">מדיניות העוגיות</a>.</p>',
       ],
       [
         'אבטחת מידע',
@@ -694,7 +699,9 @@ export function cookiesView({ signupOpen }) {
   return legalPage({
     title: 'מדיניות עוגיות',
     signupOpen,
-    intro: `<p>עוגייה (Cookie) היא קובץ טקסט קטן שהאתר שומר בדפדפן. ${h(op.brand)} משתמש <b>רק בעוגיות הכרחיות</b> שבלעדיהן האתר לא יכול לפעול. אין אצלנו עוגיות פרסום, פיקסלים של רשתות חברתיות או כלי מעקב של צד שלישי.</p>`,
+    intro: pixelsOn()
+      ? `<p>עוגייה (Cookie) היא קובץ טקסט קטן שהאתר שומר בדפדפן. מערכת הניהול של ${h(op.brand)} ודפי הסקר של העסקים משתמשים <b>רק בעוגיות הכרחיות</b>. באתר השיווקי ובדפי ההרשמה והכניסה פועלים גם כלי מדידה של צד שלישי (Meta ו/או Google), שעוזרים לנו לדעת אילו מודעות מביאות נרשמים.</p>`
+      : `<p>עוגייה (Cookie) היא קובץ טקסט קטן שהאתר שומר בדפדפן. ${h(op.brand)} משתמש <b>רק בעוגיות הכרחיות</b> שבלעדיהן האתר לא יכול לפעול. אין אצלנו עוגיות פרסום, פיקסלים של רשתות חברתיות או כלי מעקב של צד שלישי.</p>`,
     sections: [
       [
         'העוגיות שבשימוש',
@@ -706,10 +713,21 @@ export function cookiesView({ signupOpen }) {
             ${row('l2', 'כניסה', 'שלב הביניים באימות דו-שלבי', '5 דקות')}
             ${row('gstate', 'חיבור לגוגל', 'מאבטחת את החזרה מגוגל אל החשבון הנכון', '10 דקות')}
             ${row('vid', 'דף הסקר של העסק', 'מזהה אקראי שמונע ספירה כפולה של אותו ביקור. לא מזהה אתכם אישית', 'שנה')}
+            ${row('src', 'האתר השיווקי', 'זוכרת מאיזו מודעה או קמפיין הגעתם (פרמטרי UTM), כדי שנדע אילו מודעות עובדות', '30 יום')}
+            ${row('conv', 'אחרי הרשמה או תשלום', 'מסמנת לכלי המדידה שההרשמה או התשלום הושלמו, פעם אחת', '10 דקות')}
           </tbody>
         </table></div>
-        <p>כל העוגיות הן של האתר עצמו (First Party), מוגנות מגישה של סקריפטים (HttpOnly) ונשלחות בחיבור מוצפן.</p>`,
+        <p>כל העוגיות האלה הן של האתר עצמו (First Party), מוגנות מגישה של סקריפטים (HttpOnly) ונשלחות בחיבור מוצפן.</p>`,
       ],
+      ...(pixelsOn()
+        ? [
+            [
+              'כלי מדידה של צד שלישי',
+              `<p>באתר השיווקי ובדפי ההרשמה והכניסה בלבד פועלים ${[process.env.META_PIXEL_ID && 'הפיקסל של Meta (פייסבוק ואינסטגרם)', process.env.GOOGLE_TAG_ID && 'תג Google (Google Ads / Analytics)'].filter(Boolean).join(' ו')}. הם שומרים עוגיות משלהם ומודדים ביקורים, הרשמות ופניות, כדי לדעת אילו מודעות עובדות ולהציג מודעות למי שעשוי להתעניין. הם לא פועלים במערכת הניהול ולא בדפי הסקר שלקוחות העסקים ממלאים.</p>
+              <p>אפשר לחסום אותם בהגדרות הדפדפן או בחוסם פרסומות, ולנהל את ההעדפות ב<a href="https://www.facebook.com/settings/?tab=ads" rel="noopener" target="_blank">הגדרות המודעות של Meta</a> וב<a href="https://myadcenter.google.com/" rel="noopener" target="_blank">מרכז המודעות של Google</a>.</p>`,
+            ],
+          ]
+        : []),
       [
         'שמירה מקומית בדפדפן',
         `<p>בנוסף לעוגיות, הדפדפן שומר אצלכם (Local Storage) שני דברים שלא נשלחים אלינו: הגדרות תפריט הנגישות שבחרתם (<code>gofive-a11y</code>), וסימון שכבר ראיתם את ההודעה על העוגיות (<code>gofive-cookies-ok</code>).</p>`,

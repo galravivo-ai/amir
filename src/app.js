@@ -31,6 +31,7 @@ import { createNotifier } from './notifications.js';
 import { createPusher } from './push.js';
 import { pushRoutes } from './routes/push.js';
 import { createStore } from './store.js';
+import { captureSource, pixelCsp } from './tracking.js';
 import { adminRoutes } from './routes/admin.js';
 import { agencyRoutes } from './routes/agency.js';
 import { apiRoutes } from './routes/api.js';
@@ -62,12 +63,15 @@ function parseCookies(req, _res, next) {
 }
 
 function securityHeaders(_req, res, next) {
+  // The ad pixels' hosts are allowed only once their ids are set.
+  const px = pixelCsp();
+  const extra = (list) => (list.length ? ` ${list.join(' ')}` : '');
   res.set({
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'same-origin',
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy':
-      "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self' https://secure.cardcom.solutions https://accounts.google.com https://wa.me https://api.whatsapp.com; frame-ancestors 'none'",
+      `default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'${extra(px.script)}; connect-src 'self'${extra(px.connect)}; frame-src 'self'${extra(px.frame)}; form-action 'self' https://secure.cardcom.solutions https://accounts.google.com https://wa.me https://api.whatsapp.com; frame-ancestors 'none'`,
   });
   next();
 }
@@ -138,6 +142,7 @@ export function createApp(db, options = {}) {
   app.use(widgetRoutes(store));
 
   app.use(ctx.session);
+  app.use(captureSource({ secure: ctx.cookieOpts.secure }));
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
