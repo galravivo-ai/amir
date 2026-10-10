@@ -71,10 +71,19 @@ export function networkSummary(rows) {
     const has = rows.filter((r) => r[k] != null);
     return has.length >= 2 ? has.reduce((a, b) => (dir * (b[k] - a[k]) > 0 ? b : a)) : null;
   };
-  // Attention: the most waiting replies, then the lowest new average.
+  // Attention: branches that fall behind, worst first. Replies count when
+  // several wait and the branch answers less than 70% of its new reviews.
   const attention = rows
-    .map((r) => ({ r, why: r.unanswered >= 3 ? `${r.unanswered} ביקורות מחכות לתשובה` : r.newAvg != null && r.newAvg < 4 && r.newReviews >= 2 ? `ממוצע ${r.newAvg.toFixed(1)}★ בתקופה` : r.health != null && r.health < 60 ? `ציון בריאות ${r.health}` : '' }))
-    .filter((x) => x.why);
+    .map((r) => {
+      const why = [
+        r.unanswered >= 3 && (r.replyRate == null || r.replyRate < 70) ? `${r.unanswered} ביקורות מחכות לתשובה` : '',
+        r.newAvg != null && r.newAvg < 4 && r.newReviews >= 2 ? `ממוצע ${r.newAvg.toFixed(1)}★ בתקופה` : '',
+        r.health != null && r.health < 60 ? `ציון בריאות ${r.health}` : '',
+      ].filter(Boolean);
+      return { r, why: why.join(' · '), weight: why.length * 1000 + r.unanswered };
+    })
+    .filter((x) => x.why)
+    .sort((a, b) => b.weight - a.weight);
   return {
     branches: rows.length,
     rating: totalReviews ? rated.reduce((s, r) => s + r.rating * r.total, 0) / totalReviews : null,

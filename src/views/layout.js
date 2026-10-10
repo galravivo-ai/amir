@@ -261,7 +261,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList
   </form>
 </aside>
 <main class="app-main" id="main">
-  ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">להתחיל ניסיון חינם</a></div>` : accessBanner(access, current)}
+  ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">פתיחת חשבון לעסק שלכם</a></div>` : accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
 </main>

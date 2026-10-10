@@ -34,6 +34,11 @@ test('demo: anyone can look around a full sample business, and change nothing', 
     assert.match((await req('/admin/rankings')).text, /ביסטרו/);
     assert.match((await req('/admin/competitors')).text, /פסטה דה לוקה/);
     assert.match((await req('/admin/profile')).text, /מתוך 100/);
+    // A network of four branches, one of them needing attention.
+    const net = (await req('/admin/network')).text;
+    assert.match(net, /4 סניפים/);
+    assert.match(net, /ביסטרו הגפן · חיפה<\/b><\/a> · \d+ ביקורות מחכות לתשובה/);
+    assert.match((await req('/admin/reply-templates')).text, /ביקורת שלילית/);
 
     // Read-only: no form goes through.
     const token = dash.match(/name="_csrf" value="([^"]+)"/)?.[1] || '';

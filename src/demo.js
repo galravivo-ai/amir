@@ -1,5 +1,5 @@
 // A demo business anyone can open from the website without signing up: a
-// fictional bistro with three months of reviews, surveys, Google profile
+// fictional bistro with four branches (a network) and three months of reviews, surveys, Google profile
 // numbers, map rank, competitors and AI visibility. The visitor gets a
 // read-only role; the jobs skip it (is_demo), so it costs nothing to keep.
 // It is rebuilt every few days so the dates stay fresh.
@@ -63,7 +63,7 @@ function build(store) {
   let userId = store.userByEmail(DEMO_EMAIL)?.id;
   if (!userId) userId = store.createUser({ email: DEMO_EMAIL, name: 'אורח בדמו', passwordHash: `!demo-${crypto.randomBytes(16).toString('hex')}` });
 
-  const bizId = store.createBusiness(userId, { name: 'ביסטרו הגפן', plan: 'business', brand_color: '#7c3aed' });
+  const bizId = store.createBusiness(userId, { name: 'ביסטרו הגפן', plan: 'pro', brand_color: '#7c3aed' });
   db.prepare("UPDATE memberships SET role = 'viewer' WHERE business_id = ? AND user_id = ?").run(bizId, userId);
   db.prepare('UPDATE businesses SET is_demo = 1, alert_drops = 0, weekly_report = 0, monthly_report = 0, alert_negative = 0 WHERE id = ?').run(bizId);
   store.updateBusiness(bizId, {
@@ -114,7 +114,7 @@ function build(store) {
   const lng = 34.7745;
   const locId = Number(
     db.prepare(`INSERT INTO google_locations (business_id, name, title, address, place_id, review_url, enabled, source, avg_rating, total_reviews, synced_at, lat, lng, campaign_id)
-                VALUES (?, ?, 'ביסטרו הגפן', 'דיזנגוף 180, תל אביב-יפו', 'demo-place', 'https://g.page/r/demo/review', 1, 'demo', 4.6, 412, datetime('now'), ?, ?, ?)`)
+                VALUES (?, ?, 'ביסטרו הגפן · דיזנגוף', 'דיזנגוף 180, תל אביב-יפו', 'demo-place', 'https://g.page/r/demo/review', 1, 'demo', 4.6, 412, datetime('now'), ?, ?, ?)`)
       .run(bizId, `demo:${bizId}`, lat, lng, campaignId).lastInsertRowid,
   );
   for (let i = 0; i < 80; i++) {
@@ -122,7 +122,7 @@ function build(store) {
     const roll = r();
     const rating = roll < 0.66 ? 5 : roll < 0.86 ? 4 : roll < 0.92 ? 3 : roll < 0.97 ? 2 : 1;
     const comment = rating >= 4 ? GOOD[i % GOOD.length] : BAD[i % BAD.length];
-    const replied = t < now - 3 * DAY && r() < 0.75;
+    const replied = t < now - 3 * DAY && r() < 0.92;
     store.upsertGoogleReview(locId, {
       name: `demo/${bizId}/reviews/${i}`,
       reviewer: NAMES[i % NAMES.length],
@@ -226,14 +226,88 @@ function build(store) {
     ].map(([keyword, value, threshold]) => ({ keyword, value, threshold })));
   }
   db.prepare("UPDATE google_locations SET metrics_at = datetime('now') WHERE id = ?").run(locId);
+
+  for (const branch of BRANCHES) addBranch(store, bizId, branch, r, now);
+  for (const t of TEMPLATES) store.addReplyTemplate(bizId, t);
   return bizId;
+}
+
+// ---- more branches, so the demo shows a network: a strong one, a new one, and one that needs attention ----
+const BRANCHES = [
+  { title: 'ביסטרו הגפן · רמת אביב', address: 'איינשטיין 40, תל אביב-יפו', lat: 32.1133, lng: 34.8044, rating: 4.7, total: 268, reviews: 60, good: 0.9, replied: 0.92, health: [70, 88], traffic: 0.85, rank: 3.1 },
+  { title: 'ביסטרו הגפן · הרצליה פיתוח', address: 'המנופים 8, הרצליה', lat: 32.1624, lng: 34.8076, rating: 4.5, total: 74, reviews: 34, good: 0.82, replied: 0.7, health: [52, 74], traffic: 0.55, rank: 7.4 },
+  { title: 'ביסטרו הגפן · חיפה', address: 'דרך הים 12, חיפה', lat: 32.8065, lng: 34.9857, rating: 4.2, total: 151, reviews: 46, good: 0.68, replied: 0.35, health: [55, 58], traffic: 0.7, rank: 9.6 },
+];
+const TEMPLATES = [
+  { title: 'תודה על ביקורת חיובית', stars: '45', body: 'תודה רבה {שם}! שמחים מאוד שנהניתם אצלנו ב{סניף}. מחכים לראות אתכם שוב בקרוב.' },
+  { title: 'ביקורת בינונית', stars: '3', body: 'תודה {שם} על המשוב. חשוב לנו לשמוע מה אפשר לשפר, ונשמח אם תכתבו לנו ישירות כדי שנוכל לתקן לפעם הבאה.' },
+  { title: 'ביקורת שלילית', stars: '12', body: 'שלום {שם}, מצטערים מאוד לשמוע על החוויה ב{סניף}. זה לא הסטנדרט שלנו. נשמח לדבר איתכם ישירות ולתקן.' },
+];
+
+function addBranch(store, bizId, b, r, now) {
+  const db = store.db;
+  const locId = Number(
+    db.prepare(`INSERT INTO google_locations (business_id, name, title, address, place_id, review_url, enabled, source, avg_rating, total_reviews, synced_at, lat, lng, metrics_at)
+                VALUES (?, ?, ?, ?, ?, 'https://g.page/r/demo/review', 1, 'demo', ?, ?, datetime('now'), ?, ?, datetime('now'))`)
+      .run(bizId, `demo:${bizId}:${b.title}`, b.title, b.address, `demo-place-${b.lat}`, b.rating, b.total, b.lat, b.lng).lastInsertRowid,
+  );
+  for (let i = 0; i < b.reviews; i++) {
+    const t = now - Math.floor(r() * 60) * DAY - r() * DAY;
+    const roll = r();
+    const rating = roll < b.good * 0.75 ? 5 : roll < b.good ? 4 : roll < b.good + (1 - b.good) * 0.4 ? 3 : roll < b.good + (1 - b.good) * 0.8 ? 2 : 1;
+    const replied = t < now - 2 * DAY && r() < b.replied;
+    store.upsertGoogleReview(locId, {
+      name: `demo/${bizId}/${locId}/reviews/${i}`,
+      reviewer: NAMES[(i + 3) % NAMES.length],
+      photo: '',
+      rating,
+      comment: rating >= 4 ? GOOD[(i + 2) % GOOD.length] : BAD[(i + 1) % BAD.length],
+      createTime: iso(t),
+      updateTime: iso(t),
+      reply: replied ? (rating >= 4 ? 'תודה רבה! מחכים לכם שוב.' : 'מצטערים מאוד. נשמח שתיצרו קשר כדי שנוכל לתקן.') : '',
+      replyTime: replied ? iso(t + DAY) : '',
+    });
+  }
+  db.prepare("UPDATE google_reviews SET alerted = 1, tagged_at = datetime('now'), tags = CASE WHEN rating >= 4 THEN '[\"איכות\"]' ELSE '[\"זמן המתנה\"]' END WHERE location_id = ?").run(locId);
+  for (let d = 90; d >= 0; d -= 3) store.snapshot('location', locId, { rating: +(b.rating - 0.05 + ((90 - d) / 90) * 0.05).toFixed(2), total: b.total - Math.round(d * 0.4) }, day(now - d * DAY));
+
+  b.health.forEach((score, k) => {
+    db.prepare('INSERT INTO profile_audits (business_id, location_id, run_at, score, profile, items) VALUES (?, ?, ?, ?, ?, ?)').run(
+      bizId, locId, sql(now - (k ? 1 : 35) * DAY), score, JSON.stringify({ title: b.title, rating: b.rating, reviews: b.total, address: b.address, lat: b.lat, lng: b.lng }), '[]',
+    );
+  });
+
+  const kw = store.addRankKeyword(bizId, locId, 'ביסטרו', 1000);
+  for (let w = 2; w >= 0; w--) {
+    const base = b.rank + w * 0.6;
+    const points = gridPoints(b.lat, b.lng, 1000).map((p, i) => {
+      const rank = Math.max(1, Math.round(base + (i % 3) - 1 + (r() - 0.5) * 2));
+      return { ...p, rank: rank > 20 ? null : rank, top: [RIVALS[i % 5], b.title, RIVALS[(i + 2) % 5]] };
+    });
+    const avg = points.reduce((sum, p) => sum + Math.min(p.rank ?? 21, 21), 0) / points.length;
+    db.prepare('INSERT INTO rank_checks (keyword_id, run_at, avg_rank, found, points, leaders) VALUES (?, ?, ?, ?, ?, ?)').run(
+      kw, sql(now - w * 7 * DAY - DAY), +avg.toFixed(1), points.filter((p) => p.rank != null).length, JSON.stringify(points), '[]',
+    );
+  }
+
+  const rows = [];
+  for (let d = 120; d >= 3; d--) {
+    const t = now - d * DAY;
+    const wk = [0.8, 0.9, 1, 1.05, 1.3, 1.5, 0.7][new Date(t).getUTCDay()];
+    const add = (metric, base) => rows.push({ date: day(t), metric, value: Math.round(base * b.traffic * wk * (0.65 + r() * 0.7)) });
+    add('BUSINESS_IMPRESSIONS_MOBILE_MAPS', 70); add('BUSINESS_IMPRESSIONS_MOBILE_SEARCH', 38); add('BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 12); add('BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 16);
+    add('CALL_CLICKS', 4.5); add('BUSINESS_DIRECTION_REQUESTS', 7); add('WEBSITE_CLICKS', 3.5);
+  }
+  store.saveProfileMetrics(locId, rows);
 }
 
 /** The demo business, built (or rebuilt when stale). Returns { userId, businessId }. */
 export function ensureDemo(store) {
   const db = store.db;
   const existing = db.prepare('SELECT * FROM businesses WHERE is_demo = 1 ORDER BY id DESC LIMIT 1').get();
-  if (existing && Date.parse(`${existing.created_at.replace(' ', 'T')}Z`) > Date.now() - REBUILD_DAYS * DAY) {
+  // Rebuilt when stale, or when it was built before the branches were added.
+  const current = existing && db.prepare('SELECT COUNT(*) AS n FROM google_locations WHERE business_id = ?').get(existing.id).n === BRANCHES.length + 1;
+  if (current && Date.parse(`${existing.created_at.replace(' ', 'T')}Z`) > Date.now() - REBUILD_DAYS * DAY) {
     return { userId: store.userByEmail(DEMO_EMAIL).id, businessId: existing.id };
   }
   db.exec('BEGIN');
