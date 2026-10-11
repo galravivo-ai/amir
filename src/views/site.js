@@ -14,7 +14,6 @@ function networkSection() {
     ['סניף חיפה', '4.3', 11, '64%', '410'],
   ];
   const max = 38;
-  const price = (k) => PLANS[k].price;
   return `<section class="lp-band net-band" id="network">
   <div class="net-split">
     <div class="net-text">
@@ -32,26 +31,8 @@ function networkSection() {
           .join('')}</div>
         <div class="net-mock-alert">${icon('alert', 14)} סניף חיפה: 6 ביקורות מחכות לתשובה</div>
       </div>
-      <div class="net-calc" data-p1="${price('basic')}" data-p2="${price('pro')}">
-        <div class="net-calc-row">
-          <span class="net-calc-q">כמה סניפים?</span>
-          <span class="net-calc-n"><button type="button" data-d="-1" aria-label="פחות">−</button><output id="net-n-out">3</output><button type="button" data-d="1" aria-label="יותר">+</button></span>
-        </div>
-        <div class="net-calc-plans" role="radiogroup" aria-label="מסלול">
-          <label><input type="radio" name="net-plan" value="1"><span>${h(PLANS.basic.label)}<small>₪${price('basic')} לסניף</small></span></label>
-          <label><input type="radio" name="net-plan" value="2" checked><span>${h(PLANS.pro.label)}<small>₪${price('pro')} לסניף</small></span></label>
-        </div>
-        <div class="net-calc-total"><span>לחודש, כולל מע״מ</span><b id="net-total">₪${(price('pro') * 3).toLocaleString('he-IL')}</b></div>
-        <p class="net-calc-note">כל כלי הרשת כלולים. בלי דמי הקמה, בלי התחייבות.</p>
-      </div>
     </div>
   </div>
-  <script>
-  (function(){var c=document.querySelector('.net-calc');if(!c)return;var n=3,out=c.querySelector('#net-n-out'),tot=c.querySelector('#net-total');
-  function draw(){var p=c.querySelector('input[name=net-plan]:checked').value==='1'?+c.dataset.p1:+c.dataset.p2;out.textContent=n;tot.textContent='₪'+(n*p).toLocaleString('he-IL')}
-  c.querySelectorAll('button[data-d]').forEach(function(b){b.addEventListener('click',function(){n=Math.min(50,Math.max(1,n+ +b.dataset.d));draw()})});
-  c.querySelectorAll('input[name=net-plan]').forEach(function(r){r.addEventListener('change',draw)});})();
-  </script>
 </section>`;
 }
 
@@ -484,13 +465,12 @@ ${networkSection()}
     <aside class="lp-faq-side">
       <span class="lp-kicker">שאלות נפוצות</span>
       <h2>כל מה שרציתם לשאול</h2>
-      <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? כתבו לנו.</p>
+      <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? <a href="#talk">השאירו פרטים</a> ונחזור אליכם.</p>
       <div class="lp-faq-card">
         <b>עדיין מתלבטים?</b>
         <span>הכי פשוט להסתכל בעצמכם על עסק לדוגמה, עם כל המסכים והנתונים.</span>
         <div class="lp-faq-actions">
           <a class="btn primary" href="/demo">לדמו החי</a>
-          ${operatorInfo().email ? `<a class="btn" href="mailto:${h(operatorInfo().email)}">${icon('chat', 16)} כתבו לנו</a>` : ''}
         </div>
       </div>
     </aside>

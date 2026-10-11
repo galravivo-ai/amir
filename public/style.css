@@ -2088,24 +2088,6 @@ a.net-tool:hover { border-color: #cfc6ff; background: #fff; }
 .net-mock-rows small { grid-column: 1 / -1; color: var(--muted); font-size: .78rem; }
 .net-mock-rows .warn { border-color: #fedf89; background: #fffcf0; }
 .net-mock-alert { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: .84rem; font-weight: 600; color: #b54708; background: #fef6e7; border-radius: 10px; padding: 8px 10px; }
-.net-calc { background: linear-gradient(150deg, #1c1650, #34249a); color: #fff; border-radius: 18px; padding: 18px 20px; }
-.net-calc-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.net-calc-q { font-weight: 700; }
-.net-calc-n { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.12); border-radius: 999px; padding: 4px; }
-.net-calc-n button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #fff; color: var(--night); font-size: 1.2rem; font-weight: 700; cursor: pointer; }
-.net-calc-n output { min-width: 40px; text-align: center; font-size: 1.3rem; font-weight: 700; }
-.net-calc-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
-.net-calc-plans label { cursor: pointer; }
-.net-calc-plans input { position: absolute; opacity: 0; }
-.net-calc-plans span { display: block; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.25); font-weight: 700; }
-.net-calc-plans small { display: block; font-weight: 500; color: var(--night-text); font-size: .82rem; }
-.net-calc-plans input:checked + span { background: #fff; color: var(--night); border-color: #fff; }
-.net-calc-plans input:checked + span small { color: var(--muted); }
-.net-calc-plans input:focus-visible + span { outline: 2px solid var(--yellow); outline-offset: 2px; }
-.net-calc-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid rgba(255,255,255,.18); padding-top: 12px; }
-.net-calc-total span { color: var(--night-text); }
-.net-calc-total b { font-size: 2rem; color: var(--yellow); }
-.net-calc-note { margin: 6px 0 0; font-size: .84rem; color: var(--night-text); }
 @media (max-width: 900px) {
   .net-split { grid-template-columns: 1fr; gap: 28px; }
 }
@@ -2114,8 +2096,6 @@ a.net-tool:hover { border-color: #cfc6ff; background: #fff; }
 .pricing-network b { display: block; font-size: 1.05rem; }
 .pricing-network small { color: var(--night-text); line-height: 1.5; }
 .pricing-network:hover { filter: brightness(1.08); }
-.net-calc-plans span { color: #fff; }
-.net-calc-plans input:checked + span { color: var(--night); }
 label.g-tpl { flex-direction: row; align-items: center; justify-content: flex-start; margin: 0; }
 label.g-tpl select { width: auto; margin: 0; }
 .plan-status.welcome { background: linear-gradient(135deg, #f2efff, #fff); border: 1px solid #ddd5ff; }
