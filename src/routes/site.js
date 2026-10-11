@@ -25,22 +25,25 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
       size: clean('size', 40),
       message: String(req.body.message ?? '').trim().slice(0, 1000),
     };
+    // The short form at the end of the page, or the quote form.
+    const done = req.body.from === 'talk' ? '/?sent=talk#talk' : '/?sent=1#contact';
     // Bots fill the hidden field; pretend it worked.
-    if (req.body.website) return res.redirect(303, '/?sent=1#contact');
+    if (req.body.website) return res.redirect(303, done);
     const error = !v.name ? 'נא למלא שם' : !v.phone && !v.email ? 'נא להשאיר טלפון או אימייל תקין' : '';
     if (error) {
-      return res.status(422).send(landingView({ signupOpen: signupOpen(), contactError: error, contactValues: v }));
+      const talk = req.body.from === 'talk' ? { talkError: error } : { contactError: error };
+      return res.status(422).send(landingView({ signupOpen: signupOpen(), contactValues: v, ...talk }));
     }
     store.createLead(v);
     await notifier?.leadReceived({ lead: v, kindLabel: LEAD_KINDS[v.kind], admins: adminEmails() }).catch((err) => console.error('[notify] lead failed:', err));
-    res.redirect(303, '/?sent=1#contact');
+    res.redirect(303, done);
   });
 
   router.get('/', (req, res) => {
     if (req.user) return res.redirect('/admin');
     // An agency's own domain is for its clients: no platform marketing page there.
     if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
-    res.send(landingView({ signupOpen: signupOpen(), contactSent: req.query.sent === '1' }));
+    res.send(landingView({ signupOpen: signupOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
   });
   // Caddy asks here before issuing an HTTPS certificate on demand, so
   // certificates are only issued for domains that belong to an agency.

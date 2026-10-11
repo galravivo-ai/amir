@@ -1096,6 +1096,15 @@ test('quote requests from agencies and large chains', async () => {
   assert.equal(lead.size, '24');
   assert.match((await client().req(ok.location)).text, /קיבלנו את הפרטים/);
 
+  // The short "call me back" form at the end of the page.
+  assert.match(home.text, /id="talk"/);
+  assert.equal((await client().req('/contact', { method: 'POST', form: { from: 'talk', kind: 'callback', name: 'רון' } })).status, 422);
+  const talk = await client().req('/contact', { method: 'POST', form: { from: 'talk', kind: 'callback', name: 'רון', phone: '052-7654321' } });
+  assert.equal(talk.location, '/?sent=talk#talk');
+  assert.equal(store.recentLeads()[0].kind, 'callback');
+  assert.match((await client().req(talk.location)).text, /lp-talk-done/);
+  assert.doesNotMatch(home.text, /<option value="callback"/, 'not a choice in the quote form');
+
   const admin = await registeredOwner('leads-admin@example.com');
   store.setSuperadmin(store.userByEmail('leads-admin@example.com').id, true);
   const panel = await admin.req('/superadmin');

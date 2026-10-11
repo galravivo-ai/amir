@@ -154,7 +154,7 @@ function heroVisual() {
   </div>`;
 }
 
-export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר' };
+export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר' };
 
 function contactForm(error = '', v = {}) {
   const val = (k) => h(v[k] ?? '');
@@ -166,6 +166,7 @@ function contactForm(error = '', v = {}) {
       <label>אימייל<input name="email" type="email" maxlength="120" value="${val('email')}" autocomplete="email" dir="ltr"></label>
       <label>שם העסק או הסוכנות<input name="company" maxlength="100" value="${val('company')}" autocomplete="organization"></label>
       <label>מי אתם?<select name="kind">${Object.entries(LEAD_KINDS)
+        .filter(([k]) => k !== 'callback')
         .map(([k, l]) => `<option value="${k}" ${v.kind === k ? 'selected' : ''}>${h(l)}</option>`)
         .join('')}</select></label>
       <label>כמה סניפים או לקוחות?<input name="size" maxlength="40" value="${val('size')}" placeholder="למשל: 25"></label>
@@ -177,7 +178,21 @@ function contactForm(error = '', v = {}) {
   </form>`;
 }
 
-export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {} }) {
+/** The short "we'll call you" form at the end of the landing page. */
+function talkForm(sent, error = '', v = {}) {
+  if (sent) return '<div class="lp-talk-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>';
+  const val = (k) => h(v[k] ?? '');
+  return `<form method="post" action="/contact#talk" class="lp-talk">
+    <input type="hidden" name="kind" value="callback"><input type="hidden" name="from" value="talk">
+    <input name="name" required maxlength="80" placeholder="שם" aria-label="שם" value="${val('name')}" autocomplete="name">
+    <input name="phone" type="tel" required maxlength="30" placeholder="טלפון" aria-label="טלפון" value="${val('phone')}" autocomplete="tel">
+    <label class="hp" aria-hidden="true">אתר<input name="website" tabindex="-1" autocomplete="off"></label>
+    <button class="btn lp-cta">חזרו אליי</button>
+    ${error ? `<p class="lp-talk-error">${h(error)}</p>` : ''}
+  </form>`;
+}
+
+export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {}, talkSent = false, talkError = '' }) {
   const faq = [
     [
       'מה זה גוגל מיי ביזנס?',
@@ -209,7 +224,15 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     ],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
   const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל עכשיו</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
-  const engines = ['Google', 'Google Maps', 'ChatGPT', 'Gemini', 'Perplexity', 'Claude', 'AI Overview'];
+  const engines = [
+    ['Google', 'google'],
+    ['Google Maps', 'googlemaps'],
+    ['ChatGPT', 'chatgpt'],
+    ['Gemini', 'gemini'],
+    ['Perplexity', 'perplexity'],
+    ['Claude', 'claude'],
+    ['AI Overviews', 'google'],
+  ];
 
   // The bento: each tile shows the feature itself, not just a sentence about it.
   const tile = (cls, ic, title, text, art = '') =>
@@ -262,7 +285,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
 
 <section class="lp-engines" aria-label="איפה אנחנו בודקים">
   <span class="lp-engines-label">מתחילים מהפרופיל בגוגל מיי ביזנס, ובודקים אתכם בכל מקום שלקוחות מחפשים</span>
-  <div class="lp-engines-row">${engines.map((e) => `<span>${e}</span>`).join('')}</div>
+  <div class="lp-engines-row">${engines.map(([name, logo]) => `<span class="lp-engine"><img src="${asset(`brands/${logo}.svg`)}" alt="" width="24" height="24" loading="lazy">${name}</span>`).join('')}</div>
 </section>
 
 <section class="lp-band lp-video-band" id="video">
@@ -484,6 +507,11 @@ ${networkSection()}
   <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
   <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
   <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="/demo">לצפייה בדמו</a></div>
+  <div class="lp-talk-box" id="talk">
+    <b>מעדיפים לדבר עם מישהו?</b><span>השאירו שם וטלפון ונחזור אליכם עוד היום.</span>
+    ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
+    ${talkSent ? '' : '<small>הפרטים ישמשו רק כדי לחזור אליכם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
+  </div>
 </section>`,
   });
 }
