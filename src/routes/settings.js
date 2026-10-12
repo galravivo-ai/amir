@@ -3,6 +3,7 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
+import { flagConversion } from '../tracking.js';
 import { CYCLES, hasApi, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
@@ -242,7 +243,10 @@ export function settingsRoutes(ctx) {
     if (!payment || payment.business_id !== req.business.id) return res.redirect(303, '/admin/plan');
     try {
       const after = await ctx.billing.complete(payment.id, { failed: req.query.failed === '1' });
-      if (after.status === 'paid') return res.redirect(303, '/admin/plan?paid=1');
+      if (after.status === 'paid') {
+        flagConversion(res, 'purchase', payment.amount, { secure: ctx.cookieOpts.secure });
+        return res.redirect(303, '/admin/plan?paid=1');
+      }
       return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `התשלום לא עבר${after.error ? `: ${after.error}` : ''}` : 'התשלום עוד לא אושר. אם חויבתם, הוא יופיע כאן בעוד כמה דקות.')}`);
     } catch (err) {
       console.error('[billing] completing failed:', err.message);

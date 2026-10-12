@@ -11,25 +11,25 @@
       open: 'תפריט נגישות', title: 'נגישות', close: 'סגירה', size: 'גודל טקסט', smaller: 'הקטנת טקסט', bigger: 'הגדלת טקסט',
       contrast: 'ניגודיות גבוהה', gray: 'גווני אפור', links: 'הדגשת קישורים', font: 'גופן קריא', spacing: 'ריווח שורות',
       still: 'עצירת אנימציות', cursor: 'סמן גדול', focus: 'הדגשת מיקוד מקלדת', reset: 'איפוס הגדרות', statement: 'הצהרת נגישות',
-      cookies: 'האתר משתמש רק בעוגיות הכרחיות שמאפשרות לו לפעול, בלי עוגיות פרסום או מעקב.', cookiesMore: 'מדיניות עוגיות', ok: 'הבנתי',
+      cookies: 'האתר משתמש רק בעוגיות הכרחיות שמאפשרות לו לפעול, בלי עוגיות פרסום או מעקב.', cookiesMore: 'מדיניות עוגיות', cookiesAds: 'האתר משתמש בעוגיות הכרחיות, ובדפי האתר השיווקי גם בכלי מדידה של Meta ו-Google כדי לדעת אילו מודעות עובדות.', ok: 'הבנתי',
     },
     en: {
       open: 'Accessibility menu', title: 'Accessibility', close: 'Close', size: 'Text size', smaller: 'Smaller text', bigger: 'Larger text',
       contrast: 'High contrast', gray: 'Grayscale', links: 'Highlight links', font: 'Readable font', spacing: 'Line spacing',
       still: 'Stop animations', cursor: 'Large cursor', focus: 'Keyboard focus', reset: 'Reset', statement: 'Accessibility statement',
-      cookies: 'This site only uses cookies it needs to work. No advertising or tracking cookies.', cookiesMore: 'Cookie policy', ok: 'Got it',
+      cookies: 'This site only uses cookies it needs to work. No advertising or tracking cookies.', cookiesMore: 'Cookie policy', cookiesAds: 'This site uses cookies it needs to work, and on its marketing pages also Meta and Google measurement tools to see which ads work.', ok: 'Got it',
     },
     ar: {
       open: 'قائمة إمكانية الوصول', title: 'إمكانية الوصول', close: 'إغلاق', size: 'حجم النص', smaller: 'تصغير النص', bigger: 'تكبير النص',
       contrast: 'تباين عالٍ', gray: 'تدرج رمادي', links: 'إبراز الروابط', font: 'خط مقروء', spacing: 'تباعد الأسطر',
       still: 'إيقاف الحركة', cursor: 'مؤشر كبير', focus: 'إبراز تركيز لوحة المفاتيح', reset: 'إعادة الضبط', statement: 'بيان إمكانية الوصول',
-      cookies: 'يستخدم الموقع ملفات تعريف الارتباط الضرورية فقط لتشغيله، دون إعلانات أو تتبع.', cookiesMore: 'سياسة ملفات تعريف الارتباط', ok: 'فهمت',
+      cookies: 'يستخدم الموقع ملفات تعريف الارتباط الضرورية فقط لتشغيله، دون إعلانات أو تتبع.', cookiesMore: 'سياسة ملفات تعريف الارتباط', cookiesAds: 'يستخدم الموقع ملفات تعريف الارتباط الضرورية، وفي صفحاته التسويقية أيضاً أدوات قياس من Meta وGoogle لمعرفة الإعلانات الفعالة.', ok: 'فهمت',
     },
     ru: {
       open: 'Меню доступности', title: 'Доступность', close: 'Закрыть', size: 'Размер текста', smaller: 'Уменьшить текст', bigger: 'Увеличить текст',
       contrast: 'Высокий контраст', gray: 'Оттенки серого', links: 'Выделить ссылки', font: 'Читаемый шрифт', spacing: 'Межстрочный интервал',
       still: 'Остановить анимацию', cursor: 'Крупный курсор', focus: 'Фокус клавиатуры', reset: 'Сбросить', statement: 'Заявление о доступности',
-      cookies: 'Сайт использует только необходимые для работы cookie, без рекламы и отслеживания.', cookiesMore: 'Политика cookie', ok: 'Понятно',
+      cookies: 'Сайт использует только необходимые для работы cookie, без рекламы и отслеживания.', cookiesMore: 'Политика cookie', cookiesAds: 'Сайт использует необходимые cookie, а на маркетинговых страницах также инструменты измерения Meta и Google, чтобы понимать, какая реклама работает.', ok: 'Понятно',
     },
   };
   var t = TEXT[lang] || TEXT.he;
@@ -154,19 +154,22 @@
 
   function buildCookieNotice() {
     var seen = false;
+    // Pages with the ad pixels say so, and ask again from anyone who saw the old notice.
+    var ads = Boolean(window.fbq || window.gtag);
+    var key = ads ? COOKIE_KEY + '-ads' : COOKIE_KEY;
     try {
-      seen = localStorage.getItem(COOKIE_KEY) === '1';
+      seen = localStorage.getItem(key) === '1';
     } catch (e) {
       /* show it */
     }
     if (seen || document.body.hasAttribute('data-no-cookie-notice')) return;
     var bar = el('div', { class: 'cookie-bar', role: 'region', 'aria-label': t.cookiesMore });
-    bar.appendChild(el('p', {}, t.cookies + ' '));
+    bar.appendChild(el('p', {}, (ads ? t.cookiesAds : t.cookies) + ' '));
     bar.firstChild.appendChild(el('a', { href: '/cookies' }, t.cookiesMore));
     var ok = el('button', { type: 'button', class: 'btn primary' }, t.ok);
     ok.addEventListener('click', function () {
       try {
-        localStorage.setItem(COOKIE_KEY, '1');
+        localStorage.setItem(key, '1');
       } catch (e) {
         /* private mode */
       }
