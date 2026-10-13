@@ -980,11 +980,8 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
 
 /** The poster sheet itself; the designer's script updates it live. */
 function posterSheet({ business, qrSvg, t, design: d, rating = null }) {
+  // Only the business's own logo, never a placeholder letter.
   const logo = logoSrc(business);
-  const mark = logo
-    ? `<img class="ps-logo" src="${h(logo)}" alt="">`
-    : `<span class="ps-initial">${h(String(business.name).trim().charAt(0) || '★')}</span>`;
-  const qrMark = logo ? `<img src="${h(logo)}" alt="">` : `<span>${h(String(business.name).trim().charAt(0) || '★')}</span>`;
   const steps = [t.poster_step1, t.poster_step2, t.poster_step3];
   const show = (k) => `data-show="${k}" ${d[k] ? '' : 'hidden'}`;
   const ratingText = rating
@@ -994,7 +991,7 @@ function posterSheet({ business, qrSvg, t, design: d, rating = null }) {
       style="--c:${h(d.color)};--on-c:${inkOn(d.color)};--a:${h(d.accent)};--on-a:${inkOn(d.accent)}">
     <span class="ps-deco" aria-hidden="true"></span>
     <header class="ps-head">
-      <span ${show('showLogo')}>${mark}</span>
+      ${logo ? `<span ${show('showLogo')}><img class="ps-logo" src="${h(logo)}" alt=""></span>` : ''}
       <span class="ps-biz" ${show('showName')}>${h(business.name)}</span>
     </header>
     <div class="ps-body">
@@ -1003,7 +1000,7 @@ function posterSheet({ business, qrSvg, t, design: d, rating = null }) {
       <p class="ps-sub" data-text="subtitle">${h(d.subtitle)}</p>
       <div class="ps-qr-wrap">
         <span class="ps-badge" data-text="badge">${h(d.badge)}</span>
-        <div class="ps-qr">${qrSvg}<span class="ps-qr-logo" ${show('qrLogo')}>${qrMark}</span></div>
+        <div class="ps-qr">${qrSvg}${logo ? `<span class="ps-qr-logo" ${show('qrLogo')}><img src="${h(logo)}" alt=""></span>` : ''}</div>
       </div>
       <ol class="ps-steps" ${show('showSteps')}>${steps.map((x, i) => `<li><span>${i + 1}</span>${h(x)}</li>`).join('')}</ol>
       ${rating ? `<div class="ps-rating" ${show('showRating')}>${ratingText}</div>` : ''}
@@ -1076,14 +1073,15 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
         )}
         ${section(
           'קוד ה-QR',
-          `${check('qrBrand', 'הקוד בצבע הראשי')}${check('qrLogo', 'הלוגו במרכז הקוד')}
+          `${check('qrBrand', 'הקוד בצבע הראשי')}${logoSrc(business) ? check('qrLogo', 'הלוגו במרכז הקוד') : ''}
           <p class="muted small">הקוד נבנה עם תיקון שגיאות גבוה, כך שהוא נסרק גם עם לוגו במרכז. אחרי ההדפסה כדאי לסרוק פעם אחת לבדיקה.</p>`,
         )}
         ${section(
           'מה מופיע בשלט',
-          `<div class="pd-toggles">${check('showLogo', 'לוגו')}${check('showName', 'שם העסק')}${check('showSteps', '3 שלבים')}${check('showStars', 'כוכבים')}${check('showGoogle', 'סמל Google')}${
+          `<div class="pd-toggles">${logoSrc(business) ? check('showLogo', 'לוגו') : ''}${check('showName', 'שם העסק')}${check('showSteps', '3 שלבים')}${check('showStars', 'כוכבים')}${check('showGoogle', 'סמל Google')}${
             rating ? check('showRating', `הדירוג בגוגל (${rating.avg.toFixed(1)}★)`) : ''
           }</div>
+          ${logoSrc(business) ? '' : '<p class="muted small">להצגת הלוגו בשלט ובמרכז הקוד, מעלים לוגו ב<a href="/admin/business">הגדרות העסק</a>.</p>'}
           ${rating ? '' : '<p class="muted small">אחרי חיבור הפרופיל בגוגל אפשר להציג בשלט גם את הדירוג שלכם.</p>'}`,
         )}
         ${canEdit ? '<button class="btn primary pd-save">שמירת העיצוב</button>' : ''}

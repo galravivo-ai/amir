@@ -2418,3 +2418,4 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
 }
 .style-elegant .ps-body { padding: 4cqw 10cqw 9cqw; }
 .ps-rating:not([hidden]) ~ .ps-stars { display: none !important; }
+.ps-logo { max-height: 17cqw; max-width: 52cqw; }

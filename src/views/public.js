@@ -184,8 +184,7 @@ export function thanksView({ campaign, business, t, response }) {
     }`;
   } else {
     const reachable = Boolean(response.wants_contact && (response.phone || response.email));
-    // Unhappy customers can still reach the public review pages (Google's
-    // policy forbids "review gating"); the private channel comes first.
+    // An unhappy customer is taken to the business directly, not to the public review pages.
     body = `<div class="thanks">
       <div class="thanks-icon">${icon('handshake', 34)}</div>
       <p>${h(t.thanks_negative_body)}</p>
@@ -197,13 +196,6 @@ export function thanksView({ campaign, business, t, response }) {
           ${reachable ? `<li>${icon('phone', 14)}<span>${h(t.next_contact)}</span></li>` : ''}
         </ol>
       </div>
-      ${
-        links.length
-          ? `<p class="public-quiet">${h(t.public_short)} ${links
-              .map((l) => `<a href="${go(l.key)}" rel="noopener">${h(l.google ? 'Google' : l.label)}</a>`)
-              .join(' · ')}</p>`
-          : ''
-      }
     </div>`;
   }
   const heading = positive ? t.thanks_positive_title : t.thanks_negative_title;
@@ -230,8 +222,8 @@ export function followupResultView({ campaign, business, t, response, yes, alrea
   if (campaign.google_review_url) links.push({ key: 'google', label: t.google_button });
   campaign.extraLinks.forEach((l, i) => links.push({ key: String(i), label: l.label }));
   const heading = already ? t.followup_done : yes ? t.followup_yes_title : t.followup_no_title;
-  // Every customer can reach the public review links; nothing is gated on the answer.
-  const reviewLinks = links.length
+  // Review links once the complaint was solved; a customer still unhappy is not sent to them.
+  const reviewLinks = yes && links.length
     ? `<div class="public-note"><p class="muted">${h(t.public_review_note)}</p>
         <div class="alt-links">${links
           .map((l) => `<a class="btn" href="/go/${h(response.token)}/${h(l.key)}" rel="noopener">${h(l.label)}</a>`)

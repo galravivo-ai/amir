@@ -1,5 +1,5 @@
 import { parseJson } from './db.js';
-import { safeColor } from './util.js';
+import { logoSrc, safeColor } from './util.js';
 
 // The QR poster a business prints: sizes, looks, and the design saved per campaign.
 
@@ -62,7 +62,8 @@ export function posterDesign(raw, { business, t, staff = null }) {
     badge: clip(d.badge, 30) || t.poster_badge,
     footer: clip(d.footer, 80),
     showLogo: flag('showLogo', true),
-    showName: flag('showName', true),
+    // With a logo, the logo alone heads the sign; without one, the business name.
+    showName: flag('showName', !logoSrc(business)),
     showSteps: flag('showSteps', size !== 'sticker'),
     showStars: flag('showStars', true),
     showRating: flag('showRating', false),

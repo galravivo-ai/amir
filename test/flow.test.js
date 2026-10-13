@@ -200,8 +200,8 @@ test('unhappy customer: private feedback + ticket + webhook, public links still 
   });
   const thanks = await customer.req(done.location);
   assert.match(thanks.text, /הועברה ישירות להנהלה/);
-  // No review gating: the public review link is still offered.
-  assert.match(thanks.text, /\/go\/[^"]+\/google/);
+  // An unhappy customer is taken to the business, not to the review pages.
+  assert.doesNotMatch(thanks.text, /\/go\//);
 
   const [row] = store.listResponses(campaign.business_id, { sentiment: 'negative' });
   assert.equal(row.comment, 'cold coffee');
@@ -691,6 +691,7 @@ test('closing the loop with unhappy customers', async () => {
 
   const no = await client().req(link, { method: 'POST', form: { answer: 'no' } });
   assert.match(no.text, /מצטערים לשמוע/);
+  assert.doesNotMatch(no.text, /\/go\//, 'still unhappy: no review links');
   const reopened = store.responseForBusiness(a.id, campaign.business_id);
   assert.equal(reopened.status, 'in_progress');
   assert.equal(reopened.recovered, 0);
@@ -709,7 +710,7 @@ test('closing the loop with unhappy customers', async () => {
   const bLink = store.responseForBusiness(b.id, campaign.business_id).followup_token;
   const yes = await client().req(`/c/${bLink}`, { method: 'POST', form: { answer: 'yes' } });
   assert.match(yes.text, /שמחים שהסתדר/);
-  assert.match(yes.text, /\/go\/[^"]+\/google/, 'public review links stay available');
+  assert.match(yes.text, /\/go\/[^"]+\/google/, 'solved: now the review links');
 
   const stats = store.stats(campaign.business_id, { campaignId: campaign.id });
   assert.equal(stats.recoveredYes, 1);
@@ -1170,7 +1171,7 @@ test('poster designer: choose a look, save it, it comes back', async () => {
   assert.equal(saved.location, `/admin/campaigns/${campaign.id}/poster?saved=1&src=table4`);
   const again = await owner.req(saved.location);
   assert.match(again.text, /class="poster-sheet style-dark size-a6 font-rubik qr-brand"/);
-  assert.match(again.text, /class="ps-qr-logo" data-show="qrLogo" >/, 'the logo sits in the code');
+  assert.doesNotMatch(again.text, /ps-initial|class="ps-qr-logo"/, 'no logo uploaded: no letter in its place');
   assert.match(again.text, /@page \{ size: 210mm 297mm/, 'four cards on an A4 sheet');
   assert.match(again.text, /--c:#0f7a4a/);
   assert.match(again.text, /--a:#ffd23f/, 'a bad color falls back to the default');
