@@ -1152,7 +1152,9 @@ test('poster designer: choose a look, save it, it comes back', async () => {
   const page = await owner.req(`/admin/campaigns/${campaign.id}/poster`);
   assert.equal(page.status, 200);
   assert.match(page.text, /עיצוב שלט QR/);
-  assert.match(page.text, /class="poster-sheet style-classic size-a4"/);
+  assert.match(page.text, /class="poster-sheet style-classic size-a4 font-display"/);
+  assert.match(page.text, /value="google"/, 'a Google look among the templates');
+  assert.match(page.text, /class="pd-pal"/, 'ready color palettes');
   assert.match(page.text, /@page \{ size: 210mm 297mm/);
   assert.match(page.text, /<svg[^>]*>/, 'the QR code is inline');
   assert.match(page.text, /vendor\/html-to-image\.js\?v=/);
@@ -1162,16 +1164,18 @@ test('poster designer: choose a look, save it, it comes back', async () => {
     form: {
       _csrf: await csrfOf(owner), size: 'a6', style: 'dark', color: '#0f7a4a', accent: 'red;}</style>',
       title: 'דרגו אותנו!', subtitle: '', badge: 'סרקו', footer: 'תודה שבאתם', showLogo: '1', showStars: '1', src: 'table4',
+      font: 'rubik', qrBrand: '1', qrLogo: '1', sheet4: '1',
     },
   });
   assert.equal(saved.location, `/admin/campaigns/${campaign.id}/poster?saved=1&src=table4`);
   const again = await owner.req(saved.location);
-  assert.match(again.text, /class="poster-sheet style-dark size-a6"/);
+  assert.match(again.text, /class="poster-sheet style-dark size-a6 font-rubik qr-brand"/);
+  assert.match(again.text, /class="ps-qr-logo" data-show="qrLogo" >/, 'the logo sits in the code');
+  assert.match(again.text, /@page \{ size: 210mm 297mm/, 'four cards on an A4 sheet');
   assert.match(again.text, /--c:#0f7a4a/);
   assert.match(again.text, /--a:#ffd23f/, 'a bad color falls back to the default');
   assert.match(again.text, /דרגו אותנו!/);
   assert.match(again.text, /תודה שבאתם/);
-  assert.match(again.text, /@page \{ size: 105mm 148mm/);
   assert.match(again.text, /class="ps-steps" data-show="showSteps" hidden/, 'unticked parts stay hidden');
   assert.match(again.text, /העיצוב נשמר/);
 

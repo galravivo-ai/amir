@@ -4,18 +4,45 @@ import { safeColor } from './util.js';
 // The QR poster a business prints: sizes, looks, and the design saved per campaign.
 
 export const POSTER_SIZES = {
+  a3: { label: 'A3 · שלט גדול לחלון או לקיר', w: 297, h: 420 },
   a4: { label: 'A4 · שלט לקיר או לחלון', w: 210, h: 297 },
   a5: { label: 'A5 · שלט לדלפק', w: 148, h: 210 },
   a6: { label: 'A6 · כרטיס לשולחן', w: 105, h: 148 },
   sticker: { label: 'מדבקה מרובעת 10×10 ס״מ', w: 100, h: 100 },
+  story: { label: 'סטורי לוואטסאפ ולאינסטגרם (תמונה)', w: 108, h: 192, digital: true },
 };
+
+/** Sizes small enough to print four on one A4 sheet. */
+export const SHEET4_SIZES = ['a6', 'sticker'];
 
 export const POSTER_STYLES = {
   classic: 'קלאסי',
   bold: 'צבעוני',
+  modern: 'מודרני',
+  google: 'גוגל',
   minimal: 'נקי',
+  elegant: 'יוקרתי',
+  split: 'חצוי',
   dark: 'כהה',
 };
+
+export const POSTER_FONTS = {
+  display: 'בולט (Secular One)',
+  rubik: 'מודרני (Rubik)',
+  light: 'עדין (Assistant)',
+};
+
+/** Ready color pairs (main, accent) for one tap. */
+export const POSTER_PALETTES = [
+  ['#4b2bd6', '#ffd23f'],
+  ['#111827', '#f5c542'],
+  ['#0f766e', '#fde68a'],
+  ['#be123c', '#fecdd3'],
+  ['#1d4ed8', '#bfdbfe'],
+  ['#c2410c', '#fed7aa'],
+  ['#3f6212', '#ecfccb'],
+  ['#7c2d12', '#e7c9a9'],
+];
 
 const clip = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -27,6 +54,7 @@ export function posterDesign(raw, { business, t, staff = null }) {
   return {
     size,
     style: POSTER_STYLES[d.style] ? d.style : 'classic',
+    font: POSTER_FONTS[d.font] ? d.font : 'display',
     color: safeColor(d.color, safeColor(business.brand_color, '#4b2bd6')),
     accent: safeColor(d.accent, '#ffd23f'),
     title: clip(d.title, 80) || (staff ? t.poster_staff.replace('{name}', staff.name) : t.title),
@@ -37,12 +65,21 @@ export function posterDesign(raw, { business, t, staff = null }) {
     showName: flag('showName', true),
     showSteps: flag('showSteps', size !== 'sticker'),
     showStars: flag('showStars', true),
+    showRating: flag('showRating', false),
+    showGoogle: flag('showGoogle', false),
+    qrBrand: flag('qrBrand', false),
+    qrLogo: flag('qrLogo', false),
+    sheet4: SHEET4_SIZES.includes(size) && flag('sheet4', false),
   };
 }
 
+/** The on/off choices of the designer. */
+export const POSTER_FLAGS = ['showLogo', 'showName', 'showSteps', 'showStars', 'showRating', 'showGoogle', 'qrBrand', 'qrLogo', 'sheet4'];
+
 /** The fields a business can save (texts equal to the defaults are not stored, so a language change still applies). */
 export function designToSave(body, { business, t, staff }) {
-  const d = posterDesign({ ...body, showLogo: body.showLogo === '1', showName: body.showName === '1', showSteps: body.showSteps === '1', showStars: body.showStars === '1' }, { business, t, staff });
+  const flags = Object.fromEntries(POSTER_FLAGS.map((k) => [k, body[k] === '1']));
+  const d = posterDesign({ ...body, ...flags }, { business, t, staff });
   const defaults = posterDesign({}, { business, t, staff });
   for (const k of ['title', 'subtitle', 'badge']) if (d[k] === defaults[k]) delete d[k];
   return d;

@@ -144,8 +144,7 @@ ${SKIP()}
       label: 'מוניטין וביקורות',
       items: [
         ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending],
-        ['/admin/responses?sentiment=negative&status=new', 'לקוחות לא מרוצים', 'alert', openCount],
-        ['/admin/responses', 'תגובות מסקרים', 'inbox'],
+        ['/admin/responses', 'תגובות לקוחות', 'inbox', openCount],
         ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
         ['/admin/poster', 'עיצוב שלט QR', 'print'],
         role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],

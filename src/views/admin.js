@@ -7,7 +7,7 @@ import { profileCard, viewsOf } from './performance.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
-import { inkOn, POSTER_SIZES, POSTER_STYLES } from '../poster.js';
+import { inkOn, POSTER_FONTS, POSTER_PALETTES, POSTER_SIZES, POSTER_STYLES, SHEET4_SIZES } from '../poster.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -511,7 +511,7 @@ export function responsesTable(rows) {
       .join('')}</tbody></table>`;
 }
 
-export function responsesView({ rows, campaigns, filters, page, hasMore, staff = [] }) {
+export function responsesView({ rows, campaigns, filters, page, hasMore, staff = [], openCount = 0 }) {
   const opt = (value, label, current) =>
     `<option value="${h(value)}" ${String(current ?? '') === String(value) ? 'selected' : ''}>${h(label)}</option>`;
   const qs = (p) => {
@@ -527,14 +527,31 @@ export function responsesView({ rows, campaigns, filters, page, hasMore, staff =
   const advancedOn = Boolean(filters.status && !unhappyView) || filters.staff || filters.tag || filters.overdue || filters.consent;
   const intro = unhappyView
     ? 'לקוחות שדירגו נמוך בסקר ועוד לא טיפלתם בהם. פותחים את הלקוח, חוזרים אליו בטלפון או בוואטסאפ, ומסמנים "טופל". ככה לקוח כועס הופך ללקוח שחוזר, לפני שהוא כותב ביקורת רעה בגוגל.'
-    : 'כל סקר שלקוח מילא דרך ה-QR או הקישור שלכם: הדירוג, התשובות וההערה. ביקורות מגוגל נמצאות בעמוד "ביקורות".';
+    : 'כל סקר שלקוח מילא דרך ה-QR או הקישור שלכם: הדירוג, התשובות וההערה. ביקורות מגוגל נמצאות בעמוד "ביקורות בגוגל".';
+  // One page, four views: who waits for you, everyone, the satisfied and the unhappy.
+  const bare = !filters.status && !filters.staff && !filters.tag && !filters.overdue && !filters.consent;
+  const tab = unhappyView ? 'open' : bare && !filters.sentiment ? 'all' : bare && filters.sentiment === 'positive' ? 'pos' : bare && filters.sentiment === 'negative' ? 'neg' : '';
+  const keep = filters.campaign ? `&campaign=${encodeURIComponent(filters.campaign)}` : '';
+  const tabs = [
+    ['open', `?sentiment=negative&status=new${keep}`, 'מחכים לטיפול', openCount],
+    ['all', `?${keep.slice(1)}`, 'כל התגובות'],
+    ['pos', `?sentiment=positive${keep}`, 'מרוצים'],
+    ['neg', `?sentiment=negative${keep}`, 'לא מרוצים'],
+  ];
+  const tabsBar = `<nav class="view-tabs" aria-label="תצוגה">${tabs
+    .map(
+      ([k, q, label, n]) =>
+        `<a href="/admin/responses${q === '?' ? '' : q}"${tab === k ? ' aria-current="page" class="on"' : ''}>${label}${n ? ` <b class="${k === 'open' ? 'hot' : ''}">${n}</b>` : ''}</a>`,
+    )
+    .join('')}</nav>`;
   const emptyState = unhappyView
     ? '<div class="card empty"><p><b>אין לקוחות לא מרוצים שמחכים.</b></p><p class="muted">כשלקוח ידרג נמוך בסקר, הוא יופיע כאן ותקבלו התראה.</p></div>'
     : `<div class="card empty"><p><b>עוד אף לקוח לא מילא סקר.</b></p>
         <p class="muted">מדפיסים את שלט ה-QR ומניחים אותו בקופה או על השולחנות, או שולחים ללקוחות את הקישור לסקר.</p>
         <a class="btn primary" href="/admin/campaigns">לקמפיינים ו-QR</a></div>`;
-  return `<div class="page-head"><h1>${unhappyView ? 'לקוחות לא מרוצים' : 'תגובות מסקרים'}</h1>
+  return `<div class="page-head"><h1>תגובות לקוחות</h1>
       ${rows.length ? `<a class="btn" href="/admin/responses.csv?${h(exportParams)}">ייצוא CSV</a>` : ''}</div>
+    ${tabsBar}
     <p class="page-intro">${intro}</p>
     ${
       empty
@@ -549,11 +566,7 @@ export function responsesView({ rows, campaigns, filters, page, hasMore, staff =
               .join('')}</select>`
           : ''
       }
-      ${
-        unhappyView
-          ? ''
-          : `<select name="sentiment" aria-label="דירוג" onchange="this.form.submit()">${opt('', 'כל הדירוגים', filters.sentiment)}${opt('positive', 'מרוצים', filters.sentiment)}${opt('negative', 'לא מרוצים', filters.sentiment)}</select>`
-      }
+      ${unhappyView || !filters.sentiment ? '' : `<input type="hidden" name="sentiment" value="${h(filters.sentiment)}">`}
       <button class="btn">חיפוש</button>
       <details class="more-filters" ${advancedOn ? 'open' : ''}><summary>עוד סינונים</summary>
         <div class="filters">
@@ -966,41 +979,53 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
 }
 
 /** The poster sheet itself; the designer's script updates it live. */
-function posterSheet({ business, qrSvg, t, design: d }) {
+function posterSheet({ business, qrSvg, t, design: d, rating = null }) {
   const logo = logoSrc(business);
   const mark = logo
     ? `<img class="ps-logo" src="${h(logo)}" alt="">`
     : `<span class="ps-initial">${h(String(business.name).trim().charAt(0) || '★')}</span>`;
+  const qrMark = logo ? `<img src="${h(logo)}" alt="">` : `<span>${h(String(business.name).trim().charAt(0) || '★')}</span>`;
   const steps = [t.poster_step1, t.poster_step2, t.poster_step3];
-  return `<article id="sheet" class="poster-sheet style-${h(d.style)} size-${h(d.size)}" dir="${h(t.dir)}"
+  const show = (k) => `data-show="${k}" ${d[k] ? '' : 'hidden'}`;
+  const ratingText = rating
+    ? `<b>${rating.avg.toFixed(1)}</b><span class="ps-rstars" style="--r:${(rating.avg / 5) * 100}%">★★★★★</span><small>${rating.total.toLocaleString('he-IL')} ביקורות בגוגל</small>`
+    : '';
+  return `<article id="sheet" class="poster-sheet style-${h(d.style)} size-${h(d.size)} font-${h(d.font)}${d.qrBrand ? ' qr-brand' : ''}" dir="${h(t.dir)}"
       style="--c:${h(d.color)};--on-c:${inkOn(d.color)};--a:${h(d.accent)};--on-a:${inkOn(d.accent)}">
+    <span class="ps-deco" aria-hidden="true"></span>
     <header class="ps-head">
-      <span data-show="showLogo" ${d.showLogo ? '' : 'hidden'}>${mark}</span>
-      <span class="ps-biz" data-show="showName" ${d.showName ? '' : 'hidden'}>${h(business.name)}</span>
+      <span ${show('showLogo')}>${mark}</span>
+      <span class="ps-biz" ${show('showName')}>${h(business.name)}</span>
     </header>
     <div class="ps-body">
+      <div class="ps-google" ${show('showGoogle')}><img src="/static/brands/google.svg" alt=""><span>Google</span></div>
       <h1 data-text="title">${h(d.title)}</h1>
       <p class="ps-sub" data-text="subtitle">${h(d.subtitle)}</p>
       <div class="ps-qr-wrap">
         <span class="ps-badge" data-text="badge">${h(d.badge)}</span>
-        <div class="ps-qr">${qrSvg}</div>
+        <div class="ps-qr">${qrSvg}<span class="ps-qr-logo" ${show('qrLogo')}>${qrMark}</span></div>
       </div>
-      <ol class="ps-steps" data-show="showSteps" ${d.showSteps ? '' : 'hidden'}>${steps.map((x, i) => `<li><span>${i + 1}</span>${h(x)}</li>`).join('')}</ol>
-      <div class="ps-stars" data-show="showStars" ${d.showStars ? '' : 'hidden'} aria-hidden="true">★★★★★</div>
+      <ol class="ps-steps" ${show('showSteps')}>${steps.map((x, i) => `<li><span>${i + 1}</span>${h(x)}</li>`).join('')}</ol>
+      ${rating ? `<div class="ps-rating" ${show('showRating')}>${ratingText}</div>` : ''}
+      <div class="ps-stars" ${show('showStars')} aria-hidden="true">★★★★★</div>
       <p class="ps-footer" data-text="footer" ${d.footer ? '' : 'hidden'}>${h(d.footer)}</p>
     </div>
   </article>`;
 }
 
-export function posterView({ campaign, business, qrSvg, t, staff = null, design, csrf = '', canEdit = true, src = '', saved = false }) {
+const POSTER_TITLES = ['איך הייתה החוויה שלך?', 'נהניתם? ספרו לנו!', 'דרגו אותנו ב-10 שניות', 'הדעה שלכם חשובה לנו', 'אהבתם? נשמח לביקורת', 'עזרו לנו להשתפר'];
+
+export function posterView({ campaign, business, qrSvg, t, staff = null, design, csrf = '', canEdit = true, src = '', saved = false, rating = null }) {
   const d = design;
-  const sizes = Object.fromEntries(Object.entries(POSTER_SIZES).map(([k, v]) => [k, { w: v.w, h: v.h }]));
+  const sizes = Object.fromEntries(Object.entries(POSTER_SIZES).map(([k, v]) => [k, { w: v.w, h: v.h, digital: Boolean(v.digital) }]));
   const opt = (map, cur) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${h(typeof v === 'string' ? v : v.label)}</option>`).join('');
-  const check = (name, label) => `<label class="check"><input type="checkbox" name="${name}" value="1" ${d[name] ? 'checked' : ''}> ${label}</label>`;
+  const check = (name, label, extra = '') => `<label class="pd-toggle"${extra}><input type="checkbox" name="${name}" value="1" ${d[name] ? 'checked' : ''}><span class="pd-switch"></span>${label}</label>`;
+  const section = (title, body, open = true) => `<details class="pd-sec" ${open ? 'open' : ''}><summary>${title}</summary><div class="pd-sec-body">${body}</div></details>`;
+  const hebrew = campaign.lang === 'he' || !campaign.lang;
   return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>עיצוב שלט · ${h(business.name)}</title><link rel="stylesheet" href="${asset('style.css')}">
-  <style id="page-size">@page { size: ${sizes[d.size].w}mm ${sizes[d.size].h}mm; margin: 0 }</style>
+  <style id="page-size">@page { size: ${d.sheet4 ? '210mm 297mm' : `${sizes[d.size].w}mm ${sizes[d.size].h}mm`}; margin: 0 }</style>
   <script src="${asset('vendor/html-to-image.js')}" defer></script>
   </head>
   <body class="poster-app">
@@ -1009,7 +1034,7 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
       <h1>עיצוב שלט QR <span class="muted">· ${h(campaign.name)}${staff ? ` · ${h(staff.name)}` : ''}</span></h1>
       <div class="pd-actions">
         <button type="button" class="btn" id="pd-png">הורדה כתמונה (PNG)</button>
-        <button type="button" class="btn accent" onclick="print()">הדפסה / שמירה כ-PDF</button>
+        <button type="button" class="btn accent" id="pd-print">הדפסה / שמירה כ-PDF</button>
       </div>
     </header>
     ${saved ? '<div class="flash noprint pd-flash">העיצוב נשמר.</div>' : ''}
@@ -1018,35 +1043,61 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
         <input type="hidden" name="_csrf" value="${h(csrf)}">
         ${staff ? `<input type="hidden" name="e" value="${h(staff.code)}">` : ''}
         ${src ? `<input type="hidden" name="src" value="${h(src)}">` : ''}
-        <fieldset><legend>גודל ותבנית</legend>
-          <label>גודל<select name="size">${opt(POSTER_SIZES, d.size)}</select></label>
-          <div class="pd-styles" role="radiogroup" aria-label="תבנית">${Object.entries(POSTER_STYLES)
-            .map(([k, l]) => `<label class="pd-style s-${k}"><input type="radio" name="style" value="${k}" ${k === d.style ? 'checked' : ''}><span class="pd-swatch"></span>${h(l)}</label>`)
-            .join('')}</div>
-        </fieldset>
-        <fieldset><legend>צבעים</legend>
+        ${section(
+          'תבנית',
+          `<div class="pd-styles" role="radiogroup" aria-label="תבנית">${Object.entries(POSTER_STYLES)
+            .map(([k, l]) => `<label class="pd-style s-${k}"><input type="radio" name="style" value="${k}" ${k === d.style ? 'checked' : ''}><span class="pd-swatch"><i></i><i></i><i></i></span>${h(l)}</label>`)
+            .join('')}</div>`,
+        )}
+        ${section(
+          'גודל והדפסה',
+          `<label>גודל<select name="size">${opt(POSTER_SIZES, d.size)}</select></label>
+          ${check('sheet4', '4 עותקים בדף A4 (לחיתוך)', ` data-only="${SHEET4_SIZES.join(' ')}"${SHEET4_SIZES.includes(d.size) ? '' : ' hidden'}`)}
+          <p class="muted small" data-only="story"${d.size === 'story' ? '' : ' hidden'}>הסטורי מיועד להורדה כתמונה ולשיתוף בסטטוס בוואטסאפ או בסטורי באינסטגרם.</p>`,
+        )}
+        ${section(
+          'צבעים וגופן',
+          `<div class="pd-palettes" role="group" aria-label="צבעים מוכנים">${POSTER_PALETTES.map(
+            ([c, a]) => `<button type="button" class="pd-pal" data-c="${c}" data-a="${a}" style="--pc:${c};--pa:${a}" aria-label="ערכת צבעים ${c}"></button>`,
+          ).join('')}${business.brand_color ? `<button type="button" class="pd-pal brand" data-c="${h(safeColor(business.brand_color, '#4b2bd6'))}" data-a="#ffd23f" style="--pc:${h(safeColor(business.brand_color, '#4b2bd6'))};--pa:#ffd23f" title="צבע העסק" aria-label="צבע העסק"></button>` : ''}</div>
           <div class="pd-colors">
             <label>צבע ראשי<input type="color" name="color" value="${h(d.color)}"></label>
             <label>צבע הדגשה<input type="color" name="accent" value="${h(d.accent)}"></label>
           </div>
-        </fieldset>
-        <fieldset><legend>טקסטים</legend>
-          <label>כותרת<input name="title" value="${h(d.title)}" maxlength="80"></label>
+          <label>גופן הכותרת<select name="font">${opt(POSTER_FONTS, d.font)}</select></label>`,
+        )}
+        ${section(
+          'טקסטים',
+          `<label>כותרת<input name="title" value="${h(d.title)}" maxlength="80"></label>
+          ${hebrew ? `<div class="pd-chips" aria-label="כותרות מוכנות">${POSTER_TITLES.map((x) => `<button type="button" class="pd-chip" data-title="${h(x)}">${h(x)}</button>`).join('')}</div>` : ''}
           <label>שורה מתחת לכותרת<input name="subtitle" value="${h(d.subtitle)}" maxlength="120"></label>
           <label>תווית מעל הקוד<input name="badge" value="${h(d.badge)}" maxlength="30"></label>
-          <label>שורה בתחתית (לא חובה)<input name="footer" value="${h(d.footer)}" maxlength="80" placeholder="למשל: תודה שבחרתם בנו"></label>
-        </fieldset>
-        <fieldset><legend>מה מופיע בשלט</legend>
-          <div class="pd-checks">${check('showLogo', 'לוגו')}${check('showName', 'שם העסק')}${check('showSteps', '3 שלבים')}${check('showStars', 'כוכבים')}</div>
-        </fieldset>
+          <label>שורה בתחתית (לא חובה)<input name="footer" value="${h(d.footer)}" maxlength="80" placeholder="למשל: תודה שבחרתם בנו · www.example.co.il"></label>`,
+        )}
+        ${section(
+          'קוד ה-QR',
+          `${check('qrBrand', 'הקוד בצבע הראשי')}${check('qrLogo', 'הלוגו במרכז הקוד')}
+          <p class="muted small">הקוד נבנה עם תיקון שגיאות גבוה, כך שהוא נסרק גם עם לוגו במרכז. אחרי ההדפסה כדאי לסרוק פעם אחת לבדיקה.</p>`,
+        )}
+        ${section(
+          'מה מופיע בשלט',
+          `<div class="pd-toggles">${check('showLogo', 'לוגו')}${check('showName', 'שם העסק')}${check('showSteps', '3 שלבים')}${check('showStars', 'כוכבים')}${check('showGoogle', 'סמל Google')}${
+            rating ? check('showRating', `הדירוג בגוגל (${rating.avg.toFixed(1)}★)`) : ''
+          }</div>
+          ${rating ? '' : '<p class="muted small">אחרי חיבור הפרופיל בגוגל אפשר להציג בשלט גם את הדירוג שלכם.</p>'}`,
+        )}
         ${canEdit ? '<button class="btn primary pd-save">שמירת העיצוב</button>' : ''}
-        <p class="muted small">הקוד מוביל לסקר של הקמפיין "${h(campaign.name)}". אפשר להדפיס כמה שלטים ולשמור כל אחד כ-PDF או כתמונה לשליחה לבית דפוס.</p>
+        <p class="muted small">הקוד מוביל לסקר של הקמפיין "${h(campaign.name)}". אפשר לשמור כל שלט כ-PDF או כתמונה ולשלוח לבית דפוס.</p>
       </form>
-      <div class="pd-stage">${posterSheet({ business, qrSvg, t, design: d })}</div>
+      <div class="pd-stage">
+        <div class="pd-stage-bar noprint"><span id="pd-dim"></span></div>
+        <div id="pd-sheet-wrap">${posterSheet({ business, qrSvg, t, design: d, rating })}</div>
+        <div id="pd-print4" class="pd-print4" aria-hidden="true"></div>
+      </div>
     </div>
     <script>
     (function () {
-      var SIZES = ${JSON.stringify(sizes)};
+      var SIZES = ${JSON.stringify(sizes)}, SHEET4 = ${JSON.stringify(SHEET4_SIZES)};
       var form = document.getElementById('pd-form');
       var sheet = document.getElementById('sheet');
       function ink(hex) {
@@ -1054,9 +1105,9 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
         return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.45 ? '#17123a' : '#ffffff';
       }
       function apply() {
-        var f = form.elements;
+        var f = form.elements, size = f.size.value, s = SIZES[size];
         var style = form.querySelector('input[name=style]:checked').value;
-        sheet.className = 'poster-sheet style-' + style + ' size-' + f.size.value;
+        sheet.className = 'poster-sheet style-' + style + ' size-' + size + ' font-' + f.font.value + (f.qrBrand.checked ? ' qr-brand' : '');
         sheet.style.setProperty('--c', f.color.value); sheet.style.setProperty('--on-c', ink(f.color.value));
         sheet.style.setProperty('--a', f.accent.value); sheet.style.setProperty('--on-a', ink(f.accent.value));
         sheet.querySelectorAll('[data-text]').forEach(function (el) {
@@ -1064,18 +1115,37 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
           el.textContent = v || f[el.dataset.text].defaultValue;
           if (el.dataset.text === 'footer') el.hidden = !v;
         });
-        sheet.querySelectorAll('[data-show]').forEach(function (el) { el.hidden = !f[el.dataset.show].checked; });
-        var s = SIZES[f.size.value];
-        document.getElementById('page-size').textContent = '@page { size: ' + s.w + 'mm ' + s.h + 'mm; margin: 0 }';
+        sheet.querySelectorAll('[data-show]').forEach(function (el) { el.hidden = !(f[el.dataset.show] && f[el.dataset.show].checked); });
+        form.querySelectorAll('[data-only]').forEach(function (el) { el.hidden = el.dataset.only.split(' ').indexOf(size) < 0; });
+        var four = SHEET4.indexOf(size) >= 0 && f.sheet4.checked;
+        document.getElementById('page-size').textContent = '@page { size: ' + (four ? '210mm 297mm' : s.w + 'mm ' + s.h + 'mm') + '; margin: 0 }';
+        document.body.classList.toggle('print-four', four);
+        document.getElementById('pd-dim').textContent = s.digital ? '1080 × 1920 פיקסלים' : (s.w / 10) + ' × ' + (s.h / 10) + ' ס״מ' + (four ? ' · 4 בדף A4' : '');
+        document.getElementById('pd-print').disabled = !!s.digital;
       }
       form.addEventListener('input', apply);
       form.addEventListener('change', apply);
+      form.querySelectorAll('.pd-pal').forEach(function (b) {
+        b.addEventListener('click', function () { form.elements.color.value = b.dataset.c; form.elements.accent.value = b.dataset.a; apply(); });
+      });
+      form.querySelectorAll('.pd-chip').forEach(function (b) {
+        b.addEventListener('click', function () { form.elements.title.value = b.dataset.title; apply(); });
+      });
+      // Four on a sheet: copies of the sign, laid out only for printing.
+      document.getElementById('pd-print').addEventListener('click', function () {
+        var box = document.getElementById('pd-print4');
+        box.innerHTML = '';
+        if (document.body.classList.contains('print-four')) {
+          for (var i = 0; i < 4; i++) { var c = sheet.cloneNode(true); c.removeAttribute('id'); box.appendChild(c); }
+        }
+        print();
+      });
       document.getElementById('pd-png').addEventListener('click', function () {
         var btn = this, s = SIZES[form.elements.size.value];
         if (!window.htmlToImage) return;
         btn.disabled = true; btn.textContent = 'מכין תמונה…';
-        // 300 DPI at the printed width, good enough for a print shop.
-        var ratio = (s.w / 25.4 * 300) / sheet.offsetWidth;
+        // A story is 1080 pixels wide; a print is 300 DPI at the printed width.
+        var ratio = (s.digital ? 1080 : s.w / 25.4 * 300) / sheet.offsetWidth;
         window.htmlToImage.toBlob(sheet, { pixelRatio: ratio, style: { borderRadius: '0', boxShadow: 'none', margin: '0' } }).then(function (blob) {
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a'); a.href = url; a.download = 'qr-sign-' + form.elements.size.value + '.png';
@@ -1084,6 +1154,7 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
         }).catch(function () { alert('לא הצלחנו ליצור תמונה. אפשר להשתמש בהדפסה ושמירה כ-PDF.'); })
           .then(function () { btn.disabled = false; btn.textContent = 'הורדה כתמונה (PNG)'; });
       });
+      apply();
     })();
     </script>
   </body></html>`;

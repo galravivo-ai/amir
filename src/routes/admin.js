@@ -121,7 +121,7 @@ export function adminRoutes(ctx) {
     render(
       req,
       res,
-      filters.sentiment === 'negative' && filters.status === 'new' ? 'לקוחות לא מרוצים' : 'תגובות מסקרים',
+      'תגובות לקוחות',
       V.responsesView({
         rows: rows.slice(0, PAGE_SIZE),
         hasMore: rows.length > PAGE_SIZE,
@@ -129,6 +129,7 @@ export function adminRoutes(ctx) {
         filters,
         campaigns: store.campaignsFor(req.business.id),
         staff: store.staffFor(req.business.id),
+        openCount: store.openIssuesCount(req.business.id),
       }),
     );
   });
@@ -410,8 +411,12 @@ export function adminRoutes(ctx) {
   admin.get('/campaigns/:id/poster', async (req, res) => {
     const c = loadCampaign(req, res);
     if (!c) return;
-    const qrSvg = await QRCode.toString(qrTarget(req, c), { type: 'svg', ...QR_OPTS });
+    // High error correction, so a logo can sit in the middle of the code.
+    const qrSvg = await QRCode.toString(qrTarget(req, c), { type: 'svg', ...QR_OPTS, errorCorrectionLevel: 'H' });
     store.setOnboardingFlag(req.business.id, 'poster');
+    const rated = store.googleLocations(req.business.id).filter((l) => l.enabled && l.avg_rating && l.total_reviews);
+    const total = rated.reduce((n, l) => n + l.total_reviews, 0);
+    const rating = total ? { avg: rated.reduce((n, l) => n + l.avg_rating * l.total_reviews, 0) / total, total } : null;
     const staff = store.staffByCode(req.business.id, req.query.e);
     const t = textsFor(c);
     res.send(
@@ -424,6 +429,7 @@ export function adminRoutes(ctx) {
         design: posterDesign(c.poster_design, { business: req.business, t, staff }),
         csrf: req.user.csrf,
         canEdit: req.can('manager'),
+        rating,
         src: String(req.query.src ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40),
         saved: req.query.saved === '1',
       }),
