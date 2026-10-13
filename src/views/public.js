@@ -5,11 +5,9 @@ import { publicPage } from './layout.js';
 const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
 
 export function ratingView({ campaign, business, t, src, invite, staffCode = '' }) {
-  const tiles = [1, 2, 3, 4, 5]
+  const stars = [1, 2, 3, 4, 5]
     .map(
-      (n) => `<button type="submit" name="rating" value="${n}" class="rate-btn" aria-label="${n} · ${h(t.rate_labels[n - 1])}">
-        ${n}<small>${h(t.rate_labels[n - 1])}</small>
-      </button>`,
+      (n) => `<button type="submit" name="rating" value="${n}" class="star-btn" data-label="${h(t.rate_labels[n - 1])}" aria-label="${n} · ${h(t.rate_labels[n - 1])}">${starMark(46)}<small>${n}</small></button>`,
     )
     .join('');
   return publicPage({
@@ -20,14 +18,27 @@ export function ratingView({ campaign, business, t, src, invite, staffCode = '' 
     lang: campaign.lang,
     dir: t.dir,
     business,
-    body: `<form method="post" action="/r/${h(campaign.slug)}/rate" class="rating-form">
+    step: 1,
+    body: `<form method="post" action="/r/${h(campaign.slug)}/rate" class="rating-form star-form">
         <input type="hidden" name="src" value="${h(src)}">
         <input type="hidden" name="i" value="${h(invite?.token || '')}">
         ${staffCode ? `<input type="hidden" name="e" value="${h(staffCode)}">` : ''}
-        ${tiles}
+        <div class="star-row">${stars}</div>
+        <p class="star-label" aria-live="polite" data-hint="${h(t.rate_hint)}">${h(t.rate_hint)}</p>
       </form>
-      <div class="rate-scale"><span>${h(t.rate_labels[0])}</span><span>${h(t.rate_labels[4])}</span></div>
-      <div class="rate-hint">${starMark(24)}<span>${h(t.rate_hint)}</span></div>`,
+      <div class="trust-row">
+        <span>${icon('clock', 16)} ${h(t.trust_time)}</span>
+        <span>${icon('shield', 16)} ${h(t.trust_private.replace('{business}', business.name))}</span>
+      </div>
+      <script>
+      (function(){var f=document.querySelector('.star-form'),l=f.querySelector('.star-label'),bs=f.querySelectorAll('.star-btn');
+      function show(b){l.textContent=b?b.dataset.label:l.dataset.hint;l.classList.toggle('on',!!b)}
+      bs.forEach(function(b){b.addEventListener('mouseenter',function(){show(b)});b.addEventListener('focus',function(){show(b)});
+      b.addEventListener('click',function(e){if(f.dataset.sent)return e.preventDefault();e.preventDefault();f.dataset.sent=1;show(b);
+      bs.forEach(function(x){x.classList.toggle('lit',+x.value<=+b.value)});f.classList.add('picked');
+      setTimeout(function(){f.requestSubmit?f.requestSubmit(b):(function(){var i=document.createElement('input');i.type='hidden';i.name='rating';i.value=b.value;f.appendChild(i);f.submit()})()},380)})});
+      f.querySelector('.star-row').addEventListener('mouseleave',function(){if(!f.dataset.sent)show(null)});})();
+      </script>`,
   });
 }
 
@@ -43,12 +54,12 @@ function questionField(q, t, value, error) {
       .map(
         (o) => `<label class="chip"><input type="${type}" name="${name}" value="${h(o)}" ${
           selected.has(o) ? 'checked' : ''
-        }><span>${h(o)}</span></label>`,
+        }><span>${icon('check', 14)}${h(o)}</span></label>`,
       )
       .join('')}</div>`;
   } else if (q.type === 'nps') {
     input = `<div class="nps">${Array.from({ length: 11 }, (_, n) => {
-      return `<label class="nps-cell"><input type="radio" name="${name}" value="${n}" ${
+      return `<label class="nps-cell nps-${n <= 6 ? 'lo' : n <= 8 ? 'mid' : 'hi'}"><input type="radio" name="${name}" value="${n}" ${
         String(value) === String(n) ? 'checked' : ''
       }><span>${n}</span></label>`;
     }).join('')}</div>
@@ -77,9 +88,12 @@ export function questionsView({ campaign, business, t, response, questions, valu
   const contact = negative
     ? `<fieldset class="q contact">
         <legend>${h(t.contact_title)}</legend>
+        <p class="q-note">${icon('user', 16)} ${h(t.contact_note)}</p>
         <label>${h(t.name_label)}<input name="customer_name" maxlength="100" value="${h(values.customer_name ?? prefill.customer_name ?? '')}" autocomplete="name"></label>
-        <label>${h(t.phone_label)}<input name="phone" type="tel" maxlength="30" value="${h(values.phone ?? prefill.phone ?? '')}" autocomplete="tel"></label>
-        <label>${h(t.email_label)}<input name="email" type="email" maxlength="120" value="${h(values.email ?? '')}" autocomplete="email"></label>
+        <div class="q-pair">
+          <label>${h(t.phone_label)}<input name="phone" type="tel" maxlength="30" value="${h(values.phone ?? prefill.phone ?? '')}" autocomplete="tel" dir="ltr"></label>
+          <label>${h(t.email_label)}<input name="email" type="email" maxlength="120" value="${h(values.email ?? '')}" autocomplete="email" dir="ltr"></label>
+        </div>
         <label class="check"><input type="checkbox" name="wants_contact" value="1" ${
           values.wants_contact === undefined || values.wants_contact ? 'checked' : ''
         }> ${h(t.wants_contact)}</label>
@@ -95,75 +109,105 @@ export function questionsView({ campaign, business, t, response, questions, valu
   return publicPage({
     title: t.title,
     heading: negative ? t.q_negative : t.q_positive,
-    above: `<div class="picked" aria-label="${response.rating} / 5">${stars(response.rating)}</div>`,
+    above: `<div class="picked" aria-label="${response.rating} / 5">${stars(response.rating)}<span>${h(t.rate_labels[response.rating - 1])}</span></div>`,
     lang: campaign.lang,
     dir: t.dir,
     business,
+    step: 2,
+    tone: negative ? 'calm' : '',
     body: `<form method="post" action="/f/${h(response.token)}" class="survey">
         ${staffField(staff, t, values.staff)}
         ${questions.map((q) => questionField(q, t, values[`q_${q.id}`], errors[q.id])).join('')}
         <fieldset class="q"><legend>${h(t.comment_label)}</legend>
-          <textarea name="comment" rows="3" maxlength="3000">${h(values.comment ?? '')}</textarea>
+          <textarea name="comment" rows="3" maxlength="3000" placeholder="${h(t.comment_placeholder)}">${h(values.comment ?? '')}</textarea>
         </fieldset>
         ${contact}
         ${consent}
-        <button class="btn big" type="submit">${h(negative ? t.send : t.next)}</button>
+        <div class="survey-submit"><button class="btn big" type="submit">${h(negative ? t.send : t.next)} <span aria-hidden="true">${t.dir === 'rtl' ? '←' : '→'}</span></button></div>
       </form>`,
   });
 }
 
-export function thanksView({ campaign, business, t, response }) {
+/** The public review links of a campaign: Google first, then the extra platforms. */
+function reviewLinks(campaign, t) {
   const links = [];
   if (campaign.google_review_url) links.push({ key: 'google', label: t.google_button, google: true });
   campaign.extraLinks.forEach((l, i) => links.push({ key: String(i), label: l.label }));
+  return links;
+}
+
+const GOOGLE_G = '<img src="/static/brands/google.svg" alt="" width="22" height="22">';
+
+export function thanksView({ campaign, business, t, response }) {
+  const links = reviewLinks(campaign, t);
   const go = (key) => `/go/${h(response.token)}/${h(key)}`;
+  const positive = response.sentiment === 'positive';
+  const google = links.find((l) => l.google);
+  const others = links.filter((l) => !l.google);
+  const comment = String(response.comment || '').trim();
 
   let body;
-  if (response.sentiment === 'positive') {
+  if (positive) {
+    const card = google
+      ? `<div class="g-card">
+          <div class="g-card-head">${GOOGLE_G}<span><b>Google</b><small>${h(t.g_review_on.replace('{business}', business.name))}</small></span></div>
+          ${
+            comment
+              ? `<div class="g-quote"><small>${h(t.g_your_words)}</small><p>${h(comment)}</p>
+                  <button type="button" class="g-copy" data-copy>${h(t.g_copy)}</button></div>`
+              : ''
+          }
+          <a class="btn big g-btn" href="${go(google.key)}" rel="noopener"${comment ? ' data-copy' : ''}>${GOOGLE_G} ${h(google.label)}</a>
+          <ol class="g-steps"><li>${h(t.g_step1)}</li><li>${h(t.g_step2)}</li><li>${h(comment ? t.g_step3_paste : t.g_step3)}</li></ol>
+          <p class="g-toast" role="status" hidden>${icon('check', 16)} ${h(t.g_copied)}</p>
+        </div>`
+      : '';
     body = `<div class="thanks">
       <div class="thanks-icon">${icon('heart', 34)}</div>
-      <p>${h(t.thanks_positive_body)}</p>
-      <div class="review-links">
-        ${links
-          .map((l) =>
-            l.google
-              ? `<a class="btn big google" href="${go(l.key)}" rel="noopener">
-                  <span class="g">G</span> ${h(l.label)}</a>`
-              : '',
-          )
-          .join('')}
-        ${
-          links.some((l) => !l.google)
-            ? `<p class="muted">${h(t.other_platforms)}</p>
-               <div class="alt-links">${links
-                 .filter((l) => !l.google)
-                 .map((l) => `<a class="btn" href="${go(l.key)}" rel="noopener">${h(l.label)}</a>`)
-                 .join('')}</div>`
-            : ''
-        }
-      </div>
-    </div>`;
+      ${google ? `<p>${h(t.thanks_positive_body)}</p>` : ''}
+      ${card}
+      ${
+        others.length
+          ? `<div class="alt-wrap"><p class="muted">${h(google ? t.other_platforms : t.public_short)}</p>
+              <div class="alt-links">${others.map((l) => `<a class="btn" href="${go(l.key)}" rel="noopener">${h(l.label)}</a>`).join('')}</div></div>`
+          : ''
+      }
+    </div>
+    ${
+      comment
+        ? `<script>
+      (function(){var text=${JSON.stringify(comment).replace(/</g, '\\u003c')},toast=document.querySelector('.g-toast');
+      function copy(){try{navigator.clipboard.writeText(text).then(function(){toast.hidden=false}).catch(function(){})}catch(e){}}
+      document.querySelectorAll('[data-copy]').forEach(function(el){el.addEventListener('click',copy)});})();
+      </script>`
+        : ''
+    }`;
   } else {
-    // Customers who were not satisfied still get access to the public review
-    // links (Google policy forbids "review gating"); the private channel is
-    // simply offered first.
+    const reachable = Boolean(response.wants_contact && (response.phone || response.email));
+    // Unhappy customers can still reach the public review pages (Google's
+    // policy forbids "review gating"); the private channel comes first.
     body = `<div class="thanks">
       <div class="thanks-icon">${icon('handshake', 34)}</div>
       <p>${h(t.thanks_negative_body)}</p>
+      <div class="next-box">
+        <b>${h(t.next_title)}</b>
+        <ol class="next-steps">
+          <li class="done">${icon('check', 14)}<span>${h(t.next_received)}</span></li>
+          <li>${icon('user', 14)}<span>${h(t.next_read)}</span></li>
+          ${reachable ? `<li>${icon('phone', 14)}<span>${h(t.next_contact)}</span></li>` : ''}
+        </ol>
+      </div>
       ${
         links.length
-          ? `<div class="public-note">
-              <p class="muted">${h(t.public_review_note)}</p>
-              <div class="alt-links">${links
-                .map((l) => `<a class="btn" href="${go(l.key)}" rel="noopener">${h(l.label)}</a>`)
-                .join('')}</div>
-            </div>`
+          ? `<p class="public-quiet">${h(t.public_short)} ${links
+              .map((l) => `<a href="${go(l.key)}" rel="noopener">${h(l.google ? 'Google' : l.label)}</a>`)
+              .join(' · ')}</p>`
           : ''
       }
     </div>`;
   }
-  const heading = response.sentiment === 'positive' ? t.thanks_positive_title : t.thanks_negative_title;
-  return publicPage({ title: heading, heading, lang: campaign.lang, dir: t.dir, business, body });
+  const heading = positive ? t.thanks_positive_title : t.thanks_negative_title;
+  return publicPage({ title: heading, heading, lang: campaign.lang, dir: t.dir, business, body, step: 3, tone: positive ? 'happy' : 'calm' });
 }
 
 export function followupView({ campaign, business, t, response }) {

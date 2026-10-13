@@ -273,7 +273,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList
  * Customer-facing shell, branded per business: a colored header with the
  * business logo and the page heading, then the page content.
  */
-export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = 'rtl', business, body, above = '' }) {
+export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = 'rtl', business, body, above = '', step = 0, tone = '' }) {
   const color = safeColor(business?.brand_color, '#4b2bd6');
   const initial = h(String(business?.name ?? '').trim().charAt(0) || '★');
   const ft = PUBLIC_TEXTS[lang] || PUBLIC_TEXTS.he;
@@ -286,8 +286,15 @@ export function publicPage({ title, heading = '', sub = '', lang = 'he', dir = '
 </head>
 <body class="public">
 ${SKIP(ft.skipToContent)}
-<main class="survey-shell" id="main">
+<main class="survey-shell${tone ? ` tone-${h(tone)}` : ''}" id="main">
   <header class="survey-head">
+    ${
+      step
+        ? `<div class="survey-steps" role="img" aria-label="${h(ft.step_label.replace('{n}', step))}">${[1, 2, 3]
+            .map((n) => `<i class="${n < step ? 'done' : n === step ? 'now' : ''}"></i>`)
+            .join('')}</div>`
+        : ''
+    }
     ${
       business
         ? `<div class="survey-biz">

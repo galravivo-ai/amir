@@ -145,6 +145,7 @@ test('happy customer: rating -> questions -> Google review link tracked', async 
   const scan = await customer.req(`/r/${campaign.slug}?src=table-3`);
   assert.equal(scan.status, 200);
   assert.match(scan.text, /Test Cafe/);
+  assert.match(scan.text, /class="star-btn"/, 'five stars to tap');
 
   const rate = await customer.req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '5', src: 'table-3' } });
   assert.equal(rate.status, 303);
@@ -157,6 +158,8 @@ test('happy customer: rating -> questions -> Google review link tracked', async 
   assert.equal(done.status, 303);
   const thanks = await customer.req(done.location);
   assert.match(thanks.text, /כתיבת ביקורת בגוגל/);
+  assert.match(thanks.text, /class="g-card"/, 'a Google review card');
+  assert.match(thanks.text, /שלב 3 מתוך 3/);
 
   const tok = tokenPath.split('/').pop();
   const go = await customer.req(`/go/${tok}/google`);
