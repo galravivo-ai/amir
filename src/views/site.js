@@ -522,8 +522,8 @@ export function guideHubView({ signupOpen }) {
     <i>למדריך החיבור ←</i>
   </a>
   <div class="guide-video">
-    <video controls playsinline preload="none" poster="${asset('media/gofive-intro.jpg')}" aria-label="סרטון הכרות עם GoFive">
-      <source src="${asset('media/gofive-intro.mp4')}" type="video/mp4">
+    <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
+      <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
     </video>
   </div>
   ${GUIDE_GROUPS.map(
@@ -549,6 +549,11 @@ export function guideConnectView({ signupOpen }) {
     body: `<section class="guide">
   <a class="guide-back" href="/guide">→ כל המדריכים</a>
   <header class="guide-head"><h1>${h(c.title)}</h1><p>${h(c.intro)}</p></header>
+  <div class="guide-video">
+    <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
+      <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
+    </video>
+  </div>
   <div class="guide-why"><h2>למה חיבור מלא?</h2>${compareTable()}</div>
   ${c.steps
     .map(
