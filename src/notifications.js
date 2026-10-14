@@ -1,6 +1,6 @@
 import { emailButton, emailLayout } from './mailer.js';
 import { sendWebhook } from './notify.js';
-import { GUIDE_STEPS } from './guide.js';
+import { CONNECT_COMPARE, CONNECT_GUIDE, FEATURE_GUIDES } from './guide.js';
 import { emailList, h, safeColor } from './util.js';
 
 const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
@@ -409,31 +409,51 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
-    /** The getting-started guide, with the real screens: sent on sign-up, and again from the system panel. */
+    /**
+     * The getting-started email: the connection to Google first (it brings all the data),
+     * with the real screens, then a link to a short guide for each feature.
+     * Sent on sign-up, and again from the system panel.
+     */
     async welcomeGuide({ user, business }) {
-      const steps = GUIDE_STEPS.map(
-        (s, i) => `<div style="margin:28px 0 0;padding-top:20px;border-top:1px solid #eee">
+      const c = CONNECT_GUIDE;
+      const cell = 'padding:8px 10px;border-bottom:1px solid #eee';
+      const compare = `<table style="width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 4px">
+        <tr><th style="${cell};text-align:right"></th><th style="${cell};color:#4b2bd6">חיבור מלא</th><th style="${cell};color:#6b7280">קישור בלבד</th></tr>
+        ${CONNECT_COMPARE.map(([what, full, link]) => `<tr><td style="${cell}">${h(what)}</td><td style="${cell};text-align:center;color:${full ? '#15803d' : '#9ca3af'}">${full ? '✓' : '—'}</td><td style="${cell};text-align:center;color:${link ? '#15803d' : '#9ca3af'}">${link ? '✓' : '—'}</td></tr>`).join('')}
+      </table>`;
+      const steps = c.steps
+        .map(
+          (s, i) => `<div style="margin:24px 0 0;padding-top:18px;border-top:1px solid #eee">
           <p style="margin:0 0 6px;color:#4b2bd6;font-weight:700;font-size:13px">שלב ${i + 1}</p>
           <h3 style="margin:0 0 10px;font-size:18px;color:#17123a">${h(s.title)}</h3>
           <ul style="margin:0 0 14px;padding-inline-start:20px;color:#374151;line-height:1.7">${s.points.map((x) => `<li>${h(x)}</li>`).join('')}</ul>
-          ${s.tip ? `<p style="margin:0 0 14px;background:#f5f3ff;border-radius:8px;padding:10px 12px;color:#374151;font-size:14px">💡 ${h(s.tip)}</p>` : ''}
-          <img src="${h(url(`/static/media/guide/${s.image}`))}" alt="${h(s.alt)}" width="${s.small ? 300 : 520}" style="display:block;width:100%;max-width:${s.small ? 300 : 520}px;height:auto;border:1px solid #e5e7eb;border-radius:10px">
-          ${emailButton(url(s.link), s.linkLabel)}
+          ${s.image ? `<img src="${h(url(`/static/media/guide/${s.image}`))}" alt="${h(s.alt)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border:1px solid #e5e7eb;border-radius:10px">` : ''}
+          ${s.link ? emailButton(url(s.link), s.linkLabel) : ''}
         </div>`,
+        )
+        .join('');
+      const features = FEATURE_GUIDES.map(
+        (g) => `<li style="margin:0 0 6px"><a href="${h(url(`/guide/${g.slug}`))}" style="color:#4b2bd6;font-weight:600">${h(g.title)}</a> · <span style="color:#6b7280">${h(g.summary)}</span></li>`,
       ).join('');
       return mailer.send({
         kind: 'welcome_guide',
         businessId: business?.id,
         to: user.email,
-        subject: 'ברוכים הבאים ל-GoFive: איך מתחילים, צעד אחר צעד',
+        subject: 'ברוכים הבאים ל-GoFive: מתחילים בחיבור לגוגל',
         html: emailLayout({
           title: 'ברוכים הבאים ל-GoFive',
           brand: true,
           body: `<p>היי ${h(user.name)},</p>
-            <p>שמחים שהצטרפת${business ? ` עם <b>${h(business.name)}</b>` : ''}. ריכזנו כאן את כל מה שצריך כדי להתחיל, בשישה צעדים קצרים, עם צילומי מסך מהמערכת.</p>
-            ${emailButton(url('/guide'), 'למדריך המלא באתר')}
+            <p>שמחים שהצטרפת${business ? ` עם <b>${h(business.name)}</b>` : ''}. הצעד הראשון והחשוב ביותר: <b>חיבור מלא לחשבון הגוגל של העסק</b>. ${h(c.intro.split('. ').slice(1).join('. '))}</p>
+            <h3 style="margin:22px 0 4px;font-size:17px;color:#17123a">למה חיבור מלא?</h3>
+            ${compare}
             ${steps}
-            ${process.env.CONTACT_EMAIL ? `<p style="margin-top:28px;color:#6b7280;font-size:14px">שאלה? כתבו לנו ל-<a href="mailto:${h(process.env.CONTACT_EMAIL)}">${h(process.env.CONTACT_EMAIL)}</a> ונחזור אליכם.</p>` : ''}`,
+            <div style="margin:28px 0 0;padding:18px;background:#f5f3ff;border-radius:12px">
+              <h3 style="margin:0 0 10px;font-size:17px;color:#17123a">מחוברים? מדריך קצר לכל פיצ׳ר</h3>
+              <ul style="margin:0;padding-inline-start:18px;line-height:1.6">${features}</ul>
+              ${emailButton(url('/guide'), 'לכל המדריכים')}
+            </div>
+            ${process.env.CONTACT_EMAIL ? `<p style="margin-top:24px;color:#6b7280;font-size:14px">שאלה? כתבו לנו ל-<a href="mailto:${h(process.env.CONTACT_EMAIL)}">${h(process.env.CONTACT_EMAIL)}</a> ונחזור אליכם.</p>` : ''}`,
         }),
       });
     },

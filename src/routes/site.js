@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { errorPage, isEmail } from '../util.js';
-import { accessibilityView, cookiesView, guideView, landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
+import { accessibilityView, cookiesView, guideConnectView, guideFeatureView, guideHubView, landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
+import { featureGuide } from '../guide.js';
 
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
 
@@ -81,7 +82,13 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
     res.sendFile(SW);
   });
 
-  router.get('/guide', (req, res) => res.send(guideView({ signupOpen: signupOpen() })));
+  router.get('/guide', (req, res) => res.send(guideHubView({ signupOpen: signupOpen() })));
+  router.get('/guide/connect', (req, res) => res.send(guideConnectView({ signupOpen: signupOpen() })));
+  router.get('/guide/:slug', (req, res) => {
+    const guide = featureGuide(req.params.slug);
+    if (!guide) return res.status(404).send(errorPage('המדריך לא נמצא'));
+    res.send(guideFeatureView({ signupOpen: signupOpen(), guide }));
+  });
   router.get('/privacy', (req, res) => res.send(privacyView({ signupOpen: signupOpen() })));
   router.get('/terms', (req, res) => res.send(termsView({ signupOpen: signupOpen() })));
   router.get('/cookies', (req, res) => res.send(cookiesView({ signupOpen: signupOpen() })));

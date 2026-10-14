@@ -62,10 +62,11 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
     .join('')}</tbody></table>`;
 }
 
-function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug }) {
+function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial = false }) {
   const full = places.length >= branchLimit;
   return `<section class="card stack">
-    <h2>מעקב אחרי הביקורות בגוגל</h2>
+    <h2>${partial ? 'אין גישה לחשבון? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2>
+    ${partial ? '<p class="g-partial">זה חיבור חלקי: ביקורות ודירוג בלבד. בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת.</p>' : ''}
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
     ${places.length ? '<p class="muted small">המחיר הוא לכל פרופיל גוגל שעוקבים אחריו. אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף מחויב במחיר המסלול מהחידוש הבא.</p>' : ''}
     ${
@@ -146,23 +147,29 @@ export function googleConnectView({
   ${serpMissing ? '<div class="warn">כדי לעקוב אחרי ביקורות לפי קישור, הוסיפו ב-Railway את המשתנה <code>SERPAPI_KEY</code> (רק מנהל המערכת רואה את זה).</div>' : ''}
   ${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
 
-  const serpPart = serpAvailable ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug }) : '';
+  const serpPart = serpAvailable
+    ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial: gbpAvailable && !conn })
+    : '';
 
   let gbpPart = '';
   if (gbpAvailable && !conn) {
-    gbpPart = `<section class="card g-hero">
+    // The full connection runs most of the system, so it comes first.
+    gbpPart = `<section class="card g-hero g-full">
       <div class="stack">
-        <h2>${serpAvailable ? 'חיבור חשבון הגוגל של העסק' : 'כל הביקורות מגוגל, במקום אחד'}</h2>
+        <div class="row"><h2>חיבור מלא לחשבון הגוגל של העסק</h2><span class="badge st-resolved">מומלץ</span></div>
+        <p>החיבור המלא הוא מה שמפעיל את רוב המערכת. בלעדיו חסרים הנתונים החשובים ביותר.</p>
         <ul class="how-list">
-          ${serpAvailable ? '' : '<li>כל ביקורת חדשה בגוגל מגיעה לכאן, עם התראה לטלפון.</li><li>ביקורת של 3 כוכבים ומטה נשלחת גם במייל, כדי שתענו מהר.</li>'}
-          <li>עונים לביקורות ישירות מכאן, עם טיוטה שה-AI מנסח ואתם מאשרים.</li>
-          <li>הסניפים נטענים אוטומטית מהחשבון, והביקורות מתעדכנות כל חצי שעה.</li>
+          <li>צפיות בפרופיל, שיחות, בקשות הגעה וכניסות לאתר, 18 חודשים אחורה.</li>
+          <li>מה אנשים חיפשו בגוגל כשמצאו אתכם.</li>
+          <li>תשובות לביקורות שמתפרסמות בגוגל ישירות מכאן, עם טיוטה מוכנה.</li>
+          <li>פרסום פוסטים ותמונות לפרופיל.</li>
+          <li>כל הסניפים בחשבון נטענים לבד, והביקורות מתעדכנות כל חצי שעה.</li>
         </ul>
         ${
           can('manager')
             ? `<form method="post" action="/admin/google/connect"><input type="hidden" name="_csrf" value="${h(csrf)}">
                 <button class="btn g-btn">${GOOGLE_G} התחברות עם חשבון גוגל של העסק</button></form>
-               <p class="muted small">מתחברים עם חשבון הגוגל שמנהל את פרופיל העסק במפות. אנחנו מבקשים רק הרשאה לנהל ביקורות, לא גישה למייל או לקבצים.</p>`
+               <p class="muted small">מתחברים עם חשבון הגוגל שמנהל את פרופיל העסק (בעלים או מנהל בפרופיל). ההרשאה היא לניהול פרופיל העסק בלבד, בלי גישה למייל או לקבצים. <a href="/guide/connect">מדריך החיבור</a></p>`
             : '<p class="muted">רק מנהלים יכולים לחבר את החשבון.</p>'
         }
       </div>
@@ -187,7 +194,7 @@ export function googleConnectView({
       }
     </section>`;
   }
-  return `${head}${serpPart}${gbpPart}`;
+  return `${head}${gbpPart}${serpPart}`;
 }
 
 export function googleReviewsView({ reviews, locations, filters, summary }) {

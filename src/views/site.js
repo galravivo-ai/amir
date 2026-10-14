@@ -3,7 +3,7 @@ import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { NETWORK_TOOLS } from './network.js';
-import { GUIDE_STEPS } from '../guide.js';
+import { CONNECT_COMPARE, CONNECT_GUIDE, FEATURE_GUIDES, GUIDE_GROUPS } from '../guide.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 
@@ -85,7 +85,7 @@ ${body}
 <footer class="site-foot">
   <div>© ${new Date().getFullYear()} ${h(op.name)}</div>
   <nav>
-    <a href="/guide">מדריך התחלה</a>
+    <a href="/guide">מדריכים</a>
     <a href="/terms">תנאי שימוש ותקנון</a>
     <a href="/privacy">מדיניות פרטיות</a>
     <a href="/cookies">מדיניות עוגיות</a>
@@ -500,41 +500,104 @@ ${networkSection()}
 
 // ---------------------------------------------------------------- guide
 
-/** The getting-started guide: the same steps as the welcome email, with the real screens. */
-export function guideView({ signupOpen }) {
+const guideImg = (file, alt, small = false) =>
+  `<figure class="guide-fig${small ? ' small' : ''}"><img src="${asset(`media/guide/${file}`)}" alt="${h(alt)}" loading="lazy"></figure>`;
+const compareTable = () => `<table class="guide-compare">
+  <thead><tr><th></th><th>חיבור מלא</th><th>קישור בלבד</th></tr></thead>
+  <tbody>${CONNECT_COMPARE.map(([what, full, link]) => `<tr><td>${h(what)}</td><td class="${full ? 'yes' : 'no'}">${full ? '✓' : '—'}</td><td class="${link ? 'yes' : 'no'}">${link ? '✓' : '—'}</td></tr>`).join('')}</tbody>
+</table>`;
+
+/** The guides: connecting comes first, then a card for each feature. */
+export function guideHubView({ signupOpen }) {
   return sitePage({
-    title: `מדריך התחלה · ${operatorInfo().brand}`,
-    description: 'איך מחברים את פרופיל העסק בגוגל ל-GoFive, מדפיסים שלט QR, עונים לביקורות ומטפלים בלקוחות לא מרוצים. צעד אחר צעד, עם צילומי מסך.',
+    title: `מדריכים · ${operatorInfo().brand}`,
+    description: 'מדריכים ל-GoFive: איך מחברים את פרופיל העסק בגוגל, ומדריך קצר לכל פיצ׳ר, עם צילומי מסך.',
     signupOpen,
     body: `<section class="guide">
-  <header class="guide-head">
-    <h1>מדריך התחלה</h1>
-    <p>שישה צעדים קצרים, מהחיבור לגוגל ועד הביקורת הראשונה. כל צילום מסך כאן הוא מהמערכת עצמה.</p>
-    <ol class="guide-toc">${GUIDE_STEPS.map((x, i) => `<li><a href="#step-${i + 1}">${h(x.title)}</a></li>`).join('')}</ol>
-  </header>
+  <header class="guide-head"><h1>מדריכים</h1><p>מתחילים מהחיבור לגוגל, ואז בוחרים מדריך לכל פיצ׳ר. כל צילום מסך כאן הוא מהמערכת עצמה.</p></header>
+  <a class="guide-start" href="/guide/connect">
+    <span class="guide-start-tag">מתחילים כאן</span>
+    <b>${h(CONNECT_GUIDE.title)}</b>
+    <span>החיבור המלא לחשבון הגוגל של העסק מביא למערכת את כל הנתונים. שתי דקות, פעם אחת.</span>
+    <i>למדריך החיבור ←</i>
+  </a>
   <div class="guide-video">
     <video controls playsinline preload="none" poster="${asset('media/gofive-intro.jpg')}" aria-label="סרטון הכרות עם GoFive">
       <source src="${asset('media/gofive-intro.mp4')}" type="video/mp4">
     </video>
   </div>
-  ${GUIDE_STEPS.map(
-    (x, i) => `<article class="guide-step${x.small ? ' small' : ''}" id="step-${i + 1}">
+  ${GUIDE_GROUPS.map(
+    ([key, label]) => `<h2 class="guide-group">${h(label)}</h2>
+  <div class="guide-cards">${FEATURE_GUIDES.filter((g) => g.group === key)
+    .map(
+      (g) => `<a class="guide-card" href="/guide/${g.slug}"><img src="${asset(`media/guide/${g.image}`)}" alt="" loading="lazy"><b>${h(g.title)}</b><span>${h(g.summary)}</span>${g.full ? '<em>דורש חיבור מלא</em>' : ''}</a>`,
+    )
+    .join('')}</div>`,
+  ).join('')}
+  ${guideHelp()}
+</section>`,
+  });
+}
+
+/** Connecting the business to Google, step by step. */
+export function guideConnectView({ signupOpen }) {
+  const c = CONNECT_GUIDE;
+  return sitePage({
+    title: `${c.title} · ${operatorInfo().brand}`,
+    description: c.intro,
+    signupOpen,
+    body: `<section class="guide">
+  <a class="guide-back" href="/guide">→ כל המדריכים</a>
+  <header class="guide-head"><h1>${h(c.title)}</h1><p>${h(c.intro)}</p></header>
+  <div class="guide-why"><h2>למה חיבור מלא?</h2>${compareTable()}</div>
+  ${c.steps
+    .map(
+      (x, i) => `<article class="guide-step${x.image ? '' : ' text-only'}" id="step-${i + 1}">
     <div class="guide-text">
       <span class="guide-num">${i + 1}</span>
       <h2>${h(x.title)}</h2>
       <ul>${x.points.map((p) => `<li>${h(p)}</li>`).join('')}</ul>
-      ${x.tip ? `<p class="guide-tip">${h(x.tip)}</p>` : ''}
-      <a class="btn primary" href="${h(x.link)}">${h(x.linkLabel)}</a>
+      ${x.link ? `<a class="btn primary" href="${h(x.link)}">${h(x.linkLabel)}</a>` : ''}
     </div>
-    <figure><img src="${asset(`media/guide/${x.image}`)}" alt="${h(x.alt)}" loading="lazy"></figure>
+    ${x.image ? guideImg(x.image, x.alt) : ''}
   </article>`,
-  ).join('')}
-  <footer class="guide-foot">
-    <h2>צריכים עזרה?</h2>
-    <p>${operatorInfo().email ? `כתבו לנו ל-<a href="mailto:${h(operatorInfo().email)}">${h(operatorInfo().email)}</a>, או ` : ''}השאירו פרטים <a href="/#talk">בדף הבית</a> ונחזור אליכם.</p>
-  </footer>
+    )
+    .join('')}
+  <div class="guide-trouble"><h2>משהו לא עובד?</h2><dl>${c.trouble.map(([q, a]) => `<dt>${h(q)}</dt><dd>${h(a)}</dd>`).join('')}</dl></div>
+  <p class="guide-next">מחוברים? עכשיו <a href="/guide">בוחרים מדריך לפיצ׳ר הבא</a>.</p>
+  ${guideHelp()}
 </section>`,
   });
+}
+
+/** One feature: what it's for, a few steps, and its screen. */
+export function guideFeatureView({ signupOpen, guide: g }) {
+  const others = FEATURE_GUIDES.filter((x) => x.group === g.group && x.slug !== g.slug);
+  return sitePage({
+    title: `${g.title} · ${operatorInfo().brand}`,
+    description: g.summary,
+    signupOpen,
+    body: `<section class="guide">
+  <a class="guide-back" href="/guide">→ כל המדריכים</a>
+  <article class="guide-step guide-feature">
+    <div class="guide-text">
+      <h1>${h(g.title)}</h1>
+      <p class="guide-summary">${h(g.summary)}</p>
+      ${g.full ? '<p class="guide-tip">הפיצ׳ר הזה דורש <a href="/guide/connect">חיבור מלא לחשבון הגוגל של העסק</a>.</p>' : ''}
+      <ol>${g.points.map((p) => `<li>${h(p)}</li>`).join('')}</ol>
+      <a class="btn primary" href="${h(g.link)}">לפתוח במערכת</a>
+    </div>
+    ${guideImg(g.image, g.title, g.image === 'poster.jpg')}
+  </article>
+  ${others.length ? `<h2 class="guide-group">עוד בנושא</h2><div class="guide-cards">${others.map((x) => `<a class="guide-card" href="/guide/${x.slug}"><b>${h(x.title)}</b><span>${h(x.summary)}</span></a>`).join('')}</div>` : ''}
+  ${guideHelp()}
+</section>`,
+  });
+}
+
+function guideHelp() {
+  return `<footer class="guide-foot"><h2>צריכים עזרה?</h2>
+    <p>${operatorInfo().email ? `כתבו לנו ל-<a href="mailto:${h(operatorInfo().email)}">${h(operatorInfo().email)}</a>, או ` : ''}השאירו פרטים <a href="/#talk">בדף הבית</a> ונחזור אליכם.</p></footer>`;
 }
 
 // ---------------------------------------------------------------- legal
