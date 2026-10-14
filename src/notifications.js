@@ -297,6 +297,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `<p><b>${h(kindLabel)}</b>${lead.size ? ` · ${h(lead.size)} סניפים / לקוחות` : ''}</p>
             <p>${h(lead.name)}${lead.company ? ` · ${h(lead.company)}` : ''}<br>
             <span dir="ltr">${h(lead.phone)}</span> ${h(lead.email)}</p>
+            ${lead.marketing ? '<p style="color:#15803d">✓ אישר/ה קבלת דיוור פרסומי</p>' : ''}
             ${lead.message ? `<blockquote style="border-right:3px solid #ddd;margin:0;padding:4px 12px">${h(lead.message)}</blockquote>` : ''}
             ${emailButton(url('/superadmin#leads'), 'לכל הפניות')}`,
         }),

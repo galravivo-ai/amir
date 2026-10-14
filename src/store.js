@@ -84,9 +84,15 @@ export function createStore(db) {
     // Every change of mind is timestamped, so we can show when consent was given or withdrawn.
     setMarketingConsent: (id, on) =>
       q("UPDATE users SET marketing_consent = ?, marketing_consent_at = datetime('now') WHERE id = ? AND marketing_consent IS NOT ?").run(on ? 1 : 0, id, on ? 1 : 0),
+    // Everyone who opted in: accounts (current choice) and website leads (an email
+    // that later became an account follows the account's choice).
     marketingList: () =>
-      q(`SELECT email, name, marketing_consent_at FROM users
-         WHERE marketing_consent = 1 AND is_superadmin = 0 AND password_hash NOT LIKE '!demo-%' ORDER BY marketing_consent_at DESC`).all(),
+      q(`SELECT 'account' AS source, email, '' AS phone, name, marketing_consent_at AS consent_at FROM users
+           WHERE marketing_consent = 1 AND is_superadmin = 0 AND password_hash NOT LIKE '!demo-%'
+         UNION ALL
+         SELECT 'lead', l.email, l.phone, l.name, l.created_at FROM leads l
+           WHERE l.marketing_consent = 1 AND (l.email = '' OR l.email NOT IN (SELECT email FROM users))
+         ORDER BY consent_at DESC`).all(),
     updateUserPassword(id, passwordHash, keepSessionId = null) {
       q('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
       // Changing the password signs out every other session.
@@ -245,8 +251,8 @@ export function createStore(db) {
 
     // ---------- leads (quote requests) ----------
     createLead(f) {
-      const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-        f.kind, f.name, f.phone, f.email, f.company, f.size, f.message,
+      const r = q('INSERT INTO leads (kind, name, phone, email, company, size, message, marketing_consent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+        f.kind, f.name, f.phone, f.email, f.company, f.size, f.message, f.marketing ? 1 : 0,
       );
       return Number(r.lastInsertRowid);
     },

@@ -1725,6 +1725,8 @@ body.site .site-head { background: rgba(255, 255, 255, .9); border-bottom-color:
 .lp-talk .btn { height: 48px; min-height: 48px; margin: 0; padding: 0 1.4em; white-space: nowrap; }
 .lp-talk-box > small { display: block; margin-top: .8rem; color: #a9a2d6; font-size: .8rem; }
 .lp-talk-box > small a { color: #cfc9f2; }
+.lp-talk-mk { grid-column: 1 / -1; margin: 0; color: #cfc9f2; font-size: .85rem; }
+.lp-talk .lp-talk-mk input { width: 18px; height: 18px; padding: 0; flex: none; }
 .lp-talk-error { grid-column: 1 / -1; margin: 0; color: #ffb4a8; font-size: .9rem; }
 .lp-talk-done { padding: .9rem; border-radius: 12px; background: rgba(52,168,83,.18); color: #c9f5d6; font-weight: 600; }
 @media (max-width: 600px) { .lp-talk { grid-template-columns: 1fr; } }

@@ -25,6 +25,7 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
       company: clean('company', 100),
       size: clean('size', 40),
       message: String(req.body.message ?? '').trim().slice(0, 1000),
+      marketing: req.body.marketing === '1',
     };
     // The short form at the end of the page, or the quote form.
     const done = req.body.from === 'talk' ? '/?sent=talk#talk' : '/?sent=1#contact';

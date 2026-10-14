@@ -646,6 +646,10 @@ const MIGRATIONS = [
   ALTER TABLE users ADD COLUMN marketing_consent INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE users ADD COLUMN marketing_consent_at TEXT;
   `,
+  // v33: website leads can opt in to marketing too
+  `
+  ALTER TABLE leads ADD COLUMN marketing_consent INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function migrate(db) {

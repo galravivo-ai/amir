@@ -36,8 +36,8 @@ export function superadminRoutes(ctx) {
 
   // Users who opted in to marketing email, for import into a mailing tool.
   router.get('/marketing.csv', (req, res) => {
-    const lines = [['email', 'name', 'consent_at'].join(',')];
-    for (const u of store.marketingList()) lines.push([u.email, u.name, u.marketing_consent_at].map(csvEscape).join(','));
+    const lines = [['email', 'phone', 'name', 'source', 'consent_at'].join(',')];
+    for (const u of store.marketingList()) lines.push([u.email, u.phone, u.name, u.source, u.consent_at].map(csvEscape).join(','));
     res.type('text/csv; charset=utf-8');
     res.attachment(`marketing-optin-${new Date().toISOString().slice(0, 10)}.csv`);
     res.send(`\ufeff${lines.join('\r\n')}`);

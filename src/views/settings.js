@@ -745,7 +745,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
               (l) => `<tr class="${l.handled_at ? 'unranked' : ''}"><td data-l="מתי" class="small">${h(formatDate(l.created_at))}</td>
                 <td data-l="סוג">${h(LEAD_KINDS[l.kind] || l.kind)}</td>
                 <td data-l="פרטים"><b>${h(l.name)}</b>${l.company ? ` · ${h(l.company)}` : ''}<div class="small" dir="ltr">${h(l.phone)} ${h(l.email)}</div></td>
-                <td data-l="היקף">${h(l.size || '—')}</td>
+                <td data-l="היקף">${h(l.size || '—')}${l.marketing_consent ? '<div class="small">✓ אישר דיוור</div>' : ''}</td>
                 <td data-l="הודעה" class="clip">${h(l.message || '')}</td>
                 <td><form method="post" action="/superadmin/leads/${l.id}" class="inline">${csrfField(csrf)}
                   <input type="hidden" name="handled" value="${l.handled_at ? 0 : 1}">

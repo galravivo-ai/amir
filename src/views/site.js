@@ -155,9 +155,10 @@ function contactForm(error = '', v = {}) {
       <label>כמה סניפים או לקוחות?<input name="size" maxlength="40" value="${val('size')}" placeholder="למשל: 25"></label>
     </div>
     <label>משהו נוסף? (לא חובה)<textarea name="message" rows="3" maxlength="1000">${val('message')}</textarea></label>
+    <label class="check"><input type="checkbox" name="marketing" value="1" ${v.marketing ? 'checked' : ''}><span>אשמח לקבל עדכונים, טיפים והטבות מ-GoFive בהודעות ובמייל (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>
     <label class="hp" aria-hidden="true">אתר<input name="website" tabindex="-1" autocomplete="off"></label>
     <button class="btn primary">שליחה</button>
-    <p class="muted small">צריך טלפון או אימייל כדי שנוכל לחזור אליכם. הפרטים ישמשו רק למענה לפנייה, ואין חובה חוקית למסור אותם. <a href="/privacy">מדיניות הפרטיות</a></p>
+    <p class="muted small">צריך טלפון או אימייל כדי שנוכל לחזור אליכם. הפרטים ישמשו למענה לפנייה, ולעדכונים רק אם סימנתם, ואין חובה חוקית למסור אותם. <a href="/privacy">מדיניות הפרטיות</a></p>
   </form>`;
 }
 
@@ -171,6 +172,7 @@ function talkForm(sent, error = '', v = {}) {
     <input name="phone" type="tel" required maxlength="30" placeholder="טלפון" aria-label="טלפון" value="${val('phone')}" autocomplete="tel">
     <label class="hp" aria-hidden="true">אתר<input name="website" tabindex="-1" autocomplete="off"></label>
     <button class="btn lp-cta">חזרו אליי</button>
+    <label class="check lp-talk-mk"><input type="checkbox" name="marketing" value="1" ${v.marketing ? 'checked' : ''}><span>אשמח לקבל עדכונים, טיפים והטבות מ-GoFive בהודעות ובמייל (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>
     ${error ? `<p class="lp-talk-error">${h(error)}</p>` : ''}
   </form>`;
 }
@@ -492,7 +494,7 @@ ${networkSection()}
   <div class="lp-talk-box" id="talk">
     <b>מעדיפים לדבר עם מישהו?</b><span>השאירו שם וטלפון ונחזור אליכם עוד היום.</span>
     ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
-    ${talkSent ? '' : '<small>הפרטים ישמשו רק כדי לחזור אליכם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
+    ${talkSent ? '' : '<small>הפרטים ישמשו כדי לחזור אליכם, ולעדכונים רק אם סימנתם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
   </div>
 </section>`,
   });

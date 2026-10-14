@@ -1104,9 +1104,10 @@ test('quote requests from agencies and large chains', async () => {
   // The short "call me back" form at the end of the page.
   assert.match(home.text, /id="talk"/);
   assert.equal((await client().req('/contact', { method: 'POST', form: { from: 'talk', kind: 'callback', name: 'רון' } })).status, 422);
-  const talk = await client().req('/contact', { method: 'POST', form: { from: 'talk', kind: 'callback', name: 'רון', phone: '052-7654321' } });
+  const talk = await client().req('/contact', { method: 'POST', form: { from: 'talk', kind: 'callback', name: 'רון', phone: '052-7654321', marketing: '1' } });
   assert.equal(talk.location, '/?sent=talk#talk');
   assert.equal(store.recentLeads()[0].kind, 'callback');
+  assert.equal(store.recentLeads()[0].marketing_consent, 1, 'marketing opt-in saved');
   assert.match((await client().req(talk.location)).text, /lp-talk-done/);
   assert.doesNotMatch(home.text, /<option value="callback"/, 'not a choice in the quote form');
 
@@ -1335,4 +1336,15 @@ test('marketing email is a separate, optional opt-in that can be withdrawn', asy
   await c.req('/account/marketing', { method: 'POST', form: { _csrf: await csrfOf(c) } });
   assert.equal(store.userByEmail('yesmail@example.com').marketing_consent, 0, 'withdrawn');
   assert.doesNotMatch((await root.req('/superadmin/marketing.csv')).text, /yesmail@example\.com/);
+});
+
+test('website leads can opt in to marketing, and land in the opt-in export', async () => {
+  assert.match((await client().req('/')).text, /lp-talk-mk"><input type="checkbox" name="marketing"/);
+  store.createLead({ kind: 'callback', name: 'Dana', phone: '050-1112222', email: '', company: '', size: '', message: '', marketing: true });
+  store.createLead({ kind: 'other', name: 'Avi', phone: '', email: 'avi-lead@example.com', company: '', size: '', message: '' });
+  const root = await registeredOwner('mkt-root2@example.com');
+  store.setSuperadmin(store.userByEmail('mkt-root2@example.com').id, true);
+  const csv = (await root.req('/superadmin/marketing.csv')).text;
+  assert.match(csv, /050-1112222,Dana,lead/);
+  assert.doesNotMatch(csv, /avi-lead@example\.com/);
 });
