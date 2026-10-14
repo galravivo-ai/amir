@@ -95,6 +95,28 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1#businesses');
   });
 
+  // The getting-started guide, by email to a business's owner, or to every owner at once.
+  const sendGuide = (business) => {
+    const owner = store.membersOf(business.id).find((m) => m.role === 'owner');
+    return owner ? ctx.notifier.welcomeGuide({ user: owner, business }) : null;
+  };
+  router.post('/businesses/:id/guide', async (req, res) => {
+    const business = store.businessById(Number(req.params.id));
+    if (business && !business.is_demo) await sendGuide(business);
+    res.redirect(303, '/superadmin?ok=1');
+  });
+  router.post('/guide-all', async (req, res) => {
+    const seen = new Set();
+    for (const b of store.allBusinesses()) {
+      const owner = store.membersOf(b.id).find((m) => m.role === 'owner');
+      // One email per owner, even with several businesses.
+      if (b.is_demo || !owner || seen.has(owner.email)) continue;
+      seen.add(owner.email);
+      await ctx.notifier.welcomeGuide({ user: owner, business: b });
+    }
+    res.redirect(303, '/superadmin?ok=1');
+  });
+
   // Wider AI visibility for one business whose plan doesn't include it (a gift or a deal).
   router.post('/businesses/:id/ai-plus', (req, res) => {
     const business = store.businessById(Number(req.params.id));

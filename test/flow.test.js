@@ -1292,3 +1292,17 @@ test('a business webhook only reaches public HTTPS addresses', async () => {
   assert.ok(isPrivateAddress('::ffff:192.168.1.1'));
   assert.ok(!isPrivateAddress('8.8.8.8'));
 });
+
+test('a new account gets the getting-started guide by email, and the guide is on the site', async () => {
+  await registeredOwner('guide@example.com');
+  const mail = outbox('welcome_guide').find((m) => m.to_addr === 'guide@example.com');
+  assert.ok(mail, 'guide email sent on sign-up');
+  assert.match(mail.body, /\/static\/media\/guide\/1-connect\.jpg/);
+  assert.match(mail.body, /התחברות עם חשבון גוגל של העסק/);
+  const page = await client().req('/guide');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /מדריך התחלה/);
+  assert.match(page.text, /id="step-6"/);
+  const img = await fetch(`${base}/static/media/guide/1-connect.jpg`);
+  assert.equal(img.status, 200);
+});

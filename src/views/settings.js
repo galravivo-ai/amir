@@ -643,6 +643,7 @@ const MAIL_KINDS = {
   customer_reminder: 'תזכורת ללקוח',
   team_invite: 'הזמנה לצוות',
   password_reset: 'איפוס סיסמה',
+  welcome_guide: 'מדריך התחלה',
 };
 
 export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '' }) {
@@ -722,11 +723,13 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
       : ''
   }
   <section class="card" id="businesses">
-    <h3>עסקים</h3>
+    <div class="row between"><h3>עסקים</h3>
+      <form method="post" action="/superadmin/guide-all" onsubmit="return confirm('לשלוח את מדריך ההתחלה במייל לבעלים של כל העסקים?')">${csrfField(csrf)}<button class="btn">שליחת מדריך ההתחלה לכל הבעלים</button></form>
+    </div>
     <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>מסלול ותשלום</th><th>סוכנות</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
     <tbody>${businesses
       .map(
-        (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}</td>
+        (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}${b.owner_email ? `<form method="post" action="/superadmin/businesses/${b.id}/guide" class="small">${csrfField(csrf)}<button class="btn-link">שליחת מדריך</button></form>` : ''}</td>
           <td data-l="מסלול">${planSelect(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )

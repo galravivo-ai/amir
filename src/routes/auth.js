@@ -133,8 +133,14 @@ export function authRoutes(ctx) {
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
-    store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
+    const businessId = store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
     ctx.startSession(res, userId);
+    // The getting-started guide, by email (in the background: sign-up never waits for it).
+    if (!admin) {
+      ctx.notifier
+        ?.welcomeGuide({ user: store.userById(userId), business: store.businessById(businessId) })
+        .catch((err) => console.error('[notify] welcome guide failed:', err));
+    }
     res.redirect(303, admin ? '/superadmin' : '/admin');
   });
 

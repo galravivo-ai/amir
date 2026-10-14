@@ -3,6 +3,7 @@ import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { NETWORK_TOOLS } from './network.js';
+import { GUIDE_STEPS } from '../guide.js';
 
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 
@@ -84,6 +85,7 @@ ${body}
 <footer class="site-foot">
   <div>© ${new Date().getFullYear()} ${h(op.name)}</div>
   <nav>
+    <a href="/guide">מדריך התחלה</a>
     <a href="/terms">תנאי שימוש ותקנון</a>
     <a href="/privacy">מדיניות פרטיות</a>
     <a href="/cookies">מדיניות עוגיות</a>
@@ -492,6 +494,45 @@ ${networkSection()}
     ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
     ${talkSent ? '' : '<small>הפרטים ישמשו רק כדי לחזור אליכם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
   </div>
+</section>`,
+  });
+}
+
+// ---------------------------------------------------------------- guide
+
+/** The getting-started guide: the same steps as the welcome email, with the real screens. */
+export function guideView({ signupOpen }) {
+  return sitePage({
+    title: `מדריך התחלה · ${operatorInfo().brand}`,
+    description: 'איך מחברים את פרופיל העסק בגוגל ל-GoFive, מדפיסים שלט QR, עונים לביקורות ומטפלים בלקוחות לא מרוצים. צעד אחר צעד, עם צילומי מסך.',
+    signupOpen,
+    body: `<section class="guide">
+  <header class="guide-head">
+    <h1>מדריך התחלה</h1>
+    <p>שישה צעדים קצרים, מהחיבור לגוגל ועד הביקורת הראשונה. כל צילום מסך כאן הוא מהמערכת עצמה.</p>
+    <ol class="guide-toc">${GUIDE_STEPS.map((x, i) => `<li><a href="#step-${i + 1}">${h(x.title)}</a></li>`).join('')}</ol>
+  </header>
+  <div class="guide-video">
+    <video controls playsinline preload="none" poster="${asset('media/gofive-intro.jpg')}" aria-label="סרטון הכרות עם GoFive">
+      <source src="${asset('media/gofive-intro.mp4')}" type="video/mp4">
+    </video>
+  </div>
+  ${GUIDE_STEPS.map(
+    (x, i) => `<article class="guide-step${x.small ? ' small' : ''}" id="step-${i + 1}">
+    <div class="guide-text">
+      <span class="guide-num">${i + 1}</span>
+      <h2>${h(x.title)}</h2>
+      <ul>${x.points.map((p) => `<li>${h(p)}</li>`).join('')}</ul>
+      ${x.tip ? `<p class="guide-tip">${h(x.tip)}</p>` : ''}
+      <a class="btn primary" href="${h(x.link)}">${h(x.linkLabel)}</a>
+    </div>
+    <figure><img src="${asset(`media/guide/${x.image}`)}" alt="${h(x.alt)}" loading="lazy"></figure>
+  </article>`,
+  ).join('')}
+  <footer class="guide-foot">
+    <h2>צריכים עזרה?</h2>
+    <p>${operatorInfo().email ? `כתבו לנו ל-<a href="mailto:${h(operatorInfo().email)}">${h(operatorInfo().email)}</a>, או ` : ''}השאירו פרטים <a href="/#talk">בדף הבית</a> ונחזור אליכם.</p>
+  </footer>
 </section>`,
   });
 }

@@ -1,5 +1,6 @@
 import { emailButton, emailLayout } from './mailer.js';
 import { sendWebhook } from './notify.js';
+import { GUIDE_STEPS } from './guide.js';
 import { emailList, h, safeColor } from './util.js';
 
 const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
@@ -404,6 +405,35 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `<p>${h(inviter.name)} הזמין/ה אותך להצטרף לניהול הביקורות של <b>${h(business.name)}</b> בתפקיד ${h(role)}.</p>
             ${emailButton(link, 'הצטרפות')}
             <p style="color:#6b7280;font-size:13px">הקישור בתוקף ל-7 ימים.</p>`,
+        }),
+      });
+    },
+
+    /** The getting-started guide, with the real screens: sent on sign-up, and again from the system panel. */
+    async welcomeGuide({ user, business }) {
+      const steps = GUIDE_STEPS.map(
+        (s, i) => `<div style="margin:28px 0 0;padding-top:20px;border-top:1px solid #eee">
+          <p style="margin:0 0 6px;color:#4b2bd6;font-weight:700;font-size:13px">שלב ${i + 1}</p>
+          <h3 style="margin:0 0 10px;font-size:18px;color:#17123a">${h(s.title)}</h3>
+          <ul style="margin:0 0 14px;padding-inline-start:20px;color:#374151;line-height:1.7">${s.points.map((x) => `<li>${h(x)}</li>`).join('')}</ul>
+          ${s.tip ? `<p style="margin:0 0 14px;background:#f5f3ff;border-radius:8px;padding:10px 12px;color:#374151;font-size:14px">💡 ${h(s.tip)}</p>` : ''}
+          <img src="${h(url(`/static/media/guide/${s.image}`))}" alt="${h(s.alt)}" width="${s.small ? 300 : 520}" style="display:block;width:100%;max-width:${s.small ? 300 : 520}px;height:auto;border:1px solid #e5e7eb;border-radius:10px">
+          ${emailButton(url(s.link), s.linkLabel)}
+        </div>`,
+      ).join('');
+      return mailer.send({
+        kind: 'welcome_guide',
+        businessId: business?.id,
+        to: user.email,
+        subject: 'ברוכים הבאים ל-GoFive: איך מתחילים, צעד אחר צעד',
+        html: emailLayout({
+          title: 'ברוכים הבאים ל-GoFive',
+          brand: true,
+          body: `<p>היי ${h(user.name)},</p>
+            <p>שמחים שהצטרפת${business ? ` עם <b>${h(business.name)}</b>` : ''}. ריכזנו כאן את כל מה שצריך כדי להתחיל, בשישה צעדים קצרים, עם צילומי מסך מהמערכת.</p>
+            ${emailButton(url('/guide'), 'למדריך המלא באתר')}
+            ${steps}
+            ${process.env.CONTACT_EMAIL ? `<p style="margin-top:28px;color:#6b7280;font-size:14px">שאלה? כתבו לנו ל-<a href="mailto:${h(process.env.CONTACT_EMAIL)}">${h(process.env.CONTACT_EMAIL)}</a> ונחזור אליכם.</p>` : ''}`,
         }),
       });
     },
