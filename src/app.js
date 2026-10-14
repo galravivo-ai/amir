@@ -61,8 +61,11 @@ function parseCookies(req, _res, next) {
   next();
 }
 
-function securityHeaders(_req, res, next) {
+function securityHeaders(req, res, next) {
+  // Browsers that reached us over HTTPS keep using it.
+  if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.set({
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'same-origin',
     'X-Frame-Options': 'DENY',
@@ -91,7 +94,7 @@ export function createApp(db, options = {}) {
             }),
         });
   const pusher = createPusher(store, { webpush: options.webpush });
-  const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl });
+  const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl, webhook: options.webhook });
   const google = options.google !== undefined ? options.google : createGoogle();
   const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
   const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp') });

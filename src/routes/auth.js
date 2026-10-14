@@ -15,6 +15,8 @@ export function authRoutes(ctx) {
   const { store, render } = ctx;
   const router = express.Router();
   const limit = rateLimiter(ctx.authLimit);
+  // Logins from one address, across all emails (password guessing on many accounts).
+  const loginLimit = rateLimiter({ windowMs: ctx.authLimit.windowMs, max: ctx.authLimit.max * 2 });
 
   const clean = (body) => ({
     name: String(body.name ?? '').trim().slice(0, 80),
@@ -36,8 +38,10 @@ export function authRoutes(ctx) {
   function createUser(v) {
     const first = store.countUsers() === 0;
     const id = store.createUser({ email: v.email, name: v.name, passwordHash: hashPassword(v.password) });
-    // On a fresh install the first account runs the system.
-    if (first) store.setSuperadmin(id, true);
+    // On a fresh install the first account runs the system, unless the
+    // operator already named the admins (SUPERADMIN_EMAILS).
+    const named = String(process.env.SUPERADMIN_EMAILS ?? '').trim();
+    if (first && !named) store.setSuperadmin(id, true);
     return id;
   }
 
@@ -57,7 +61,7 @@ export function authRoutes(ctx) {
   });
 
   const loginAttempts = new Map();
-  router.post('/login', (req, res) => {
+  router.post('/login', loginLimit, (req, res) => {
     const email = String(req.body.email ?? '').trim();
     const key = `${req.ip}|${email.toLowerCase()}`;
     const attempts = loginAttempts.get(key) || { n: 0, until: 0 };

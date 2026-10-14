@@ -8,7 +8,7 @@ const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
  * Every outgoing message (email + webhook) is composed here so the texts
  * stay consistent. `publicUrl` is used when there is no request (jobs).
  */
-export function createNotifier({ store, mailer, pusher = null, publicUrl = () => process.env.PUBLIC_URL || 'http://localhost:3000' }) {
+export function createNotifier({ store, mailer, pusher = null, publicUrl = () => process.env.PUBLIC_URL || 'http://localhost:3000', webhook = {} }) {
   const url = (path) => `${publicUrl().replace(/\/$/, '')}${path}`;
 
   function recipients(business) {
@@ -32,7 +32,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           ...data,
           admin_url: adminUrl,
         },
-      });
+      }, webhook);
       if (!negative || !business.alert_negative) return;
       pusher
         ?.sendToBusiness(business.id, {

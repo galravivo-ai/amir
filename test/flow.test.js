@@ -40,6 +40,7 @@ before(async () => {
   await new Promise((r) => hookServer.listen(0, r));
 
   const created = createApp(openDb(':memory:'), {
+    webhook: { allowLocal: true },
     publicLimit: { windowMs: 60e3, max: 1000 },
     authLimit: { windowMs: 60e3, max: 1000 },
     ai: fakeAi,
@@ -1276,4 +1277,18 @@ test('the owner renames the business from the account page', async () => {
   } finally {
     srv.close();
   }
+});
+
+test('a business webhook only reaches public HTTPS addresses', async () => {
+  const { publicHttpsUrl, isPrivateAddress } = await import('../src/notify.js');
+  const at = (ip) => ({ lookup: async () => [{ address: ip }] });
+  assert.equal(await publicHttpsUrl('https://hooks.example.com/x', at('93.184.216.34')), 'https://hooks.example.com/x');
+  assert.equal(await publicHttpsUrl('http://hooks.example.com/x', at('93.184.216.34')), '', 'plain http');
+  assert.equal(await publicHttpsUrl('https://127.0.0.1/x'), '', 'loopback');
+  assert.equal(await publicHttpsUrl('https://localhost:3000/x'), '');
+  assert.equal(await publicHttpsUrl('https://metadata.example/x', at('169.254.169.254')), '', 'cloud metadata');
+  assert.equal(await publicHttpsUrl('https://intra.example/x', at('10.1.2.3')), '', 'private network');
+  assert.equal(await publicHttpsUrl('https://[::1]/x'), '');
+  assert.ok(isPrivateAddress('::ffff:192.168.1.1'));
+  assert.ok(!isPrivateAddress('8.8.8.8'));
 });
