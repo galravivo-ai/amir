@@ -1,6 +1,6 @@
 import { PLANS } from '../plans.js';
 import { asset, h } from '../util.js';
-import { logoMark, wordmark } from './icons.js';
+import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
 import { NETWORK_TOOLS } from './network.js';
 
