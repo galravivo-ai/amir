@@ -1311,3 +1311,28 @@ test('a new account gets the getting-started guide by email, and the guide is on
   const img = await fetch(`${base}/static/media/guide/connect.jpg`);
   assert.equal(img.status, 200);
 });
+
+test('marketing email is a separate, optional opt-in that can be withdrawn', async () => {
+  const form = await client().req('/register');
+  assert.match(form.text, /name="marketing" value="1" >/, 'unchecked by default');
+  await registeredOwner('nomail@example.com');
+  assert.equal(store.userByEmail('nomail@example.com').marketing_consent, 0);
+  const c = client();
+  await c.req('/register', {
+    method: 'POST',
+    form: { name: 'Yes', email: 'yesmail@example.com', password: 'password123', business: 'Cafe', terms: '1', marketing: '1' },
+  });
+  const u = store.userByEmail('yesmail@example.com');
+  assert.equal(u.marketing_consent, 1);
+  assert.ok(u.marketing_consent_at);
+  assert.match((await c.req('/account')).text, /name="marketing" value="1" checked/);
+  const root = await registeredOwner('mkt-root@example.com');
+  store.setSuperadmin(store.userByEmail('mkt-root@example.com').id, true);
+  const csv = await root.req('/superadmin/marketing.csv');
+  assert.match(csv.text, /yesmail@example\.com/);
+  assert.doesNotMatch(csv.text, /nomail@example\.com/);
+  assert.equal((await c.req('/superadmin/marketing.csv')).status, 404);
+  await c.req('/account/marketing', { method: 'POST', form: { _csrf: await csrfOf(c) } });
+  assert.equal(store.userByEmail('yesmail@example.com').marketing_consent, 0, 'withdrawn');
+  assert.doesNotMatch((await root.req('/superadmin/marketing.csv')).text, /yesmail@example\.com/);
+});

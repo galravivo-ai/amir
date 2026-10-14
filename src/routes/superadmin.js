@@ -4,6 +4,7 @@ import { lastBackupAge } from '../backup.js';
 import { statusView } from '../views/status.js';
 import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
+import { csvEscape } from '../util.js';
 
 /** System-wide administration: businesses, plans, users and the email outbox. */
 export function superadminRoutes(ctx) {
@@ -28,8 +29,18 @@ export function superadminRoutes(ctx) {
         aiEnabled: Boolean(ctx.ai),
         aiTest: req.query.ai === 'ok' ? { ok: true, text: String(req.query.t ?? '').slice(0, 80) } : req.query.ai === 'err' ? { ok: false, error: String(req.query.t ?? '').slice(0, 300) } : null,
         meId: req.user.id,
+        marketingCount: store.marketingList().length,
       }),
     );
+  });
+
+  // Users who opted in to marketing email, for import into a mailing tool.
+  router.get('/marketing.csv', (req, res) => {
+    const lines = [['email', 'name', 'consent_at'].join(',')];
+    for (const u of store.marketingList()) lines.push([u.email, u.name, u.marketing_consent_at].map(csvEscape).join(','));
+    res.type('text/csv; charset=utf-8');
+    res.attachment(`marketing-optin-${new Date().toISOString().slice(0, 10)}.csv`);
+    res.send(`\ufeff${lines.join('\r\n')}`);
   });
 
   const domainOk = (d) => /^(?=.{4,253}$)([a-z0-9-]+\.)+[a-z]{2,}$/.test(d);

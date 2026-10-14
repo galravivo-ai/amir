@@ -24,6 +24,7 @@ export function authRoutes(ctx) {
     business: String(body.business ?? '').trim().slice(0, 100),
     password: String(body.password ?? ''),
     terms: body.terms === '1',
+    marketing: body.marketing === '1',
   });
 
   function validateNewUser(v, { needBusiness }) {
@@ -37,7 +38,7 @@ export function authRoutes(ctx) {
 
   function createUser(v) {
     const first = store.countUsers() === 0;
-    const id = store.createUser({ email: v.email, name: v.name, passwordHash: hashPassword(v.password) });
+    const id = store.createUser({ email: v.email, name: v.name, passwordHash: hashPassword(v.password), marketing: v.marketing });
     // On a fresh install the first account runs the system, unless the
     // operator already named the admins (SUPERADMIN_EMAILS).
     const named = String(process.env.SUPERADMIN_EMAILS ?? '').trim();
@@ -228,6 +229,7 @@ export function authRoutes(ctx) {
       totpEnabled: Boolean(full.totp_enabled),
       backupLeft: store.backupCodesLeft(full.id),
       businesses: store.businessesFor(full.id),
+      marketing: Boolean(full.marketing_consent),
       saved: req.query.ok === '1',
       ...extra,
     });
@@ -282,6 +284,11 @@ export function authRoutes(ctx) {
     const name = String(req.body.name ?? '').trim().slice(0, 80);
     if (name) store.updateUserName(req.user.id, name);
     res.redirect(303, '/account?ok=1');
+  });
+
+  router.post('/account/marketing', ctx.requireAuth, (req, res) => {
+    store.setMarketingConsent(req.user.id, req.body.marketing === '1');
+    res.redirect(303, '/account?ok=1#marketing');
   });
 
   // Renaming a business the user owns, right from the account page.

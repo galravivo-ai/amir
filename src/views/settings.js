@@ -646,7 +646,7 @@ const MAIL_KINDS = {
   welcome_guide: 'מדריך התחלה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0 }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
@@ -756,11 +756,12 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     }
   </section>
   <section class="card">
-    <h3>משתמשים</h3>
-    <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>
+    <div class="row between"><h3>משתמשים</h3>
+      <span class="small">${marketingCount} אישרו דיוור פרסומי · <a href="/superadmin/marketing.csv">ייצוא לרשימת תפוצה (CSV)</a></span></div>
+    <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>דיוור</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>
     <tbody>${users
       .map(
-        (u) => `<tr><td data-l="שם">${h(u.name)}</td><td data-l="אימייל" dir="ltr">${h(u.email)}</td><td data-l="עסקים">${u.businesses}</td>
+        (u) => `<tr><td data-l="שם">${h(u.name)}</td><td data-l="אימייל" dir="ltr">${h(u.email)}</td><td data-l="דיוור">${u.marketing_consent ? '✓' : '—'}</td><td data-l="עסקים">${u.businesses}</td>
           <td data-l="אימות">${
             u.totp_enabled
               ? `<form method="post" action="/superadmin/users/${u.id}/reset-2fa" class="inline" data-name="${h(u.name)}" onsubmit="return confirm('לכבות אימות דו-שלבי ל' + this.dataset.name + '? עשו זאת רק אחרי שווידאתם את זהותו.')">${csrfField(csrf)}<button class="btn-link">✓ (איפוס)</button></form>`

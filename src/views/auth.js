@@ -29,6 +29,8 @@ export function registerView({ error = '', values = {}, invite = null }) {
       ${invite ? '' : `<label>שם העסק<input name="business" required maxlength="100" value="${h(values.business)}"></label>`}
       <label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
         <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>
+      <label class="check"><input type="checkbox" name="marketing" value="1" ${values.marketing ? 'checked' : ''}>
+        <span>אשמח לקבל במייל עדכונים, טיפים והטבות מ-GoFive (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>
       <button class="btn primary">${invite ? 'יצירת חשבון והצטרפות' : 'יצירת חשבון'}</button>
     </form>
     ${invite ? '' : '<p class="muted">כבר רשומים? <a href="/login">לכניסה</a></p>'}
@@ -175,7 +177,7 @@ export function backupCodesView({ codes }) {
   </section>`;
 }
 
-export function accountView({ user, csrf, error = '', totpEnabled = false, backupLeft = 0, businesses = [], saved = false }) {
+export function accountView({ user, csrf, error = '', totpEnabled = false, backupLeft = 0, businesses = [], saved = false, marketing = false }) {
   const owned = businesses.filter((b) => b.role === 'owner');
   return `<h1>החשבון שלי</h1>
   ${saved ? '<div class="flash">נשמר.</div>' : ''}
@@ -215,6 +217,14 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
         </section>`
       : ''
   }
+  <form method="post" action="/account/marketing" class="card stack" id="marketing">
+    ${csrfField(csrf)}
+    <h3>עדכונים במייל</h3>
+    <label class="check"><input type="checkbox" name="marketing" value="1" ${marketing ? 'checked' : ''}>
+      <span>אשמח לקבל במייל עדכונים, טיפים והטבות (דברי פרסומת)</span></label>
+    <p class="muted small">הודעות שירות (חשבונית, אבטחה, התראות על ביקורות) נשלחות בכל מקרה.</p>
+    <button class="btn">שמירה</button>
+  </form>
   <section class="card stack" id="push">
     <h3>התראות לטלפון ולמחשב</h3>
     <p class="muted">התראה קופצת על כל לקוח לא מרוצה, על פנייה שמחכה יותר מדי זמן, ועל לקוח שענה שהטיפול לא עזר.</p>

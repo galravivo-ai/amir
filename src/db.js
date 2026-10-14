@@ -641,6 +641,11 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN cancel_reason TEXT;
   ALTER TABLE businesses ADD COLUMN canceled_at TEXT;
   `,
+  // v32: opt-in to marketing email (spam law: explicit, separate, revocable)
+  `
+  ALTER TABLE users ADD COLUMN marketing_consent INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN marketing_consent_at TEXT;
+  `,
 ];
 
 function migrate(db) {

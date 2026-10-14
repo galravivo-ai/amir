@@ -71,17 +71,22 @@ export function createStore(db) {
     db,
 
     // ---------- users & sessions ----------
-    createUser({ email, name, passwordHash }) {
-      const r = q("INSERT INTO users (email, name, password_hash, terms_accepted_at) VALUES (?, ?, ?, datetime('now'))").run(
-        email.toLowerCase(),
-        name,
-        passwordHash,
-      );
+    createUser({ email, name, passwordHash, marketing = false }) {
+      const r = q(
+        `INSERT INTO users (email, name, password_hash, terms_accepted_at, marketing_consent, marketing_consent_at)
+         VALUES (?, ?, ?, datetime('now'), ?, datetime('now'))`,
+      ).run(email.toLowerCase(), name, passwordHash, marketing ? 1 : 0);
       return Number(r.lastInsertRowid);
     },
     userByEmail: (email) => q('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase()),
     userById: (id) => q('SELECT * FROM users WHERE id = ?').get(id) || null,
     updateUserName: (id, name) => q('UPDATE users SET name = ? WHERE id = ?').run(name, id),
+    // Every change of mind is timestamped, so we can show when consent was given or withdrawn.
+    setMarketingConsent: (id, on) =>
+      q("UPDATE users SET marketing_consent = ?, marketing_consent_at = datetime('now') WHERE id = ? AND marketing_consent IS NOT ?").run(on ? 1 : 0, id, on ? 1 : 0),
+    marketingList: () =>
+      q(`SELECT email, name, marketing_consent_at FROM users
+         WHERE marketing_consent = 1 AND is_superadmin = 0 AND password_hash NOT LIKE '!demo-%' ORDER BY marketing_consent_at DESC`).all(),
     updateUserPassword(id, passwordHash, keepSessionId = null) {
       q('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
       // Changing the password signs out every other session.
@@ -251,7 +256,7 @@ export function createStore(db) {
     superadminEmails: () => q('SELECT email FROM users WHERE is_superadmin = 1').all().map((u) => u.email),
     setSuperadmin: (id, on) => q('UPDATE users SET is_superadmin = ? WHERE id = ?').run(on ? 1 : 0, id),
     allUsers: () =>
-      q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.totp_enabled, u.created_at,
+      q(`SELECT u.id, u.email, u.name, u.is_superadmin, u.totp_enabled, u.created_at, u.marketing_consent,
            (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS businesses
          FROM users u ORDER BY u.id DESC`).all(),
 
