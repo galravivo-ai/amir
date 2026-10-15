@@ -948,7 +948,14 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
           ${emailInvites ? '<input name="email" type="email" placeholder="אימייל (לא חובה)" maxlength="120" dir="ltr">' : ''}
         </div>
         ${waAuto ? '<label class="check"><input type="checkbox" name="wa" value="1" checked> לשלוח ללקוח בוואטסאפ אוטומטית</label>' : ''}
-        <button class="btn primary">יצירת קישור</button>
+        <p class="invite-what small" aria-live="polite"></p>
+        <button class="btn primary invite-go">יצירת קישור</button>
+        <script>(function(){var f=document.currentScript.closest('form'),em=f.querySelector('[name=email]'),wa=f.querySelector('[name=wa]'),ph=f.querySelector('[name=phone]'),
+w=f.querySelector('.invite-what'),b=f.querySelector('.invite-go');
+function upd(){var byMail=em&&em.value.trim(),byWa=wa&&wa.checked&&ph.value.trim(),ch=[];if(byWa)ch.push('בוואטסאפ ל-'+ph.value.trim());if(byMail)ch.push('במייל ל-'+em.value.trim());
+b.textContent=ch.length?'יצירת קישור ושליחה '+(byWa&&byMail?'בוואטסאפ ובמייל':byWa?'בוואטסאפ':'במייל'):'יצירת קישור';
+w.textContent=ch.length?'בלחיצה תישלח ללקוח הודעה '+ch.join(' ו')+(byMail?'${campaign.reminder_hours > 0 ? `. מי שלא ענה יקבל תזכורת אחת במייל אחרי ${Number(campaign.reminder_hours)} שעות.` : '.'}':'.'):'לא תישלח הודעה: נוצר קישור, ואתם שולחים אותו בעצמכם (וואטסאפ, SMS).'}
+[em,wa,ph].forEach(function(x){if(x){x.addEventListener('input',upd);x.addEventListener('change',upd)}});upd()})();</script>
         ${emailInvites && !mailEnabled ? '<p class="muted small">שימו לב: שליחת מיילים עוד לא הוגדרה בשרת, ההודעות נשמרות ביומן בלבד.</p>' : ''}
       </form>`
           : ''
@@ -1015,7 +1022,7 @@ function posterSheet({ business, qrSvg, t, design: d, rating = null }) {
 
 const POSTER_TITLES = ['איך הייתה החוויה שלך?', 'נהניתם? ספרו לנו!', 'דרגו אותנו ב-10 שניות', 'הדעה שלכם חשובה לנו', 'אהבתם? נשמח לביקורת', 'עזרו לנו להשתפר'];
 
-export function posterView({ campaign, business, qrSvg, t, staff = null, design, csrf = '', canEdit = true, src = '', saved = false, rating = null }) {
+export function posterView({ campaign, business, qrSvg, t, staff = null, design, csrf = '', canEdit = true, src = '', saved = false, rating = null, live = { ok: true }, surveyUrl = '' }) {
   const d = design;
   const sizes = Object.fromEntries(Object.entries(POSTER_SIZES).map(([k, v]) => [k, { w: v.w, h: v.h, digital: Boolean(v.digital) }]));
   const opt = (map, cur) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${h(typeof v === 'string' ? v : v.label)}</option>`).join('');
@@ -1036,6 +1043,12 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
         <button type="button" class="btn" id="pd-png">הורדה כתמונה (PNG)</button>
         <button type="button" class="btn accent" id="pd-print">הדפסה / שמירה כ-PDF</button>
       </div>
+      <p class="pd-live ${live.ok ? 'ok' : 'off'}" role="status">${
+        live.ok
+          ? `● הסקר פעיל: מי שסורק את הקוד מגיע אליו. ${surveyUrl ? `<a href="${h(surveyUrl)}" target="_blank" rel="noopener">לבדיקת הסקר ↗</a>` : ''}`
+          : `● הסקר לא פעיל כרגע (${h(live.why)}). אפשר להכין ולהדפיס את השלט, אבל לקוח שיסרוק יראה שהסקר לא זמין. ${!campaign.active ? `<a href="/admin/campaigns/${campaign.id}">להפעלת הקמפיין</a>` : '<a href="/admin/plan">לתוכנית שלי</a>'}`
+      }</p>
+      ${live.ok ? '' : `<script>(function(){['pd-png','pd-print'].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener('click',function(e){if(!confirm('הסקר לא פעיל כרגע (${h(live.why)}). לקוחות שיסרקו את השלט יראו שהסקר לא זמין. להמשיך בכל זאת?')){e.preventDefault();e.stopImmediatePropagation()}},true)})})();</script>`}
     </header>
     ${saved ? '<div class="flash noprint pd-flash">העיצוב נשמר.</div>' : ''}
     <div class="pd-main">

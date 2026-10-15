@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { errorPage, isEmail } from '../util.js';
-import { accessibilityView, cookiesView, guideConnectView, guideFeatureView, guideHubView, landingView, LEAD_KINDS, operatorInfo, privacyView, termsView } from '../views/site.js';
+import { accessibilityView, cookiesView, guideConnectView, guideFeatureView, guideHubView, landingView, LEAD_KINDS, operatorInfo, privacyView, publicBase, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
-import { featureGuide } from '../guide.js';
+import { FEATURE_GUIDES, featureGuide } from '../guide.js';
 
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
 
@@ -57,6 +57,19 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
   });
 
   // Installable app ("Add to home screen")
+  // Search engines: the public pages only (never the app, the surveys or the API), and where the sitemap is.
+  const PUBLIC_PATHS = () => ['/', '/guide', '/guide/connect', ...FEATURE_GUIDES.map((g) => `/guide/${g.slug}`), '/terms', '/privacy', '/cookies', '/accessibility'];
+  router.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(
+      ['User-agent: *', ...['/admin', '/superadmin', '/account', '/agency', '/api', '/auth', '/login', '/register', '/forgot', '/reset', '/join', '/r/', '/f/', '/m/', '/go/', '/billing', '/demo'].map((p) => `Disallow: ${p}`), 'Allow: /', '', `Sitemap: ${publicBase()}/sitemap.xml`, ''].join('\n'),
+    );
+  });
+  router.get('/sitemap.xml', (req, res) => {
+    const base = publicBase();
+    const urls = PUBLIC_PATHS().map((p) => `  <url><loc>${base}${p}</loc>${p === '/' ? '<priority>1.0</priority>' : ''}</url>`);
+    res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
+  });
+
   router.get('/manifest.webmanifest', (req, res) => {
     const brand = operatorInfo().brand;
     res.type('application/manifest+json').send(

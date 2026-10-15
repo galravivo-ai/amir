@@ -430,6 +430,9 @@ export function adminRoutes(ctx) {
         csrf: req.user.csrf,
         canEdit: req.can('manager'),
         rating,
+        // Will a scan reach a working survey? The sign can still be made either way.
+        live: !c.active ? { ok: false, why: 'הקמפיין כבוי' } : req.access?.state === 'paused' ? { ok: false, why: 'החשבון לא פעיל כרגע' } : { ok: true },
+        surveyUrl: qrTarget(req, c),
         src: String(req.query.src ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40),
         saved: req.query.saved === '1',
       }),

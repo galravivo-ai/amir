@@ -2562,3 +2562,6 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
 .start-terms ul { margin: .4rem 0; padding-inline-start: 1.1rem; }
 .start-terms li { margin: .2rem 0; }
 .start-terms a { font-size: .85rem; }
+.pd-live { flex-basis: 100%; margin: 6px 0 0; font-size: .88rem; font-weight: 600; }
+.pd-live.ok { color: #067647; }
+.pd-live.off { color: #b42318; }

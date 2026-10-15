@@ -45,7 +45,30 @@ export function operatorInfo() {
   };
 }
 
-function sitePage({ title, description = '', body, signupOpen = true }) {
+/** The public address, for links that leave the site (share previews, the sitemap). */
+export const publicBase = () => String(process.env.PUBLIC_URL || 'https://gofive.co.il').replace(/\/$/, '');
+
+/** How a shared link looks on WhatsApp, Facebook, LinkedIn and X: title, text and the brand image. */
+function shareMeta({ title, description, path }) {
+  const base = publicBase();
+  const image = `${base}/static/brand/og-image.jpg`;
+  return `<meta property="og:type" content="website">
+<meta property="og:site_name" content="${h(operatorInfo().brand)}">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="${h(title)}">
+${description ? `<meta property="og:description" content="${h(description)}">` : ''}
+${path ? `<meta property="og:url" content="${h(base + path)}"><link rel="canonical" href="${h(base + path)}">` : ''}
+<meta property="og:image" content="${h(image)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${h(operatorInfo().brand)}: יותר לקוחות מגוגל וגם מה-AI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${h(title)}">
+${description ? `<meta name="twitter:description" content="${h(description)}">` : ''}
+<meta name="twitter:image" content="${h(image)}">`;
+}
+
+function sitePage({ title, description = '', body, signupOpen = true, path = '' }) {
   const op = operatorInfo();
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -54,6 +77,7 @@ function sitePage({ title, description = '', body, signupOpen = true }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${h(title)}</title>
 ${description ? `<meta name="description" content="${h(description)}">` : ''}
+${shareMeta({ title, description, path })}
 <link rel="stylesheet" href="${asset('style.css')}">
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
@@ -272,6 +296,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     title: `${operatorInfo().brand} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI`,
     description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית פעולה שבועית והתראות.',
     signupOpen,
+    path: '/',
     body: `
 <section class="lp-hero">
   <div class="lp-hero-glow" aria-hidden="true"></div>
@@ -540,6 +565,7 @@ export function guideHubView({ signupOpen }) {
     title: `מדריכים · ${operatorInfo().brand}`,
     description: 'מדריכים ל-GoFive: איך מחברים את פרופיל העסק בגוגל, ומדריך קצר לכל פיצ׳ר, עם צילומי מסך.',
     signupOpen,
+    path: '/guide',
     body: `<section class="guide">
   <header class="guide-head"><h1>מדריכים</h1><p>מתחילים מהחיבור לגוגל, ואז בוחרים מדריך לכל פיצ׳ר. כל צילום מסך כאן הוא מהמערכת עצמה.</p></header>
   <a class="guide-start" href="/guide/connect">
@@ -573,6 +599,7 @@ export function guideConnectView({ signupOpen }) {
     title: `${c.title} · ${operatorInfo().brand}`,
     description: c.intro,
     signupOpen,
+    path: '/guide/connect',
     body: `<section class="guide">
   <a class="guide-back" href="/guide">→ כל המדריכים</a>
   <header class="guide-head"><h1>${h(c.title)}</h1><p>${h(c.intro)}</p></header>
@@ -609,6 +636,7 @@ export function guideFeatureView({ signupOpen, guide: g }) {
     title: `${g.title} · ${operatorInfo().brand}`,
     description: g.summary,
     signupOpen,
+    path: `/guide/${g.slug}`,
     body: `<section class="guide">
   <a class="guide-back" href="/guide">→ כל המדריכים</a>
   <article class="guide-step guide-feature">
@@ -636,10 +664,11 @@ function guideHelp() {
 
 const UPDATED = '15.10.2026';
 
-function legalPage({ title, sections, signupOpen, intro = '' }) {
+function legalPage({ title, sections, signupOpen, intro = '', path = '' }) {
   return sitePage({
     title,
     signupOpen,
+    path,
     body: `<main class="legal">
       <h1>${h(title)}</h1>
       <p class="muted">עודכן לאחרונה: ${UPDATED}</p>
@@ -660,6 +689,7 @@ export function privacyView({ signupOpen }) {
   const op = operatorInfo();
   const contact = contactOf(op);
   return legalPage({
+    path: '/privacy',
     title: 'מדיניות פרטיות',
     signupOpen,
     intro: `<p>אנחנו מתייחסים לפרטיות ברצינות. כאן מוסבר איזה מידע נאסף ב-${h(op.brand)}, למה, עם מי הוא משותף ומה הזכויות שלכם.
@@ -759,6 +789,7 @@ export function termsView({ signupOpen }) {
   const op = operatorInfo();
   const contact = contactOf(op);
   return legalPage({
+    path: '/terms',
     title: 'תנאי שימוש ותקנון',
     signupOpen,
     intro: `<p>התקנון מסדיר את השימוש ב-${h(op.brand)}. הוא מנוסח בלשון רבים ופונה לכל המינים. אם משהו לא ברור, <a href="/#talk">כתבו לנו</a>.</p>`,
@@ -869,6 +900,7 @@ export function cookiesView({ signupOpen }) {
   const op = operatorInfo();
   const row = (name, where, what, time) => `<tr><td><code>${name}</code></td><td>${where}</td><td>${what}</td><td>${time}</td></tr>`;
   return legalPage({
+    path: '/cookies',
     title: 'מדיניות עוגיות',
     signupOpen,
     intro: `<p>עוגייה (Cookie) היא קובץ טקסט קטן שהאתר שומר בדפדפן. ${h(op.brand)} משתמש <b>רק בעוגיות הכרחיות</b> שבלעדיהן האתר לא יכול לפעול. אין אצלנו עוגיות פרסום, פיקסלים של רשתות חברתיות או כלי מעקב של צד שלישי.</p>`,
@@ -909,6 +941,7 @@ export function accessibilityView({ signupOpen }) {
   const coordinator = process.env.ACCESSIBILITY_COORDINATOR || op.name;
   const phone = process.env.CONTACT_PHONE || '';
   return legalPage({
+    path: '/accessibility',
     title: 'הצהרת נגישות',
     signupOpen,
     intro: `<p>אנחנו רואים חשיבות רבה בכך שכל אחד ואחת יוכלו להשתמש ב-${h(op.brand)}, כולל אנשים עם מוגבלות. השקענו בהנגשת האתר, מערכת הניהול ודפי הסקר שהלקוחות של העסקים ממלאים, ואנחנו ממשיכים לשפר.</p>`,

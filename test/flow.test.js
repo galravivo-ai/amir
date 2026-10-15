@@ -1350,3 +1350,20 @@ test('website leads can opt in to marketing, and land in the opt-in export', asy
   assert.match(csv, /050-1112222,Dana,פנייה מהאתר,/);
   assert.doesNotMatch(csv, /avi-lead@example\.com/);
 });
+
+test('search engines and link previews: robots.txt, sitemap.xml and share tags', async () => {
+  const robots = await client().req('/robots.txt');
+  assert.match(robots.text, /Disallow: \/admin/);
+  assert.match(robots.text, /Disallow: \/r\//);
+  assert.match(robots.text, /Sitemap: https?:\/\/[^\s]+\/sitemap\.xml/);
+  const map = (await client().req('/sitemap.xml')).text;
+  assert.match(map, /<urlset/);
+  assert.match(map, /\/guide\/connect<\/loc>/);
+  assert.match(map, /\/terms<\/loc>/);
+  assert.doesNotMatch(map, /\/admin/);
+  const home = (await client().req('/')).text;
+  assert.match(home, /<meta property="og:title"/);
+  assert.match(home, /<meta property="og:image" content="https?:\/\/[^"]+\/static\/brand\/og-image\.jpg"/);
+  assert.match(home, /<meta name="twitter:card" content="summary_large_image"/);
+  assert.equal((await fetch(`${base}/static/brand/og-image.jpg`)).status, 200);
+});
