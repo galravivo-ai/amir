@@ -372,6 +372,7 @@ export function dashboardView({
         ${filter}
         ${can('manager') && campaigns.length ? `<button type="button" class="btn cover-wa" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} שליחה בוואטסאפ</button>` : ''}
         ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
+        ${can('manager') && connect?.connected ? '<a class="cover-link" href="/admin/google">⚙ חיבור לגוגל וסניפים</a>' : ''}
       </div>
     </header>
     ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, business?.invite_template || DEFAULT_INVITE_TEMPLATE, waAuto) : ''}
@@ -607,7 +608,8 @@ export function responsesView({ rows, campaigns, filters, page, hasMore, staff =
     : `<div class="card empty"><p><b>עוד אף לקוח לא מילא סקר.</b></p>
         <p class="muted">מדפיסים את שלט ה-QR ומניחים אותו בקופה או על השולחנות, או שולחים ללקוחות את הקישור לסקר.</p>
         <a class="btn primary" href="/admin/campaigns">לקמפיינים ו-QR</a></div>`;
-  return `<div class="page-head"><h1>תגובות לקוחות</h1>
+  return `<div class="page-head"><div><h1>משוב מהסקר</h1>
+      <p class="page-sub">מה שלקוחות כתבו בסקר שלכם: אחרי סריקת שלט ה-QR או מקישור ששלחתם להם. המשוב פרטי ולא מתפרסם בגוגל. הביקורות הציבוריות נמצאות ב<a href="/admin/google/reviews">ביקורות בגוגל</a>.</p></div>
       ${rows.length ? `<a class="btn" href="/admin/responses.csv?${h(exportParams)}">ייצוא CSV</a>` : ''}</div>
     ${tabsBar}
     <p class="page-intro">${intro}</p>

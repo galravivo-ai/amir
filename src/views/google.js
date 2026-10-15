@@ -200,6 +200,7 @@ export function googleConnectView({
 export function googleReviewsView({ reviews, locations, filters, summary }) {
   const opt = (v, l, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(l)}</option>`;
   return `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1>
+      <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
       <p class="muted">${summary.total ? `דירוג ${summary.avg.toFixed(1)} ★ מתוך ${summary.total} ביקורות` : 'עוד אין נתונים מגוגל'}${summary.unanswered ? ` · <b>${summary.unanswered} ממתינות לתשובה</b>` : ''}</p></div>
     <form method="get" class="filters">
       <select name="filter" onchange="this.form.submit()" aria-label="סינון">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}</select>

@@ -38,9 +38,10 @@ function initialMark(name, size) {
 }
 
 /** Whether a nav link points at the current page (query strings must match when the link has one). */
-function navLink([href, label, ic, badge], current) {
+function navLink([href, label, ic, badge, opts = {}], current) {
   const active = isActive(href, current);
-  return `<a href="${href}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>
+  const cls = [active ? 'active' : '', opts.hl ? 'hl' : ''].filter(Boolean).join(' ');
+  return `<a href="${href}" class="${cls}" ${active ? 'aria-current="page"' : ''}${opts.tip ? ` title="${h(opts.tip)}"` : ''}>
           ${icon(ic)}<span>${label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}
         </a>`;
 }
@@ -152,8 +153,8 @@ ${SKIP()}
       key: 'reputation',
       label: 'מוניטין וביקורות',
       items: [
-        ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending],
-        ['/admin/responses', 'תגובות לקוחות', 'inbox', openCount],
+        ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending, { tip: 'הביקורות הציבוריות של העסק בגוגל, עם תשובה בלחיצה' }],
+        ['/admin/responses', 'משוב מהסקר', 'inbox', openCount, { tip: 'מה שלקוחות כתבו בסקר שלכם, דרך שלט ה-QR או קישור ששלחתם. פרטי, לא מתפרסם בגוגל' }],
         ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
         ['/admin/poster', 'עיצוב שלט QR', 'print'],
         role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
@@ -163,7 +164,6 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
-        !notConnected && role !== 'viewer' && ['/admin/google', 'חיבור וסניפים', 'plug'],
         ['/admin/profile', 'בריאות הפרופיל', 'shield'],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],
@@ -174,7 +174,7 @@ ${SKIP()}
       items: [
         ['/admin/rankings', 'מיקום במפות', 'pin'],
         ['/admin/competitors', 'מתחרים', 'rivals'],
-        ['/admin/ai-visibility', 'נראות ב-AI', 'search'],
+        ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { hl: true, tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן' }],
       ],
     },
     {

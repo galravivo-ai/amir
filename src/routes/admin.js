@@ -122,7 +122,7 @@ export function adminRoutes(ctx) {
     render(
       req,
       res,
-      'תגובות לקוחות',
+      'משוב מהסקר',
       V.responsesView({
         rows: rows.slice(0, PAGE_SIZE),
         hasMore: rows.length > PAGE_SIZE,

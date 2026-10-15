@@ -2590,3 +2590,17 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
 .cf-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
 .cf-nav .cf-next { margin-inline-start: auto; }
 .cf-dialog [hidden] { display: none !important; }
+
+/* ---------- menu: yellow icons; a highlighted item is yellow with a purple icon ---------- */
+body.app .side-nav a .icon { color: #ffcf3a; }
+body.app .side-nav a:hover .icon { color: #ffe07a; }
+body.app .side-nav a.active .icon { color: #fff; }
+body.app .side-nav a.hl { background: #ffcf3a; color: #1c1650; font-weight: 700; }
+body.app .side-nav a.hl .icon { color: #4e2ef6; }
+body.app .side-nav a.hl:hover { background: #ffd95e; color: #1c1650; }
+body.app .side-nav a.hl.active { background: #ffcf3a; color: #1c1650; box-shadow: 0 0 0 2px #fff inset, 0 6px 16px -6px rgba(255, 207, 58, .7); }
+body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
+/* the Google connection, on the dashboard cover once connected */
+.cover-link { color: rgba(255, 255, 255, .85); font-size: .88rem; font-weight: 600; text-decoration: none; padding: 6px 4px; }
+.cover-link:hover { color: #fff; text-decoration: underline; }
+.page-sub { margin: 4px 0 0; color: var(--ink-2); font-size: .95rem; line-height: 1.55; max-width: 760px; }
