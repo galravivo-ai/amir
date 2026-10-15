@@ -80,6 +80,8 @@ export function createStore(db) {
     },
     userByEmail: (email) => q('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase()),
     userById: (id) => q('SELECT * FROM users WHERE id = ?').get(id) || null,
+    /** The user, their sessions and memberships, and the businesses they own (cascades). */
+    deleteUser: (id) => q('DELETE FROM users WHERE id = ?').run(id),
     updateUserName: (id, name) => q('UPDATE users SET name = ? WHERE id = ?').run(name, id),
     // Every change of mind is timestamped, so we can show when consent was given or withdrawn.
     setMarketingConsent: (id, on) =>

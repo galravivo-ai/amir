@@ -132,3 +132,35 @@ test('sign-up: the business name comes first, and an email or password there is 
     server.close();
   }
 });
+
+test('the system admin can delete a user and the businesses they own', async () => {
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const { store } = created;
+  try {
+    const op = client(base);
+    await op('/register', { method: 'POST', form: { name: 'מפעיל', email: 'op@example.com', password: 'password123', business: 'GoFive', terms: '1' } });
+    store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
+    const gone = client(base);
+    await gone('/register', { method: 'POST', form: { name: 'אור', email: 'gone@example.com', password: 'password123', business: 'עסק למחיקה', terms: '1' } });
+    const id = store.userByEmail('gone@example.com').id;
+    const bizId = store.businessesFor(id)[0].id;
+    const token = (await op('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+    assert.match((await op('/superadmin')).text, new RegExp(`/superadmin/users/${id}/delete`));
+    // The email must be typed to confirm.
+    await op(`/superadmin/users/${id}/delete`, { method: 'POST', form: { _csrf: token, confirm: 'wrong' } });
+    assert.ok(store.userByEmail('gone@example.com'));
+    await op(`/superadmin/users/${id}/delete`, { method: 'POST', form: { _csrf: token, confirm: 'gone@example.com' } });
+    assert.equal(store.userByEmail('gone@example.com'), undefined);
+    assert.ok(!store.businessById(bizId), 'their business too');
+    assert.equal((await gone('/admin')).status, 302, 'signed out');
+    // Never the admin themselves.
+    const me = store.userByEmail('op@example.com').id;
+    await op(`/superadmin/users/${me}/delete`, { method: 'POST', form: { _csrf: token, confirm: 'op@example.com' } });
+    assert.ok(store.userByEmail('op@example.com'));
+  } finally {
+    server.close();
+  }
+});

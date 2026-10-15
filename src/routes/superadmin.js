@@ -244,6 +244,18 @@ export function superadminRoutes(ctx) {
     res.redirect(303, '/superadmin?ok=1');
   });
 
+  // Deletes a person and the businesses they own (with everything in them). Never
+  // the admin themselves or another system admin; the email is typed to confirm.
+  router.post('/users/:id/delete', (req, res) => {
+    const user = store.userById(Number(req.params.id));
+    if (!user || user.id === req.user.id || user.is_superadmin || String(req.body.confirm ?? '') !== user.email) {
+      return res.redirect(303, '/superadmin?err=' + encodeURIComponent('המשתמש לא נמחק.'));
+    }
+    store.deleteUser(user.id);
+    console.log(`[superadmin] ${req.user.email} deleted user ${user.email}`);
+    res.redirect(303, '/superadmin?ok=1');
+  });
+
   router.post('/users/:id/superadmin', (req, res) => {
     const id = Number(req.params.id);
     if (id !== req.user.id) store.setSuperadmin(id, req.body.on === '1');

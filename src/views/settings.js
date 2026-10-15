@@ -848,7 +848,12 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
             <input type="hidden" name="on" value="${u.is_superadmin ? 0 : 1}">
             <button class="btn-link">${u.is_superadmin ? '✓ (הסרה)' : 'מינוי'}</button></form>`
           }</td>
-          <td data-l="נרשם" class="small">${h(formatDate(u.created_at))}</td></tr>`,
+          <td data-l="נרשם" class="small">${h(formatDate(u.created_at))}${
+            u.id === meId || u.is_superadmin
+              ? ''
+              : `<form method="post" action="/superadmin/users/${u.id}/delete" class="small" data-email="${h(u.email)}" onsubmit="return prompt('מחיקה לצמיתות של ' + this.dataset.email + ', יחד עם העסקים שבבעלותו וכל הנתונים שלהם. אי אפשר לבטל. כדי לאשר, הקלידו את המייל:') === this.dataset.email">${csrfField(csrf)}
+                  <input type="hidden" name="confirm" value="${h(u.email)}"><button class="btn-link danger-text">מחיקה</button></form>`
+          }</td></tr>`,
       )
       .join('')}</tbody></table>
   </section>
