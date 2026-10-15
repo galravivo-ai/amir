@@ -437,6 +437,9 @@ export function createStore(db) {
       q('UPDATE businesses SET onboarding = ? WHERE id = ?').run(JSON.stringify(flags), id);
     },
     /** First-run checklist, computed from what the business has actually done. */
+    /** True once the business follows at least one Google place (by connection or by link). */
+    googleConnected: (businessId) => Boolean(q('SELECT 1 FROM google_locations WHERE business_id = ? AND enabled = 1 LIMIT 1').get(businessId)),
+
     onboarding(business) {
       const flags = parseJson(business.onboarding, {});
       const c = q(
@@ -447,6 +450,8 @@ export function createStore(db) {
       ).get(business.id).n;
       const members = q('SELECT COUNT(*) AS n FROM memberships WHERE business_id = ?').get(business.id).n;
       const steps = [
+        // First and most important: without the Google profile there is no data.
+        { key: 'connect', label: 'מחברים את פרופיל העסק בגוגל', href: '/admin?connect=1', done: this.googleConnected(business.id) },
         { key: 'brand', label: 'מעלים לוגו ובוחרים צבע', href: '/admin/business#logo', done: Boolean(business.logo_version || business.logo_url) },
         { key: 'campaign', label: 'יוצרים קמפיין ראשון', href: '/admin/campaigns/new', done: c.campaigns > 0 },
         { key: 'google', label: 'מחברים את הקישור לביקורות בגוגל', href: '/admin/campaigns', done: (c.google || 0) > 0 },

@@ -79,6 +79,7 @@ export function adminRoutes(ctx) {
         onboarding,
         csrf: req.user.csrf,
         sendError: req.query.send === 'bad',
+        connect: { connected: store.googleConnected(req.business.id), gbp: Boolean(ctx.google), canConnect: req.can('manager'), open: req.query.connect === '1' },
         tasks: req.can('manager') ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp), aiOn: Boolean(ctx.ai) && req.plan.ai }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
         waResult: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,

@@ -94,6 +94,58 @@ function optionBreakdown(optionCounts) {
     .join('');
 }
 
+/**
+ * Before the Google profile is connected: one big card that says it comes
+ * first, and a "let's do it together" window that walks through it (opened by
+ * itself the first time, or with ?connect=1).
+ */
+function connectFirst({ csrf, gbp, canConnect, open, businessId }) {
+  const G = `<svg class="g-logo" width="22" height="22" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+  const connectBtn = (cls = 'btn big g-btn') =>
+    gbp
+      ? `<form method="post" action="/admin/google/connect" class="inline">${csrfField(csrf)}<button class="${cls}">${G}<span>התחברות עם חשבון הגוגל של העסק</span></button></form>`
+      : `<a class="${cls}" href="/admin/google">${G}<span>לחיבור פרופיל העסק</span></a>`;
+  if (!canConnect) {
+    return `<section class="card cf-card"><div class="cf-text"><b>פרופיל העסק בגוגל עוד לא מחובר</b>
+      <span>בלי החיבור אין נתונים בדשבורד. בקשו מבעלי העסק או ממנהל להיכנס ולחבר אותו.</span></div></section>`;
+  }
+  const step = (n, title, body) => `<section class="cf-step" data-step="${n}" ${n === 1 ? '' : 'hidden'}><span class="cf-n">${n} / 3</span><h3>${title}</h3>${body}</section>`;
+  return `<section class="card cf-card" id="connect-first">
+    <div class="cf-text">
+      <span class="cf-kicker">הצעד הראשון, והכי חשוב</span>
+      <b>מחברים את פרופיל העסק בגוגל</b>
+      <span>בלי החיבור אין נתונים: הביקורות, הדירוג, הצפיות והשיחות, המיקום במפות והנראות ב-AI מגיעים כולם מהפרופיל. לוקח דקה, ומיד אחרי זה הכול נטען לבד.</span>
+      <ul class="cf-gets"><li>✓ כל הביקורות, עם התראה על כל ביקורת חדשה</li><li>✓ צפיות, שיחות ובקשות הגעה מהפרופיל</li><li>✓ תשובות לביקורות ופוסטים ישר מהמערכת</li></ul>
+    </div>
+    <div class="cf-actions">
+      ${connectBtn()}
+      <button type="button" class="btn cf-open">בואו נעשה את זה ביחד ←</button>
+      <a class="cf-alt small" href="/admin/google#partial">אין לי גישה לחשבון הגוגל של העסק</a>
+    </div>
+  </section>
+  <dialog class="cf-dialog" aria-labelledby="cf-title">
+    <button type="button" class="cf-x" aria-label="סגירה">✕</button>
+    <h2 id="cf-title">בואו נחבר את פרופיל העסק בגוגל</h2>
+    ${step(1, 'מה צריך?', `<p>את <b>חשבון הגוגל שמנהל את פרופיל העסק</b> (זה שאיתו נכנסים לעריכת העסק בגוגל מפות).</p>
+      <p class="muted small">לא בטוחים איזה חשבון? נכנסים ל-<a href="https://business.google.com" target="_blank" rel="noopener">business.google.com</a> עם החשבון, ואם העסק מופיע שם, זה החשבון הנכון.</p>
+      <p class="muted small">אין לכם גישה? מי שמנהל את הפרופיל יכול להוסיף אתכם כמנהלים (בגוגל: "אנשים וגישה"), או לחבר בעצמו.</p>`)}
+    ${step(2, 'מה יקרה בלחיצה?', `<ol class="cf-list"><li>ייפתח חלון של גוגל: בוחרים את החשבון שמנהל את העסק.</li>
+      <li>גוגל תבקש לאשר גישה לניהול פרופיל העסק. מאשרים (ההרשאה רק לפרופיל העסק, לא למייל או לקבצים).</li>
+      <li>אם מופיעה הודעה שהאפליקציה עוד בבדיקה של גוגל, לוחצים "מתקדם" (Advanced) ואז "המשך".</li></ol>`)}
+    ${step(3, 'וזהו', `<p>חוזרים לכאן, בוחרים את הסניף, ותוך כמה דקות הביקורות, הדירוג והצפיות מופיעים בדשבורד. נתוני 18 החודשים האחרונים נטענים ברקע.</p>
+      <div class="cf-final">${connectBtn('btn big g-btn')}</div>`)}
+    <div class="cf-nav"><button type="button" class="btn cf-prev" hidden>→ הקודם</button><button type="button" class="btn primary cf-next">הבא ←</button></div>
+  </dialog>
+  <script>(function(){var d=document.querySelector('.cf-dialog');if(!d||!d.showModal)return;var steps=d.querySelectorAll('.cf-step'),i=0,prev=d.querySelector('.cf-prev'),next=d.querySelector('.cf-next');
+function go(n){i=n;steps.forEach(function(s,k){s.hidden=k!==i});prev.hidden=i===0;next.hidden=i===steps.length-1}
+function open(){go(0);d.showModal()}
+document.querySelector('.cf-open').addEventListener('click',open);next.addEventListener('click',function(){go(Math.min(i+1,steps.length-1))});prev.addEventListener('click',function(){go(Math.max(i-1,0))});
+d.querySelector('.cf-x').addEventListener('click',function(){d.close()});d.addEventListener('click',function(e){if(e.target===d)d.close()});
+/* the first time on this business (or when asked): open by itself */
+var k='gf-cf-${Number(businessId) || 0}',seen=null;try{seen=localStorage.getItem(k)}catch(e){}
+if(${open ? 'true' : 'false'}||!seen){try{localStorage.setItem(k,'1')}catch(e){}open()}})();</script>`;
+}
+
 function onboardingCard(o, csrf) {
   const pctDone = Math.round((o.done / o.total) * 100);
   const next = o.steps.find((s) => !s.done && !s.optional) || o.steps.find((s) => !s.done);
@@ -277,7 +329,9 @@ export function dashboardView({
   waAuto = null,
   waResult = null,
   tasks = [],
+  connect = null,
 }) {
+  const connectCard = connect && !connect.connected ? connectFirst({ ...connect, csrf, businessId: business?.id }) : '';
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
@@ -421,6 +475,7 @@ export function dashboardView({
 
   return `${cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
+    ${connectCard}
     ${checklist}
     ${
       stats.overdue

@@ -97,6 +97,7 @@ export function adminPage({
   current = '',
   openCount = 0,
   googlePending = 0,
+  notConnected = false,
   usage = null,
   brand: brandInfo = null,
   isAgency = false,
@@ -139,7 +140,14 @@ ${SKIP()}
   const groups = branchId
     ? [{ items: branchNav(branchId) }]
     : [
-    { items: [['/admin', 'דשבורד ראשי', 'home'], (network || role !== 'viewer') && ['/admin/network', 'רשת הסניפים', 'branches']] },
+    {
+      items: [
+        ['/admin', 'דשבורד ראשי', 'home'],
+        // Until the Google profile is connected, that is the first thing in the menu.
+        notConnected && role !== 'viewer' && ['/admin/google', 'חיבור לגוגל', 'plug', '!'],
+        (network || role !== 'viewer') && ['/admin/network', 'רשת הסניפים', 'branches'],
+      ],
+    },
     {
       key: 'reputation',
       label: 'מוניטין וביקורות',
@@ -155,7 +163,7 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
-        role !== 'viewer' && ['/admin/google', 'חיבור וסניפים', 'plug'],
+        !notConnected && role !== 'viewer' && ['/admin/google', 'חיבור וסניפים', 'plug'],
         ['/admin/profile', 'בריאות הפרופיל', 'shield'],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],

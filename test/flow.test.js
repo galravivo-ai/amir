@@ -662,13 +662,24 @@ test('onboarding checklist tracks real progress', async () => {
   const owner = await registeredOwner('onboard@example.com');
   let dash = await owner.req('/admin');
   assert.match(dash.text, /צעדים ראשונים/);
-  assert.match(dash.text, /0 מתוך 5/);
+  assert.match(dash.text, /0 מתוך 6/);
+  // Not connected to Google yet: that comes first, on the dashboard and in the menu.
+  assert.match(dash.text, /id="connect-first"/);
+  assert.match(dash.text, /הצעד הראשון, והכי חשוב/);
+  assert.match(dash.text, /בואו נעשה את זה ביחד/);
+  assert.match(dash.text, /href="\/admin\/google"[^>]*>[\s\S]{0,1500}?<span>חיבור לגוגל<\/span>/);
 
   const campaign = await createCampaign(owner);
   await owner.req(`/admin/campaigns/${campaign.id}/poster`);
   await completeSurvey(campaign.slug, 5, {});
   dash = await owner.req('/admin');
-  assert.match(dash.text, /4 מתוך 5/, 'campaign, google link, poster and test response are done; logo is not');
+  assert.match(dash.text, /4 מתוך 6/, 'campaign, google link, poster and test response are done; logo and the connection are not');
+  // Following a Google place: the connection card and the menu reminder go away.
+  const bizId = store.businessesFor(store.userByEmail('onboard@example.com').id)[0].id;
+  store.db.prepare("INSERT INTO google_locations (business_id, name, source, place_id, title, enabled) VALUES (?, 'serp:p-onboard', 'serp', 'p-onboard', 'קפה', 1)").run(bizId);
+  dash = await owner.req('/admin');
+  assert.doesNotMatch(dash.text, /id="connect-first"/);
+  assert.match(dash.text, /5 מתוך 6/);
 
   await owner.req('/admin/onboarding/dismiss', { method: 'POST', form: { _csrf: await csrfOf(owner) } });
   dash = await owner.req('/admin');
