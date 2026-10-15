@@ -49,7 +49,6 @@ test('no free trial: a new account picks a plan and pays before it starts', asyn
     assert.equal((await me('/admin/ai-visibility')).location, '/admin/plan');
     const plan = (await me('/admin/plan')).text;
     assert.match(plan, /בוחרים מסלול ומתחילים/);
-    assert.match(plan, /href="\/demo"/);
     const token = plan.match(/name="_csrf" value="([^"]+)"/)[1];
     assert.equal((await me('/admin/campaigns', { method: 'POST', form: { _csrf: token, name: 'x' } })).status, 402);
 

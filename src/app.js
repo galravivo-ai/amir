@@ -1,3 +1,4 @@
+import { signupTrialDays } from './plans.js';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -141,7 +142,7 @@ export function createApp(db, options = {}) {
   app.use(widgetRoutes(store));
 
   app.use(ctx.session);
-  app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
+  app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, trialOpen: () => Boolean(billing) || signupTrialDays() > 0, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));
   // Work done for a page of the business's admin is counted against that business.

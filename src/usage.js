@@ -12,8 +12,8 @@ export const ACTIONS = {
   rank_run: 'בדיקת מיקום במפות ידנית (לכל חיפוש)',
 };
 
-/** During the trial: about half of the "pro" plan. */
-const TRIAL_LIMITS = { ai_draft: 100, insights: 5, health_run: 3, visibility_run: 2, rank_run: 2 };
+/** During the trial: enough to see every feature work, small enough to keep the costs down. */
+export const TRIAL_LIMITS = { ai_draft: 20, insights: 2, health_run: 1, visibility_run: 1, rank_run: 1 };
 
 export const monthKey = (now = Date.now()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit' }).format(new Date(now)).slice(0, 7);

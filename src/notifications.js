@@ -2,6 +2,7 @@ import { emailButton, emailLayout } from './mailer.js';
 import { sendWebhook } from './notify.js';
 import { CONNECT_COMPARE, CONNECT_GUIDE, FEATURE_GUIDES } from './guide.js';
 import { emailList, h, safeColor } from './util.js';
+import { PLANS } from './plans.js';
 
 const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
 
@@ -196,7 +197,24 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
-    async trialEnding(business) {
+    async trialEnding(business, { amount = null } = {}) {
+      // A trial with a saved card: say exactly what will be charged, and how to stop it.
+      if (business.card_token) {
+        return mailer.send({
+          kind: 'trial_ending',
+          businessId: business.id,
+          to: recipients(business),
+          subject: `תקופת הניסיון של ${business.name} מסתיימת מחר`,
+          html: emailLayout({
+            title: 'תקופת הניסיון מסתיימת מחר',
+            brand: true,
+            body: `<p>מחר מסתיימים ימי הניסיון של <b>${h(business.name)}</b>, והמנוי במסלול <b>${h(PLANS[business.plan]?.label || '')}</b> יתחיל.</p>
+              <p>הכרטיס שמסתיים ב-<span dir="ltr">${h(business.card_last4 || '····')}</span> יחויב ב-<b>₪${amount?.toLocaleString('he-IL') ?? ''}</b> ${business.billing_cycle === 'annual' ? 'לשנה' : 'לחודש'} (כולל מע״מ), והחשבונית תישלח במייל.</p>
+              <p>לא רוצים להמשיך? אפשר לבטל עד מחר בעמוד "התוכנית שלי", ולא תחויבו.</p>
+              ${emailButton(url('/admin/plan'), 'לתוכנית שלי')}`,
+          }),
+        });
+      }
       return mailer.send({
         kind: 'trial_ending',
         businessId: business.id,
@@ -272,6 +290,8 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           <p>כדי שהסקרים לא יושהו, אפשר לשלם עכשיו בכרטיס אחר.</p>`],
         paused: ['החשבון הושהה: החיוב לא עבר', `<p>אחרי כמה ניסיונות, לא הצלחנו לחייב את הכרטיס של <b>${h(business.name)}</b>, והסקרים הושהו. כל הנתונים שמורים.</p>
           <p>אחרי תשלום הכול חוזר לעבוד מיד.</p>`],
+        trial_failed: ['תקופת הניסיון הסתיימה: החיוב לא עבר', `<p>תקופת הניסיון של <b>${h(business.name)}</b> הסתיימה, אבל החיוב הראשון בכרטיס לא עבר${error ? ` (${h(error)})` : ''}, והסקרים הושהו. כל הנתונים וההגדרות שמורים.</p>
+          <p>אחרי תשלום בכרטיס אחר הכול חוזר לעבוד מיד.</p>`],
         ended: ['המנוי הסתיים', `<p>המנוי של <b>${h(business.name)}</b> הסתיים כמו שביקשתם, והסקרים הושהו. כל הנתונים שמורים, ואפשר לחדש בכל רגע.</p>`],
       };
       const [title, body] = texts[kind] || texts.failed;

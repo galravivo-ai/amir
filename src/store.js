@@ -87,10 +87,12 @@ export function createStore(db) {
     // Everyone who opted in: accounts (current choice) and website leads (an email
     // that later became an account follows the account's choice).
     marketingList: () =>
-      q(`SELECT 'account' AS source, email, '' AS phone, name, marketing_consent_at AS consent_at FROM users
+      q(`SELECT 'account' AS source, email, '' AS phone, name, marketing_consent_at AS consent_at,
+           (SELECT b.billing FROM businesses b WHERE b.user_id = u.id ORDER BY b.id LIMIT 1) AS billing
+         FROM users u
            WHERE marketing_consent = 1 AND is_superadmin = 0 AND password_hash NOT LIKE '!demo-%'
          UNION ALL
-         SELECT 'lead', l.email, l.phone, l.name, l.created_at FROM leads l
+         SELECT 'lead', l.email, l.phone, l.name, l.created_at, NULL FROM leads l
            WHERE l.marketing_consent = 1 AND (l.email = '' OR l.email NOT IN (SELECT email FROM users))
          ORDER BY consent_at DESC`).all(),
     updateUserPassword(id, passwordHash, keepSessionId = null) {
@@ -1011,9 +1013,16 @@ export function createStore(db) {
     },
     paymentsFor: (businessId, limit = 24) => q('SELECT * FROM payments WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
     /** Card subscriptions whose paid period is over. */
+    // Paid periods that ended, and card trials that ended (their first charge).
     renewalsDue: (now = sqlTime()) =>
       q(`SELECT b.*, u.email AS owner_email FROM businesses b LEFT JOIN users u ON u.id = b.user_id
-         WHERE b.billing = 'active' AND b.card_token IS NOT NULL AND b.paid_until IS NOT NULL AND b.paid_until <= ?`).all(now),
+         WHERE b.billing IN ('active', 'trial') AND b.card_token IS NOT NULL AND b.paid_until IS NOT NULL AND b.paid_until <= ?`).all(now),
+    /** One free trial per person: any business they own that already started one. */
+    hadTrial: (userId) =>
+      Boolean(
+        q(`SELECT 1 FROM payments p JOIN businesses b ON b.id = p.business_id
+           WHERE b.user_id = ? AND p.kind = 'trial' AND p.status = 'paid' LIMIT 1`).get(userId),
+      ),
 
     // ---------- WhatsApp invites ----------
     setInviteWhatsApp(id, f) {

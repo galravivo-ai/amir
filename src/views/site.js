@@ -1,4 +1,4 @@
-import { PLANS } from '../plans.js';
+import { PLANS, TRIAL_DAYS } from '../plans.js';
 import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
@@ -70,7 +70,7 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#ai">נראות ב-AI</a>
     <a href="/#network">רשתות וסניפים</a>
     <a href="/#video">סרטון</a>
-    <a href="/demo">דמו</a>
+    <a href="/#screens">צילומי מסך</a>
     <a href="/#pricing">מחירים</a>
     <a href="/#faq">שאלות</a>
   </nav>
@@ -177,7 +177,17 @@ function talkForm(sent, error = '', v = {}) {
   </form>`;
 }
 
-export function landingView({ signupOpen, contactSent = false, contactError = '', contactValues = {}, talkSent = false, talkError = '' }) {
+/** The screenshots on the landing page (from public/media/guide). */
+const SCREENS = [
+  ['dashboard', 'דשבורד', 'כל העסק במסך אחד: דירוג, ביקורות, צפיות, שיחות ומיקום במפות.'],
+  ['reviews', 'ביקורות', 'כל הביקורות מגוגל ומהסקרים במקום אחד, עם תשובה מוכנה בלחיצה.'],
+  ['rank', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות בכל שכונה, מול המתחרים.'],
+  ['ai', 'נראות ב-AI', 'האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן.'],
+  ['health', 'בריאות הפרופיל', 'ציון לפרופיל בגוגל ורשימת תיקונים לפי סדר חשיבות.'],
+  ['report', 'דוח חודשי', 'דוח מסודר בכל חודש, להדפסה או לשליחה.'],
+];
+
+export function landingView({ signupOpen, trialOpen = false, contactSent = false, contactError = '', contactValues = {}, talkSent = false, talkError = '' }) {
   const faq = [
     [
       'מה זה גוגל מיי ביזנס?',
@@ -208,7 +218,8 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
       'המחיר הוא לכל פרופיל בגוגל, כולל מע״מ. עסק עם שלושה סניפים משלם שלוש פעמים את מחיר המסלול, ומקבל את כל הפיצ\'רים בכל סניף: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים באמצע החודש מחויב רק מהחידוש הבא.',
     ],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
-  const trial = signupOpen ? `<a class="btn lp-cta" href="/register">להתחיל עכשיו</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
+  const start = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
+  const trial = signupOpen ? `<a class="btn lp-cta" href="/register">${start}</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
   const engines = [
     ['Google', 'google'],
     ['Google Maps', 'googlemaps'],
@@ -257,7 +268,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     <span class="lp-pill lp-pill-g">${G_LOGO}<span>בנויה על <b class="lp-gbp">Google Business Profile</b></span></span>
     <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
-    <div class="lp-actions">${trial}<a class="btn lp-ghost" href="/demo">${icon('search', 18)} לצפייה בדמו חי</a></div>
+    <div class="lp-actions">${trial}<a class="btn lp-ghost" href="#screens">${icon('search', 18)} איך זה נראה מבפנים</a></div>
     <a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>
     <div class="lp-checks">
       <span>${icon('check', 16)}בלי התחייבות</span>
@@ -420,28 +431,16 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
   </div>
 </section>
 
-<section class="lp-demo">
-  <div class="lp-demo-text">
-    <span class="lp-pill"><b>חי</b>בלי הרשמה ובלי פרטים</span>
-    <h2>רוצים לראות לפני שנרשמים?</h2>
-    <p>עסק לדוגמה עם שלושה חודשים של נתונים. נכנסים ומסתובבים בכל המסכים.</p>
-    <ul class="lp-demo-list">
-      <li>${icon('chart', 16)} דשבורד עם צפיות, שיחות והגעה מגוגל</li>
-      <li>${icon('search', 16)} נראות ב-AI עם תוכנית פעולה</li>
-      <li>${icon('pin', 16)} מפת מיקום מול המתחרים</li>
-      <li>${icon('report', 16)} דוח חודשי מוכן להדפסה</li>
-    </ul>
-    <a class="btn lp-cta" href="/demo">לדמו החי ←</a>
+<section class="lp-band" id="screens">
+  <div class="lp-head"><span class="lp-kicker">מבפנים</span><h2>ככה זה נראה מבפנים</h2><p>צילומי מסך מעסק לדוגמה. אחרי ההרשמה רואים את אותם המסכים עם הנתונים שלכם.</p></div>
+  <div class="lp-screens">
+    <div class="lp-screens-tabs" role="tablist">${SCREENS.map(([key, label], i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-shot="${key}">${h(label)}</button>`).join('')}</div>
+    <figure class="lp-screens-frame">
+      <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il</span></span>
+      ${SCREENS.map(([key, label, cap], i) => `<div class="lp-shot" data-shot="${key}"${i ? ' hidden' : ''}><img src="${asset(`media/guide/${key}.jpg`)}" alt="${h(label)}" width="1120" height="730" loading="lazy"><figcaption>${h(cap)}</figcaption></div>`).join('')}
+    </figure>
   </div>
-  <a class="lp-demo-shot" href="/demo" aria-label="לדמו החי">
-    <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/demo</span></span>
-    <span class="lp-demo-screen">
-      <span class="lp-demo-cover"><b>ביסטרו הגפן</b><small>חשבון דמו</small></span>
-      <span class="lp-demo-stats">${[['4.7★', 'דירוג'], ['5,916', 'צפיות'], ['62', 'נראות AI']].map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</span>
-      <span class="lp-demo-bars">${[40, 55, 48, 66, 60, 74, 70, 85, 80, 92].map((v) => `<i style="height:${v}%"></i>`).join('')}</span>
-    </span>
-    <span class="lp-demo-play">▶ לצפייה</span>
-  </a>
+  <script>(function(){var t=document.querySelectorAll('.lp-screens-tabs button');t.forEach(function(b){b.addEventListener('click',function(){t.forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.lp-shot').forEach(function(s){s.hidden=s.dataset.shot!==b.dataset.shot})})})})();</script>
 </section>
 
 <section class="lp-band alt" id="pricing">
@@ -451,7 +450,7 @@ export function landingView({ signupOpen, contactSent = false, contactError = ''
     compact: true,
     action: () =>
       signupOpen
-        ? `<a class="btn primary plan-cta" href="/register">להתחיל עכשיו</a>`
+        ? `<a class="btn primary plan-cta" href="/register">${start}</a>`
         : `<a class="btn primary plan-cta" href="/login">כניסה</a>`,
   })}
   <details class="lp-agency" id="contact"${contactSent || contactError ? ' open' : ''}>
@@ -472,9 +471,9 @@ ${networkSection()}
       <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? <a href="#talk">השאירו פרטים</a> ונחזור אליכם.</p>
       <div class="lp-faq-card">
         <b>עדיין מתלבטים?</b>
-        <span>הכי פשוט להסתכל בעצמכם על עסק לדוגמה, עם כל המסכים והנתונים.</span>
+        <span>${trialOpen ? `מתחילים ב-${TRIAL_DAYS} ימים חינם, או משאירים` : 'משאירים'} פרטים ונחזור אליכם עם הסבר קצר.</span>
         <div class="lp-faq-actions">
-          <a class="btn primary" href="/demo">לדמו החי</a>
+          <a class="btn primary" href="#talk">השארת פרטים</a>
         </div>
       </div>
     </aside>
@@ -484,13 +483,13 @@ ${networkSection()}
   </div>
 </section>
 
-<div class="lp-sticky" aria-hidden="false">${trial}<a class="btn lp-ghost-dark" href="/demo">דמו</a></div>
+<div class="lp-sticky" aria-hidden="false">${trial}<a class="btn lp-ghost-dark" href="#screens">צילומי מסך</a></div>
 
 <section class="lp-final">
   <div class="lp-hero-glow" aria-hidden="true"></div>
   <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
   <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
-  <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="/demo">לצפייה בדמו</a></div>
+  <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="#talk">לדבר איתנו</a></div>
   <div class="lp-talk-box" id="talk">
     <b>מעדיפים לדבר עם מישהו?</b><span>השאירו שם וטלפון ונחזור אליכם עוד היום.</span>
     ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
@@ -609,7 +608,7 @@ function guideHelp() {
 
 // ---------------------------------------------------------------- legal
 
-const UPDATED = '10.10.2026';
+const UPDATED = '15.10.2026';
 
 function legalPage({ title, sections, signupOpen, intro = '' }) {
   return sitePage({
@@ -777,7 +776,9 @@ export function termsView({ signupOpen }) {
         `<ul>
           <li>המחירים מפורטים ב<a href="/#pricing">עמוד המחירים</a>, בשקלים וכוללים מע״מ. המחיר הוא <b>לכל פרופיל עסק בגוגל</b> שהחשבון עוקב אחריו. המסלולים נבדלים בבדיקת הנראות ב-ChatGPT, Gemini, Perplexity ו-Claude ובתוכנית הפעולה, הכלולות במסלול "גוגל + AI".</li>
           <li>פרופיל שנוסף באמצע תקופה מחויב מהחידוש הבא, ופרופיל שהוסר מפסיק להיות מחויב מהחידוש הבא. אין חיוב או זיכוי על החלק של התקופה הנוכחית.</li>
-          <li>השירות מתחיל אחרי בחירת מסלול ותשלום. אפשר להתרשם מהמערכת לפני כן בחשבון הדמו. מנהל השירות רשאי להעניק תקופת ניסיון לעסק מסוים, לפי שיקול דעתו.</li>
+          <li><b>תקופת ניסיון:</b> חשבון חדש יכול להתחיל ב-${TRIAL_DAYS} ימי ניסיון חינם, פעם אחת לכל אדם. בתחילת הניסיון שומרים כרטיס אשראי בדף המאובטח של קארדקום, ו<b>לא מחויבים</b>. יום לפני סוף הניסיון נשלח מייל עם הסכום שיחויב. אם לא ביטלתם עד סוף הניסיון, המנוי במסלול שבחרתם מתחיל והכרטיס מחויב אוטומטית, ומאז המנוי מתחדש כרגיל. ביטול בזמן הניסיון נעשה בקליק בעמוד "התוכנית שלי", ואינו כרוך בחיוב כלשהו. אם החיוב הראשון לא עובר, החשבון מושהה עד לתשלום.</li>
+          <li>בזמן הניסיון חלק מהמכסות מצומצמות (למשל טיוטות AI, בדיקות ידניות, חיפושים במפות והודעות וואטסאפ). המכסות המלאות של המסלול נפתחות עם תחילת המנוי.</li>
+          <li>מנהל השירות רשאי להעניק תקופת ניסיון גם בדרך אחרת לעסק מסוים, לפי שיקול דעתו.</li>
           <li>התשלום בכרטיס אשראי, בדף התשלום המאובטח של חברת הסליקה קארדקום. אנחנו לא שומרים את פרטי הכרטיס: נשמר אצלנו רק אסימון (טוקן) שמאפשר לחייב את המנוי, ו-4 הספרות האחרונות.</li>
           <li>מסלול חודשי מתחדש כל חודש, ומסלול שנתי כל שנה, עד שמבטלים, והכרטיס מחויב אוטומטית ביום החידוש. בתשלום שנתי משלמים על 10 חודשים ומקבלים 12. חשבונית נשלחת במייל אחרי כל חיוב.</li>
           <li>תוספות שאינן חלק מהמסלולים, כמו חיבור לקופה ולמערכות (API), ומסלולים לרשתות גדולות ולסוכנויות, ניתנים בהצעת מחיר נפרדת.</li>

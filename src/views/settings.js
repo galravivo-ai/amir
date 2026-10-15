@@ -1,4 +1,4 @@
-import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, PLANS } from '../plans.js';
+import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, PLANS, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
@@ -379,7 +379,7 @@ export const CANCEL_REASONS = {
  */
 export function planView({
   business, plan, usage, access, request = null, csrf = '', can = () => true, requested = false,
-  cardBilling = false, payments = [], notice = '', error = '', actionUsage = null, profiles = 1,
+  cardBilling = false, payments = [], notice = '', error = '', actionUsage = null, profiles = 1, trialOffer = false,
 }) {
   const meter = (label, used, max) => {
     if (max === Infinity) {
@@ -412,10 +412,25 @@ export function planView({
   ].filter(Boolean);
   const factsHtml = `<dl class="sub-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
   let head;
-  if (access?.reason === 'new') {
+  if (access?.reason === 'new' && trialOffer) {
+    head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! ${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
+      <span>בוחרים מסלול ושומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים.</b> יום לפני סוף הניסיון נזכיר לכם במייל, ומבטלים בקליק.
+      מיד אחרי זה מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד.</span></div></div>`;
+  } else if (access?.reason === 'new') {
     head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! בוחרים מסלול ומתחילים</b>
-      <span>מיד אחרי התשלום מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד. בלי התחייבות, מבטלים בכל רגע.
-      רוצים להסתכל קודם? <a href="/demo">לחשבון הדמו</a></span></div></div>`;
+      <span>מיד אחרי התשלום מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד. בלי התחייבות, מבטלים בכל רגע.</span></div></div>`;
+  } else if (access?.state === 'trial' && access.card) {
+    const ends = h(day(access.endsAt));
+    const stopped = !business.auto_renew;
+    head = `<div class="sub-head ${stopped ? 'canceled' : 'trial'}"><div><b>${stopped ? 'הניסיון בוטל: לא תחויבו' : `ניסיון חינם במסלול ${h(plan.label)}`}</b>
+      <span>${
+        stopped
+          ? `אפשר להמשיך להשתמש עד ${ends}. אחרי זה הסקרים מושהים, והנתונים נשמרים.`
+          : `${access.daysLeft > 1 ? `נשארו ${access.daysLeft} ימים` : access.daysLeft === 1 ? 'היום האחרון' : 'הניסיון הסתיים, החיוב בתהליך'}. ב-${ends} יתחיל המנוי, והכרטיס יחויב ב-${money(perPeriod)} ${cycleKey === 'annual' ? 'לשנה' : 'לחודש'}.`
+      }</span></div>
+      ${stopped && owner ? `<form method="post" action="/admin/billing/auto-renew">${csrfField(csrf)}<button class="btn primary" name="on" value="1">המשך המנוי בסוף הניסיון</button></form>` : ''}
+    </div>${factsHtml.replace('</dl>', `<div><dt>כרטיס</dt><dd><span dir="ltr">•••• ${h(business.card_last4 || '····')}</span></dd></div></dl>`)}
+    ${owner && !stopped ? `<p class="sub-cancel"><a href="/admin/plan/cancel">ביטול הניסיון, בלי חיוב</a></p>` : ''}`;
   } else if (access?.state === 'trial') {
     head = `<div class="sub-head trial"><div><b>תקופת ניסיון במסלול ${h(plan.label)}</b>
       <span>${access.daysLeft === 1 ? 'היום האחרון' : `נשארו ${access.daysLeft} ימים`}, עד ${h(formatDate(access.endsAt).split(',')[0])}. אחרי זה הסקרים יושהו עד שתבחרו מסלול.</span></div></div>${factsHtml}`;
@@ -457,10 +472,10 @@ export function planView({
   // The plan cards lead to the confirmation page (GET), which says what happens before anything is charged.
   const action = (key) =>
     owner
-      ? active && key === business.plan
+      ? (active || access?.card) && key === business.plan
         ? '<span class="btn plan-cta" aria-disabled="true">המסלול שלכם</span>'
         : `<button class="btn ${key === 'pro' ? 'accent' : 'primary'} plan-cta" name="plan" value="${key}">${
-            paying ? (PLANS[key].price > plan.price ? `שדרוג ל${h(PLANS[key].label)}` : `מעבר ל${h(PLANS[key].label)}`) : `בחירה ב${h(PLANS[key].label)}`
+            trialOffer ? `${TRIAL_DAYS} ימים חינם · ${h(PLANS[key].label)}` : paying ? (PLANS[key].price > plan.price ? `שדרוג ל${h(PLANS[key].label)}` : `מעבר ל${h(PLANS[key].label)}`) : `בחירה ב${h(PLANS[key].label)}`
           }</button>`
       : '';
   const history = payments.length
@@ -495,6 +510,8 @@ export function planView({
       cardBilling
         ? paying
           ? 'לפני כל שינוי תראו בדיוק מה ייכנס לתוקף ומה יחויב. שדרוג נכנס לתוקף מיד ומחויב רק על הימים שנשארו; מעבר למסלול זול יותר או לתדירות אחרת נכנס לתוקף בחידוש הבא.'
+          : trialOffer
+          ? `${TRIAL_DAYS} ימי ניסיון חינם. הכרטיס נשמר בדף המאובטח של קארדקום ומחויב רק בסוף הניסיון, אם לא ביטלתם. אחרי זה המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.`
           : 'התשלום בכרטיס אשראי, בדף המאובטח של קארדקום. המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.'
         : 'התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.'
     } <a href="/terms#billing">התנאים המלאים: תשלום, שינוי וביטול</a>${op.email ? ` · שאלות? <span dir="ltr">${h(op.email)}</span>` : ''}</p>
@@ -514,18 +531,26 @@ export function planView({
 export function planChangeView({ business, current, access, plan, cycle, quote, csrf }) {
   const p = PLANS[plan];
   const per = cycle === 'annual' ? 'לשנה' : 'לחודש';
+  const trialEnd = new Date(Date.now() + (quote.days || 0) * 864e5).toISOString().slice(0, 19).replace('T', ' ');
   const lines = {
     checkout: [`תועברו לדף התשלום המאובטח של קארדקום, לתשלום של <b>${money(quote.amount)}</b> ${per} (${quote.profiles > 1 ? `${quote.profiles} פרופילים, ` : ''}כולל מע״מ).`, 'המסלול נפתח מיד אחרי התשלום, ומתחדש אוטומטית עד שמבטלים.'],
     upgrade: [`השדרוג נכנס לתוקף <b>מיד</b>.`, quote.charge ? `תחויבו עכשיו ב-<b>${money(quote.charge)}</b>: ההפרש היחסי על הימים שנשארו עד ${h(day(business.paid_until))}.` : 'אין חיוב נוסף עד החידוש הבא.', `מהחידוש הבא: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`],
     scheduled: [`השינוי ייכנס לתוקף <b>בחידוש הבא, ב-${h(day(quote.at))}</b>. עד אז הכול נשאר כמו שהוא, בלי חיוב נוסף.`, `מהחידוש: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`, 'אפשר לבטל את השינוי בעמוד "התוכנית שלי" עד יום החידוש.'],
     kept: ['זה המסלול הנוכחי שלכם. המנוי ימשיך להתחדש כרגיל.'],
+    trial: [
+      `<b>${quote.days} ימים חינם</b>, עם כל מה שיש במסלול.`,
+      'תועברו לדף המאובטח של קארדקום לשמירת כרטיס. <b>היום לא מחויבים.</b>',
+      `ב-${h(day(trialEnd))} יתחיל המנוי: <b>${money(quote.amount)}</b> ${per} (${quote.profiles > 1 ? `${quote.profiles} פרופילים, ` : ''}כולל מע״מ), ויתחדש עד שתבטלו. יום לפני נזכיר לכם במייל.`,
+      'רוצים לבטל? בקליק בעמוד "התוכנית שלי", לפני סוף הניסיון, ולא תחויבו בכלל.',
+    ],
+    trial_switch: ['המסלול מתחלף מיד, ואתם עדיין בתקופת הניסיון, בלי חיוב.', `בסוף הניסיון, ב-${h(day(quote.at))}: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`],
     request: ['נקבל את הבקשה ונחזור אליכם להשלמת התשלום ולהפעלת המסלול.'],
   }[quote.kind];
   const lose = current.aiPlus && !p.aiPlus ? '<div class="warn">במסלול גוגל אין בדיקה ב-ChatGPT, Gemini, Perplexity ו-Claude, ואין תוכנית פעולה אחרי כל בדיקה. הנתונים שכבר נאספו נשמרים.</div>' : '';
   const gain = !current.aiPlus && p.aiPlus ? `<ul class="sub-gain">${['נראות ב-ChatGPT, Gemini, Perplexity ו-Claude', 'תוכנית פעולה ו"על מי ממליצים במקומכם"', `מיקום במפות: ${p.rankKeywords} חיפושים · ${p.competitors} מתחרים`].map((x) => `<li>${icon('check', 16)}${h(x)}</li>`).join('')}</ul>` : '';
-  const button = { checkout: 'להמשך לתשלום', upgrade: quote.charge ? `אישור ותשלום ${money(quote.charge)}` : 'אישור השדרוג', scheduled: 'אישור השינוי', kept: 'חזרה', request: 'שליחת הבקשה' }[quote.kind];
+  const button = { trial: 'להמשך: שמירת כרטיס', trial_switch: 'אישור המעבר', checkout: 'להמשך לתשלום', upgrade: quote.charge ? `אישור ותשלום ${money(quote.charge)}` : 'אישור השדרוג', scheduled: 'אישור השינוי', kept: 'חזרה', request: 'שליחת הבקשה' }[quote.kind];
   return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
-  <h1>${quote.kind === 'upgrade' ? 'שדרוג' : 'מעבר'} למסלול ${h(p.label)}</h1>
+  <h1>${quote.kind === 'trial' ? `${quote.days} ימים חינם במסלול ${h(p.label)}` : `${quote.kind === 'upgrade' ? 'שדרוג' : 'מעבר'} למסלול ${h(p.label)}`}</h1>
   <section class="card stack sub-confirm">
     <div class="sub-from-to"><span>${h(current.label)}${access?.state === 'active' ? ` · ${h(CYCLES[business.billing_cycle] || CYCLES.monthly)}` : ''}</span><b>←</b><span><b>${h(p.label)}</b> · ${h(CYCLES[cycle])}</span></div>
     ${gain}${lose}
@@ -546,6 +571,24 @@ export function planChangeView({ business, current, access, plan, cycle, quote, 
 export function cancelView({ business, plan, access, csrf }) {
   const until = day(business.paid_until);
   const annual = business.billing_cycle === 'annual';
+  if (access?.card) {
+    return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
+  <h1>ביטול הניסיון</h1>
+  <section class="card stack sub-confirm">
+    <ul class="sub-lines">
+      <li><b>לא תחויבו בכלל.</b> הכרטיס לא יחויב בסוף הניסיון.</li>
+      <li>אפשר להמשיך להשתמש עד <b>${h(day(access.endsAt))}</b>. אחרי זה הסקרים, ההתראות והבדיקות מושהים, <b>והנתונים נשמרים</b>.</li>
+      <li>התחרטתם? אפשר להחזיר את המנוי בעמוד "התוכנית שלי" עד סוף הניסיון.</li>
+    </ul>
+    <form method="post" action="/admin/plan/cancel" class="stack">
+      <input type="hidden" name="_csrf" value="${h(csrf)}">
+      <label>מה היה חסר לכם? <span class="muted small">(לא חובה, ועוזר לנו להשתפר)</span>
+        <select name="reason"><option value="">בחירה…</option>${Object.entries(CANCEL_REASONS).map(([k, v]) => `<option value="${k}">${h(v)}</option>`).join('')}</select></label>
+      <label>משהו שתרצו להוסיף? <textarea name="details" rows="3" maxlength="400"></textarea></label>
+      <div class="row compact"><button class="btn danger">ביטול הניסיון</button><a class="btn primary" href="/admin/plan">להמשיך בניסיון</a></div>
+    </form>
+  </section>`;
+  }
   return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
   <h1>ביטול המנוי</h1>
   <section class="card stack sub-confirm">
@@ -646,7 +689,7 @@ const MAIL_KINDS = {
   welcome_guide: 'מדריך התחלה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0 }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0 }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
@@ -757,7 +800,8 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
   </section>
   <section class="card">
     <div class="row between"><h3>משתמשים</h3>
-      <span class="small">${marketingCount} אישרו דיוור פרסומי · <a href="/superadmin/marketing.csv">ייצוא לרשימת תפוצה (CSV)</a></span></div>
+      <span class="small">${marketingCount} אישרו דיוור פרסומי · <a href="/superadmin/marketing.csv">ייצוא לרשימת תפוצה (CSV)</a>
+        · ${unpaidCount} נרשמו ולא התחילו · <a href="/superadmin/marketing.csv?only=unpaid">רק מי שלא התחיל ואישר דיוור</a></span></div>
     <table class="table responsive"><thead><tr><th>שם</th><th>אימייל</th><th>דיוור</th><th>עסקים</th><th>אימות דו-שלבי</th><th>מנהל מערכת</th><th>נרשם</th></tr></thead>
     <tbody>${users
       .map(

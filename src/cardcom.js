@@ -64,6 +64,26 @@ export function createCardcom({ env = process.env, fetchImpl = globalThis.fetch 
       return { id: r.LowProfileId, url: r.Url };
     },
 
+    /**
+     * A page that only saves the card (a free trial): Cardcom checks the card
+     * and returns a token, nothing is charged and no invoice is issued.
+     */
+    async createTokenPage({ amount, description, returnValue, successUrl, failedUrl, webhookUrl }) {
+      const r = await call('LowProfile/Create', {
+        Operation: 'CreateTokenOnly',
+        Amount: amount,
+        ISOCoinId: 1,
+        Language: 'he',
+        ProductName: description,
+        ReturnValue: returnValue,
+        SuccessRedirectUrl: successUrl,
+        FailedRedirectUrl: failedUrl,
+        WebHookUrl: webhookUrl,
+      });
+      if (r.ResponseCode !== 0 || !r.Url) throw new CardcomError(r.Description || 'Cardcom did not open a payment page');
+      return { id: r.LowProfileId, url: r.Url };
+    },
+
     /** What happened on a payment page; trusted, unlike the webhook's body. */
     async result(lowProfileId) {
       const r = await call('LowProfile/GetLpResult', { LowProfileId: lowProfileId });
@@ -74,6 +94,8 @@ export function createCardcom({ env = process.env, fetchImpl = globalThis.fetch 
       const year = token.CardYear || tx.CardYear;
       return {
         ok,
+        // A card-only page has no transaction: done when the page succeeded and left a token.
+        saved: r.ResponseCode === 0 && (tx.ResponseCode ?? 0) === 0 && Boolean(token.Token),
         error: ok ? '' : String(tx.Description || r.Description || 'התשלום לא הושלם'),
         transactionId: String(r.TranzactionId || tx.TranzactionId || ''),
         amount: Number(tx.Amount || 0),

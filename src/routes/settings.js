@@ -217,6 +217,14 @@ export function settingsRoutes(ctx) {
     const billing = ctx.billing;
     if (billing && PLANS[plan].price != null) {
       try {
+        // During a card trial: switch the plan, still free until the trial ends.
+        if (req.business.billing === 'trial' && req.business.card_token) {
+          store.updateBusiness(req.business.id, { plan, billing_cycle: cycle });
+          return res.redirect(303, '/admin/plan?change=switched');
+        }
+        if (billing.canTrial(req.business)) {
+          return res.redirect(303, await billing.startTrial({ business: req.business, email: req.user.email, plan, cycle, baseUrl: ctx.baseUrl(req) }));
+        }
         if (billing.hasCardPlan(req.business)) {
           const r = await billing.changePlan({ business: req.business, email: req.user.email, plan, cycle });
           return res.redirect(303, `/admin/plan?change=${r.status}${r.error ? `&err=${encodeURIComponent(r.error)}` : ''}`);
@@ -242,7 +250,8 @@ export function settingsRoutes(ctx) {
     if (!payment || payment.business_id !== req.business.id) return res.redirect(303, '/admin/plan');
     try {
       const after = await ctx.billing.complete(payment.id, { failed: req.query.failed === '1' });
-      if (after.status === 'paid') return res.redirect(303, '/admin/plan?paid=1');
+      if (after.status === 'paid') return res.redirect(303, payment.kind === 'trial' ? '/admin?trial=1' : '/admin/plan?paid=1');
+      if (payment.kind === 'trial') return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `הכרטיס לא נשמר${after.error ? `: ${after.error}` : ''}. אפשר לנסות שוב או בכרטיס אחר.` : 'הכרטיס עוד לא אושר. נסו לרענן בעוד דקה.')}`);
       return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `התשלום לא עבר${after.error ? `: ${after.error}` : ''}` : 'התשלום עוד לא אושר. אם חויבתם, הוא יופיע כאן בעוד כמה דקות.')}`);
     } catch (err) {
       console.error('[billing] completing failed:', err.message);
@@ -272,7 +281,7 @@ export function settingsRoutes(ctx) {
     await ctx.notifier
       ?.subscriptionCancelled({ business: b, user: req.user, reason, until: b.paid_until ? b.paid_until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, admins: ctx.adminEmails() })
       .catch((err) => console.error('[notify] cancellation failed:', err.message));
-    res.redirect(303, '/admin/plan?canceled=1');
+    res.redirect(303, `/admin/plan?canceled=${req.access?.card ? 'trial' : '1'}`);
   });
 
   // Undo a change scheduled for the renewal.
@@ -301,11 +310,13 @@ export function settingsRoutes(ctx) {
         can: req.can,
         cardBilling: Boolean(ctx.billing),
         actionUsage: usageOf(store, req.business),
-        payments: store.paymentsFor(req.business.id, 12).filter((p) => p.status !== 'pending'),
+        payments: store.paymentsFor(req.business.id, 12).filter((p) => p.status !== 'pending' && p.kind !== 'trial'),
+        trialOffer: Boolean(ctx.billing?.canTrial(req.business)),
         notice: req.query.paid
           ? 'התשלום עבר. המסלול פעיל, והחשבונית נשלחה למייל.'
-          : { upgraded: 'המסלול שודרג.', scheduled: 'השינוי ייכנס לתוקף בחידוש הבא.', kept: 'המסלול נשאר כמו שהוא.' }[req.query.change] ||
+          : { switched: 'המסלול הוחלף. אתם עדיין בתקופת הניסיון, בלי חיוב.', upgraded: 'המסלול שודרג.', scheduled: 'השינוי ייכנס לתוקף בחידוש הבא.', kept: 'המסלול נשאר כמו שהוא.' }[req.query.change] ||
             { on: 'המנוי חודש: הוא יתחדש אוטומטית כרגיל.', off: 'החידוש האוטומטי בוטל. המסלול פעיל עד סוף התקופה ששולמה.' }[req.query.renew] ||
+            (req.query.canceled === 'trial' ? 'הניסיון בוטל, ולא תחויבו. אפשר להמשיך להשתמש עד סוף הניסיון.' : '') ||
             (req.query.canceled ? 'המנוי בוטל. הוא נשאר פעיל עד סוף התקופה ששולמה, ולא תחויבו יותר. אפשר לחדש בכל רגע.' : '') ||
             '',
         error: String(req.query.err ?? '').slice(0, 300),

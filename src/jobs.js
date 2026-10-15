@@ -1,6 +1,7 @@
 import { sendDropAlerts } from './drops.js';
 import { backupDb, lastBackupAge } from './backup.js';
-import { accessOf, planOf, PLANS } from './plans.js';
+import { accessOf, planOf, PLANS, profilesOf } from './plans.js';
+import { amountFor } from './billing.js';
 import { buildReport, lastMonth, monthRange } from './report.js';
 import { monthlySummary } from './routes/reports.js';
 import { sendWhatsAppInvite } from './whatsapp.js';
@@ -99,7 +100,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
         sent++;
       } else if (access.state === 'trial' && access.daysLeft <= 1 && !business.trial_notice) {
         store.updateBusiness(business.id, { trial_notice: 'ending' });
-        await notifier.trialEnding(business);
+        await notifier.trialEnding(business, { amount: amountFor(business.plan, business.billing_cycle || 'monthly', profilesOf(store, business.id)) });
         sent++;
       }
     }

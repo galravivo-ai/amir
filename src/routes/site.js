@@ -10,7 +10,7 @@ import { featureGuide } from '../guide.js';
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
 
 /** Public site pages: landing, privacy, terms and uploaded logos. */
-export function siteRoutes(store, { signupOpen = () => true, notifier = null, adminEmails = () => [], contactLimit } = {}) {
+export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => false, notifier = null, adminEmails = () => [], contactLimit } = {}) {
   const router = express.Router();
   const limit = rateLimiter(contactLimit || { windowMs: 60 * 60e3, max: 5 });
 
@@ -34,7 +34,7 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
     const error = !v.name ? 'נא למלא שם' : !v.phone && !v.email ? 'נא להשאיר טלפון או אימייל תקין' : '';
     if (error) {
       const talk = req.body.from === 'talk' ? { talkError: error } : { contactError: error };
-      return res.status(422).send(landingView({ signupOpen: signupOpen(), contactValues: v, ...talk }));
+      return res.status(422).send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactValues: v, ...talk }));
     }
     store.createLead(v);
     await notifier?.leadReceived({ lead: v, kindLabel: LEAD_KINDS[v.kind], admins: adminEmails() }).catch((err) => console.error('[notify] lead failed:', err));
@@ -45,7 +45,7 @@ export function siteRoutes(store, { signupOpen = () => true, notifier = null, ad
     if (req.user) return res.redirect('/admin');
     // An agency's own domain is for its clients: no platform marketing page there.
     if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
-    res.send(landingView({ signupOpen: signupOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
+    res.send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
   });
   // Caddy asks here before issuing an HTTPS certificate on demand, so
   // certificates are only issued for domains that belong to an agency.

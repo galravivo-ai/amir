@@ -48,7 +48,9 @@ export function authRoutes(ctx) {
 
   // ---------- login ----------
   // A look around a sample business, without signing up (read-only).
+  // Closed unless DEMO_OPEN=1: the landing page shows screenshots instead.
   router.get('/demo', (req, res) => {
+    if (process.env.DEMO_OPEN !== '1') return res.redirect(303, '/#screens');
     const { userId, businessId } = ensureDemo(store);
     ctx.startSession(res, userId);
     res.cookie(BIZ_COOKIE, String(businessId), { ...ctx.cookieOpts, maxAge: 864e5 });

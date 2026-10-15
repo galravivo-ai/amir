@@ -30,14 +30,21 @@ export function superadminRoutes(ctx) {
         aiTest: req.query.ai === 'ok' ? { ok: true, text: String(req.query.t ?? '').slice(0, 80) } : req.query.ai === 'err' ? { ok: false, error: String(req.query.t ?? '').slice(0, 300) } : null,
         meId: req.user.id,
         marketingCount: store.marketingList().length,
+        unpaidCount: store.db.prepare("SELECT COUNT(*) AS n FROM businesses WHERE billing = 'unpaid' AND is_demo = 0").get().n,
       }),
     );
   });
 
   // Users who opted in to marketing email, for import into a mailing tool.
+  // `?only=unpaid`: signed up but never started (no card, no payment), to win back later.
+  const STATUS = { unpaid: 'לא התחיל', trial: 'בניסיון', active: 'משלם', paused: 'מושהה' };
   router.get('/marketing.csv', (req, res) => {
-    const lines = [['email', 'phone', 'name', 'source', 'consent_at'].join(',')];
-    for (const u of store.marketingList()) lines.push([u.email, u.phone, u.name, u.source, u.consent_at].map(csvEscape).join(','));
+    const only = Object.hasOwn(STATUS, req.query.only) ? req.query.only : null;
+    const lines = [['email', 'phone', 'name', 'source', 'status', 'consent_at'].join(',')];
+    for (const u of store.marketingList()) {
+      if (only && u.billing !== only) continue;
+      lines.push([u.email, u.phone, u.name, u.source === 'lead' ? 'פנייה מהאתר' : 'חשבון', STATUS[u.billing] || '', u.consent_at].map(csvEscape).join(','));
+    }
     res.type('text/csv; charset=utf-8');
     res.attachment(`marketing-optin-${new Date().toISOString().slice(0, 10)}.csv`);
     res.send(`\ufeff${lines.join('\r\n')}`);

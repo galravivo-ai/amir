@@ -1331,6 +1331,8 @@ test('marketing email is a separate, optional opt-in that can be withdrawn', asy
   store.setSuperadmin(store.userByEmail('mkt-root@example.com').id, true);
   const csv = await root.req('/superadmin/marketing.csv');
   assert.match(csv.text, /yesmail@example\.com/);
+  assert.match(csv.text, /yesmail@example\.com,,Yes,חשבון,בניסיון,/);
+  assert.doesNotMatch((await root.req('/superadmin/marketing.csv?only=unpaid')).text, /yesmail/);
   assert.doesNotMatch(csv.text, /nomail@example\.com/);
   assert.equal((await c.req('/superadmin/marketing.csv')).status, 404);
   await c.req('/account/marketing', { method: 'POST', form: { _csrf: await csrfOf(c) } });
@@ -1345,6 +1347,6 @@ test('website leads can opt in to marketing, and land in the opt-in export', asy
   const root = await registeredOwner('mkt-root2@example.com');
   store.setSuperadmin(store.userByEmail('mkt-root2@example.com').id, true);
   const csv = (await root.req('/superadmin/marketing.csv')).text;
-  assert.match(csv, /050-1112222,Dana,lead/);
+  assert.match(csv, /050-1112222,Dana,פנייה מהאתר,/);
   assert.doesNotMatch(csv, /avi-lead@example\.com/);
 });

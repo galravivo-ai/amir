@@ -21,8 +21,15 @@ test('demo: anyone can look around a full sample business, and change nothing', 
     }
     return { status: res.status, location: res.headers.get('location'), text: await res.text() };
   };
+  const before = process.env.DEMO_OPEN;
   try {
-    assert.match((await req('/')).text, /href="\/demo"/);
+    // Closed by default: the landing page shows screenshots instead.
+    const home = (await req('/')).text;
+    assert.doesNotMatch(home, /href="\/demo"/);
+    assert.match(home, /id="screens"/);
+    assert.match(home, /media\/guide\/dashboard\.jpg/);
+    assert.equal((await req('/demo')).location, '/#screens');
+    process.env.DEMO_OPEN = '1';
     const go = await req('/demo');
     assert.equal(go.location, '/admin');
     const dash = (await req('/admin')).text;
@@ -61,5 +68,7 @@ test('demo: anyone can look around a full sample business, and change nothing', 
     assert.equal(store.db.prepare('SELECT id FROM businesses WHERE is_demo = 1').get().id, id);
   } finally {
     server.close();
+    if (before === undefined) delete process.env.DEMO_OPEN;
+    else process.env.DEMO_OPEN = before;
   }
 });

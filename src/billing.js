@@ -1,9 +1,11 @@
-import { annualPrice, PLANS, profilesOf } from './plans.js';
+import { annualPrice, PLANS, profilesOf, TRIAL_DAYS } from './plans.js';
 
 // Subscriptions paid by card through Cardcom: the first payment on Cardcom's
 // page saves a token, and the token pays every renewal. Upgrades are charged
 // now for the rest of the period; downgrades and cycle changes wait for the
 // renewal. Three failed renewals pause the account.
+// A free trial saves the card first (nothing charged); its first charge is
+// the "renewal" when the trial ends, and if that charge fails the account pauses.
 
 const DAY = 864e5;
 const MAX_FAILURES = 3;
@@ -49,6 +51,54 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     return page.url;
   }
 
+  /** A new account can start a trial: not yet paid or trialled, and its owner never had one. */
+  const canTrial = (business) => business.billing === 'unpaid' && !store.hadTrial(business.user_id);
+
+  /** Opens Cardcom's page to save a card for the free trial; nothing is charged. */
+  async function startTrial({ business, email, plan, cycle, baseUrl }) {
+    const profiles = profilesOf(store, business.id);
+    const amount = amountFor(plan, cycle, profiles);
+    const id = store.createPayment(business.id, { kind: 'trial', plan, cycle, amount, createdBy: email });
+    const page = await cardcom.createTokenPage({
+      amount,
+      description: `${describe(plan, cycle, profiles)} · ${TRIAL_DAYS} ימי ניסיון`,
+      returnValue: String(id),
+      successUrl: `${baseUrl}/admin/billing/done?p=${id}`,
+      failedUrl: `${baseUrl}/admin/billing/done?p=${id}&failed=1`,
+      webhookUrl: `${baseUrl}/billing/cardcom/webhook?p=${id}`,
+    });
+    store.setPaymentPage(id, page.id);
+    return page.url;
+  }
+
+  /** The card was saved: the trial starts now, and the first charge is due when it ends. */
+  async function completeTrial(payment, r, failed) {
+    if (!r.saved || (r.returnValue && r.returnValue !== String(payment.id))) {
+      if (failed) store.settlePayment(payment.id, { status: 'failed', error: r.error });
+      return store.paymentById(payment.id);
+    }
+    if (store.settlePayment(payment.id, { status: 'paid', transactionId: '' })) {
+      const ends = toSql(now() + TRIAL_DAYS * DAY);
+      store.updateBusiness(payment.business_id, {
+        plan: payment.plan,
+        billing_cycle: payment.cycle,
+        billing: 'trial',
+        trial_ends_at: ends,
+        paid_until: ends,
+        trial_notice: null,
+        plan_request: null,
+        card_token: r.token,
+        card_expiry: r.expiry || null,
+        card_last4: r.last4 || null,
+        auto_renew: true,
+        pay_failures: 0,
+        next_plan: null,
+        next_cycle: null,
+      });
+    }
+    return store.paymentById(payment.id);
+  }
+
   /**
    * Settles a payment page from Cardcom's own record (never from what the
    * browser or the webhook sent). Safe to call twice: the redirect and the
@@ -58,6 +108,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     const payment = store.paymentById(paymentId);
     if (!payment || payment.status !== 'pending' || !payment.page_id) return payment;
     const r = await cardcom.result(payment.page_id);
+    if (payment.kind === 'trial') return completeTrial(payment, r, failed);
     const matches = (!r.returnValue || r.returnValue === String(payment.id)) && (!r.amount || Math.abs(r.amount - payment.amount) < 0.01);
     if (!r.ok || !matches) {
       // Before the customer pays, Cardcom reports "not done yet": only a failed redirect closes it.
@@ -129,6 +180,8 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
   function quote(business, plan, cycle) {
     const profiles = profilesOf(store, business.id);
     const amount = amountFor(plan, cycle, profiles);
+    if (canTrial(business)) return { kind: 'trial', amount, profiles, days: TRIAL_DAYS };
+    if (business.billing === 'trial' && business.card_token) return { kind: 'trial_switch', amount, profiles, at: business.trial_ends_at };
     if (!hasCardPlan(business)) return { kind: 'checkout', amount, profiles };
     if (plan === business.plan && cycle === business.billing_cycle) return { kind: 'kept', amount, profiles };
     const oldAmount = amountFor(business.plan, business.billing_cycle, profiles);
@@ -159,6 +212,13 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     let renewed = 0;
     const t = now();
     for (const b of store.renewalsDue(toSql(t))) {
+      const trial = b.billing === 'trial';
+      if (!b.auto_renew && trial) {
+        // Cancelled during the trial: never charged.
+        store.updateBusiness(b.id, { billing: 'paused', trial_notice: 'ended' });
+        await notifier?.trialEnded?.(b).catch(() => {});
+        continue;
+      }
       if (!b.auto_renew) {
         store.updateBusiness(b.id, { billing: 'paused' });
         await notifier?.billingNotice?.({ business: b, kind: 'ended' }).catch(() => {});
@@ -174,7 +234,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
       const profiles = profilesOf(store, b.id);
       const amount = amountFor(plan, cycle, profiles);
       if (amount == null) continue;
-      const id = store.createPayment(b.id, { kind: 'renewal', plan, cycle, amount });
+      const id = store.createPayment(b.id, { kind: trial ? 'checkout' : 'renewal', plan, cycle, amount });
       // The same id for the same period and attempt, so a crash can't charge twice.
       const r = await cardcom.chargeToken({
         amount,
@@ -184,7 +244,11 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         uniqueId: `renew-${b.id}-${String(b.paid_until).replace(/\D/g, '')}-${b.pay_failures}`,
         customer: customer(b),
       });
-      if (r.ok) {
+      if (r.ok && trial) {
+        store.settlePayment(id, { status: 'paid', transactionId: r.transactionId });
+        store.updateBusiness(b.id, { billing: 'active', trial_ends_at: null, trial_notice: null, plan, billing_cycle: cycle, paid_until: toSql(addPeriod(t, cycle)), pay_failures: 0, next_plan: null, next_cycle: null });
+        renewed++;
+      } else if (r.ok) {
         store.settlePayment(id, { status: 'paid', transactionId: r.transactionId });
         // Keep the billing day, unless the renewal is days late after failures.
         const from = fromSql(b.paid_until) > t - 7 * DAY ? fromSql(b.paid_until) : t;
@@ -193,13 +257,14 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
       } else {
         store.settlePayment(id, { status: 'failed', error: r.error });
         const failures = b.pay_failures + 1;
-        const stop = failures >= MAX_FAILURES;
+        // The first charge after a trial isn't retried: the account waits for a working card.
+        const stop = trial || failures >= MAX_FAILURES;
         store.updateBusiness(b.id, { pay_failures: failures, ...(stop ? { billing: 'paused' } : {}) });
-        await notifier?.billingNotice?.({ business: b, kind: stop ? 'paused' : 'failed', error: r.error }).catch(() => {});
+        await notifier?.billingNotice?.({ business: b, kind: trial ? 'trial_failed' : stop ? 'paused' : 'failed', error: r.error }).catch(() => {});
       }
     }
     return renewed;
   }
 
-  return { hasCardPlan, startCheckout, complete, changePlan, quote, setAutoRenew, cancel, renewDue };
+  return { canTrial, startTrial, hasCardPlan, startCheckout, complete, changePlan, quote, setAutoRenew, cancel, renewDue };
 }

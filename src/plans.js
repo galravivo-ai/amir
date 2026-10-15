@@ -98,10 +98,11 @@ export const hasApi = (business) => Boolean(planOf(business).api || business?.ap
 export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, p]) => !p.hidden));
 
 /**
- * A trial runs on this plan for TRIAL_DAYS. New accounts don't get one: they
- * pick a plan and pay before starting (the demo is there to look around).
- * A system admin can still give a business a trial, and SIGNUP_TRIAL_DAYS
- * turns one on for every new account.
+ * A trial runs for TRIAL_DAYS. With card payments, a new account picks a plan
+ * and saves a card on Cardcom's page: nothing is charged until the trial ends,
+ * then the plan renews like any other (unless cancelled first). One trial per
+ * owner. A system admin can still give a business a trial without a card, and
+ * SIGNUP_TRIAL_DAYS turns one on for every new account.
  */
 export const TRIAL_PLAN = 'pro';
 export const TRIAL_DAYS = 7;
@@ -116,8 +117,15 @@ export const ANNUAL_MONTHS = 10;
 
 export const CYCLES = { monthly: 'חודשי', annual: 'שנתי' };
 
+/**
+ * During a trial the quotas that cost us per use (WhatsApp, map searches,
+ * competitors) are kept small; the manual actions have their own trial limits (usage.js).
+ */
+export const TRIAL_CAPS = { waMonthly: 20, rankKeywords: 1, competitors: 3 };
+
 export function planOf(business) {
-  return PLANS[business?.plan] || PLANS.basic;
+  const plan = PLANS[business?.plan] || PLANS.basic;
+  return business?.billing === 'trial' ? { ...plan, ...TRIAL_CAPS } : plan;
 }
 
 export const annualPrice = (p) => (p.price == null ? null : p.price * ANNUAL_MONTHS);
@@ -133,7 +141,10 @@ export function accessOf(business, now = Date.now()) {
   if (business.billing === 'unpaid') return { state: 'paused', reason: 'new' };
   const ends = business.trial_ends_at ? Date.parse(`${business.trial_ends_at.replace(' ', 'T')}Z`) : 0;
   const msLeft = ends - now;
+  // A trial with a saved card stays open until the first charge goes through (jobs.renewals).
+  if (msLeft <= 0 && business.card_token && business.auto_renew) return { state: 'trial', daysLeft: 0, endsAt: business.trial_ends_at, card: true };
   if (msLeft <= 0) return { state: 'paused', reason: 'trial' };
+  if (business.card_token) return { state: 'trial', daysLeft: Math.ceil(msLeft / 864e5), endsAt: business.trial_ends_at, card: true };
   return { state: 'trial', daysLeft: Math.ceil(msLeft / 864e5), endsAt: business.trial_ends_at };
 }
 

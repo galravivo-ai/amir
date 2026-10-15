@@ -226,3 +226,105 @@ test('the price is per Google profile', async () => {
   assert.equal(amountFor('pro', 'annual', 2), 3380);
   assert.equal(amountFor('enterprise', 'monthly', 4), null);
 });
+
+test('7 free days with a saved card: nothing charged, small quotas, charged when the trial ends unless cancelled', async () => {
+  const signUp = async (email) => {
+    for (const k of Object.keys(jar)) delete jar[k];
+    await req('/register', { method: 'POST', form: { name: 'ניסיון', email, password: 'password123', business: `עסק ${email}`, terms: '1' } });
+    const b = created.store.businessesFor(created.store.userByEmail(email).id)[0];
+    // A new account starts waiting for its first step (no trial without a card).
+    created.store.updateBusiness(b.id, { billing: 'unpaid', trial_ends_at: null });
+    return { id: b.id, token: (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1] };
+  };
+  for (const k of Object.keys(jar)) delete jar[k];
+  assert.match((await req('/')).text, /href="\/register">7 ימים חינם</, 'the landing page offers the trial');
+  const { id, token } = await signUp('trial-card@example.com');
+  const fresh = () => created.store.businessById(id);
+
+  const plan = (await req('/admin/plan')).text;
+  assert.match(plan, /7 ימים חינם, ואז ממשיכים רק אם מתאים/);
+  assert.match(plan, /7 ימים חינם · גוגל \+ AI/);
+  const confirm = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
+  assert.match(confirm, /היום לא מחויבים/);
+  assert.match(confirm, /<b>₪169<\/b> לחודש/);
+
+  // Cardcom's page only saves the card: no charge, no invoice.
+  const go = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'monthly' } });
+  const lp = go.location.split('/').at(-1);
+  const page = pages.get(lp).body;
+  assert.equal(page.Operation, 'CreateTokenOnly');
+  assert.equal(page.Document, undefined);
+  const chargesBefore = charges.length;
+  pages.get(lp).paid = true;
+  assert.equal((await req(`/admin/billing/done?p=${page.ReturnValue}`)).location, '/admin?trial=1');
+  let b = fresh();
+  assert.deepEqual([b.billing, b.plan, b.card_token, b.auto_renew], ['trial', 'pro', 'tok-1', 1]);
+  assert.equal(b.paid_until, b.trial_ends_at);
+  assert.equal(charges.length, chargesBefore, 'nothing charged yet');
+  assert.equal((await req('/admin')).status, 200, 'the system is open during the trial');
+
+  // Small quotas during the trial.
+  const { planOf } = await import('../src/plans.js');
+  assert.equal(planOf(b).rankKeywords, 1);
+  assert.equal(planOf(b).waMonthly, 20);
+  const mine = (await req('/admin/plan')).text;
+  assert.match(mine, /ניסיון חינם במסלול גוגל \+ AI/);
+  assert.match(mine, /יחויב ב-₪169 לחודש/);
+  assert.match(mine, /ביטול הניסיון, בלי חיוב/);
+  assert.doesNotMatch(mine, /שמירת כרטיס לניסיון|₪0/, 'the card check is not in the payments list');
+
+  // Switching plans during the trial: still free.
+  assert.equal((await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'basic', cycle: 'monthly' } })).location, '/admin/plan?change=switched');
+  assert.equal(fresh().plan, 'basic');
+  assert.equal(charges.length, chargesBefore);
+
+  // The day before: an email that says what will be charged.
+  created.store.updateBusiness(id, { trial_ends_at: new Date(Date.now() + 20 * 3600e3).toISOString().slice(0, 19).replace('T', ' ') });
+  await created.jobs.trialNotices();
+  const ending = created.store.db.prepare("SELECT body FROM outbox WHERE kind = 'trial_ending' ORDER BY id DESC LIMIT 1").get();
+  assert.match(ending.body, /יחויב ב-<b>₪99<\/b> לחודש/);
+
+  // The trial ends: the first charge, and the plan is active for a month.
+  const ended = new Date(Date.now() - 3600e3).toISOString().slice(0, 19).replace('T', ' ');
+  created.store.updateBusiness(id, { trial_ends_at: ended, paid_until: ended });
+  assert.equal((await req('/admin')).status, 200, 'no gap before the charge');
+  assert.equal(await created.jobs.renewals(), 1);
+  b = fresh();
+  assert.equal(charges.at(-1).Amount, 99);
+  assert.equal(charges.at(-1).Token, 'tok-1');
+  assert.deepEqual([b.billing, b.trial_ends_at], ['active', null]);
+  assert.ok(Date.parse(`${b.paid_until.replace(' ', 'T')}Z`) > Date.now() + 27 * 864e5);
+
+  // One trial per person.
+  const { canTrial } = created.billing;
+  created.store.updateBusiness(id, { billing: 'unpaid' });
+  assert.equal(canTrial(fresh()), false);
+
+  // Cancelled during the trial: never charged, paused at the end.
+  const second = await signUp('trial-cancel@example.com');
+  const go2 = await req('/admin/plan/request', { method: 'POST', form: { _csrf: second.token, plan: 'basic', cycle: 'monthly' } });
+  const lp2 = go2.location.split('/').at(-1);
+  pages.get(lp2).paid = true;
+  await req(`/admin/billing/done?p=${pages.get(lp2).body.ReturnValue}`);
+  assert.match((await req('/admin/plan/cancel')).text, /לא תחויבו בכלל/);
+  assert.equal((await req('/admin/plan/cancel', { method: 'POST', form: { _csrf: second.token } })).location, '/admin/plan?canceled=trial');
+  assert.match((await req('/admin/plan')).text, /הניסיון בוטל: לא תחויבו/);
+  created.store.updateBusiness(second.id, { trial_ends_at: ended, paid_until: ended });
+  const n = charges.length;
+  await created.jobs.renewals();
+  assert.equal(charges.length, n);
+  assert.equal(created.store.businessById(second.id).billing, 'paused');
+
+  // A declined first charge pauses right away.
+  const third = await signUp('trial-declined@example.com');
+  const go3 = await req('/admin/plan/request', { method: 'POST', form: { _csrf: third.token, plan: 'basic', cycle: 'monthly' } });
+  const lp3 = go3.location.split('/').at(-1);
+  pages.get(lp3).paid = true;
+  await req(`/admin/billing/done?p=${pages.get(lp3).body.ReturnValue}`);
+  created.store.updateBusiness(third.id, { trial_ends_at: ended, paid_until: ended });
+  declineCharges = true;
+  await created.jobs.renewals();
+  declineCharges = false;
+  assert.equal(created.store.businessById(third.id).billing, 'paused');
+  assert.ok(created.store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'billing_trial_failed'").get());
+});
