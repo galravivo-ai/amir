@@ -24,11 +24,11 @@ export function googleSetupView({ configured, isSuperadmin, redirectUri }) {
 function googleSetupCheck({ clientId, secretLooksRight, secretLength, redirectUri }) {
   const idOk = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId);
   const row = (ok, label, value) => `<li>${ok ? '✅' : '❌'} ${label}: <code dir="ltr">${h(value)}</code></li>`;
-  return `<section class="card"><h3>בדיקת הגדרות (רק מנהל המערכת רואה את זה)</h3><ul class="how-list">
+  return `<details class="card g-tech"><summary>פרטים טכניים של החיבור (רק מנהל המערכת רואה את זה)</summary><ul class="how-list">
     ${row(idOk, 'GOOGLE_CLIENT_ID', clientId)}
     ${row(secretLooksRight, 'GOOGLE_CLIENT_SECRET', `${secretLength} תווים${secretLooksRight ? '' : ', אמור להתחיל ב-GOCSPX-'}`)}
     ${row(true, 'כתובת חזרה שצריכה להופיע ב-Authorized redirect URIs', redirectUri)}
-  </ul></section>`;
+  </ul></details>`;
 }
 
 function locationsTable(locations, { campaigns, csrf, can, deletable, debug = false }) {
@@ -64,8 +64,10 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
 
 function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial = false }) {
   const full = places.length >= branchLimit;
-  return `<section class="card stack">
-    <h2>${partial ? 'אין גישה לחשבון? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2>
+  // Second to the full connection: folded away until asked for (or already in use).
+  const open = !partial || places.length || matches || query;
+  return `<details class="card stack g-partial-box" id="partial" ${open ? 'open' : ''}>
+    <summary><h2>${partial ? 'אין גישה לחשבון הגוגל? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2></summary>
     ${partial ? '<p class="g-partial">זה חיבור חלקי: ביקורות ודירוג בלבד. בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת.</p>' : ''}
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
     ${places.length ? '<p class="muted small">המחיר הוא לכל פרופיל גוגל שעוקבים אחריו. אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף מחויב במחיר המסלול מהחידוש הבא.</p>' : ''}
@@ -107,7 +109,8 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
         : ''
     }
     <p class="muted small">כדי לענות לביקורת, לוחצים עליה ואז "מענה בגוגל". ה-AI יכול לנסח לכם טיוטה להעתקה.</p>
-  </section>`;
+  </details>
+  <script>if(location.hash==='#partial'){var p=document.getElementById('partial');if(p)p.open=true}</script>`;
 }
 
 export function googleConnectView({
@@ -131,7 +134,8 @@ export function googleConnectView({
   const places = locations.filter((l) => l.source === 'serp');
   const gbpLocations = locations.filter((l) => l.source !== 'serp');
   const hasAny = locations.length > 0;
-  const head = `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1></div>
+  const head = `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} חיבור לגוגל</h1>
+      <p class="page-sub">${hasAny ? 'החשבון והסניפים שהמערכת עוקבת אחריהם.' : 'מחברים פעם אחת את פרופיל העסק בגוגל, ומכאן הכול מתעדכן לבד.'}</p></div>
     ${
       hasAny
         ? `<div class="g-actions">${
@@ -141,11 +145,10 @@ export function googleConnectView({
           }<a class="btn primary" href="/admin/google/reviews">לביקורות</a></div>`
         : ''
     }</div>
-  ${googleTabs('settings')}
   ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   ${serpMissing ? '<div class="warn">כדי לעקוב אחרי ביקורות לפי קישור, הוסיפו ב-Railway את המשתנה <code>SERPAPI_KEY</code> (רק מנהל המערכת רואה את זה).</div>' : ''}
-  ${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
+`;
 
   const serpPart = serpAvailable
     ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial: gbpAvailable && !conn })
@@ -154,32 +157,35 @@ export function googleConnectView({
   let gbpPart = '';
   if (gbpAvailable && !conn) {
     // The full connection runs most of the system, so it comes first.
-    gbpPart = `<section class="card g-hero g-full">
-      <div class="stack">
-        <div class="row"><h2>חיבור מלא לחשבון הגוגל של העסק</h2><span class="badge st-resolved">מומלץ</span></div>
-        <p>החיבור המלא הוא מה שמפעיל את רוב המערכת. בלעדיו חסרים הנתונים החשובים ביותר.</p>
-        <ul class="how-list">
-          <li>צפיות בפרופיל, שיחות, בקשות הגעה וכניסות לאתר, 18 חודשים אחורה.</li>
-          <li>מה אנשים חיפשו בגוגל כשמצאו אתכם.</li>
-          <li>תשובות לביקורות שמתפרסמות בגוגל ישירות מכאן, עם טיוטה מוכנה.</li>
-          <li>פרסום פוסטים ותמונות לפרופיל.</li>
-          <li>כל הסניפים בחשבון נטענים לבד, והביקורות מתעדכנות כל חצי שעה.</li>
-        </ul>
+    const perks = [
+      ['star', 'כל הביקורות', 'עם התראה על כל ביקורת חדשה, ותשובה ישר מכאן'],
+      ['chart', 'צפיות ושיחות', 'כמה ראו, התקשרו וביקשו הגעה, 18 חודשים אחורה'],
+      ['search', 'מה חיפשו', 'המילים שאנשים חיפשו בגוגל כשמצאו אתכם'],
+      ['chat', 'פוסטים ותמונות', 'מפרסמים לפרופיל בלי להיכנס לגוגל'],
+    ];
+    gbpPart = `<section class="g-connect">
+      <div class="g-connect-main">
+        <span class="g-connect-badge">${GOOGLE_G}<span>Google Business Profile</span></span>
+        <h2>מחברים את פרופיל העסק בגוגל</h2>
+        <p>חיבור אחד, בערך דקה, ומכאן הכול מתעדכן לבד. זה מה שמפעיל את רוב המערכת.</p>
         ${
           can('manager')
             ? `<form method="post" action="/admin/google/connect"><input type="hidden" name="_csrf" value="${h(csrf)}">
-                <button class="btn g-btn">${GOOGLE_G} התחברות עם חשבון גוגל של העסק</button></form>
-               <p class="muted small">מתחברים עם חשבון הגוגל שמנהל את פרופיל העסק (בעלים או מנהל בפרופיל). ההרשאה היא לניהול פרופיל העסק בלבד, בלי גישה למייל או לקבצים. <a href="/guide/connect">מדריך החיבור</a></p>`
-            : '<p class="muted">רק מנהלים יכולים לחבר את החשבון.</p>'
+                <button class="btn big g-btn">${GOOGLE_G}<span>התחברות עם חשבון הגוגל של העסק</span></button></form>
+               <ol class="g-connect-steps"><li>בוחרים את החשבון שמנהל את העסק</li><li>מאשרים גישה לפרופיל העסק</li><li>בוחרים סניף, והנתונים נטענים</li></ol>
+               <p class="g-connect-safe">🔒 ההרשאה היא לניהול פרופיל העסק בלבד, בלי גישה למייל או לקבצים. <a href="/guide/connect">מדריך מצולם</a></p>`
+            : '<p class="muted">רק בעלים או מנהלים יכולים לחבר את החשבון.</p>'
         }
       </div>
+      <ul class="g-connect-perks">${perks.map(([ic, t, d]) => `<li><span class="g-perk-ic">${icon(ic, 20)}</span><div><b>${t}</b><small>${d}</small></div></li>`).join('')}</ul>
     </section>`;
   } else if (gbpAvailable && conn) {
     gbpPart = `${conn.last_error ? `<div class="warn">הסנכרון האחרון מול החשבון נכשל: ${h(conn.last_error)}</div>` : ''}
     <section class="card stack">
-      <h2>חשבון הגוגל של העסק</h2>
-      <div><b>מחובר</b>${conn.email ? ` · <span dir="ltr">${h(conn.email)}</span>` : ''}
-        <div class="muted small">סנכרון אחרון: ${conn.last_sync_at ? h(formatDate(conn.last_sync_at)) : 'עוד לא'} · מתעדכן כל חצי שעה</div></div>
+      <div class="g-conn-status"><span class="g-conn-dot" aria-hidden="true"></span>
+        <div><b>מחובר לגוגל</b>${conn.email ? ` <span class="muted" dir="ltr">${h(conn.email)}</span>` : ''}
+        <div class="muted small">סנכרון אחרון: ${conn.last_sync_at ? h(formatDate(conn.last_sync_at)) : 'עוד לא'} · מתעדכן כל חצי שעה</div></div></div>
+      <h3>הסניפים</h3>
       <p class="muted small">מסמנים אילו סניפים לעקוב אחריהם, ומשייכים כל אחד לקמפיין. אם לקמפיין עוד אין קישור לביקורת, הקישור מגוגל נכנס אליו לבד.</p>
       ${
         gbpLocations.length
@@ -194,7 +200,7 @@ export function googleConnectView({
       }
     </section>`;
   }
-  return `${head}${gbpPart}${serpPart}`;
+  return `${head}${gbpPart}${serpPart}${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
 }
 
 export function googleReviewsView({ reviews, locations, filters, summary }) {
@@ -207,7 +213,6 @@ export function googleReviewsView({ reviews, locations, filters, summary }) {
       ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
       <noscript><button class="btn">סינון</button></noscript>
     </form></div>
-  ${googleTabs('reviews')}
   ${
     reviews.length
       ? `<div class="g-list">${reviews

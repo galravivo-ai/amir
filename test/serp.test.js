@@ -106,7 +106,7 @@ test('follow a place by link or by name, get alerts, answer on Google', async ()
   // Without a Google OAuth client the page still offers following by link.
   const page = await req('/admin/google');
   assert.match(page.text, /מעקב אחרי הביקורות בגוגל/);
-  assert.doesNotMatch(page.text, /התחברות עם חשבון גוגל/);
+  assert.doesNotMatch(page.text, /התחברות עם חשבון הגוגל של העסק/);
 
   // A search by name lists places to choose from.
   const found = await req('/admin/google/places/find', { method: 'POST', form: { _csrf: token, q: 'קפה לנדוור רמת גן' } });
