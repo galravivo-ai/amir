@@ -65,7 +65,8 @@ function isActive(href, current) {
   const [path, query] = href.split('?');
   const [curPath, curQuery = ''] = String(current || '').split('?');
   if (query) return curPath === path && curQuery.includes(query);
-  if (path === '/admin') return curPath === '/admin';
+  // These have pages of their own under them in the menu.
+  if (path === '/admin' || path === '/admin/google') return curPath === path;
   return curPath === path || curPath.startsWith(`${path}/`);
 }
 
@@ -154,6 +155,7 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
+        role !== 'viewer' && ['/admin/google', 'חיבור וסניפים', 'plug'],
         ['/admin/profile', 'בריאות הפרופיל', 'shield'],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],
