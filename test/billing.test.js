@@ -230,7 +230,7 @@ test('the price is per Google profile', async () => {
 test('7 free days with a saved card: nothing charged, small quotas, charged when the trial ends unless cancelled', async () => {
   const signUp = async (email) => {
     for (const k of Object.keys(jar)) delete jar[k];
-    await req('/register', { method: 'POST', form: { name: 'ניסיון', email, password: 'password123', business: `עסק ${email}`, terms: '1' } });
+    await req('/register', { method: 'POST', form: { name: 'ניסיון', email, password: 'password123', business: `עסק ${email.split('@')[0]}`, terms: '1' } });
     const b = created.store.businessesFor(created.store.userByEmail(email).id)[0];
     // A new account starts waiting for its first step (no trial without a card).
     created.store.updateBusiness(b.id, { billing: 'unpaid', trial_ends_at: null });

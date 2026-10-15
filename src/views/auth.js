@@ -26,10 +26,15 @@ export function registerView({ error = '', values = {}, invite = null, pass = nu
     ${passGone ? '<div class="warn">הקישור להתנסות חינם כבר נוצל או בוטל. אפשר להירשם כרגיל.</div>' : ''}
     ${errorBox(error)}
     <form method="post" action="${invite ? `/join/${h(values.token)}` : '/register'}" class="stack">
-      <label>שם<input name="name" required maxlength="80" value="${h(values.name)}" autocomplete="name"></label>
-      <label>אימייל<input name="email" type="email" required value="${h(invite ? invite.email : values.email)}" dir="ltr" ${invite ? 'readonly' : ''}></label>
+      ${
+        invite
+          ? ''
+          : `<label>שם העסק או החברה<input name="business" required maxlength="100" value="${h(values.business)}" autocomplete="organization" placeholder="למשל: מסעדת הגפן">
+              <small class="muted">כך העסק ייקרא בדשבורד, בסקר ללקוחות ובדוחות.</small></label>`
+      }
+      <label>השם שלך<input name="name" required maxlength="80" value="${h(values.name)}" autocomplete="name"></label>
+      <label>אימייל<input name="email" type="email" required value="${h(invite ? invite.email : values.email)}" dir="ltr" autocomplete="email" ${invite ? 'readonly' : ''}></label>
       <label>סיסמה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
-      ${invite ? '' : `<label>שם העסק<input name="business" required maxlength="100" value="${h(values.business)}"></label>`}
       ${values.pass ? `<input type="hidden" name="pass" value="${h(values.pass)}">` : ''}
       <label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
         <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>

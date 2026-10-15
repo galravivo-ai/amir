@@ -111,3 +111,23 @@ test('a free-access link: pilot customers sign up without a card and get the ful
     else process.env.SIGNUP_TRIAL_DAYS = before;
   }
 });
+
+test('sign-up: the business name comes first, and an email or password there is refused', async () => {
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const me = client(`http://127.0.0.1:${server.address().port}`);
+  try {
+    const form = (await me('/register')).text;
+    assert.ok(form.indexOf('name="business"') < form.indexOf('name="password"'), 'before the password');
+    assert.match(form, /name="business"[^>]*autocomplete="organization"/);
+    for (const business of ['password123', 'x@example.com']) {
+      const r = await me('/register', { method: 'POST', form: { name: 'דנה', email: 'x@example.com', password: 'password123', business, terms: '1' } });
+      assert.equal(r.status, 422);
+      assert.match(r.text, /שם העסק/);
+    }
+    assert.equal(created.store.userByEmail('x@example.com'), undefined);
+  } finally {
+    server.close();
+  }
+});

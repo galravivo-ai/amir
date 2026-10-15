@@ -32,6 +32,10 @@ export function authRoutes(ctx) {
     if (!isEmail(v.email)) return 'אימייל לא תקין';
     if (v.password.length < 8) return 'סיסמה חייבת להכיל לפחות 8 תווים';
     if (!v.terms) return 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
+    // A browser's password manager sometimes fills the business name with the email or the password.
+    if (needBusiness && (v.business === v.password || v.business.toLowerCase() === v.email || v.business.includes('@'))) {
+      return 'נא לכתוב בשדה "שם העסק" את השם של העסק, כפי שיופיע בדשבורד';
+    }
     if (store.userByEmail(v.email)) return 'האימייל כבר רשום. היכנסו לחשבון ופתחו שוב את הקישור';
     return '';
   }
