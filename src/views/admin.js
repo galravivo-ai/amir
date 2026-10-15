@@ -53,9 +53,12 @@ function dailyChart(daily) {
     })
     .join('');
   const label = (d) => d.date.slice(8, 10) + '.' + d.date.slice(5, 7);
-  const ticks = [0, Math.floor(daily.length / 2), daily.length - 1]
-    .map((i, k) => `<text class="tick" x="${padX + i * step + step / 2}" y="${hgt - 6}" text-anchor="${['start', 'middle', 'end'][k]}">${label(daily[i])}</text>`)
-    .join('');
+  // Up to three dates under the axis, never the same one twice (a one- or two-day range).
+  const tickAt = daily.length >= 3 ? [0, Math.floor(daily.length / 2), daily.length - 1] : daily.length === 2 ? [0, 1] : [0];
+  const anchor = (k) => (tickAt.length === 1 ? 'middle' : k === 0 ? 'start' : k === tickAt.length - 1 ? 'end' : 'middle');
+  const ticks = daily.length
+    ? tickAt.map((i, k) => `<text class="tick" x="${padX + i * step + step / 2}" y="${hgt - 6}" text-anchor="${anchor(k)}">${label(daily[i])}</text>`).join('')
+    : '';
   return `<svg viewBox="0 0 ${w} ${hgt}" class="chart" role="img" aria-label="דירוגים לפי יום" direction="ltr">
     ${grid}
     <line class="axis" x1="${padX}" x2="${w - padX}" y1="${y(0)}" y2="${y(0)}"/>

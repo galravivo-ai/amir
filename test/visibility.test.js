@@ -156,7 +156,7 @@ test('set the questions, run a check, see the results', async () => {
 
   const view = (await req('/admin/ai-visibility')).text;
   assert.match(view, /ציון הנראות ב-AI/);
-  assert.match(view, /הוזכרתם ב-2 מתוך 5 תשובות/);
+  assert.match(view, /הוזכרתם בשם ב-2 מתוך 5 תשובות/);
   assert.match(view, /40%/, '2 of 5 answers mention the business');
   assert.match(view, /כדאי לנסות את ג׳קו סטריט/);
   assert.match(view, /אין תשובת AI/);

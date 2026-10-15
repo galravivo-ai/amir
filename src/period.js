@@ -111,7 +111,8 @@ export function resolvePeriod(query = {}, now = Date.now()) {
       break;
     }
     default:
-      from = now - { '7d': 7, '30d': 30, '90d': 90, '365d': 365 }[key] * DAY;
+      // "The last 7 days": today and the 6 days before it, whole days, so the chart has 7 bars.
+      from = midnight(today.y, today.m, today.d - ({ '7d': 7, '30d': 30, '90d': 90, '365d': 365 }[key] - 1));
   }
 
   const end = to ?? now;

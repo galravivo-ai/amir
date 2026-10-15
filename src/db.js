@@ -666,6 +666,10 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN pilot INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE businesses ADD COLUMN pass_id INTEGER;
   `,
+  // v35: a monthly summary remembers the numbers it was written from
+  `
+  ALTER TABLE monthly_reports ADD COLUMN facts_hash TEXT;
+  `,
 ];
 
 function migrate(db) {

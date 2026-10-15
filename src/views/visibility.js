@@ -11,7 +11,15 @@ function cell(row) {
   if (row.error === 'no_answer') return '<td class="vis-cell" title="גוגל לא הציגה תשובת AI לחיפוש הזה"><span class="vis-chip none">אין תשובת AI</span></td>';
   if (row.error) return `<td class="vis-cell" title="${h(row.error)}"><span class="vis-chip err">שגיאה</span></td>`;
   const sources = parseJson(row.sources, []);
-  const label = row.cited ? '<span class="vis-chip yes">✓ הוזכרתם וצוטטתם</span>' : row.mentioned ? '<span class="vis-chip yes">✓ הוזכרתם</span>' : '<span class="vis-chip no">✗ לא הוזכרתם</span>';
+  // Mentioned (named in the answer) and cited (a source) are counted apart, like the summary above.
+  const label =
+    row.mentioned && row.cited
+      ? '<span class="vis-chip yes">✓ הוזכרתם וצוטטתם</span>'
+      : row.mentioned
+        ? '<span class="vis-chip yes">✓ הוזכרתם</span>'
+        : row.cited
+          ? '<span class="vis-chip part" title="האתר או פרופיל הגוגל שלכם הופיעו כמקור, אבל שם העסק לא הוזכר בתשובה">צוטטתם, בלי אזכור בשם</span>'
+          : '<span class="vis-chip no">✗ לא הוזכרתם</span>';
   return `<td class="vis-cell"><details><summary>${label}</summary>
     ${row.snippet ? `<blockquote>${h(row.snippet)}</blockquote>` : ''}
     ${
@@ -45,7 +53,7 @@ function hero(last, prev) {
     <div class="vis-hero-text">
       <span class="muted small">ציון הנראות ב-AI</span>
       <h2>${label}</h2>
-      <p class="muted">הוזכרתם ב-${last.mentioned} מתוך ${last.answered} תשובות${last.cited ? `, ובכ-${pct(last.cited, last.answered)}% מהן גם צוטטתם כמקור` : ''}.
+      <p class="muted">הוזכרתם בשם ב-${last.mentioned} מתוך ${last.answered} תשובות${last.cited ? `. צוטטתם כמקור (האתר או פרופיל הגוגל) ב-${last.cited} מהן` : ''}.
         ${diff ? `<span class="pf-chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} נקודות מהבדיקה הקודמת</span>` : diff === 0 ? '<span class="pf-chg flat">ללא שינוי מהבדיקה הקודמת</span>' : ''}</p>
       <span class="muted small">בדיקה אחרונה: ${h(when(last.run_at))}</span>
     </div>

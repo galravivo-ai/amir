@@ -21,6 +21,32 @@ export const ROLES = {
   viewer: 'צפייה בלבד',
 };
 const ROLE_RANK = { viewer: 1, manager: 2, owner: 3 };
+
+/**
+ * Daily charts count by Israel's calendar day, not UTC's: a moment's hour
+ * ("2026-10-14 21" or "2026-10-14T21", UTC) to its local date.
+ */
+const ilDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' });
+const ilDayCache = new Map();
+export function ilDayOfHour(hour) {
+  const key = String(hour).slice(0, 13).replace('T', ' ');
+  let day = ilDayCache.get(key);
+  if (!day) {
+    day = ilDayFmt.format(new Date(`${key.replace(' ', 'T')}:00:00Z`));
+    if (ilDayCache.size > 50000) ilDayCache.clear();
+    ilDayCache.set(key, day);
+  }
+  return day;
+}
+/** Israel's days from `startMs` to `endMs`, in order. */
+function ilDays(startMs, endMs) {
+  const days = [];
+  for (let t = Math.floor(startMs / 3600e3) * 3600e3; t < endMs; t += 3600e3) {
+    const d = ilDayOfHour(new Date(t).toISOString());
+    if (days[days.length - 1] !== d) days.push(d);
+  }
+  return days;
+}
 export const roleAtLeast = (role, min) => (ROLE_RANK[role] || 0) >= ROLE_RANK[min];
 
 export const STATUSES = {
@@ -858,10 +884,15 @@ export function createStore(db) {
         `SELECT COUNT(*) AS n, AVG(g.rating) AS avg FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
          WHERE ${where} AND g.create_time >= ? AND g.create_time < ?`,
       ).get(...args, iso(start - (end - start)), fromIso);
-      const daily = q(
-        `SELECT substr(g.create_time, 1, 10) AS d, COUNT(*) AS n, SUM(g.rating < 4) AS neg
-         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? AND g.create_time < ? GROUP BY d`,
-      ).all(...args, fromIso, toIso);
+      const daily = new Map();
+      for (const r of q(
+        `SELECT substr(g.create_time, 1, 13) AS hr, COUNT(*) AS n, SUM(g.rating < 4) AS neg
+         FROM google_reviews g JOIN google_locations l ON l.id = g.location_id WHERE ${where} AND g.create_time >= ? AND g.create_time < ? GROUP BY hr`,
+      ).all(...args, fromIso, toIso)) {
+        const d = ilDayOfHour(r.hr);
+        const cur = daily.get(d) || { n: 0, neg: 0 };
+        daily.set(d, { n: cur.n + r.n, neg: cur.neg + (r.neg || 0) });
+      }
       const waiting = q(
         `SELECT g.*, l.title AS location_title FROM google_reviews g JOIN google_locations l ON l.id = g.location_id
          WHERE ${where} AND g.reply = '' AND g.rating <= 3 ORDER BY g.create_time DESC LIMIT 5`,
@@ -884,7 +915,7 @@ export function createStore(db) {
         distribution: [period.s1, period.s2, period.s3, period.s4, period.s5].map((v) => v || 0),
         prevCount: prev.n,
         prevAvg: prev.avg || 0,
-        daily: new Map(daily.map((r) => [r.d, { n: r.n, neg: r.neg || 0 }])),
+        daily,
         waiting,
       };
     },
@@ -1226,8 +1257,8 @@ export function createStore(db) {
 
     // ---------- monthly report ----------
     monthlyReport: (businessId, month) => q('SELECT * FROM monthly_reports WHERE business_id = ? AND month = ?').get(businessId, month) || null,
-    saveMonthlyReport: (businessId, month, summary) =>
-      q('INSERT OR REPLACE INTO monthly_reports (business_id, month, summary) VALUES (?, ?, ?)').run(businessId, month, summary),
+    saveMonthlyReport: (businessId, month, summary, factsHash = null) =>
+      q('INSERT OR REPLACE INTO monthly_reports (business_id, month, summary, facts_hash) VALUES (?, ?, ?, ?)').run(businessId, month, summary, factsHash),
     /** The best and the worst things customers wrote in [from, to): survey comments and Google reviews. */
     highlights(businessId, { from, to, limit = 3 }) {
       const sqlAt = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
@@ -1348,6 +1379,12 @@ export function createStore(db) {
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
          WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter}`,
       ).get(...base);
+      // Waiting is a state, not a period: every unhappy customer still open, whenever they wrote
+      // (the same as the alert and the "waiting" list beside it).
+      const openNow = q(
+        `SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
+         WHERE c.business_id = ? ${cFilter} AND r.sentiment = 'negative' AND r.status IN ('new','in_progress')`,
+      ).get(...(campaignId ? [businessId, campaignId] : [businessId])).n;
       const overdue = q(
         `SELECT COUNT(*) AS n FROM responses r JOIN campaigns c ON c.id = r.campaign_id
          JOIN businesses b ON b.id = c.business_id
@@ -1363,24 +1400,24 @@ export function createStore(db) {
         if (row.rating >= 1 && row.rating <= 5) dist[row.rating - 1] = row.n;
       }
 
+      // One bar per Israel calendar day in the range (counted by the hour, then mapped to the local day).
       const daily = new Map();
-      for (let t = Date.parse(since.slice(0, 10)); t < end; t += 864e5) {
-        const d = new Date(t).toISOString().slice(0, 10);
-        daily.set(d, { date: d, scans: 0, responses: 0, negative: 0 });
-      }
+      for (const d of ilDays(start, end)) daily.set(d, { date: d, scans: 0, responses: 0, negative: 0 });
       for (const row of q(
-        `SELECT substr(e.created_at, 1, 10) AS d, COUNT(*) AS n FROM events e
+        `SELECT substr(e.created_at, 1, 13) AS hr, COUNT(*) AS n FROM events e
          JOIN campaigns c ON c.id = e.campaign_id
-         WHERE c.business_id = ? AND e.created_at >= ? AND e.created_at < ? ${cFilter} AND e.type = 'scan' GROUP BY d`,
+         WHERE c.business_id = ? AND e.created_at >= ? AND e.created_at < ? ${cFilter} AND e.type = 'scan' GROUP BY hr`,
       ).all(...base)) {
-        if (daily.has(row.d)) daily.get(row.d).scans = row.n;
+        const day = daily.get(ilDayOfHour(row.hr));
+        if (day) day.scans += row.n;
       }
       for (const row of q(
-        `SELECT substr(r.created_at, 1, 10) AS d, COUNT(*) AS n, SUM(r.sentiment = 'negative') AS neg
+        `SELECT substr(r.created_at, 1, 13) AS hr, COUNT(*) AS n, SUM(r.sentiment = 'negative') AS neg
          FROM responses r JOIN campaigns c ON c.id = r.campaign_id
-         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter} GROUP BY d`,
+         WHERE c.business_id = ? AND r.created_at >= ? AND r.created_at < ? ${cFilter} GROUP BY hr`,
       ).all(...base)) {
-        if (daily.has(row.d)) Object.assign(daily.get(row.d), { responses: row.n, negative: row.neg });
+        const day = daily.get(ilDayOfHour(row.hr));
+        if (day) Object.assign(day, { responses: day.responses + row.n, negative: day.negative + (row.neg || 0) });
       }
 
       const sources = q(
@@ -1430,7 +1467,7 @@ export function createStore(db) {
         avgRating: agg.avg_rating || 0,
         positive: agg.positive || 0,
         negative: agg.negative || 0,
-        openIssues: agg.open_issues || 0,
+        openIssues: openNow,
         overdue,
         avgResolveHours: agg.avg_resolve_hours ?? null,
         recoveredYes: agg.recovered_yes || 0,
