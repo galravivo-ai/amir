@@ -155,7 +155,7 @@ test('the system admin can delete a user and the businesses they own', async () 
     await op(`/superadmin/users/${id}/delete`, { method: 'POST', form: { _csrf: token, confirm: 'gone@example.com' } });
     assert.equal(store.userByEmail('gone@example.com'), undefined);
     assert.ok(!store.businessById(bizId), 'their business too');
-    assert.equal((await gone('/admin')).status, 302, 'signed out');
+    assert.match((await gone('/admin')).location || '', /\/login/, 'signed out');
     // Never the admin themselves.
     const me = store.userByEmail('op@example.com').id;
     await op(`/superadmin/users/${me}/delete`, { method: 'POST', form: { _csrf: token, confirm: 'op@example.com' } });
