@@ -223,7 +223,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         html: emailLayout({
           title: 'תקופת הניסיון מסתיימת מחר',
           brand: true,
-          body: `<p>מחר מסתיימים 7 ימי הניסיון של <b>${h(business.name)}</b>.</p>
+          body: `<p>מחר מסתיימת תקופת הניסיון של <b>${h(business.name)}</b>.</p>
             <p>כדי שהסקרים ימשיכו לעבוד בלי הפסקה, בחרו מסלול. הנתונים וההגדרות נשמרים כמו שהם.</p>
             ${emailButton(url('/admin/plan'), 'בחירת מסלול')}`,
         }),

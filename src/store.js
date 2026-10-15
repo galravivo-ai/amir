@@ -361,11 +361,11 @@ export function createStore(db) {
     businessById: (id) => q('SELECT * FROM businesses WHERE id = ?').get(id) || null,
     businessByWidgetKey: (key) => q('SELECT * FROM businesses WHERE widget_key = ?').get(String(key)) || null,
     /** `trialDays` starts a free trial; billing 'unpaid' waits for the first payment; otherwise active right away. */
-    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'basic', trialDays = 0, billing = 'active' }) {
+    createBusiness(userId, { name, logo_url = '', brand_color = '#4b2bd6', plan = 'basic', trialDays = 0, billing = 'active', passId = null }) {
       const r = q(
-        `INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key, billing, trial_ends_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(userId, name, logo_url, brand_color, plan, token(12), trialDays ? 'trial' : billing, trialDays ? sqlTime(trialDays * 864e5) : null);
+        `INSERT INTO businesses (user_id, name, logo_url, brand_color, plan, widget_key, billing, trial_ends_at, pilot, pass_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(userId, name, logo_url, brand_color, plan, token(12), trialDays ? 'trial' : billing, trialDays ? sqlTime(trialDays * 864e5) : null, passId ? 1 : 0, passId);
       const id = Number(r.lastInsertRowid);
       q("INSERT INTO memberships (business_id, user_id, role) VALUES (?, ?, 'owner')").run(id, userId);
       return id;
@@ -378,7 +378,7 @@ export function createStore(db) {
         'billing', 'trial_ends_at', 'trial_notice', 'billing_cycle', 'plan_request', 'invite_template',
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
-        'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at',
+        'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at', 'pilot',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -1014,6 +1014,22 @@ export function createStore(db) {
     paymentsFor: (businessId, limit = 24) => q('SELECT * FROM payments WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
     /** Card subscriptions whose paid period is over. */
     // Paid periods that ended, and card trials that ended (their first charge).
+    // ---------- free-access links (pilot customers) ----------
+    createPass({ plan, days, maxUses, note }) {
+      const code = token(9);
+      q('INSERT INTO free_passes (code, plan, days, max_uses, note) VALUES (?, ?, ?, ?, ?)').run(code, plan, days, maxUses, note);
+      return code;
+    },
+    /** A pass that can still be used, or null. */
+    usablePass: (code) =>
+      q('SELECT * FROM free_passes WHERE code = ? AND revoked_at IS NULL AND uses < max_uses').get(String(code ?? '')) ?? null,
+    /** Takes one use; false when it was used up in the meantime. */
+    usePass: (id) => q('UPDATE free_passes SET uses = uses + 1 WHERE id = ? AND revoked_at IS NULL AND uses < max_uses').run(id).changes === 1,
+    revokePass: (id) => q("UPDATE free_passes SET revoked_at = datetime('now') WHERE id = ?").run(id),
+    allPasses: () =>
+      q(`SELECT p.*, (SELECT GROUP_CONCAT(b.name, ', ') FROM businesses b WHERE b.pass_id = p.id) AS businesses
+         FROM free_passes p ORDER BY p.id DESC LIMIT 50`).all(),
+
     renewalsDue: (now = sqlTime()) =>
       q(`SELECT b.*, u.email AS owner_email FROM businesses b LEFT JOIN users u ON u.id = b.user_id
          WHERE b.billing IN ('active', 'trial') AND b.card_token IS NOT NULL AND b.paid_until IS NOT NULL AND b.paid_until <= ?`).all(now),

@@ -125,7 +125,8 @@ export const TRIAL_CAPS = { waMonthly: 20, rankKeywords: 1, competitors: 3 };
 
 export function planOf(business) {
   const plan = PLANS[business?.plan] || PLANS.basic;
-  return business?.billing === 'trial' ? { ...plan, ...TRIAL_CAPS } : plan;
+  // Pilot customers (a free-access link) get the plan's full quotas.
+  return business?.billing === 'trial' && !business.pilot ? { ...plan, ...TRIAL_CAPS } : plan;
 }
 
 export const annualPrice = (p) => (p.price == null ? null : p.price * ANNUAL_MONTHS);

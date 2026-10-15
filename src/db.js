@@ -650,6 +650,22 @@ const MIGRATIONS = [
   `
   ALTER TABLE leads ADD COLUMN marketing_consent INTEGER NOT NULL DEFAULT 0;
   `,
+  // v34: free-access links for pilot customers (no card, full quotas)
+  `
+  CREATE TABLE free_passes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    plan TEXT NOT NULL,
+    days INTEGER NOT NULL,
+    max_uses INTEGER NOT NULL DEFAULT 1,
+    uses INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT '',
+    revoked_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  ALTER TABLE businesses ADD COLUMN pilot INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE businesses ADD COLUMN pass_id INTEGER;
+  `,
 ];
 
 function migrate(db) {

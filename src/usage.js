@@ -19,7 +19,7 @@ export const monthKey = (now = Date.now()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit' }).format(new Date(now)).slice(0, 7);
 
 export function limitsOf(business) {
-  if (accessOf(business).state === 'trial') return TRIAL_LIMITS;
+  if (accessOf(business).state === 'trial' && !business.pilot) return TRIAL_LIMITS;
   return planOf(business).limits || TRIAL_LIMITS;
 }
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { newBusiness } from '../plans.js';
+import { newBusiness, PLANS } from '../plans.js';
 import QRCode from 'qrcode';
 import { generateBackupCodes, generateSecret, otpauthUri, verifyCode } from '../totp.js';
 import { operatorInfo } from '../views/site.js';
@@ -120,23 +120,34 @@ export function authRoutes(ctx) {
   });
 
   // ---------- register ----------
+  // `?pass=` is a free-access link from the system admin: free days without a card.
+  const passFor = (code) => {
+    const pass = code ? store.usablePass(code) : null;
+    return pass && PLANS[pass.plan] ? pass : null;
+  };
   router.get('/register', (req, res) => {
     if (!ctx.signupOpen()) return res.redirect('/login');
-    render(req, res, 'הרשמה', V.registerView({}));
+    const pass = passFor(req.query.pass);
+    render(req, res, 'הרשמה', V.registerView({ pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass) }));
   });
 
   router.post('/register', limit, (req, res) => {
     if (!ctx.signupOpen()) return res.redirect(303, '/login');
     const v = clean(req.body);
+    const pass = passFor(req.body.pass);
     const error = validateNewUser(v, { needBusiness: true });
     if (error) {
       res.status(422);
-      return render(req, res, 'הרשמה', V.registerView({ error, values: v }));
+      return render(req, res, 'הרשמה', V.registerView({ error, values: { ...v, pass: pass?.code }, pass }));
     }
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
-    const businessId = store.createBusiness(userId, admin ? { name: v.business, plan: 'business' } : newBusiness(v.business));
+    const viaPass = !admin && pass && store.usePass(pass.id);
+    const businessId = store.createBusiness(
+      userId,
+      admin ? { name: v.business, plan: 'business' } : viaPass ? { name: v.business, plan: pass.plan, trialDays: pass.days, passId: pass.id } : newBusiness(v.business),
+    );
     ctx.startSession(res, userId);
     // The getting-started guide, by email (in the background: sign-up never waits for it).
     if (!admin) {

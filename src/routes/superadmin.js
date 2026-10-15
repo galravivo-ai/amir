@@ -30,6 +30,8 @@ export function superadminRoutes(ctx) {
         aiTest: req.query.ai === 'ok' ? { ok: true, text: String(req.query.t ?? '').slice(0, 80) } : req.query.ai === 'err' ? { ok: false, error: String(req.query.t ?? '').slice(0, 300) } : null,
         meId: req.user.id,
         marketingCount: store.marketingList().length,
+        passes: store.allPasses(),
+        baseUrl: ctx.baseUrl(req),
         unpaidCount: store.db.prepare("SELECT COUNT(*) AS n FROM businesses WHERE billing = 'unpaid' AND is_demo = 0").get().n,
       }),
     );
@@ -48,6 +50,19 @@ export function superadminRoutes(ctx) {
     res.type('text/csv; charset=utf-8');
     res.attachment(`marketing-optin-${new Date().toISOString().slice(0, 10)}.csv`);
     res.send(`\ufeff${lines.join('\r\n')}`);
+  });
+
+  // Free-access links: a pilot customer signs up through one and gets free days, no card, full quotas.
+  router.post('/passes', (req, res) => {
+    const plan = Object.hasOwn(PLANS, req.body.plan) && !PLANS[req.body.plan].hidden ? req.body.plan : 'pro';
+    const days = Math.min(365, Math.max(1, Number(req.body.days) || 30));
+    const maxUses = Math.min(100, Math.max(1, Number(req.body.uses) || 1));
+    store.createPass({ plan, days, maxUses, note: String(req.body.note ?? '').trim().slice(0, 100) });
+    res.redirect(303, '/superadmin?ok=1#passes');
+  });
+  router.post('/passes/:id/revoke', (req, res) => {
+    store.revokePass(Number(req.params.id));
+    res.redirect(303, '/superadmin?ok=1#passes');
   });
 
   const domainOk = (d) => /^(?=.{4,253}$)([a-z0-9-]+\.)+[a-z]{2,}$/.test(d);
@@ -102,6 +117,8 @@ export function superadminRoutes(ctx) {
       const from = Math.max(Date.now(), Date.parse(`${String(business.trial_ends_at ?? '').replace(' ', 'T')}Z`) || 0);
       store.updateBusiness(business.id, {
         billing: 'trial',
+        // Given by hand: full quotas, like a free-access link.
+        pilot: 1,
         trial_ends_at: new Date(from + TRIAL_DAYS * 864e5).toISOString().slice(0, 19).replace('T', ' '),
         trial_notice: null,
       });

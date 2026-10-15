@@ -689,10 +689,10 @@ const MAIL_KINDS = {
   welcome_guide: 'מדריך התחלה',
 };
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0 }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], baseUrl = '' }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
-    if (a.state === 'trial') return `<span class="badge st-in_progress">ניסיון · עוד ${a.daysLeft} ימים</span>`;
+    if (a.state === 'trial') return `<span class="badge st-in_progress">${b.pilot ? 'התנסות חינם' : a.card ? 'ניסיון עם כרטיס' : 'ניסיון'} · עוד ${a.daysLeft} ימים</span>`;
     if (a.state === 'paused') return `<span class="badge st-new">${a.reason === 'trial' ? 'הניסיון נגמר' : a.reason === 'new' ? 'ממתין לתשלום' : 'מושהה'}</span>`;
     return `<span class="badge st-resolved">פעיל · ${h(CYCLES[b.billing_cycle] || '')}</span>`;
   };
@@ -777,6 +777,32 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )
       .join('')}</tbody></table>
+  </section>
+  <section class="card stack" id="passes">
+    <h3>קישורי התנסות חינם</h3>
+    <p class="muted small">שולחים ללקוח קישור, הוא נרשם דרכו ומקבל ימים חינם בלי כרטיס אשראי ובלי הגבלות הניסיון הרגילות. בסוף התקופה הוא מקבל מייל ובוחר מסלול. ימים נוספים ללקוח מסוים: "הארכת ניסיון" בטבלת העסקים.</p>
+    <form method="post" action="/superadmin/passes" class="row compact pass-form">
+      ${csrfField(csrf)}
+      <label>מסלול<select name="plan">${Object.entries(PLANS).filter(([, p]) => !p.hidden).map(([k, p]) => `<option value="${k}" ${k === 'pro' ? 'selected' : ''}>${h(p.label)}</option>`).join('')}</select></label>
+      <label>ימים<select name="days">${[14, 30, 60, 90].map((d) => `<option ${d === 30 ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
+      <label>כמה עסקים יכולים להשתמש<input name="uses" type="number" min="1" max="100" value="1" style="width:6em"></label>
+      <label>למי (הערה לעצמך)<input name="note" maxlength="100" placeholder="למשל: מספרת של דנה"></label>
+      <button class="btn primary">יצירת קישור</button>
+    </form>
+    ${
+      passes.length
+        ? `<div class="table-wrap"><table class="table"><thead><tr><th>למי</th><th>מה</th><th>שימושים</th><th>קישור</th><th></th></tr></thead><tbody>${passes
+            .map((p) => {
+              const link = `${baseUrl}/register?pass=${p.code}`;
+              const live = !p.revoked_at && p.uses < p.max_uses;
+              return `<tr class="${live ? '' : 'unranked'}"><td>${h(p.note || '—')}${p.businesses ? `<div class="small muted">${h(p.businesses)}</div>` : ''}</td>
+                <td>${h(PLANS[p.plan]?.label || p.plan)} · ${p.days} ימים</td><td>${p.uses} / ${p.max_uses}</td>
+                <td>${live ? `<input readonly value="${h(link)}" dir="ltr" onclick="this.select()" style="min-width:16em">` : p.revoked_at ? 'בוטל' : 'נוצל'}</td>
+                <td>${live ? `<form method="post" action="/superadmin/passes/${p.id}/revoke" class="inline">${csrfField(csrf)}<button class="btn-link">ביטול</button></form>` : ''}</td></tr>`;
+            })
+            .join('')}</tbody></table></div>`
+        : ''
+    }
   </section>
   ${agenciesAdminBlock({ agencies, csrf })}
   <section class="card" id="leads">

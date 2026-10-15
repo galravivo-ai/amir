@@ -64,3 +64,50 @@ test('no free trial: a new account picks a plan and pays before it starts', asyn
     else process.env.SIGNUP_TRIAL_DAYS = before;
   }
 });
+
+test('a free-access link: pilot customers sign up without a card and get the full plan for the set days', async () => {
+  const before = process.env.SIGNUP_TRIAL_DAYS;
+  process.env.SIGNUP_TRIAL_DAYS = '0';
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const { store } = created;
+  try {
+    const op = client(base);
+    await op('/register', { method: 'POST', form: { name: 'מפעיל', email: 'op@example.com', password: 'password123', business: 'GoFive', terms: '1' } });
+    store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
+    const opToken = (await op('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+    await op('/superadmin/passes', { method: 'POST', form: { _csrf: opToken, plan: 'pro', days: '30', uses: '1', note: 'מספרת דנה' } });
+    const panel = (await op('/superadmin')).text;
+    const link = panel.match(/value="(http[^"]+\/register\?pass=[^"]+)"/)[1];
+    assert.match(panel, /מספרת דנה/);
+    const path = link.slice(link.indexOf('/register'));
+
+    const me = client(base);
+    const page = (await me(path)).text;
+    assert.match(page, /הוזמנתם ל-<b>30 ימים חינם<\/b> במסלול <b>גוגל \+ AI<\/b>/);
+    const code = path.split('=')[1];
+    await me('/register', { method: 'POST', form: { name: 'דנה', email: 'pilot@example.com', password: 'password123', business: 'מספרת דנה', terms: '1', pass: code } });
+    const biz = store.businessesFor(store.userByEmail('pilot@example.com').id)[0];
+    assert.deepEqual([biz.billing, biz.plan, biz.pilot], ['trial', 'pro', 1]);
+    assert.ok(Date.parse(`${biz.trial_ends_at.replace(' ', 'T')}Z`) > Date.now() + 29 * 864e5);
+    assert.equal((await me('/admin')).status, 200, 'straight in, no card');
+    // Full quotas, not the trial's.
+    const { planOf } = await import('../src/plans.js');
+    const { limitsOf } = await import('../src/usage.js');
+    assert.equal(planOf(store.businessById(biz.id)).rankKeywords, 4);
+    assert.equal(limitsOf(store.businessById(biz.id)).ai_draft, 200);
+    assert.match((await op('/superadmin')).text, /התנסות חינם · עוד 30 ימים/);
+
+    // Used up: the next person signs up normally.
+    const other = client(base);
+    assert.match((await other(path)).text, /כבר נוצל או בוטל/);
+    await other('/register', { method: 'POST', form: { name: 'אבי', email: 'late@example.com', password: 'password123', business: 'מאוחר', terms: '1', pass: code } });
+    assert.equal(store.businessesFor(store.userByEmail('late@example.com').id)[0].billing, 'unpaid');
+  } finally {
+    server.close();
+    if (before === undefined) delete process.env.SIGNUP_TRIAL_DAYS;
+    else process.env.SIGNUP_TRIAL_DAYS = before;
+  }
+});

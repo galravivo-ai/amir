@@ -1,4 +1,5 @@
 import { h } from '../util.js';
+import { PLANS } from '../plans.js';
 
 const csrfField = (csrf) => (csrf ? `<input type="hidden" name="_csrf" value="${h(csrf)}">` : '');
 const errorBox = (error) => (error ? `<div class="error">${h(error)}</div>` : '');
@@ -18,15 +19,18 @@ export function loginView({ error = '', values = {}, allowSignup, notice = '', n
   </div>`;
 }
 
-export function registerView({ error = '', values = {}, invite = null }) {
+export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false }) {
   return `<div class="auth card">
     <h1>${invite ? `הצטרפות ל${h(invite.business_name)}` : 'הרשמה'}</h1>
+    ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, עם כל האפשרויות ובלי כרטיס אשראי.</div>` : ''}
+    ${passGone ? '<div class="warn">הקישור להתנסות חינם כבר נוצל או בוטל. אפשר להירשם כרגיל.</div>' : ''}
     ${errorBox(error)}
     <form method="post" action="${invite ? `/join/${h(values.token)}` : '/register'}" class="stack">
       <label>שם<input name="name" required maxlength="80" value="${h(values.name)}" autocomplete="name"></label>
       <label>אימייל<input name="email" type="email" required value="${h(invite ? invite.email : values.email)}" dir="ltr" ${invite ? 'readonly' : ''}></label>
       <label>סיסמה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
       ${invite ? '' : `<label>שם העסק<input name="business" required maxlength="100" value="${h(values.business)}"></label>`}
+      ${values.pass ? `<input type="hidden" name="pass" value="${h(values.pass)}">` : ''}
       <label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
         <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>
       <label class="check"><input type="checkbox" name="marketing" value="1" ${values.marketing ? 'checked' : ''}>
