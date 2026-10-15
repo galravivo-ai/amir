@@ -343,21 +343,21 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     /** A business cancelled its subscription: the operator hears, with what to do (a refund on a yearly plan). */
-    async subscriptionCancelled({ business, user, reason, until, cycle, admins }) {
+    async subscriptionCancelled({ business, user, reason, until, cycle, refund = 0, admins }) {
       if (!admins.length) return false;
       const annual = cycle === 'annual';
       return mailer.send({
         kind: 'subscription_cancelled',
         businessId: business.id,
         to: admins,
-        subject: `ביטול מנוי${annual ? ' שנתי (נדרש החזר יחסי)' : ''} · ${business.name}`,
+        subject: `ביטול מנוי${annual && refund ? ` שנתי (החזר ₪${refund})` : ''} · ${business.name}`,
         html: emailLayout({
           title: 'עסק ביטל את המנוי',
           brand: true,
           body: `<p><b>${h(business.name)}</b> ביטל את המנוי. הוא נשאר פעיל עד <b>${h(until || '—')}</b>, ולא יחויב יותר.</p>
             <p>מבטל: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
             ${reason ? `<p>הסיבה: ${h(reason)}</p>` : ''}
-            ${annual ? '<p><b>מסלול שנתי:</b> לפי תנאי השימוש מגיע החזר יחסי על החודשים המלאים שנותרו, לפי המחיר החודשי הרגיל. יש לבצע אותו בקארדקום בתוך 14 יום.</p>' : ''}
+            ${annual && refund ? `<p><b>מסלול שנתי: יש להחזיר ₪${refund.toLocaleString('he-IL')}</b> בקארדקום, בתוך 14 יום. החודשים שנוצלו חושבו לפי המחיר החודשי הרגיל, והגישה מסתיימת בסוף החודש הנוכחי.</p>` : ''}
             ${emailButton(url('/superadmin#businesses'), 'לניהול המערכת')}`,
         }),
       });

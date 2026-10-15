@@ -27,6 +27,28 @@ export function addPeriod(ms, cycle) {
 
 const describe = (plan, cycle, profiles = 1) => `GoFive · מסלול ${PLANS[plan].label} · ${cycle === 'annual' ? 'שנתי' : 'חודשי'}${profiles > 1 ? ` · ${profiles} פרופילים` : ''}`;
 
+/**
+ * Cancelling a yearly plan: the month in progress counts as used, and each
+ * used month is charged at the plan's regular monthly price (no yearly
+ * discount). The rest of what was paid is refunded, and access ends with the
+ * month in progress. `paid` is what was paid for the year.
+ */
+export function annualRefund({ paid, monthly, paidUntil, now = Date.now() }) {
+  const end = fromSql(paidUntil);
+  if (!end || end <= now || !paid) return { refund: 0, until: paidUntil, used: 0 };
+  const start = new Date(end);
+  start.setUTCMonth(start.getUTCMonth() - 12);
+  let used = 1;
+  while (used < 12 && monthsAfter(start.getTime(), used) <= now) used++;
+  const refund = Math.max(0, Math.round((paid - used * monthly) * 100) / 100);
+  return { refund, until: refund > 0 ? toSql(monthsAfter(start.getTime(), used)) : paidUntil, used };
+}
+const monthsAfter = (ms, n) => {
+  const d = new Date(ms);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return d.getTime();
+};
+
 export function createBilling({ store, cardcom, notifier = null, now = () => Date.now() }) {
   const customer = (business) => ({ name: business.name, email: business.owner_email || '' });
 
@@ -196,15 +218,31 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
   const setAutoRenew = (business, on) =>
     store.updateBusiness(business.id, on ? { auto_renew: true, cancel_reason: null, canceled_at: null } : { auto_renew: false });
 
-  /** Cancels the subscription: no more renewals, the paid period stays. */
+  /** What cancelling now would do: a yearly plan's refund and the last day, or nothing for a monthly one. */
+  function cancelQuote(business) {
+    if (business.billing_cycle !== 'annual' || !hasCardPlan(business)) return { refund: 0, until: business.paid_until };
+    const lastPaid = store.paymentsFor(business.id, 20).find((p) => p.status === 'paid' && p.cycle === 'annual' && p.kind !== 'upgrade');
+    const profiles = profilesOf(store, business.id);
+    return annualRefund({
+      paid: lastPaid?.amount ?? amountFor(business.plan, 'annual', profiles),
+      monthly: amountFor(business.plan, 'monthly', profiles),
+      paidUntil: business.paid_until,
+      now: now(),
+    });
+  }
+
+  /** Cancels the subscription: no more renewals. A yearly plan ends with the month in progress, the rest is refunded. */
   function cancel(business, reason = '') {
+    const q = cancelQuote(business);
     store.updateBusiness(business.id, {
       auto_renew: false,
       next_plan: null,
       next_cycle: null,
+      paid_until: q.until || business.paid_until,
       cancel_reason: String(reason).slice(0, 500) || null,
       canceled_at: toSql(now()),
     });
+    return q;
   }
 
   /** Charges every subscription whose period ended. Runs with the other jobs. */
@@ -266,5 +304,5 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
     return renewed;
   }
 
-  return { canTrial, startTrial, hasCardPlan, startCheckout, complete, changePlan, quote, setAutoRenew, cancel, renewDue };
+  return { cancelQuote, canTrial, startTrial, hasCardPlan, startCheckout, complete, changePlan, quote, setAutoRenew, cancel, renewDue };
 }

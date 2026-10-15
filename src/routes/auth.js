@@ -161,7 +161,7 @@ export function authRoutes(ctx) {
     const p = pendingSignup(req);
     if (!p || !ctx.signupOpen()) return res.redirect('/register');
     const pass = passFor(p.pass);
-    render(req, res, 'הרשמה', V.googleSignupView({ who: p, pass, values: { name: p.name } }));
+    render(req, res, 'הרשמה', V.googleSignupView({ trialOpen: Boolean(ctx.billing), who: p, pass, values: { name: p.name } }));
   });
 
   router.post('/register/google', limit, (req, res) => {
@@ -176,7 +176,7 @@ export function authRoutes(ctx) {
     else if (!v.terms) error = 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
     if (error) {
       res.status(422);
-      return render(req, res, 'הרשמה', V.googleSignupView({ who: p, pass, values: v, error }));
+      return render(req, res, 'הרשמה', V.googleSignupView({ trialOpen: Boolean(ctx.billing), who: p, pass, values: v, error }));
     }
     res.clearCookie(GOOGLE_SIGNUP_COOKIE);
     // Signed up meanwhile (another tab): just sign in.
@@ -219,7 +219,7 @@ export function authRoutes(ctx) {
   router.get('/register', (req, res) => {
     if (!ctx.signupOpen()) return res.redirect('/login');
     const pass = passFor(req.query.pass);
-    render(req, res, 'הרשמה', V.registerView({ pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass), google: Boolean(ctx.google) }));
+    render(req, res, 'הרשמה', V.registerView({ trialOpen: Boolean(ctx.billing), pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass), google: Boolean(ctx.google) }));
   });
 
   router.post('/register', limit, (req, res) => {
@@ -229,7 +229,7 @@ export function authRoutes(ctx) {
     const error = validateNewUser(v, { needBusiness: true });
     if (error) {
       res.status(422);
-      return render(req, res, 'הרשמה', V.registerView({ error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
+      return render(req, res, 'הרשמה', V.registerView({ trialOpen: Boolean(ctx.billing), error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
     }
     startAccount(res, v, pass);
   });
@@ -304,7 +304,7 @@ export function authRoutes(ctx) {
       return render(req, res, 'הזמנה', V.joinView({ invite, user: req.user, csrf: req.user.csrf, token: req.params.token }));
     }
     if (store.userByEmail(invite.email)) return res.redirect(`/login?next=/join/${encodeURIComponent(req.params.token)}`);
-    render(req, res, 'הצטרפות', V.registerView({ invite, values: { token: req.params.token } }));
+    render(req, res, 'הצטרפות', V.registerView({ trialOpen: Boolean(ctx.billing), invite, values: { token: req.params.token } }));
   });
 
   router.post('/join/:token', limit, (req, res) => {
@@ -319,7 +319,7 @@ export function authRoutes(ctx) {
       const error = validateNewUser(v, { needBusiness: false });
       if (error) {
         res.status(422);
-        return render(req, res, 'הצטרפות', V.registerView({ invite, error, values: { ...v, token: req.params.token } }));
+        return render(req, res, 'הצטרפות', V.registerView({ trialOpen: Boolean(ctx.billing), invite, error, values: { ...v, token: req.params.token } }));
       }
       userId = createUser(v);
       ctx.startSession(res, userId);

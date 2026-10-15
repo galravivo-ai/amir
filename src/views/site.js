@@ -152,7 +152,7 @@ function contactForm(error = '', v = {}) {
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     <div class="grid2">
       <label>שם<input name="name" required maxlength="80" value="${val('name')}" autocomplete="name"></label>
-      <label>טלפון<input name="phone" type="tel" maxlength="30" value="${val('phone')}" autocomplete="tel" dir="ltr"></label>
+      <label>טלפון<input name="phone" type="tel" maxlength="20" pattern="[0-9+\\(\\)\\s.\\-]{9,20}" title="מספר טלפון, למשל 050-1234567" inputmode="tel" value="${val('phone')}" autocomplete="tel" dir="ltr"></label>
       <label>אימייל<input name="email" type="email" maxlength="120" value="${val('email')}" autocomplete="email" dir="ltr"></label>
       <label>שם העסק או הסוכנות<input name="company" maxlength="100" value="${val('company')}" autocomplete="organization"></label>
       <label>מי אתם?<select name="kind">${Object.entries(LEAD_KINDS)
@@ -176,7 +176,7 @@ function talkForm(sent, error = '', v = {}) {
   return `<form method="post" action="/contact#talk" class="lp-talk">
     <input type="hidden" name="kind" value="callback"><input type="hidden" name="from" value="talk">
     <input name="name" required maxlength="80" placeholder="שם" aria-label="שם" value="${val('name')}" autocomplete="name">
-    <input name="phone" type="tel" required maxlength="30" placeholder="טלפון" aria-label="טלפון" value="${val('phone')}" autocomplete="tel">
+    <input name="phone" type="tel" required maxlength="20" pattern="[0-9+\\(\\)\\s.\\-]{9,20}" title="מספר טלפון, למשל 050-1234567" inputmode="tel" placeholder="טלפון" aria-label="טלפון" value="${val('phone')}" autocomplete="tel">
     <label class="hp" aria-hidden="true">אתר<input name="website" tabindex="-1" autocomplete="off"></label>
     <button class="btn lp-cta">חזרו אליי</button>
     <label class="check lp-talk-mk"><input type="checkbox" name="marketing" value="1" ${v.marketing ? 'checked' : ''}><span>אשמח לקבל עדכונים, טיפים והטבות מ-GoFive בהודעות ובמייל (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>
@@ -218,7 +218,11 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     ],
     [
       'אפשר לראות את המערכת לפני שמשלמים?',
-      'כן. בחשבון הדמו יש עסק לדוגמה עם כל המסכים והנתונים, פתוח לכולם בלי הרשמה. כשמחליטים להתחיל, בוחרים מסלול, ותוך דקות רואים את הנתונים של העסק שלכם. בלי התחייבות: מבטלים בכל רגע.',
+      `כן. ב<a href="#screens">צילומי המסך</a> רואים את כל המסכים של המערכת על עסק לדוגמה. ${
+        trialOpen
+          ? `ואפשר לנסות על העסק שלכם: ${TRIAL_DAYS} ימים חינם, ורק אם ממשיכים מחויבים בסוף. מבטלים בקליק לפני כן.`
+          : 'כשמחליטים להתחיל, בוחרים מסלול, ותוך דקות רואים את הנתונים של העסק שלכם. בלי התחייבות: מבטלים בכל רגע.'
+      } רוצים שנראה לכם? <a href="#talk">השאירו פרטים</a> ונחזור אליכם.`,
     ],
     [
       'יש לי כמה סניפים. כמה זה עולה?',
@@ -757,7 +761,7 @@ export function termsView({ signupOpen }) {
   return legalPage({
     title: 'תנאי שימוש ותקנון',
     signupOpen,
-    intro: `<p>התקנון מסדיר את השימוש ב-${h(op.brand)}. הוא מנוסח בלשון רבים ופונה לכל המינים. אם משהו לא ברור, <a href="/#contact">כתבו לנו</a>.</p>`,
+    intro: `<p>התקנון מסדיר את השימוש ב-${h(op.brand)}. הוא מנוסח בלשון רבים ופונה לכל המינים. אם משהו לא ברור, <a href="/#talk">כתבו לנו</a>.</p>`,
     sections: [
       [
         'כללי',
@@ -823,9 +827,11 @@ export function termsView({ signupOpen }) {
         'ביטול והחזרים',
         `<ul>
           <li>אפשר לבטל מנוי בכל עת, בעמוד "התוכנית שלי" במערכת (קישור "ביטול המנוי"), או בפנייה אלינו ${contact}. אחרי ביטול תישלח אליכם הודעה, והחיובים נעצרים: לא תחויבו על התקופה שאחרי הביטול.</li>
-          <li>המנוי נשאר פעיל עד סוף התקופה ששולמה. עד אז אפשר לחדש אותו בלחיצה, בלי לשלם שוב.</li>
+          <li>מנוי חודשי נשאר פעיל עד סוף החודש ששולם (ושנתי, כמפורט בהמשך). עד אז אפשר לחדש אותו בלחיצה, בלי לשלם שוב.</li>
           <li><b>מסלול חודשי:</b> החיוב נעצר מהחודש שאחרי הביטול. אין החזר על החודש השוטף.</li>
-          <li><b>מסלול שנתי:</b> מבטלים ומקבלים החזר יחסי על החודשים המלאים שנותרו, לפי המחיר החודשי הרגיל של המסלול (בלי ההנחה השנתית), בניכוי החודשים שכבר נוצלו.</li>
+          <li><b>מסלול שנתי:</b> החודש שבו מבטלים נחשב מנוצל, וכל חודש שנוצל מחושב לפי המחיר החודשי הרגיל של המסלול (בלי ההנחה השנתית). ההחזר הוא מה ששולם פחות החודשים שנוצלו, והגישה נמשכת עד סוף החודש שבו ביטלתם. אם החודשים שנוצלו מכסים את כל הסכום, אין החזר והמסלול נשאר פעיל עד סוף השנה. לפני אישור הביטול מוצגים לכם הסכום שיוחזר ותאריך הסיום.
+            <br><i>לדוגמה:</i> שילמתם ₪${PLANS.basic.price * 10} על שנה במסלול "${PLANS.basic.label}" (₪${PLANS.basic.price} לחודש), וביטלתם בחודש הרביעי. נוצלו 4 חודשים × ₪${PLANS.basic.price} = ₪${PLANS.basic.price * 4}, ולכן יוחזרו ₪${PLANS.basic.price * 6}, והגישה נמשכת עד סוף החודש הרביעי. ביטול בחודש ה-11: נוצלו ₪${PLANS.basic.price * 11}, יותר מהסכום ששולם, ולכן אין החזר והמסלול פעיל עד סוף השנה.</li>
+          <li><b>בתקופת הניסיון:</b> ביטול לפני סוף הניסיון אינו כרוך בחיוב כלשהו.</li>
           <li><b>צרכנים:</b> מי שהתקשר בעסקה כצרכן (ולא לצורכי עסק) רשאי לבטל לפי חוק הגנת הצרכן, התשמ"א-1981, והתקנות שלו, ובכלל זה לבטל עסקה מרחוק בתוך 14 יום מההתקשרות, בכפוף לדמי ביטול בשיעור של עד 5% מהמחיר או 100 ₪, לפי הנמוך מביניהם.</li>
           <li>ההחזר יבוצע באמצעי התשלום המקורי, בתוך 14 יום.</li>
           <li>בסוף התקופה הסקרים, ההתראות והבדיקות מושהים. הנתונים נשמרים עוד 12 חודשים כדי שתוכלו לחזור, כמפורט ב<a href="/privacy">מדיניות הפרטיות</a>.</li>

@@ -31,7 +31,9 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
     const done = req.body.from === 'talk' ? '/?sent=talk#talk' : '/?sent=1#contact';
     // Bots fill the hidden field; pretend it worked.
     if (req.body.website) return res.redirect(303, done);
-    const error = !v.name ? 'נא למלא שם' : !v.phone && !v.email ? 'נא להשאיר טלפון או אימייל תקין' : '';
+    // A phone number: digits with the usual separators, 9 to 15 digits (with a country code).
+    const phoneOk = !v.phone || (/^[0-9+()\s.-]+$/.test(v.phone) && /^\d{9,15}$/.test(v.phone.replace(/\D/g, '')));
+    const error = !v.name ? 'נא למלא שם' : !phoneOk ? 'מספר הטלפון לא תקין. למשל: 050-1234567' : !v.phone && !v.email ? 'נא להשאיר טלפון או אימייל תקין' : '';
     if (error) {
       const talk = req.body.from === 'talk' ? { talkError: error } : { contactError: error };
       return res.status(422).send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactValues: v, ...talk }));

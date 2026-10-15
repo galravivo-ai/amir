@@ -195,7 +195,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
 
   // Cancelling: what happens first, then a reason; the paid year stays, the operator hears (a yearly refund).
   const cancelPage = (await req('/admin/plan/cancel')).text;
-  assert.match(cancelPage, /החזר יחסי/);
+  assert.match(cancelPage, /יוחזרו לכם.{0,10}1,521/, 'a yearly plan: 1,690 less one used month at 169');
   assert.equal((await req('/admin/plan/cancel', { method: 'POST', form: { _csrf: token, reason: 'price', details: 'יקר לי' } })).location, '/admin/plan?canceled=1');
   assert.equal(fresh().auto_renew, 0);
   assert.equal(fresh().cancel_reason, 'המחיר גבוה מדי · יקר לי');

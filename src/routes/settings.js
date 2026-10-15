@@ -270,16 +270,17 @@ export function settingsRoutes(ctx) {
 
   // Cancelling: what happens, an optional reason, then a confirm button.
   router.get('/plan/cancel', owner, (req, res) => {
-    render(req, res, 'ביטול המנוי', V.cancelView({ business: req.business, plan: req.plan, access: req.access, csrf: req.user.csrf }));
+    const quote = ctx.billing ? ctx.billing.cancelQuote(req.business) : { refund: 0, until: req.business.paid_until };
+    render(req, res, 'ביטול המנוי', V.cancelView({ business: req.business, plan: req.plan, access: req.access, csrf: req.user.csrf, quote }));
   });
 
   router.post('/plan/cancel', owner, async (req, res) => {
     const reason = [V.CANCEL_REASONS[req.body.reason], String(req.body.details ?? '').trim()].filter(Boolean).join(' · ').slice(0, 500);
     const b = req.business;
-    if (ctx.billing) ctx.billing.cancel(b, reason);
-    else store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    const q = ctx.billing ? ctx.billing.cancel(b, reason) : { refund: 0, until: b.paid_until };
+    if (!ctx.billing) store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
     await ctx.notifier
-      ?.subscriptionCancelled({ business: b, user: req.user, reason, until: b.paid_until ? b.paid_until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, admins: ctx.adminEmails() })
+      ?.subscriptionCancelled({ business: b, user: req.user, reason, until: q.until ? q.until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, refund: q.refund, admins: ctx.adminEmails() })
       .catch((err) => console.error('[notify] cancellation failed:', err.message));
     res.redirect(303, `/admin/plan?canceled=${req.access?.card ? 'trial' : '1'}`);
   });

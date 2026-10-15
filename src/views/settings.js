@@ -572,8 +572,8 @@ export function planChangeView({ business, current, access, plan, cycle, quote, 
 }
 
 /** Cancelling the subscription: what happens, an optional reason, and confirm. */
-export function cancelView({ business, plan, access, csrf }) {
-  const until = day(business.paid_until);
+export function cancelView({ business, plan, access, csrf, quote = { refund: 0 } }) {
+  const until = day(quote.until || business.paid_until);
   const annual = business.billing_cycle === 'annual';
   if (access?.card) {
     return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
@@ -599,7 +599,13 @@ export function cancelView({ business, plan, access, csrf }) {
     <p>לפני שמבטלים, כדאי לדעת מה קורה:</p>
     <ul class="sub-lines">
       <li>המסלול <b>${h(plan.label)}</b> נשאר פעיל ${until ? `עד <b>${h(until)}</b>` : 'עד סוף התקופה ששולמה'}, ולא תחויבו יותר.</li>
-      <li>${annual ? 'במסלול שנתי מגיע לכם <b>החזר יחסי</b> על החודשים המלאים שנותרו, לפי המחיר החודשי הרגיל של המסלול. ההחזר יבוצע לכרטיס בתוך 14 יום.' : 'במסלול חודשי אין החזר על החודש הנוכחי, והחיוב פשוט נעצר.'}</li>
+      <li>${
+        annual
+          ? quote.refund
+            ? `במסלול שנתי: החודש הנוכחי נחשב מנוצל, וכל חודש שנוצל מחושב לפי המחיר החודשי הרגיל (${quote.used} חודשים). <b>יוחזרו לכם ${money(quote.refund)}</b> לכרטיס, בתוך 14 יום.`
+            : 'במסלול שנתי: לפי המחיר החודשי הרגיל, החודשים שכבר נוצלו מכסים את מה ששולם, ולכן אין החזר. המסלול נשאר פעיל עד סוף השנה.'
+          : 'במסלול חודשי אין החזר על החודש הנוכחי, והחיוב פשוט נעצר.'
+      }</li>
       <li>אחרי סוף התקופה הסקרים, ההתראות והבדיקות מושהים. <b>הנתונים נשמרים</b> ואפשר לחזור בכל רגע, בדיוק מאיפה שהפסקתם.</li>
       <li>צרכנים (לא לצורכי עסק) רשאים לבטל עסקה בתוך 14 יום לפי חוק הגנת הצרכן. <a href="/terms#cancel">פרטים בתנאי השימוש</a></li>
     </ul>

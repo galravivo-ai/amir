@@ -2550,3 +2550,14 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
 .lp-lightbox-img img { display: block; width: 100%; min-width: 900px; height: auto; }
 @media (min-width: 900px) { .lp-lightbox-img img { min-width: 0; } }
 .lp-lightbox-close { position: sticky; top: 8px; float: left; margin: 8px; z-index: 1; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(20, 16, 60, .85); color: #fff; font-size: 1.1rem; cursor: pointer; }
+
+/* new password: rule under the field, show/hide inside it */
+.pw-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.pw-wrap { position: relative; }
+.pw-wrap input { width: 100%; padding-left: 4.8rem; }
+.pw-toggle { position: absolute; top: 50%; transform: translateY(-50%); left: 6px; padding: .35em .7em; border: 0; border-radius: 8px; background: var(--purple-soft, #efeafe); color: var(--purple); font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.pw-field small { font-weight: 400; }
+.start-terms { margin: 0 0 1rem; padding: 12px 14px; border-radius: 12px; background: var(--purple-soft, #f3f0ff); font-size: .92rem; line-height: 1.55; }
+.start-terms ul { margin: .4rem 0; padding-inline-start: 1.1rem; }
+.start-terms li { margin: .2rem 0; }
+.start-terms a { font-size: .85rem; }

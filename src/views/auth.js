@@ -1,6 +1,29 @@
 import { h } from '../util.js';
-import { PLANS } from '../plans.js';
+import { PLANS, TRIAL_DAYS } from '../plans.js';
+
+/** Before signing up: how the start works and what is charged when. */
+const startTerms = (trialOpen) =>
+  trialOpen
+    ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
+        <ul><li>אחרי ההרשמה בוחרים מסלול ושומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים.</b></li>
+        <li>בסוף הניסיון מתחיל המנוי: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ), ומתחדש כל חודש.</li>
+        <li>יום לפני הסוף נשלח מייל עם הסכום והתאריך. מבטלים בקליק לפני כן, ולא מחויבים בכלל.</li></ul>
+        <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`
+    : `<div class="start-terms"><b>מה קורה אחרי ההרשמה?</b>
+        <ul><li>בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ). בלי התחייבות.</li>
+        <li>מחברים את פרופיל העסק בגוגל, והנתונים נטענים לבד.</li></ul>
+        <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`;
 import { GOOGLE_G } from './google.js';
+
+/** A new password: the rule shown before typing, and a show/hide button. */
+let pwCount = 0;
+const newPassword = (label) => {
+  const id = `pw-${++pwCount}`;
+  return `<div class="pw-field"><label for="${id}">${label}</label>
+    <div class="pw-wrap"><input id="${id}" name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password" aria-describedby="${id}-hint">
+      <button type="button" class="pw-toggle" aria-pressed="false" aria-controls="${id}" onclick="var i=document.getElementById(this.getAttribute('aria-controls')),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',String(s));this.textContent=s?'הסתרה':'הצגה'">הצגה</button></div>
+    <small id="${id}-hint" class="muted">לפחות 8 תווים</small></div>`;
+};
 
 /** "Continue with Google", then a divider before the email form. */
 const googleButton = (href, label) => `<a class="btn big g-btn auth-google" href="${h(href)}">${GOOGLE_G}<span>${label}</span></a>
@@ -30,11 +53,12 @@ export function loginView({ error = '', values = {}, allowSignup, notice = '', n
   </div>`;
 }
 
-export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false, google = false }) {
+export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false, google = false, trialOpen = false }) {
   return `<div class="auth card">
     <h1>${invite ? `הצטרפות ל${h(invite.business_name)}` : 'הרשמה'}</h1>
     ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, עם כל האפשרויות ובלי כרטיס אשראי.</div>` : ''}
     ${passGone ? '<div class="warn">הקישור להתנסות חינם כבר נוצל או בוטל. אפשר להירשם כרגיל.</div>' : ''}
+    ${invite || pass ? '' : startTerms(trialOpen)}
     ${errorBox(error)}
     ${google && !invite ? googleButton(`/auth/google${values.pass ? `?pass=${encodeURIComponent(values.pass)}` : ''}`, 'הרשמה מהירה עם Google') : ''}
     <form method="post" action="${invite ? `/join/${h(values.token)}` : '/register'}" class="stack">
@@ -46,7 +70,7 @@ export function registerView({ error = '', values = {}, invite = null, pass = nu
       }
       <label>השם שלך<input name="name" required maxlength="80" value="${h(values.name)}" autocomplete="name"></label>
       <label>אימייל<input name="email" type="email" required value="${h(invite ? invite.email : values.email)}" dir="ltr" autocomplete="email" ${invite ? 'readonly' : ''}></label>
-      <label>סיסמה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
+      ${newPassword('סיסמה')}
       ${values.pass ? `<input type="hidden" name="pass" value="${h(values.pass)}">` : ''}
       ${termsBoxes(values)}
       <button class="btn primary">${invite ? 'יצירת חשבון והצטרפות' : 'יצירת חשבון'}</button>
@@ -56,11 +80,11 @@ export function registerView({ error = '', values = {}, invite = null, pass = nu
 }
 
 /** After "Sign up with Google": the business name and the terms, and that's it. */
-export function googleSignupView({ who, values = {}, pass = null, error = '' }) {
+export function googleSignupView({ who, values = {}, pass = null, error = '', trialOpen = false }) {
   return `<div class="auth card">
     <h1>עוד צעד אחד</h1>
     <p class="auth-who">${GOOGLE_G}<span>נרשמים עם <b dir="ltr">${h(who.email)}</b></span></p>
-    ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, בלי כרטיס אשראי.</div>` : ''}
+    ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, בלי כרטיס אשראי.</div>` : startTerms(trialOpen)}
     ${errorBox(error)}
     <form method="post" action="/register/google" class="stack">
       <label>שם העסק או החברה<input name="business" required maxlength="100" value="${h(values.business)}" autocomplete="organization" placeholder="למשל: מסעדת הגפן" autofocus>
@@ -69,7 +93,7 @@ export function googleSignupView({ who, values = {}, pass = null, error = '' }) 
       ${termsBoxes(values)}
       <button class="btn primary">יצירת חשבון</button>
     </form>
-    <p class="muted small">אחרי זה: ${pass ? 'מחברים את פרופיל העסק בגוגל ומתחילים.' : 'בוחרים מסלול (7 ימים חינם), ומחברים את פרופיל העסק בגוגל.'} <a href="/register">חזרה</a></p>
+    <p class="muted small"><a href="/register">חזרה</a></p>
   </div>`;
 }
 
@@ -108,7 +132,7 @@ export function resetView({ token, error = '' }) {
     <h1>סיסמה חדשה</h1>
     ${errorBox(error)}
     <form method="post" action="/reset/${h(token)}" class="stack">
-      <label>סיסמה חדשה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
+      ${newPassword('סיסמה חדשה')}
       <label>שוב, לאימות<input name="password2" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
       <button class="btn primary">שמירה</button>
     </form>
@@ -230,7 +254,7 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
       ${csrfField(csrf)}
       <h3>שינוי סיסמה</h3>
       <label>סיסמה נוכחית<input name="current" type="password" required dir="ltr" autocomplete="current-password"></label>
-      <label>סיסמה חדשה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
+      ${newPassword('סיסמה חדשה')}
       <button class="btn primary">עדכון סיסמה</button>
       <p class="muted small">שינוי הסיסמה ינתק את כל שאר המכשירים.</p>
     </form>
