@@ -39,7 +39,9 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
 
   router.get('/google', connectPage);
   function connectPage(req, res) {
-    const notice = req.query.connected
+    const notice = req.query.started
+      ? 'הניסיון התחיל! עכשיו הצעד הכי חשוב: לחבר את פרופיל העסק בגוגל, עם החשבון שמנהל אותו.'
+      : req.query.connected
       ? 'החשבון חובר. סמנו את הסניפים שתרצו לעקוב אחריהם.'
       : req.query.added
         ? 'העסק נוסף. הביקורות נטענות עכשיו ברקע, זה לוקח עד דקה.'
@@ -78,7 +80,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     const nonce = crypto.randomBytes(16).toString('base64url');
     // The state ties the round trip to this browser and this business.
     res.cookie(STATE_COOKIE, `${nonce}.${req.business.id}`, { ...ctx.cookieOpts, maxAge: 10 * 60e3 });
-    res.redirect(303, google.authUrl({ redirectUri: redirectUri(req), state: nonce }));
+    res.redirect(303, google.authUrl({ redirectUri: redirectUri(req), state: nonce, loginHint: req.user.email }));
   });
 
   router.get('/google/callback', manager, async (req, res) => {

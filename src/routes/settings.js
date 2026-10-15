@@ -250,7 +250,7 @@ export function settingsRoutes(ctx) {
     if (!payment || payment.business_id !== req.business.id) return res.redirect(303, '/admin/plan');
     try {
       const after = await ctx.billing.complete(payment.id, { failed: req.query.failed === '1' });
-      if (after.status === 'paid') return res.redirect(303, payment.kind === 'trial' ? '/admin?trial=1' : '/admin/plan?paid=1');
+      if (after.status === 'paid') return res.redirect(303, payment.kind === 'trial' ? '/admin/google?started=1' : '/admin/plan?paid=1');
       if (payment.kind === 'trial') return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `הכרטיס לא נשמר${after.error ? `: ${after.error}` : ''}. אפשר לנסות שוב או בכרטיס אחר.` : 'הכרטיס עוד לא אושר. נסו לרענן בעוד דקה.')}`);
       return res.redirect(303, `/admin/plan?err=${encodeURIComponent(after.status === 'failed' ? `התשלום לא עבר${after.error ? `: ${after.error}` : ''}` : 'התשלום עוד לא אושר. אם חויבתם, הוא יופיע כאן בעוד כמה דקות.')}`);
     } catch (err) {

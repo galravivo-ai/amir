@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import { newBusiness, PLANS } from '../plans.js';
 import QRCode from 'qrcode';
@@ -10,6 +11,9 @@ import { BIZ_COOKIE, SESSION_COOKIE } from './context.js';
 import { ensureDemo } from '../demo.js';
 
 const CHALLENGE_COOKIE = 'l2';
+// "Sign in with Google": the round trip's state, and a sign-up waiting for its business name (both sealed).
+const GOOGLE_STATE_COOKIE = 'gs';
+const GOOGLE_SIGNUP_COOKIE = 'gp';
 
 export function authRoutes(ctx) {
   const { store, render } = ctx;
@@ -42,7 +46,9 @@ export function authRoutes(ctx) {
 
   function createUser(v) {
     const first = store.countUsers() === 0;
-    const id = store.createUser({ email: v.email, name: v.name, passwordHash: hashPassword(v.password), marketing: v.marketing });
+    // An account made with Google has no password until the person sets one ("forgot password").
+    const passwordHash = v.google ? `!google-${crypto.randomBytes(16).toString('hex')}` : hashPassword(v.password);
+    const id = store.createUser({ email: v.email, name: v.name, passwordHash, marketing: v.marketing });
     // On a fresh install the first account runs the system, unless the
     // operator already named the admins (SUPERADMIN_EMAILS).
     const named = String(process.env.SUPERADMIN_EMAILS ?? '').trim();
@@ -64,7 +70,7 @@ export function authRoutes(ctx) {
   router.get('/login', (req, res) => {
     if (req.user) return res.redirect('/admin');
     const notice = req.query.reset ? 'הסיסמה עודכנה, אפשר להיכנס' : '';
-    render(req, res, 'כניסה', V.loginView({ allowSignup: ctx.signupOpen(), notice, next: req.query.next }));
+    render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), allowSignup: ctx.signupOpen(), notice, next: req.query.next }));
   });
 
   const loginAttempts = new Map();
@@ -74,7 +80,7 @@ export function authRoutes(ctx) {
     const attempts = loginAttempts.get(key) || { n: 0, until: 0 };
     if (attempts.until > Date.now()) {
       res.status(429);
-      return render(req, res, 'כניסה', V.loginView({ error: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות', values: { email } }));
+      return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות', values: { email } }));
     }
     const user = store.userByEmail(email);
     if (!user || !verifyPassword(String(req.body.password ?? ''), user.password_hash)) {
@@ -82,20 +88,101 @@ export function authRoutes(ctx) {
       if (attempts.n >= 5) Object.assign(attempts, { n: 0, until: Date.now() + 5 * 60e3 });
       loginAttempts.set(key, attempts);
       res.status(401);
-      return render(req, res, 'כניסה', V.loginView({ error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: ctx.signupOpen(), next: req.query.next }));
+      return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: ctx.signupOpen(), next: req.query.next }));
     }
     loginAttempts.delete(key);
-    const next = String(req.query.next ?? '');
+    logIn(res, user, req.query.next);
+  });
+
+  /** The person is who they say (password or Google); the session starts now, or after the second factor. */
+  function logIn(res, user, nextRaw) {
+    const next = String(nextRaw ?? '');
     // The system admin lands on the system panel, everyone else on their business.
     const target = /^\/join\/[\w-]+$/.test(next) ? next : ctx.isSuperadmin(user) ? '/superadmin' : '/admin';
     if (user.totp_enabled) {
-      // Password is right; the session starts only after the second factor.
       const challenge = store.createLoginChallenge(user.id, target);
       res.cookie(CHALLENGE_COOKIE, challenge, { ...ctx.cookieOpts, maxAge: 5 * 60e3 });
       return res.redirect(303, '/login/2fa');
     }
     ctx.startSession(res, user.id);
     res.redirect(303, target);
+  }
+
+  // ---------- sign in / sign up with Google ----------
+  const googleRedirect = (req) => `${ctx.baseUrl(req)}/auth/google/callback`;
+  const unseal = (raw) => {
+    try {
+      return JSON.parse(ctx.google.open(raw));
+    } catch {
+      return null;
+    }
+  };
+  const googleFail = (req, res, error) => {
+    res.status(400);
+    return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error, allowSignup: ctx.signupOpen() }));
+  };
+
+  router.get('/auth/google', (req, res) => {
+    if (!ctx.google) return res.redirect('/login');
+    const nonce = crypto.randomBytes(16).toString('base64url');
+    const next = String(req.query.next ?? '');
+    const state = { nonce, at: Date.now(), pass: passFor(req.query.pass)?.code || '', next: /^\/join\/[\w-]+$/.test(next) ? next : '' };
+    res.cookie(GOOGLE_STATE_COOKIE, ctx.google.seal(JSON.stringify(state)), { ...ctx.cookieOpts, maxAge: 10 * 60e3 });
+    res.redirect(303, ctx.google.signInUrl({ redirectUri: googleRedirect(req), state: nonce }));
+  });
+
+  router.get('/auth/google/callback', limit, async (req, res) => {
+    if (!ctx.google) return res.redirect('/login');
+    const state = unseal(req.cookies[GOOGLE_STATE_COOKIE]);
+    res.clearCookie(GOOGLE_STATE_COOKIE);
+    if (req.query.error) return googleFail(req, res, 'הכניסה עם גוגל בוטלה.');
+    if (!state?.nonce || state.nonce !== req.query.state || Date.now() - state.at > 10 * 60e3) return googleFail(req, res, 'פג תוקף הכניסה. נסו שוב.');
+    let who;
+    try {
+      who = await ctx.google.signIn({ code: String(req.query.code ?? ''), redirectUri: googleRedirect(req) });
+    } catch (err) {
+      console.warn('[auth] google sign-in failed:', err.message);
+      return googleFail(req, res, 'הכניסה עם גוגל לא הצליחה. נסו שוב, או היכנסו עם מייל וסיסמה.');
+    }
+    const user = store.userByEmail(who.email);
+    if (user) return logIn(res, user, state.next);
+    if (!ctx.signupOpen()) return googleFail(req, res, 'אין חשבון עם המייל הזה, וההרשמה סגורה כרגע.');
+    // A new person: one short step for the business name and the terms.
+    res.cookie(GOOGLE_SIGNUP_COOKIE, ctx.google.seal(JSON.stringify({ ...who, pass: state.pass, at: Date.now() })), { ...ctx.cookieOpts, maxAge: 30 * 60e3 });
+    res.redirect(303, '/register/google');
+  });
+
+  const pendingSignup = (req) => {
+    const p = ctx.google && unseal(req.cookies[GOOGLE_SIGNUP_COOKIE]);
+    return p?.email && Date.now() - p.at < 30 * 60e3 ? p : null;
+  };
+
+  router.get('/register/google', (req, res) => {
+    const p = pendingSignup(req);
+    if (!p || !ctx.signupOpen()) return res.redirect('/register');
+    const pass = passFor(p.pass);
+    render(req, res, 'הרשמה', V.googleSignupView({ who: p, pass, values: { name: p.name } }));
+  });
+
+  router.post('/register/google', limit, (req, res) => {
+    const p = pendingSignup(req);
+    if (!p || !ctx.signupOpen()) return res.redirect(303, '/register');
+    const v = { ...clean(req.body), email: p.email, google: true };
+    v.name = v.name || p.name || p.email.split('@')[0];
+    const pass = passFor(p.pass);
+    let error = '';
+    if (!v.business) error = 'נא לכתוב את שם העסק';
+    else if (v.business.toLowerCase() === v.email || v.business.includes('@')) error = 'נא לכתוב בשדה "שם העסק" את השם של העסק, כפי שיופיע בדשבורד';
+    else if (!v.terms) error = 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
+    if (error) {
+      res.status(422);
+      return render(req, res, 'הרשמה', V.googleSignupView({ who: p, pass, values: v, error }));
+    }
+    res.clearCookie(GOOGLE_SIGNUP_COOKIE);
+    // Signed up meanwhile (another tab): just sign in.
+    const existing = store.userByEmail(v.email);
+    if (existing) return logIn(res, existing);
+    startAccount(res, v, pass);
   });
 
   router.get('/login/2fa', (req, res) => {
@@ -132,7 +219,7 @@ export function authRoutes(ctx) {
   router.get('/register', (req, res) => {
     if (!ctx.signupOpen()) return res.redirect('/login');
     const pass = passFor(req.query.pass);
-    render(req, res, 'הרשמה', V.registerView({ pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass) }));
+    render(req, res, 'הרשמה', V.registerView({ pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass), google: Boolean(ctx.google) }));
   });
 
   router.post('/register', limit, (req, res) => {
@@ -142,8 +229,13 @@ export function authRoutes(ctx) {
     const error = validateNewUser(v, { needBusiness: true });
     if (error) {
       res.status(422);
-      return render(req, res, 'הרשמה', V.registerView({ error, values: { ...v, pass: pass?.code }, pass }));
+      return render(req, res, 'הרשמה', V.registerView({ error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
     }
+    startAccount(res, v, pass);
+  });
+
+  /** A new person and their business: the account, the trial or free pass, the session and the guide. */
+  function startAccount(res, v, pass) {
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
@@ -160,7 +252,7 @@ export function authRoutes(ctx) {
         .catch((err) => console.error('[notify] welcome guide failed:', err));
     }
     res.redirect(303, admin ? '/superadmin' : '/admin');
-  });
+  }
 
   router.post('/logout', (req, res) => {
     if (req.user) store.deleteSession(req.user.session_id);

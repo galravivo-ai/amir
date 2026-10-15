@@ -64,13 +64,14 @@ function sealer(secret) {
   };
 }
 
-function emailFromIdToken(idToken) {
+function claimsOf(idToken) {
   try {
-    return JSON.parse(Buffer.from(String(idToken).split('.')[1], 'base64url').toString('utf8')).email || '';
+    return JSON.parse(Buffer.from(String(idToken).split('.')[1], 'base64url').toString('utf8')) || {};
   } catch {
-    return '';
+    return {};
   }
 }
+const emailFromIdToken = (idToken) => claimsOf(idToken).email || '';
 
 /** Returns null when no OAuth client is configured. */
 export function createGoogle({
@@ -114,7 +115,37 @@ export function createGoogle({
     open,
     setupCheck: () => ({ clientId, secretLooksRight: clientSecret.startsWith('GOCSPX-'), secretLength: clientSecret.length }),
 
-    authUrl({ redirectUri, state }) {
+    /** "Sign in with Google": who the person is (name and email), nothing more. */
+    signInUrl({ redirectUri, state }) {
+      const q = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid email profile',
+        prompt: 'select_account',
+        state,
+      });
+      return `${AUTH_URL}?${q}`;
+    },
+
+    /**
+     * Trades the sign-in code for the person's verified email and name. The ID
+     * token comes straight from Google's token endpoint over TLS, so its claims
+     * are trusted after checking they were issued for this app and are current.
+     */
+    async signIn({ code, redirectUri }) {
+      const t = await call(TOKEN_URL, {
+        method: 'POST',
+        form: { code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code' },
+      });
+      const c = claimsOf(t.id_token);
+      const issuerOk = c.iss === 'https://accounts.google.com' || c.iss === 'accounts.google.com';
+      if (!issuerOk || c.aud !== clientId || !(Number(c.exp) * 1000 > Date.now())) throw new GoogleError('הכניסה עם גוגל לא אומתה. נסו שוב.');
+      if (!c.email || !(c.email_verified === true || c.email_verified === 'true')) throw new GoogleError('כתובת המייל בחשבון הגוגל לא מאומתת.');
+      return { email: String(c.email).toLowerCase(), name: String(c.name || c.given_name || '').slice(0, 80), sub: String(c.sub || '') };
+    },
+
+    authUrl({ redirectUri, state, loginHint = '' }) {
       const q = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
@@ -124,6 +155,7 @@ export function createGoogle({
         prompt: 'consent',
         include_granted_scopes: 'true',
         state,
+        ...(loginHint ? { login_hint: loginHint } : {}),
       });
       return `${AUTH_URL}?${q}`;
     },

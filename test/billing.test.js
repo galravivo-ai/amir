@@ -242,7 +242,8 @@ test('7 free days with a saved card: nothing charged, small quotas, charged when
   const fresh = () => created.store.businessById(id);
 
   const plan = (await req('/admin/plan')).text;
-  assert.match(plan, /7 ימים חינם, ואז ממשיכים רק אם מתאים/);
+  assert.match(plan, /בוחרים מסלול ומתחילים 7 ימים חינם/);
+  assert.match(plan, /מחברים את פרופיל העסק בגוגל/);
   assert.match(plan, /7 ימים חינם · גוגל \+ AI/);
   const confirm = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
   assert.match(confirm, /היום לא מחויבים/);
@@ -256,7 +257,7 @@ test('7 free days with a saved card: nothing charged, small quotas, charged when
   assert.equal(page.Document, undefined);
   const chargesBefore = charges.length;
   pages.get(lp).paid = true;
-  assert.equal((await req(`/admin/billing/done?p=${page.ReturnValue}`)).location, '/admin?trial=1');
+  assert.equal((await req(`/admin/billing/done?p=${page.ReturnValue}`)).location, '/admin/google?started=1');
   let b = fresh();
   assert.deepEqual([b.billing, b.plan, b.card_token, b.auto_renew], ['trial', 'pro', 'tok-1', 1]);
   assert.equal(b.paid_until, b.trial_ends_at);

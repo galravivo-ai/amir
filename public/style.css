@@ -2497,3 +2497,21 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
   .lp-screens-tabs { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 4px; }
   .lp-screens-tabs button { flex: none; font-size: .88rem; }
 }
+
+/* ---------- sign in / sign up with Google ---------- */
+.auth .auth-google { width: 100%; justify-content: center; margin-top: .4rem; }
+.auth .auth-google .g-logo { flex: none; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 1rem 0 .4rem; color: var(--muted); font-size: .85rem; }
+.auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.auth-who { display: flex; align-items: center; gap: 8px; margin: 0 0 .8rem; color: var(--muted); }
+.auth-who .g-logo { width: 18px; height: 18px; flex: none; }
+
+/* ---------- first screen after sign-up: the next steps ---------- */
+.start-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+.start-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); opacity: .75; }
+.start-steps li.now { opacity: 1; border-color: var(--brand, #4b2bd6); box-shadow: 0 0 0 3px rgba(75, 43, 214, .12); }
+.start-steps .n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--purple-soft, #efeafe); color: var(--brand, #4b2bd6); }
+.start-steps li.now .n { background: var(--brand, #4b2bd6); color: #fff; }
+.start-steps li > div { display: flex; flex-direction: column; gap: 3px; }
+.start-steps small { color: var(--ink-2); font-size: .9rem; }
+.start-steps .btn { align-self: flex-start; margin-top: 6px; }

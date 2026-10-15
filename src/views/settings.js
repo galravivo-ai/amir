@@ -412,13 +412,17 @@ export function planView({
   ].filter(Boolean);
   const factsHtml = `<dl class="sub-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
   let head;
-  if (access?.reason === 'new' && trialOffer) {
-    head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! ${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
-      <span>בוחרים מסלול ושומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים.</b> יום לפני סוף הניסיון נזכיר לכם במייל, ומבטלים בקליק.
-      מיד אחרי זה מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד.</span></div></div>`;
-  } else if (access?.reason === 'new') {
-    head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! בוחרים מסלול ומתחילים</b>
-      <span>מיד אחרי התשלום מחברים את פרופיל הגוגל, והביקורות, הדירוג, המיקום במפות והנראות ב-AI נטענים לבד. בלי התחייבות, מבטלים בכל רגע.</span></div></div>`;
+  if (access?.reason === 'new') {
+    // The first screen after sign-up: where they are, what comes next, then the plans below.
+    const steps = [
+      trialOffer
+        ? [`בוחרים מסלול ומתחילים ${TRIAL_DAYS} ימים חינם`, 'שומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים</b>, יום לפני הסוף נזכיר במייל, ומבטלים בקליק.']
+        : ['בוחרים מסלול', 'בלי התחייבות, מבטלים בכל רגע.'],
+      ['מחברים את פרופיל העסק בגוגל', 'לחיצה אחת, עם חשבון הגוגל שמנהל את הפרופיל. זה החיבור שנותן את כל הנתונים.'],
+      ['הכול נטען לבד', 'ביקורות, דירוג, צפיות ושיחות, מיקום במפות ונראות ב-AI, תוך כמה דקות.'],
+    ];
+    head = `<div class="sub-head welcome"><div><b>ברוכים הבאים ל-GoFive! עוד שני צעדים קצרים ומתחילים</b></div></div>
+      <ol class="start-steps">${steps.map(([t, d], i) => `<li class="${i === 0 ? 'now' : ''}"><span class="n">${i + 1}</span><div><b>${t}</b><small>${d}</small>${i === 0 ? '<a class="btn primary" href="#plans">לבחירת מסלול ↓</a>' : ''}</div></li>`).join('')}</ol>`;
   } else if (access?.state === 'trial' && access.card) {
     const ends = h(day(access.endsAt));
     const stopped = !business.auto_renew;

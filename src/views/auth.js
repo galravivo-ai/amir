@@ -1,15 +1,26 @@
 import { h } from '../util.js';
 import { PLANS } from '../plans.js';
+import { GOOGLE_G } from './google.js';
+
+/** "Continue with Google", then a divider before the email form. */
+const googleButton = (href, label) => `<a class="btn big g-btn auth-google" href="${h(href)}">${GOOGLE_G}<span>${label}</span></a>
+  <div class="auth-or"><span>או עם מייל וסיסמה</span></div>`;
+const termsBoxes = (values) => `<label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
+        <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>
+      <label class="check"><input type="checkbox" name="marketing" value="1" ${values.marketing ? 'checked' : ''}>
+        <span>אשמח לקבל במייל עדכונים, טיפים והטבות מ-GoFive (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>`;
 
 const csrfField = (csrf) => (csrf ? `<input type="hidden" name="_csrf" value="${h(csrf)}">` : '');
 const errorBox = (error) => (error ? `<div class="error">${h(error)}</div>` : '');
 
-export function loginView({ error = '', values = {}, allowSignup, notice = '', next = '' }) {
-  const action = /^\/join\/[\w-]+$/.test(String(next)) ? `/login?next=${encodeURIComponent(next)}` : '/login';
+export function loginView({ error = '', values = {}, allowSignup, notice = '', next = '', google = false }) {
+  const join = /^\/join\/[\w-]+$/.test(String(next));
+  const action = join ? `/login?next=${encodeURIComponent(next)}` : '/login';
   return `<div class="auth card">
     <h1>כניסה</h1>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${errorBox(error)}
+    ${google ? googleButton(`/auth/google${join ? `?next=${encodeURIComponent(next)}` : ''}`, 'כניסה עם Google') : ''}
     <form method="post" action="${h(action)}" class="stack">
       <label>אימייל<input name="email" type="email" required value="${h(values.email)}" dir="ltr" autocomplete="email"></label>
       <label>סיסמה<input name="password" type="password" required dir="ltr" autocomplete="current-password"></label>
@@ -19,12 +30,13 @@ export function loginView({ error = '', values = {}, allowSignup, notice = '', n
   </div>`;
 }
 
-export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false }) {
+export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false, google = false }) {
   return `<div class="auth card">
     <h1>${invite ? `הצטרפות ל${h(invite.business_name)}` : 'הרשמה'}</h1>
     ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, עם כל האפשרויות ובלי כרטיס אשראי.</div>` : ''}
     ${passGone ? '<div class="warn">הקישור להתנסות חינם כבר נוצל או בוטל. אפשר להירשם כרגיל.</div>' : ''}
     ${errorBox(error)}
+    ${google && !invite ? googleButton(`/auth/google${values.pass ? `?pass=${encodeURIComponent(values.pass)}` : ''}`, 'הרשמה מהירה עם Google') : ''}
     <form method="post" action="${invite ? `/join/${h(values.token)}` : '/register'}" class="stack">
       ${
         invite
@@ -36,13 +48,28 @@ export function registerView({ error = '', values = {}, invite = null, pass = nu
       <label>אימייל<input name="email" type="email" required value="${h(invite ? invite.email : values.email)}" dir="ltr" autocomplete="email" ${invite ? 'readonly' : ''}></label>
       <label>סיסמה<input name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
       ${values.pass ? `<input type="hidden" name="pass" value="${h(values.pass)}">` : ''}
-      <label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
-        <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>
-      <label class="check"><input type="checkbox" name="marketing" value="1" ${values.marketing ? 'checked' : ''}>
-        <span>אשמח לקבל במייל עדכונים, טיפים והטבות מ-GoFive (דברי פרסומת). אפשר להסיר בכל רגע.</span></label>
+      ${termsBoxes(values)}
       <button class="btn primary">${invite ? 'יצירת חשבון והצטרפות' : 'יצירת חשבון'}</button>
     </form>
     ${invite ? '' : '<p class="muted">כבר רשומים? <a href="/login">לכניסה</a></p>'}
+  </div>`;
+}
+
+/** After "Sign up with Google": the business name and the terms, and that's it. */
+export function googleSignupView({ who, values = {}, pass = null, error = '' }) {
+  return `<div class="auth card">
+    <h1>עוד צעד אחד</h1>
+    <p class="auth-who">${GOOGLE_G}<span>נרשמים עם <b dir="ltr">${h(who.email)}</b></span></p>
+    ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, בלי כרטיס אשראי.</div>` : ''}
+    ${errorBox(error)}
+    <form method="post" action="/register/google" class="stack">
+      <label>שם העסק או החברה<input name="business" required maxlength="100" value="${h(values.business)}" autocomplete="organization" placeholder="למשל: מסעדת הגפן" autofocus>
+        <small class="muted">כך העסק ייקרא בדשבורד, בסקר ללקוחות ובדוחות.</small></label>
+      <label>השם שלך<input name="name" required maxlength="80" value="${h(values.name)}" autocomplete="name"></label>
+      ${termsBoxes(values)}
+      <button class="btn primary">יצירת חשבון</button>
+    </form>
+    <p class="muted small">אחרי זה: ${pass ? 'מחברים את פרופיל העסק בגוגל ומתחילים.' : 'בוחרים מסלול (7 ימים חינם), ומחברים את פרופיל העסק בגוגל.'} <a href="/register">חזרה</a></p>
   </div>`;
 }
 
