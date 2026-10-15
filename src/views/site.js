@@ -64,7 +64,8 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
 <a class="skip-link" href="#main">דלג לתוכן</a>
 <header class="site-head">
   <a class="brand" href="/">${logoMark(38)}${wordmark(op.brand)}</a>
-  <nav>
+  <button type="button" class="site-menu-btn" aria-label="תפריט" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+  <nav id="site-nav" aria-label="ניווט באתר">
     <a href="/#how">איך זה עובד</a>
     <a href="/#features">פיצ'רים</a>
     <a href="/#ai">נראות ב-AI</a>
@@ -73,11 +74,17 @@ ${description ? `<meta name="description" content="${h(description)}">` : ''}
     <a href="/#screens">צילומי מסך</a>
     <a href="/#pricing">מחירים</a>
     <a href="/#faq">שאלות</a>
+    <a class="nav-login" href="/login">כניסה לחשבון</a>
   </nav>
   <div class="site-cta">
     <a href="/login">כניסה לחשבון</a>
     ${signupOpen ? '<a class="btn primary" href="/register">פתיחת חשבון</a>' : ''}
   </div>
+  <script>(function(){var hd=document.currentScript.parentNode,b=hd.querySelector('.site-menu-btn'),n=hd.querySelector('nav');
+function t(o){hd.classList.toggle('menu-open',o);b.setAttribute('aria-expanded',String(o))}
+b.addEventListener('click',function(){t(!hd.classList.contains('menu-open'))});
+n.addEventListener('click',function(e){if(e.target.closest('a'))t(false)});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&hd.classList.contains('menu-open')){t(false);b.focus()}})})();</script>
 </header>
 <div id="main">
 ${body}
@@ -434,13 +441,28 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
 <section class="lp-band" id="screens">
   <div class="lp-head"><span class="lp-kicker">מבפנים</span><h2>ככה זה נראה מבפנים</h2><p>צילומי מסך מעסק לדוגמה. אחרי ההרשמה רואים את אותם המסכים עם הנתונים שלכם.</p></div>
   <div class="lp-screens">
-    <div class="lp-screens-tabs" role="tablist">${SCREENS.map(([key, label], i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-shot="${key}">${h(label)}</button>`).join('')}</div>
+    <div class="lp-screens-tabs" role="tablist" aria-label="מסכים במערכת">${SCREENS.map(([key, label], i) => `<button type="button" role="tab" id="shot-tab-${key}" aria-controls="shot-${key}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-shot="${key}">${h(label)}</button>`).join('')}</div>
     <figure class="lp-screens-frame">
       <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il</span></span>
-      ${SCREENS.map(([key, label, cap], i) => `<div class="lp-shot" data-shot="${key}"${i ? ' hidden' : ''}><img src="${asset(`media/guide/${key}.jpg`)}" alt="${h(label)}" width="1120" height="730" loading="lazy"><figcaption>${h(cap)}</figcaption></div>`).join('')}
+      ${SCREENS.map(([key, label, cap], i) => `<div class="lp-shot" role="tabpanel" id="shot-${key}" aria-labelledby="shot-tab-${key}" data-shot="${key}"${i ? ' hidden' : ''}>
+        <button type="button" class="lp-zoom" aria-label="הגדלת צילום המסך: ${h(label)}"><img src="${asset(`media/guide/${key}.jpg`)}" alt="${h(label)}" width="1120" height="730" loading="lazy"><span class="lp-zoom-hint" aria-hidden="true">⤢ הגדלה</span></button>
+        <figcaption>${h(cap)}</figcaption></div>`).join('')}
     </figure>
   </div>
-  <script>(function(){var t=document.querySelectorAll('.lp-screens-tabs button');t.forEach(function(b){b.addEventListener('click',function(){t.forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.lp-shot').forEach(function(s){s.hidden=s.dataset.shot!==b.dataset.shot})})})})();</script>
+  <dialog class="lp-lightbox" aria-label="צילום מסך מוגדל"><button type="button" class="lp-lightbox-close" aria-label="סגירה">✕</button><div class="lp-lightbox-img"><img alt=""></div></dialog>
+  <script>(function(){var tabs=[].slice.call(document.querySelectorAll('.lp-screens-tabs [role=tab]'));
+function pick(b,focus){tabs.forEach(function(x){var on=x===b;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});
+document.querySelectorAll('.lp-shot').forEach(function(s){s.hidden=s.dataset.shot!==b.dataset.shot});if(focus)b.focus()}
+tabs.forEach(function(b,i){b.addEventListener('click',function(){pick(b)});
+b.addEventListener('keydown',function(e){var n=tabs.length,j=null;
+/* right to left: the left arrow moves to the next tab */
+if(e.key==='ArrowLeft')j=(i+1)%n;else if(e.key==='ArrowRight')j=(i-1+n)%n;else if(e.key==='Home')j=0;else if(e.key==='End')j=n-1;
+if(j!==null){e.preventDefault();pick(tabs[j],true)}})});
+var d=document.querySelector('.lp-lightbox'),di=d.querySelector('img'),last=null;
+document.querySelectorAll('.lp-zoom').forEach(function(z){z.addEventListener('click',function(){var im=z.querySelector('img');di.src=im.currentSrc||im.src;di.alt=im.alt;last=z;if(d.showModal)d.showModal();else window.open(di.src)})});
+d.querySelector('.lp-lightbox-close').addEventListener('click',function(){d.close()});
+d.addEventListener('click',function(e){if(e.target===d)d.close()});
+d.addEventListener('close',function(){if(last)last.focus()})})();</script>
 </section>
 
 <section class="lp-band alt" id="pricing">
