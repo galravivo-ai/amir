@@ -152,9 +152,10 @@ export function createApp(db, options = {}) {
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 
   app.use((_req, res) => res.status(404).send(errorPage('הדף לא נמצא')));
-  app.use((err, _req, res, _next) => {
-    console.error(err);
+  app.use((err, req, res, _next) => {
+    // Where it happened, and to whom, travels with the error (and its email alert).
+    console.error(`[http] ${req.method} ${req.originalUrl}${req.user ? ` · ${req.user.email}` : ''}${req.business ? ` · ${req.business.name}` : ''}:`, err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, health, rankings, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing, health, rankings };
+  return { app, store, mailer, notifier, pusher, adminEmails: ctx.adminEmails, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, health, rankings, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing, health, rankings };
 }

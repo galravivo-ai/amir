@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { openDb } from './db.js';
 import { createApp } from './app.js';
+import { createAlerter } from './alerts.js';
 import { dropPrivileges } from './privileges.js';
 
 if (process.env.NODE_ENV === 'production') {
@@ -10,7 +11,7 @@ if (process.env.NODE_ENV === 'production') {
 const port = Number(process.env.PORT) || 3000;
 const production = process.env.NODE_ENV === 'production';
 const db = openDb();
-const { app, jobs, mailer } = createApp(db, {
+const { app, jobs, mailer, adminEmails } = createApp(db, {
   allowSignup: process.env.ALLOW_SIGNUP !== 'false',
   secureCookies: process.env.SECURE_COOKIES === 'true',
   backups: process.env.DISABLE_BACKUPS !== 'true',
@@ -26,6 +27,15 @@ const server = app.listen(port, () => {
   if (production && process.env.SECURE_COOKIES !== 'true') {
     console.warn('WARNING: SECURE_COOKIES is not true. Set it once the site is served over HTTPS.');
   }
+});
+
+// Every logged error also goes to the system admins by email (throttled).
+if (process.env.ERROR_EMAILS !== 'false') createAlerter({ mailer, adminEmails }).watchConsole();
+process.on('unhandledRejection', (err) => console.error('[process] unhandled rejection:', err));
+process.on('uncaughtException', (err) => {
+  console.error('[process] uncaught exception:', err);
+  // The process is in an unknown state: give the alert a moment to go out, then let the host restart it.
+  setTimeout(() => process.exit(1), 3000).unref();
 });
 
 // Reminders, SLA alerts, weekly reports and the daily backup.

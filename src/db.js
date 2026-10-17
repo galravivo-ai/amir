@@ -670,6 +670,10 @@ const MIGRATIONS = [
   `
   ALTER TABLE monthly_reports ADD COLUMN facts_hash TEXT;
   `,
+  // v36: when a person was last in the system (for following up on new customers)
+  `
+  ALTER TABLE users ADD COLUMN last_seen_at TEXT;
+  `,
 ];
 
 function migrate(db) {

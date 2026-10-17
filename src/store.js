@@ -471,8 +471,14 @@ export function createStore(db) {
     ensureWidgetKey(id) {
       q('UPDATE businesses SET widget_key = ? WHERE id = ? AND widget_key IS NULL').run(token(12), id);
     },
+    /** At most every half hour, so a busy session doesn't write on every request. */
+    touchUser: (id) =>
+      q("UPDATE users SET last_seen_at = datetime('now') WHERE id = ? AND (last_seen_at IS NULL OR last_seen_at < datetime('now', '-30 minutes'))").run(id),
     allBusinesses: () =>
-      q(`SELECT b.*, u.email AS owner_email,
+      q(`SELECT b.*, u.email AS owner_email, u.name AS owner_name, u.last_seen_at AS owner_seen_at,
+           EXISTS (SELECT 1 FROM google_locations l WHERE l.business_id = b.id AND l.enabled = 1) AS has_google,
+           EXISTS (SELECT 1 FROM google_connections g WHERE g.business_id = b.id) AS has_gbp,
+           (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id WHERE c.business_id = b.id) AS total_responses,
            (SELECT COUNT(*) FROM campaigns c WHERE c.business_id = b.id) AS campaigns,
            (SELECT COUNT(*) FROM memberships m WHERE m.business_id = b.id) AS members,
            (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id

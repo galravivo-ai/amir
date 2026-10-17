@@ -1378,3 +1378,17 @@ test('search engines and link previews: robots.txt, sitemap.xml and share tags',
   assert.match(home, /<meta name="twitter:card" content="summary_large_image"/);
   assert.equal((await fetch(`${base}/static/brand/og-image.jpg`)).status, 200);
 });
+
+test('system admin: each new customer\'s progress, and who to call', async () => {
+  const stuck = await registeredOwner('stuck@example.com');
+  await stuck.req('/admin');
+  const biz = store.businessesFor(store.userByEmail('stuck@example.com').id)[0];
+  store.db.prepare("UPDATE businesses SET created_at = datetime('now', '-2 days'), name = 'עסק תקוע' WHERE id = ?").run(biz.id);
+  const root = await registeredOwner('act-root@example.com');
+  store.setSuperadmin(store.userByEmail('act-root@example.com').id, true);
+  const page = (await root.req('/superadmin')).text;
+  assert.match(page, /לקוחות חדשים \(14 יום\)/);
+  assert.match(page, /כדאי ליצור קשר[\s\S]*עסק תקוע/);
+  assert.match(page, /act-chip no">✗ גוגל/);
+  assert.ok(store.userByEmail('stuck@example.com').last_seen_at, 'the visit is remembered');
+});

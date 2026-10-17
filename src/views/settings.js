@@ -697,7 +697,37 @@ const MAIL_KINDS = {
   team_invite: 'הזמנה לצוות',
   password_reset: 'איפוס סיסמה',
   welcome_guide: 'מדריך התחלה',
+  error_alert: 'התראת תקלה',
 };
+
+/** Where a business stands: the steps that make it a working customer, and when its owner was last in. */
+const seen = (sql) => {
+  if (!sql) return 'עוד לא נכנס';
+  const days = Math.floor((Date.now() - Date.parse(`${sql.replace(' ', 'T')}Z`)) / 864e5);
+  return days <= 0 ? 'נכנס היום' : days === 1 ? 'נכנס אתמול' : `נכנס לפני ${days} ימים`;
+};
+const chip = (ok, label) => `<span class="act-chip ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${label}</span>`;
+const progressChips = (b) => `<div class="act-chips">${chip(b.has_google, b.has_gbp ? 'גוגל (מלא)' : b.has_google ? 'גוגל (קישור)' : 'גוגל')}${chip(b.campaigns > 0, 'קמפיין')}${chip(b.total_responses > 0, 'דירוג ראשון')}</div><div class="small muted">${seen(b.owner_seen_at)}</div>`;
+
+/** New customers (last 14 days) who haven't connected Google yet: the ones to call. */
+function stuckBlock(businesses) {
+  const fresh = businesses.filter((b) => !b.has_google && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5 && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) > 864e5);
+  const recent = businesses.filter((b) => Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5);
+  if (!recent.length) return '';
+  const connected = recent.filter((b) => b.has_google).length;
+  return `<section class="card stack" id="activation">
+    <h3>לקוחות חדשים (14 יום)</h3>
+    <div class="act-sum"><span><b>${recent.length}</b> נרשמו</span><span><b>${connected}</b> חיברו את גוגל</span><span><b>${recent.filter((b) => b.total_responses > 0).length}</b> קיבלו דירוג ראשון</span></div>
+    ${
+      fresh.length
+        ? `<p class="small"><b>כדאי ליצור קשר:</b> נרשמו לפני יותר מיום ועוד לא חיברו את גוגל.</p>
+          <ul class="act-list">${fresh
+            .map((b) => `<li><b>${h(b.name)}</b> · ${h(b.owner_name || '')} <a dir="ltr" href="mailto:${h(b.owner_email || '')}">${h(b.owner_email || '')}</a> <span class="muted small">· ${seen(b.owner_seen_at)}</span></li>`)
+            .join('')}</ul>`
+        : '<p class="muted small">כל מי שנרשם ביומיים האחרונים או קודם כבר חיבר את גוגל.</p>'
+    }
+  </section>`;
+}
 
 export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], baseUrl = '' }) {
   const statusBadge = (b) => {
@@ -775,15 +805,16 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
           .join(', ')}. אחרי שהתשלום הוסדר, לוחצים "הפעלה" בשורה של העסק.</div>`
       : ''
   }
+  ${stuckBlock(businesses)}
   <section class="card" id="businesses">
     <div class="row between"><h3>עסקים</h3>
       <form method="post" action="/superadmin/guide-all" onsubmit="return confirm('לשלוח את מדריך ההתחלה במייל לבעלים של כל העסקים?')">${csrfField(csrf)}<button class="btn">שליחת מדריך ההתחלה לכל הבעלים</button></form>
     </div>
-    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>מסלול ותשלום</th><th>סוכנות</th><th>קמפיינים</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
+    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>מסלול ותשלום</th><th>התקדמות</th><th>סוכנות</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
     <tbody>${businesses
       .map(
         (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}${b.owner_email ? `<form method="post" action="/superadmin/businesses/${b.id}/guide" class="small">${csrfField(csrf)}<button class="btn-link">שליחת מדריך</button></form>` : ''}</td>
-          <td data-l="מסלול">${planSelect(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="קמפיינים">${b.campaigns}</td><td data-l="צוות">${b.members}</td>
+          <td data-l="מסלול">${planSelect(b)}</td><td data-l="התקדמות">${progressChips(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="צוות">${b.members}</td>
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )
       .join('')}</tbody></table>
