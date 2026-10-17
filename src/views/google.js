@@ -70,7 +70,7 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
     <summary><h2>${partial ? 'אין גישה לחשבון הגוגל? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2></summary>
     ${partial ? '<p class="g-partial">זה חיבור חלקי: ביקורות ודירוג בלבד. בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת.</p>' : ''}
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
-    ${places.length ? '<p class="muted small">המחיר הוא לכל פרופיל גוגל שעוקבים אחריו. אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף מחויב במחיר המסלול מהחידוש הבא.</p>' : ''}
+    ${places.length ? '<p class="muted small">אפשר להוסיף סניפים בלי הגבלה. כל סניף נוסף מחויב ב-20% הנחה ממחיר המסלול, מהחידוש הבא.</p>' : ''}
     ${
       can('manager') && !full
         ? `<form method="post" action="/admin/google/places/find" class="row compact g-find">

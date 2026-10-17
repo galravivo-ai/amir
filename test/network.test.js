@@ -118,7 +118,7 @@ test('a network of branches: comparison, a manager per branch, shared templates,
     const home = (await client(base)('/')).text;
     assert.match(home, /id="network"/);
     assert.match(home, /כל הסניפים שלכם בגוגל, במסך אחד/);
-    assert.match(home, /כמה סניפים\? חשבון רשת בלי תוספת/);
+    assert.match(home, /כמה סניפים\? 20% הנחה על כל סניף נוסף/);
   } finally {
     server.close();
   }

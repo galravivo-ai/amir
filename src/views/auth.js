@@ -6,17 +6,17 @@ const startTerms = (trialOpen) =>
   trialOpen === 'free'
     ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, בלי כרטיס אשראי</b>
         <ul><li>נרשמים ומתחילים מיד, עם כל האפשרויות.</li>
-        <li>בסוף הניסיון בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ).</li>
+        <li>בסוף הניסיון בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש (כולל מע״מ), ו-20% הנחה על כל סניף נוסף.</li>
         <li>לא בחרתם? הסקרים פשוט נעצרים, בלי שום חיוב, והנתונים נשמרים.</li></ul>
         <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`
     : trialOpen
     ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
         <ul><li>אחרי ההרשמה בוחרים מסלול ושומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים.</b></li>
-        <li>בסוף הניסיון מתחיל המנוי: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ), ומתחדש כל חודש.</li>
+        <li>בסוף הניסיון מתחיל המנוי: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש (כולל מע״מ, 20% הנחה על כל סניף נוסף), ומתחדש כל חודש.</li>
         <li>יום לפני הסוף נשלח מייל עם הסכום והתאריך. מבטלים בקליק לפני כן, ולא מחויבים בכלל.</li></ul>
         <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`
     : `<div class="start-terms"><b>מה קורה אחרי ההרשמה?</b>
-        <ul><li>בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ). בלי התחייבות.</li>
+        <ul><li>בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש (כולל מע״מ), ו-20% הנחה על כל סניף נוסף. בלי התחייבות.</li>
         <li>מחברים את פרופיל העסק בגוגל, והנתונים נטענים לבד.</li></ul>
         <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`;
 import { GOOGLE_G } from './google.js';

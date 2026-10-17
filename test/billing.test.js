@@ -219,11 +219,12 @@ test('periods keep the day of the month', () => {
   assert.equal(new Date(addPeriod(Date.UTC(2026, 0, 15), 'annual')).toISOString().slice(0, 10), '2027-01-15');
 });
 
-test('the price is per Google profile', async () => {
+test('the price: the plan for the first Google profile, every branch 20% off', async () => {
   const { amountFor } = await import('../src/billing.js');
   assert.equal(amountFor('basic', 'monthly'), 99);
-  assert.equal(amountFor('pro', 'monthly', 3), 507);
-  assert.equal(amountFor('pro', 'annual', 2), 3380);
+  assert.equal(amountFor('pro', 'monthly', 3), 169 + 135 + 135);
+  assert.equal(amountFor('pro', 'annual', 2), 1690 + 1350, 'a branch is 20% off');
+  assert.equal(amountFor('basic', 'monthly', 3), 99 + 79 + 79);
   assert.equal(amountFor('enterprise', 'monthly', 4), null);
 });
 

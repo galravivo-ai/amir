@@ -1,4 +1,4 @@
-import { annualPrice, ANNUAL_MONTHS, FEATURE_LABELS, ils, PUBLIC_PLANS } from '../plans.js';
+import { annualPrice, ANNUAL_MONTHS, branchPrice, FEATURE_LABELS, ils, PUBLIC_PLANS } from '../plans.js';
 import { h } from '../util.js';
 
 const FEATURED = 'pro';
@@ -37,7 +37,7 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
           <span class="when-annual"><span class="price">${ils(yearly)}</span><span class="muted"> לשנה</span>
             <small class="save">חיסכון של ${ils(p.price * 12 - yearly)}</small></span>
         </div>
-        <div class="plan-branches">לכל פרופיל בגוגל</div>
+        <div class="plan-branches"><span class="when-monthly">כל סניף נוסף ${ils(branchPrice(p))} לחודש</span><span class="when-annual">כל סניף נוסף ${ils(branchPrice(p) * ANNUAL_MONTHS)} לשנה</span></div>
         <ul>
           ${compact ? '<li>✓ כל מה שכלול בכל המסלולים</li>' : INCLUDED.map((f) => `<li>✓ ${h(f)}</li>`).join('')}
           ${waOn() ? `<li>✓ עד ${p.waMonthly.toLocaleString('he-IL')} בקשות דירוג בוואטסאפ בחודש, נשלחות אוטומטית</li>` : ''}
@@ -56,9 +56,9 @@ export function pricingCards({ action, current = '', idPrefix = 'cycle', compact
       <label for="${idPrefix}-annual">שנתי <span class="save-chip">חודשיים חינם</span></label>
     </div>
     <div class="plans">${cards}</div>
-    <a class="pricing-network" href="${compact ? '/#network' : '/admin/network'}"><span class="pn-ic">◆</span><span><b>כמה סניפים? חשבון רשת בלי תוספת</b><small>מהפרופיל השני: השוואה בין הסניפים, מנהל לכל סניף, תבניות תשובה משותפות, דוח חודשי מאוחד וחשבונית אחת.</small></span></a>
+    <a class="pricing-network" href="${compact ? '/#network' : '/admin/network'}"><span class="pn-ic">◆</span><span><b>כמה סניפים? 20% הנחה על כל סניף נוסף</b><small>וכל כלי הרשת כלולים: השוואה בין הסניפים, מנהל לכל סניף, תבניות תשובה משותפות, דוח חודשי מאוחד וחשבונית אחת.</small></span></a>
     ${compact ? `<div class="pricing-all"><b>כלול בכל המסלולים</b><div>${INCLUDED.map((f) => `<span>✓ ${h(f)}</span>`).join('')}</div></div>` : ''}
-    <p class="pricing-note">המחיר הוא לכל פרופיל בגוגל: עסק עם שני סניפים משלם פעמיים · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · בלי התחייבות, מבטלים בכל רגע · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
+    <p class="pricing-note">המחיר הוא לפרופיל אחד בגוגל, וכל סניף נוסף ב-20% הנחה · ההבדל בין המסלולים: נראות ב-ChatGPT, Gemini, Perplexity ו-Claude, עם תוכנית פעולה · המחירים כוללים מע״מ · בלי התחייבות, מבטלים בכל רגע · בתשלום שנתי משלמים על ${ANNUAL_MONTHS} חודשים ומקבלים 12</p>
   </div>`;
 }
 

@@ -1,4 +1,4 @@
-import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
+import { accessOf, AI_PLUS, ANNUAL_MONTHS, branchPrice, CYCLES, INTEGRATIONS, limitLabel, payProvider, PLANS, priceFor, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { isEn } from '../lang.js';
@@ -400,7 +400,8 @@ export function planView({
   const canceled = active && paying && !business.auto_renew;
   const next = PLANS[business.next_plan];
   const until = day(business.paid_until);
-  const perPeriod = plan.price != null ? (cycleKey === 'annual' ? plan.price * 10 : plan.price) * profiles : null;
+  const perPeriod = priceFor(plan, cycleKey, profiles);
+  const months = cycleKey === 'annual' ? ANNUAL_MONTHS : 1;
   const other = business.plan === 'basic' ? 'pro' : business.plan === 'pro' ? 'basic' : null;
   const changeLink = (p, c, label, cls = 'btn') => `<a class="${cls}" href="/admin/plan/change?plan=${p}&cycle=${c}">${label}</a>`;
 
@@ -409,7 +410,7 @@ export function planView({
     ['מסלול', `<b>${h(plan.label)}</b>${access?.state === 'trial' ? ' <small>ניסיון</small>' : ''}`],
     ['תשלום', h(cycle)],
     ['פרופילים בגוגל', `${profiles}`],
-    plan.price != null ? [cycleKey === 'annual' ? 'לשנה' : 'לחודש', `<b>${money(perPeriod)}</b> <small>${profiles > 1 ? `${profiles} × ₪${cycleKey === 'annual' ? plan.price * 10 : plan.price}, ` : ''}כולל מע״מ</small>`] : null,
+    plan.price != null ? [cycleKey === 'annual' ? 'לשנה' : 'לחודש', `<b>${money(perPeriod)}</b> <small>${profiles > 1 ? `₪${plan.price * months} + ${profiles === 2 ? 'סניף נוסף' : `${profiles - 1} סניפים ×`} ₪${branchPrice(plan) * months}, ` : ''}כולל מע״מ</small>`] : null,
     paying ? [!business.auto_renew ? 'פעיל עד' : 'החידוש הבא', h(until)] : null,
     paying ? ['כרטיס', `<span dir="ltr">•••• ${h(business.card_last4 || '····')}</span>`] : null,
   ].filter(Boolean);

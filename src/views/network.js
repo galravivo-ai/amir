@@ -1,5 +1,6 @@
 import { englishTokens, h } from '../util.js';
 import { icon } from './icons.js';
+import { branchPrice } from '../plans.js';
 import { isEn } from '../lang.js';
 
 // Templates are stored with {שם}; someone reading English sees {name}.
@@ -49,7 +50,7 @@ export function networkIntroView({ branches, plan, canAdd }) {
   <section class="card net-hero">
     <div><span class="lp-kicker">${icon('chart', 14)} חשבון רשת</span>
       <h2>יש לכם יותר מסניף אחד? מנהלים את כולם מכאן</h2>
-      <p>מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת, בלי תוספת מעבר למחיר המסלול לכל פרופיל (${h(plan.label)}: ₪${plan.price} לפרופיל לחודש, כולל מע״מ).</p>
+      <p>מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת, וכל כלי הרשת כלולים. כל סניף נוסף ב-20% הנחה (${h(plan.label)}: ₪${branchPrice(plan)} לחודש לסניף, כולל מע״מ).</p>
       <p class="muted small">${branches ? 'כרגע יש בחשבון פרופיל אחד.' : 'עוד לא הוספתם פרופיל גוגל.'}</p>
       ${canAdd ? `<a class="btn primary" href="/admin/google">${icon('plus', 16)} הוספת סניף</a>` : ''}
     </div>

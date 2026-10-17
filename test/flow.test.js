@@ -1090,7 +1090,7 @@ test('trial, plan request and activation', async () => {
 test('quote requests from agencies and large chains', async () => {
   const home = await client().req('/');
   assert.match(home.text, /רשת עם יותר מ-10 סניפים/);
-  assert.doesNotMatch(home.text, /₪79 /);
+  assert.doesNotMatch(home.text, /₪79 לכל עסק/);
   assert.doesNotMatch(home.text, /לכל עסק שאתם מנהלים/);
 
   const missing = await client().req('/contact', { method: 'POST', form: { name: 'Avi', kind: 'chain' } });

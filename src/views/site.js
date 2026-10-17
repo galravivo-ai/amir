@@ -1,5 +1,5 @@
 import { isEn } from '../lang.js';
-import { payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
+import { branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
 import { customOffer, pricingCards } from './pricing.js';
@@ -21,7 +21,7 @@ function networkSection() {
     <div class="net-text">
       <span class="hero-pill"><b>לרשתות</b>כמה סניפים, חשבון אחד</span>
       <h2>כל הסניפים שלכם בגוגל, במסך אחד</h2>
-      <p>יש לכם יותר מסניף אחד? מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת. משלמים לפי מספר הפרופילים, וכל כלי הרשת כלולים בלי תוספת.</p>
+      <p>יש לכם יותר מסניף אחד? מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת. כל סניף נוסף ב-20% הנחה, וכל כלי הרשת כלולים בלי תוספת.</p>
       <ul class="net-lp-list">${NETWORK_TOOLS.map(([ic, t, d]) => `<li><span>${icon(ic, 18)}</span><div><b>${h(t)}</b><small>${h(d)}</small></div></li>`).join('')}</ul>
     </div>
     <div class="net-side">
@@ -259,7 +259,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     ],
     [
       'יש לי כמה סניפים. כמה זה עולה?',
-      'המחיר הוא לכל פרופיל בגוגל, כולל מע״מ. עסק עם שלושה סניפים משלם שלוש פעמים את מחיר המסלול, ומקבל את כל הפיצ\'רים בכל סניף: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים באמצע החודש מחויב רק מהחידוש הבא.',
+      `הסניף הראשון במחיר המסלול, וכל סניף נוסף ב-20% הנחה: ₪${branchPrice(PLANS.basic)} לחודש במסלול "${PLANS.basic.label}" ו-₪${branchPrice(PLANS.pro)} במסלול "${PLANS.pro.label}", כולל מע״מ. כל סניף מקבל את כל הפיצ'רים: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים באמצע החודש מחויב רק מהחידוש הבא.`,
     ],
     ['אפשר להשתמש במערכת באנגלית?', 'כן. המערכת, המיילים וטיוטות ה-AI זמינים בעברית ובאנגלית, ומחליפים שפה בכל רגע בעמוד "החשבון שלי". הסקר ללקוחות זמין בעברית, ערבית, אנגלית ורוסית.'],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
@@ -513,7 +513,7 @@ d.addEventListener('close',function(){if(last)last.focus()})})();</script>
 </section>
 
 <section class="lp-band alt" id="pricing">
-  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>משלמים לפי מספר הפרופילים בגוגל. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
+  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מחיר לפרופיל אחד בגוגל, ו-20% הנחה על כל סניף נוסף. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
   ${pricingCards({
     idPrefix: 'lp',
     compact: true,
@@ -849,7 +849,7 @@ export function termsView({ signupOpen }) {
       [
         'מסלולים ותשלום',
         `<ul>
-          <li>המחירים מפורטים ב<a href="/#pricing">עמוד המחירים</a>, בשקלים וכוללים מע״מ. המחיר הוא <b>לכל פרופיל עסק בגוגל</b> שהחשבון עוקב אחריו. המסלולים נבדלים בבדיקת הנראות ב-ChatGPT, Gemini, Perplexity ו-Claude ובתוכנית הפעולה, הכלולות במסלול "גוגל + AI".</li>
+          <li>המחירים מפורטים ב<a href="/#pricing">עמוד המחירים</a>, בשקלים וכוללים מע״מ. מחיר המסלול הוא לפרופיל עסק אחד בגוגל, וכל פרופיל נוסף שהחשבון עוקב אחריו (סניף) מחויב ב-<b>80% ממחיר המסלול</b> (20% הנחה): ₪${branchPrice(PLANS.basic)} לחודש במסלול "${PLANS.basic.label}" ו-₪${branchPrice(PLANS.pro)} במסלול "${PLANS.pro.label}". המסלולים נבדלים בבדיקת הנראות ב-ChatGPT, Gemini, Perplexity ו-Claude ובתוכנית הפעולה, הכלולות במסלול "גוגל + AI".</li>
           <li>פרופיל שנוסף באמצע תקופה מחויב מהחידוש הבא, ופרופיל שהוסר מפסיק להיות מחויב מהחידוש הבא. אין חיוב או זיכוי על החלק של התקופה הנוכחית.</li>
           ${
             payProvider() === 'cardcom'

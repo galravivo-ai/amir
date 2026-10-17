@@ -154,6 +154,17 @@ export function planOf(business) {
 }
 
 export const annualPrice = (p) => (p.price == null ? null : p.price * ANNUAL_MONTHS);
+
+/** Every Google profile after the first (a branch) is 20% off the plan's price. */
+export const BRANCH_DISCOUNT = 0.2;
+export const branchPrice = (p) => (p.price == null ? null : Math.round(p.price * (1 - BRANCH_DISCOUNT)));
+
+/** What a plan costs for a period, with `profiles` Google profiles: the first at the plan's price, the rest at the branch price. */
+export function priceFor(p, cycle, profiles = 1) {
+  if (p.price == null) return null;
+  const monthly = p.price + branchPrice(p) * (Math.max(1, profiles) - 1);
+  return cycle === 'annual' ? monthly * ANNUAL_MONTHS : monthly;
+}
 export const ils = (n) => `₪${Number(n).toLocaleString('he-IL')}`;
 
 /**

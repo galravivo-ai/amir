@@ -1,4 +1,4 @@
-import { annualPrice, PLANS, profilesOf, TRIAL_DAYS } from './plans.js';
+import { PLANS, priceFor, profilesOf, TRIAL_DAYS } from './plans.js';
 
 // Subscriptions paid by card through Cardcom: the first payment on Cardcom's
 // page saves a token, and the token pays every renewal. Upgrades are charged
@@ -12,11 +12,8 @@ const MAX_FAILURES = 3;
 const toSql = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
 const fromSql = (s) => (s ? Date.parse(`${String(s).replace(' ', 'T')}Z`) : 0);
 
-/** The price of a plan for a period, for `profiles` Google profiles (each one pays the plan). */
-export const amountFor = (plan, cycle, profiles = 1) => {
-  const one = cycle === 'annual' ? annualPrice(PLANS[plan]) : PLANS[plan].price;
-  return one == null ? null : one * Math.max(1, profiles);
-};
+/** The price of a plan for a period, for `profiles` Google profiles (branches are 20% off). */
+export const amountFor = (plan, cycle, profiles = 1) => priceFor(PLANS[plan], cycle, profiles);
 
 /** One month or one year after `ms`, on the same day of the month. */
 export function addPeriod(ms, cycle) {
