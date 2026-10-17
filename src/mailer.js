@@ -91,6 +91,17 @@ export function createMailer(
  * `brand: true` puts the product logo on top. Only for emails from the
  * platform itself; emails about a business carry that business's colors.
  */
+/**
+ * Mail apps (Gmail among them) don't always carry the direction down from the
+ * wrapper, so every block in the message gets it on its own, and lists get
+ * their indent on the right.
+ */
+function rtlBlocks(html) {
+  return String(html)
+    .replace(/<(ul|ol)(?![^>]*\sstyle=)(?=[\s>])/g, '<$1 style="padding-right:22px;padding-left:0;margin-right:0"')
+    .replace(/<(p|h[1-6]|ul|ol|li|table|tr|td|th|div|blockquote)(?![^>]*\sdir=)(?=[\s>])/g, '<$1 dir="rtl"');
+}
+
 export function emailLayout({ title, body, color = '#4b2bd6', footer = '', brand = false }) {
   const base = String(process.env.PUBLIC_URL ?? '').replace(/\/$/, '');
   const logo =
@@ -101,10 +112,10 @@ export function emailLayout({ title, body, color = '#4b2bd6', footer = '', brand
 <div dir="rtl" style="max-width:560px;margin:0 auto;padding:24px 16px;direction:rtl">
 ${logo}
 <div dir="rtl" style="background:#fff;border-radius:12px;padding:24px;border-top:4px solid ${color};text-align:right;direction:rtl">
-<h2 style="margin:0 0 12px">${h(title)}</h2>
-${body}
+<h2 dir="rtl" style="margin:0 0 12px">${h(title)}</h2>
+${rtlBlocks(body)}
 </div>
-<p style="color:#6b7280;font-size:12px;text-align:center">${footer}</p>
+<p dir="rtl" style="color:#6b7280;font-size:12px;text-align:center">${rtlBlocks(footer)}</p>
 </div></body></html>`;
 }
 
