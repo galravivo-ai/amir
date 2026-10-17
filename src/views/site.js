@@ -208,7 +208,10 @@ function talkForm(sent, error = '', v = {}) {
   </form>`;
 }
 
-/** The screenshots on the landing page (from public/media/guide). */
+/** Screenshots of the app, in the reader's language (public/media/guide, guide-en). */
+const shot = (file) => asset(`media/${isEn() ? 'guide-en' : 'guide'}/${file}`);
+
+/** The screenshots on the landing page. */
 const SCREENS = [
   ['dashboard', 'דשבורד', 'כל העסק במסך אחד: דירוג, ביקורות, צפיות, שיחות ומיקום במפות.'],
   ['reviews', 'ביקורות', 'כל הביקורות מגוגל ומהסקרים במקום אחד, עם תשובה מוכנה בלחיצה.'],
@@ -307,7 +310,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="#screens">${icon('search', 18)} איך זה נראה מבפנים</a></div>
-    <a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>
+    ${isEn() ? '' : `<a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>`}
     <div class="lp-checks">
       <span>${icon('check', 16)}בלי התחייבות</span>
       <span>${icon('check', 16)}בעברית מלאה</span>
@@ -322,7 +325,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
   <div class="lp-engines-row">${engines.map(([name, logo]) => `<span class="lp-engine"><img src="${asset(`brands/${logo}.svg`)}" alt="" width="24" height="24" loading="lazy">${name}</span>`).join('')}</div>
 </section>
 
-<section class="lp-band lp-video-band" id="video">
+${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
   <div class="lp-video-wrap">
   <div class="lp-video-text">
     <span class="lp-kicker">GoFive ב-36 שניות</span>
@@ -340,7 +343,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     </video>
   </div>
   </div>
-</section>
+</section>`}
 
 <section class="lp-band" id="why">
   <div class="lp-head">
@@ -476,7 +479,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     <figure class="lp-screens-frame">
       <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il</span></span>
       ${SCREENS.map(([key, label, cap], i) => `<div class="lp-shot" role="tabpanel" id="shot-${key}" aria-labelledby="shot-tab-${key}" data-shot="${key}"${i ? ' hidden' : ''}>
-        <button type="button" class="lp-zoom" aria-label="הגדלת צילום המסך: ${h(label)}"><img src="${asset(`media/guide/${key}.jpg`)}" alt="${h(label)}" width="1120" height="730" loading="lazy"><span class="lp-zoom-hint" aria-hidden="true">⤢ הגדלה</span></button>
+        <button type="button" class="lp-zoom" aria-label="הגדלת צילום המסך: ${h(label)}"><img src="${shot(`${key}.jpg`)}" alt="${h(label)}" width="1120" height="730" loading="lazy"><span class="lp-zoom-hint" aria-hidden="true">⤢ הגדלה</span></button>
         <figcaption>${h(cap)}</figcaption></div>`).join('')}
     </figure>
   </div>
@@ -555,7 +558,7 @@ ${networkSection()}
 // ---------------------------------------------------------------- guide
 
 const guideImg = (file, alt, small = false) =>
-  `<figure class="guide-fig${small ? ' small' : ''}"><img src="${asset(`media/guide/${file}`)}" alt="${h(alt)}" loading="lazy"></figure>`;
+  `<figure class="guide-fig${small ? ' small' : ''}"><img src="${shot(file)}" alt="${h(alt)}" loading="lazy"></figure>`;
 const compareTable = () => `<table class="guide-compare">
   <thead><tr><th></th><th>חיבור מלא</th><th>קישור בלבד</th></tr></thead>
   <tbody>${CONNECT_COMPARE.map(([what, full, link]) => `<tr><td>${h(what)}</td><td class="${full ? 'yes' : 'no'}">${full ? '✓' : '—'}</td><td class="${link ? 'yes' : 'no'}">${link ? '✓' : '—'}</td></tr>`).join('')}</tbody>
@@ -576,16 +579,16 @@ export function guideHubView({ signupOpen }) {
     <span>החיבור המלא לחשבון הגוגל של העסק מביא למערכת את כל הנתונים. שתי דקות, פעם אחת.</span>
     <i>למדריך החיבור ←</i>
   </a>
-  <div class="guide-video">
+  ${isEn() ? '' : `<div class="guide-video">
     <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
       <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
     </video>
-  </div>
+  </div>`}
   ${GUIDE_GROUPS.map(
     ([key, label]) => `<h2 class="guide-group">${h(label)}</h2>
   <div class="guide-cards">${FEATURE_GUIDES.filter((g) => g.group === key)
     .map(
-      (g) => `<a class="guide-card" href="/guide/${g.slug}"><img src="${asset(`media/guide/${g.image}`)}" alt="" loading="lazy"><b>${h(g.title)}</b><span>${h(g.summary)}</span>${g.full ? '<em>דורש חיבור מלא</em>' : ''}</a>`,
+      (g) => `<a class="guide-card" href="/guide/${g.slug}"><img src="${shot(g.image)}" alt="" loading="lazy"><b>${h(g.title)}</b><span>${h(g.summary)}</span>${g.full ? '<em>דורש חיבור מלא</em>' : ''}</a>`,
     )
     .join('')}</div>`,
   ).join('')}
@@ -605,11 +608,11 @@ export function guideConnectView({ signupOpen }) {
     body: `<section class="guide">
   <a class="guide-back" href="/guide">→ כל המדריכים</a>
   <header class="guide-head"><h1>${h(c.title)}</h1><p>${h(c.intro)}</p></header>
-  <div class="guide-video">
+  ${isEn() ? '' : `<div class="guide-video">
     <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
       <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
     </video>
-  </div>
+  </div>`}
   <div class="guide-why"><h2>למה חיבור מלא?</h2>${compareTable()}</div>
   ${c.steps
     .map(

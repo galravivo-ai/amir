@@ -1,4 +1,5 @@
 import { emailButton, emailLayout } from './mailer.js';
+import { englishEmail, isEn, translateText } from './lang.js';
 import { sendWebhook } from './notify.js';
 import { CONNECT_COMPARE, CONNECT_GUIDE, FEATURE_GUIDES } from './guide.js';
 import { emailList, h, safeColor } from './util.js';
@@ -12,6 +13,22 @@ const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
  */
 export function createNotifier({ store, mailer, pusher = null, publicUrl = () => process.env.PUBLIC_URL || 'http://localhost:3000', webhook = {} }) {
   const url = (path) => `${publicUrl().replace(/\/$/, '')}${path}`;
+
+  // Email to someone who reads English goes out in English (the same message,
+  // translated); everyone else, and mail to a business's customers, stays as written.
+  async function send(msg) {
+    const all = [].concat(msg.to).map((x) => String(x ?? '').trim()).filter(Boolean);
+    const english = (e) => {
+      const user = store.userByEmail(e);
+      return user ? user.lang === 'en' : isEn();
+    };
+    const en = all.filter(english);
+    if (!en.length) return mailer.send(msg);
+    const he = all.filter((e) => !en.includes(e));
+    const sent = he.length ? await mailer.send({ ...msg, to: he }) : true;
+    const translated = await mailer.send({ ...msg, to: en, subject: translateText(h(msg.subject)).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), html: msg.html && englishEmail(msg.html), text: msg.text && translateText(msg.text) });
+    return sent && translated;
+  }
 
   function recipients(business) {
     const custom = emailList(business.alert_emails);
@@ -50,7 +67,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         .map(([k, v]) => `<li><b>${h(labels[k] || k)}:</b> ${h([].concat(v).join(', '))}</li>`)
         .join('');
       const color = safeColor(business.brand_color);
-      await mailer.send({
+      await send({
         kind: 'negative_alert',
         businessId: business.id,
         to: recipients(business),
@@ -80,7 +97,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           tag: `sla-${response.id}`,
         })
         .catch((err) => console.warn('[push]', err.message));
-      await mailer.send({
+      await send({
         kind: 'sla_alert',
         businessId: business.id,
         to: recipients(business),
@@ -129,7 +146,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         .catch((err) => console.warn('[push]', err.message));
       if (review.rating > 3) return false;
       const color = safeColor(business.brand_color);
-      return mailer.send({
+      return send({
         kind: 'google_review',
         businessId: business.id,
         to: [...new Set([...recipients(business), ...store.branchRecipients(review.location_id)])],
@@ -154,7 +171,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         ?.sendToBusiness(business.id, { title: first.title, body: first.detail.slice(0, 140), url: first.href, tag: `drop-${first.kind}` })
         .catch((err) => console.warn('[push]', err.message));
       const color = safeColor(business.brand_color);
-      return mailer.send({
+      return send({
         kind: 'drop_alert',
         businessId: business.id,
         to: recipients(business),
@@ -181,7 +198,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           tag: `resp-${response.id}`,
         })
         .catch((err) => console.warn('[push]', err.message));
-      await mailer.send({
+      await send({
         kind: 'followup_no',
         businessId: business.id,
         to: recipients(business),
@@ -200,7 +217,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     async trialEnding(business, { amount = null } = {}) {
       // A trial with a saved card: say exactly what will be charged, and how to stop it.
       if (business.card_token) {
-        return mailer.send({
+        return send({
           kind: 'trial_ending',
           businessId: business.id,
           to: recipients(business),
@@ -215,7 +232,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           }),
         });
       }
-      return mailer.send({
+      return send({
         kind: 'trial_ending',
         businessId: business.id,
         to: recipients(business),
@@ -231,7 +248,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     async trialEnded(business) {
-      return mailer.send({
+      return send({
         kind: 'trial_ended',
         businessId: business.id,
         to: recipients(business),
@@ -252,7 +269,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       const row = (label, value) =>
         `<tr><td style="padding:6px 0;color:#6b7280">${h(label)}</td><td style="padding:6px 0;font-weight:bold">${value}</td></tr>`;
       const one = (v) => (v ? v.toFixed(1) : '—');
-      return mailer.send({
+      return send({
         kind: 'monthly_report',
         businessId: business.id,
         to: recipients(business),
@@ -295,7 +312,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         ended: ['המנוי הסתיים', `<p>המנוי של <b>${h(business.name)}</b> הסתיים כמו שביקשתם, והסקרים הושהו. כל הנתונים שמורים, ואפשר לחדש בכל רגע.</p>`],
       };
       const [title, body] = texts[kind] || texts.failed;
-      return mailer.send({
+      return send({
         kind: `billing_${kind}`,
         businessId: business.id,
         to: recipients(business),
@@ -307,7 +324,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     /** Someone asked for a quote on the website. */
     async leadReceived({ lead, kindLabel, admins }) {
       if (!admins.length) return false;
-      return mailer.send({
+      return send({
         kind: 'lead',
         to: admins,
         subject: `פנייה חדשה מהאתר: ${kindLabel} · ${lead.company || lead.name}`,
@@ -327,7 +344,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     /** A business asked for a plan: tell the people who activate plans. */
     async planRequested({ business, plan, cycle, user, admins }) {
       if (!admins.length) return false;
-      return mailer.send({
+      return send({
         kind: 'plan_request',
         businessId: business.id,
         to: admins,
@@ -346,7 +363,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     async subscriptionCancelled({ business, user, reason, until, cycle, refund = 0, admins }) {
       if (!admins.length) return false;
       const annual = cycle === 'annual';
-      return mailer.send({
+      return send({
         kind: 'subscription_cancelled',
         businessId: business.id,
         to: admins,
@@ -367,7 +384,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       const color = safeColor(business.brand_color);
       const row = (label, value) =>
         `<tr><td style="padding:6px 0;color:#6b7280">${h(label)}</td><td style="padding:6px 0;font-weight:bold">${value}</td></tr>`;
-      await mailer.send({
+      await send({
         kind: 'weekly_report',
         businessId: business.id,
         to: recipients(business),
@@ -416,7 +433,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     async teamInvite({ business, inviter, email, role, link }) {
-      return mailer.send({
+      return send({
         kind: 'team_invite',
         businessId: business.id,
         to: email,
@@ -490,7 +507,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
         ],
       };
       const [subject, title, body] = mails[kind];
-      return mailer.send({
+      return send({
         kind: `trial_${kind}`,
         businessId: business.id,
         to: owner.email,
@@ -521,7 +538,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       const features = FEATURE_GUIDES.map(
         (g) => `<li style="margin:0 0 6px"><a href="${h(url(`/guide/${g.slug}`))}" style="color:#4b2bd6;font-weight:600">${h(g.title)}</a> · <span style="color:#6b7280">${h(g.summary)}</span></li>`,
       ).join('');
-      return mailer.send({
+      return send({
         kind: 'welcome_guide',
         businessId: business?.id,
         to: user.email,
@@ -545,7 +562,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     async passwordReset({ user, link }) {
-      return mailer.send({
+      return send({
         kind: 'password_reset',
         to: user.email,
         subject: 'איפוס סיסמה',

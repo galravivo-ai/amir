@@ -1,6 +1,7 @@
 import { EDITABLE_TEXT_KEYS, LANGUAGES, PUBLIC_TEXTS } from '../i18n.js';
 import { AUDIENCES, QUESTION_TYPES, STATUSES } from '../store.js';
-import { asset, DEFAULT_INVITE_TEMPLATE, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
+import { asset, DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, formatDate, h, inviteMessage, logoSrc, safeColor, waLink } from '../util.js';
+import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { profileCard, viewsOf } from './performance.js';
@@ -376,7 +377,7 @@ export function dashboardView({
         ${can('manager') && connect?.connected ? '<a class="cover-link" href="/admin/google">⚙ חיבור לגוגל וסניפים</a>' : ''}
       </div>
     </header>
-    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, business?.invite_template || DEFAULT_INVITE_TEMPLATE, waAuto) : ''}
+    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, isEn() ? englishTokens(business?.invite_template || DEFAULT_INVITE_TEMPLATE_EN) : business?.invite_template || DEFAULT_INVITE_TEMPLATE, waAuto) : ''}
     ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}
     ${waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
     ${waResult && !waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(waResult.error || 'שגיאה')}</div>` : ''}`;
@@ -971,7 +972,7 @@ export function shareView({ campaign, baseUrl, csrf, invites, newInvite, busines
         : '';
   const url = `${baseUrl}/r/${campaign.slug}`;
   const inviteUrl = (t) => `${url}?i=${t}`;
-  const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token), template: inviteTemplate });
+  const inviteMsg = (inv) => inviteMessage({ name: inv.customer_name, businessName, link: inviteUrl(inv.token), template: inviteTemplate, english: isEn() });
   return `<p><a href="/admin/campaigns">→ חזרה לקמפיינים</a></p>
   <h1>QR ושליחה: ${h(campaign.name)}</h1>
   <div class="grid2">

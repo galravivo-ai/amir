@@ -3,6 +3,8 @@
 // to run them together: a comparison of the branches, a page per branch,
 // members limited to one branch, and shared reply templates.
 
+import { canonTokens } from './util.js';
+
 const VIEW_METRICS = ['BUSINESS_IMPRESSIONS_MOBILE_MAPS', 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH', 'BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH'];
 const ilDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(ms));
 
@@ -108,7 +110,7 @@ export function networkSummary(rows) {
 /** Fills a reply template for one review: {שם} is the reviewer's first name, {סניף} the branch. */
 export function fillTemplate(body, review) {
   const first = String(review.reviewer || '').trim().split(/\s+/)[0] || '';
-  return String(body)
+  return canonTokens(body)
     .replaceAll('{שם}', first)
     .replaceAll('{סניף}', review.location_title || '')
     .replace(/\s+([,.!])/g, '$1')

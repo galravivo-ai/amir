@@ -1,5 +1,9 @@
-import { h } from '../util.js';
+import { englishTokens, h } from '../util.js';
 import { icon } from './icons.js';
+import { isEn } from '../lang.js';
+
+// Templates are stored with {שם}; someone reading English sees {name}.
+const shownTokens = (t) => (isEn() ? englishTokens(t) : t);
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('he-IL'));
 const fmt1 = (n) => (n == null ? '—' : n.toFixed(1));
@@ -183,7 +187,7 @@ export function templatesView({ templates, csrf, canEdit }) {
   const form = (t = null) => `<form method="post" action="/admin/reply-templates${t ? `/${t.id}` : ''}" class="stack net-tpl-form">
       <input type="hidden" name="_csrf" value="${h(csrf)}">
       <div class="row compact"><input name="title" value="${h(t?.title || '')}" required maxlength="80" placeholder="שם התבנית, למשל: תודה על ביקורת חיובית" aria-label="שם התבנית">${starsSelect(t?.stars)}</div>
-      <textarea name="body" rows="3" required maxlength="2000" aria-label="נוסח התשובה" placeholder="תודה רבה {שם}! שמחים שנהניתם אצלנו ב{סניף}, מחכים לראות אתכם שוב.">${h(t?.body || '')}</textarea>
+      <textarea name="body" rows="3" required maxlength="2000" aria-label="נוסח התשובה" placeholder="תודה רבה {שם}! שמחים שנהניתם אצלנו ב{סניף}, מחכים לראות אתכם שוב.">${h(shownTokens(t?.body || ''))}</textarea>
       <div class="row compact"><button class="btn ${t ? '' : 'primary'}">${t ? 'שמירה' : 'הוספת תבנית'}</button>${
         t ? `<button class="btn-link danger-text" name="action" value="delete" onclick="return confirm('למחוק את התבנית?')">מחיקה</button>` : ''
       }</div>
@@ -196,7 +200,7 @@ export function templatesView({ templates, csrf, canEdit }) {
           .map((t) =>
             canEdit
               ? `<section class="card">${form(t)}</section>`
-              : `<section class="card"><h3>${h(t.title)} <span class="muted small">${h(STAR_SETS[t.stars] || '')}</span></h3><p>${h(t.body)}</p></section>`,
+              : `<section class="card"><h3>${h(t.title)} <span class="muted small">${h(STAR_SETS[t.stars] || '')}</span></h3><p>${h(shownTokens(t.body))}</p></section>`,
           )
           .join('')
       : `<section class="card empty"><p class="muted">עוד אין תבניות.</p>${

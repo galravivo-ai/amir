@@ -1,6 +1,7 @@
 import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
-import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
+import { DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
+import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { agenciesAdminBlock } from './agency.js';
 import { icon } from './icons.js';
@@ -15,8 +16,10 @@ const checked = (on) => (on ? 'checked' : '');
 
 /** The WhatsApp wording, with placeholders and a live preview. */
 function inviteMessageCard(business, csrf) {
-  const current = business.invite_template || DEFAULT_INVITE_TEMPLATE;
-  const sample = (t) => inviteMessage({ name: 'דנה', businessName: business.name, link: 'https://gofive.co.il/r/…', template: t });
+  const en = isEn();
+  const current = business.invite_template || (en ? DEFAULT_INVITE_TEMPLATE_EN : DEFAULT_INVITE_TEMPLATE);
+  const shown = en ? englishTokens(current) : current;
+  const sample = (t) => inviteMessage({ name: en ? 'Dana' : 'דנה', businessName: business.name, link: 'https://gofive.co.il/r/…', template: t, english: en });
   return `<section class="card stack" id="invite-message">
     <h3>נוסח ההודעה בוואטסאפ</h3>
     <p class="muted small">זו ההודעה שנפתחת כששולחים ללקוח בקשת דירוג. אפשר לכתוב אותה בסגנון של העסק. המילים בסוגריים מוחלפות לבד לכל לקוח.</p>
@@ -25,14 +28,14 @@ function inviteMessageCard(business, csrf) {
         ${csrfField(csrf)}
         <div class="im-chips" aria-label="הוספת שדה להודעה">
           ${[
-            ['{שם}', 'שם הלקוח'],
-            ['{עסק}', 'שם העסק'],
-            ['{קישור}', 'הקישור לסקר'],
+            [en ? '{name}' : '{שם}', 'שם הלקוח'],
+            [en ? '{business}' : '{עסק}', 'שם העסק'],
+            [en ? '{link}' : '{קישור}', 'הקישור לסקר'],
           ]
             .map(([tok, l]) => `<button type="button" class="chip-btn" data-insert="${tok}">+ ${l}</button>`)
             .join('')}
         </div>
-        <textarea name="invite_template" id="im-text" rows="5" maxlength="${INVITE_TEMPLATE_MAX}" dir="rtl">${h(current)}</textarea>
+        <textarea name="invite_template" id="im-text" rows="5" maxlength="${INVITE_TEMPLATE_MAX}" dir="${en ? 'ltr' : 'rtl'}">${h(shown)}</textarea>
         <p class="muted small">אם השם לא ידוע, "{שם}" פשוט נעלם מההודעה. אם תשכחו את {קישור}, הוא יתווסף בסוף.</p>
         <div class="row compact">
           <button class="btn primary">שמירה</button>
@@ -49,10 +52,10 @@ function inviteMessageCard(business, csrf) {
       var ta = document.getElementById('im-text'), out = document.getElementById('im-preview');
       var biz = ${JSON.stringify(business.name)};
       function render() {
-        var t = ta.value.trim() || ${JSON.stringify(DEFAULT_INVITE_TEMPLATE)};
-        if (t.indexOf('{קישור}') < 0) t += ' {קישור}';
-        out.textContent = t.replace(/[ \t]?\{שם\}/g, function (m) { return m.replace('{שם}', 'דנה'); })
-          .replace(/\{עסק\}/g, biz).replace(/\{קישור\}/g, 'https://gofive.co.il/r/…');
+        var t = ta.value.trim() || ${JSON.stringify(shown)};
+        if (!/\{(קישור|link)\}/i.test(t)) t += ' {link}';
+        out.textContent = t.replace(/[ \t]?\{(שם|name)\}/gi, function (m) { return m.replace(/\{(שם|name)\}/i, ${JSON.stringify(en ? 'Dana' : 'דנה')}); })
+          .replace(/\{(עסק|business)\}/gi, biz).replace(/\{(קישור|link)\}/gi, 'https://gofive.co.il/r/…');
       }
       ta.addEventListener('input', render);
       document.querySelectorAll('[data-insert]').forEach(function (b) {
@@ -301,7 +304,7 @@ export function integrationsView({ keys, newKey, csrf, baseUrl, available, campa
   const curl = `curl -X POST ${baseUrl}/api/v1/invites \\
   -H "Authorization: Bearer ${newKey || 'rk_...'}" \\
   -H "Content-Type: application/json" \\
-  -d '{"campaign": "${slug}", "name": "דנה", "phone": "0501234567", "email": "dana@example.com", "delay_minutes": 120}'`;
+  -d '{"campaign": "${slug}", "name": "${isEn() ? 'Dana' : 'דנה'}", "phone": "0501234567", "email": "dana@example.com", "delay_minutes": 120}'`;
   return `<h1>חיבורים</h1>
   <p class="muted">כך כל לקוח מקבל בקשת דירוג לבד, בלי שמישהו יצטרך לזכור לשלוח: הקופה, מערכת התורים, החנות באינטרנט או Make / Zapier שולחים לנו את פרטי הלקוח בסוף הביקור.</p>
   ${

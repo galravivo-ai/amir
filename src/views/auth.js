@@ -20,6 +20,7 @@ const startTerms = (trialOpen) =>
         <li>מחברים את פרופיל העסק בגוגל, והנתונים נטענים לבד.</li></ul>
         <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`;
 import { GOOGLE_G } from './google.js';
+import { isEn } from '../lang.js';
 
 /** A new password: the rule shown before typing, and a show/hide button. */
 let pwCount = 0;
@@ -283,6 +284,15 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
         </section>`
       : ''
   }
+  <form method="post" action="/account/lang" class="card stack" id="lang">
+    ${csrfField(csrf)}
+    <h3>שפה · Language</h3>
+    <div class="row compact">
+      <label class="check"><input type="radio" name="lang" value="he" ${isEn() ? '' : 'checked'}><span lang="he">עברית</span></label>
+      <label class="check"><input type="radio" name="lang" value="en" ${isEn() ? 'checked' : ''}><span lang="en">English</span></label>
+    </div>
+    <button class="btn">שמירה</button>
+  </form>
   <form method="post" action="/account/marketing" class="card stack" id="marketing">
     ${csrfField(csrf)}
     <h3>עדכונים במייל</h3>

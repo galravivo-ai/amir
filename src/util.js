@@ -143,20 +143,29 @@ export function waNumber(phone) {
   return d;
 }
 
+// Placeholders in message templates are kept in Hebrew ({שם}); the English
+// ones ({name}) mean the same, and are what an English reader sees.
+const TOKENS = { name: 'שם', business: 'עסק', link: 'קישור', branch: 'סניף' };
+/** {name} → {שם}: how templates are stored and filled. */
+export const canonTokens = (t) => String(t ?? '').replace(/\{(name|business|link|branch)\}/gi, (m, k) => `{${TOKENS[k.toLowerCase()]}}`);
+/** {שם} → {name}, for showing a template to someone who reads English. */
+export const englishTokens = (t) => Object.entries(TOKENS).reduce((s, [en, he]) => s.replaceAll(`{${he}}`, `{${en}}`), String(t ?? ''));
+
 // The WhatsApp text that invites a customer to rate. A business can write its
 // own; {שם}, {עסק} and {קישור} are filled in per customer.
 export const DEFAULT_INVITE_TEMPLATE = 'היי {שם}! תודה שבחרת ב{עסק}. נשמח לשמוע איך היה (פחות מדקה): {קישור}';
+export const DEFAULT_INVITE_TEMPLATE_EN = "Hi {שם}! Thanks for choosing {עסק}. We'd love to hear how it went (takes less than a minute): {קישור}";
 export const INVITE_TEMPLATE_MAX = 600;
 
 /** Cleans a template a business wrote; the link is added at the end if it was left out. */
 export function normalizeInviteTemplate(text) {
-  const t = String(text ?? '').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, INVITE_TEMPLATE_MAX);
+  const t = canonTokens(text).replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, INVITE_TEMPLATE_MAX);
   if (!t) return '';
   return t.includes('{קישור}') ? t : `${t} {קישור}`;
 }
 
-export function inviteMessage({ name = '', businessName, link, template = '' }) {
-  const t = normalizeInviteTemplate(template) || DEFAULT_INVITE_TEMPLATE;
+export function inviteMessage({ name = '', businessName, link, template = '', english = false }) {
+  const t = normalizeInviteTemplate(template) || (english ? DEFAULT_INVITE_TEMPLATE_EN : DEFAULT_INVITE_TEMPLATE);
   const who = String(name ?? '').trim();
   return t
     // Without a name, "היי {שם}!" becomes "היי!" rather than "היי !".

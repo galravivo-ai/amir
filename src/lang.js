@@ -26,13 +26,19 @@ export function setLang(value) {
 
 const HEB = /[֐-׿]/;
 // Numbers as they appear in the text: 1,234 · 4.6 · 16.10.2026 · 16:38 · 74%
-const NUM = /\d[\d,.:/]*%?/g;
+const NUM = /\d(?:[\d,.:/]*\d)?%?/g;
+
+// Quotes come either raw (written in a template) or escaped (through h()), so
+// both are looked up raw, and text taken from a page goes back escaped.
+const unquote = (s) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+const requote = (s) => s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 // Exact entries, entries with {n} for numbers, and patterns with named slots.
 const exact = new Map();
 const numeric = new Map();
 const patterns = [];
-for (const [he, en] of Object.entries(EN)) {
+for (const [key, en] of Object.entries(EN)) {
+  const he = unquote(key);
   const slots = he.match(/\{(\w+)\}/g) || [];
   if (!slots.length) exact.set(he, en);
   else if (slots.every((s) => s === '{n}')) numeric.set(he, en);
@@ -46,8 +52,9 @@ for (const [he, en] of Object.entries(EN)) {
 patterns.sort((a, b) => b.weight - a.weight);
 
 /** One piece of text (already HTML-escaped, without surrounding spaces). */
-export function translateText(text) {
-  if (!HEB.test(text)) return text;
+export function translateText(html) {
+  if (!HEB.test(html)) return html;
+  const text = unquote(html);
   const hit = exact.get(text);
   if (hit != null) return hit;
   const nums = text.match(NUM);
@@ -61,10 +68,18 @@ export function translateText(text) {
   for (const p of patterns) {
     const m = p.re.exec(text);
     if (!m) continue;
-    const vals = Object.fromEntries(p.names.map((n, i) => [n, translateText(m[i + 1])]));
+    const vals = Object.fromEntries(p.names.map((n, i) => [n, slot(requote(m[i + 1]))]));
     return p.en.replace(/\{(\w+)\}/g, (s, k) => vals[k] ?? s);
   }
-  return text;
+  return html;
+}
+
+// A slot's text: translated when it's interface text, also as a list ("North, East").
+function slot(text) {
+  const en = translateText(text);
+  if (en !== text || !text.includes(', ')) return en;
+  const parts = text.split(', ').map(translateText);
+  return parts.some((x) => HEB.test(x)) ? text : parts.join(', ');
 }
 
 const keepSpace = (s, fn) => {
@@ -73,8 +88,10 @@ const keepSpace = (s, fn) => {
 };
 
 // Strings inside inline scripts and on* handlers: confirm('…'), textContent='…'.
+// A lone "and" (ו) is only safe to translate in code: on a page it may be someone's initial.
+const CODE_ONLY = { ו: 'and' };
 const quoted = (code) => code.replace(/(['"])((?:(?!\1)[^\\\n]|\\.)*?[֐-׿](?:(?!\1)[^\\\n]|\\.)*?)\1/g, (s, q, body) => {
-  const en = translateText(body);
+  const en = keepSpace(body, (t) => CODE_ONLY[t] ?? translateText(t));
   return en === body ? s : q + en.replace(new RegExp(q, 'g'), `\\${q}`) + q;
 });
 
@@ -108,7 +125,7 @@ export function translate(html) {
 /** Every piece of Hebrew interface text on a page, for finding what still needs a translation. */
 export function untranslated(html) {
   const found = new Set();
-  const seen = (t) => HEB.test(t) && translateText(t) === t && found.add(t.replace(NUM, '{n}'));
+  const seen = (t) => HEB.test(t) && translateText(t) === t && found.add(unquote(t).replace(NUM, '{n}'));
   const re = /<(script|style)\b[^>]*>[\s\S]*?<\/\1>|<!--[\s\S]*?-->|<[^>]+>/gi;
   let i = 0;
   const text = (s) => seen(s.trim());
@@ -120,4 +137,13 @@ export function untranslated(html) {
   }
   text(html.slice(i));
   return [...found];
+}
+
+/** An email, in English: the text, and the layout turned left-to-right. */
+export function englishEmail(html) {
+  return translate(html)
+    .replace(/text-align:\s*right/g, 'text-align:left')
+    .replace(/(padding|margin|border)-right/g, '$1-@@')
+    .replace(/(padding|margin|border)-left/g, '$1-right')
+    .replace(/(padding|margin|border)-@@/g, '$1-left');
 }

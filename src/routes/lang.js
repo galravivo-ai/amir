@@ -1,7 +1,7 @@
 import { LANGS, LANG_COOKIE, runWithLang, translate } from '../lang.js';
 
-// Pages printed for customers, and the operator's own screens, stay in Hebrew.
-const HEBREW_ONLY = /^\/(superadmin|admin\/status)(\/|$)|^\/admin\/campaigns\/\d+\/poster/;
+// The operator's own screens stay in Hebrew.
+const HEBREW_ONLY = /^\/(superadmin|admin\/status)(\/|$)/;
 
 /**
  * The language of this request: ?lang= (remembered in a cookie, and on the

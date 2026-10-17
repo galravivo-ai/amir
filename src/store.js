@@ -370,7 +370,7 @@ export function createStore(db) {
       if (!id) return null;
       return (
         q(
-          `SELECT s.id AS session_id, s.csrf, u.id, u.email, u.name, u.is_superadmin
+          `SELECT s.id AS session_id, s.csrf, u.id, u.email, u.name, u.is_superadmin, u.lang
            FROM sessions s JOIN users u ON u.id = s.user_id
            WHERE s.id = ? AND s.expires_at > ?`,
         ).get(id, new Date().toISOString()) || null

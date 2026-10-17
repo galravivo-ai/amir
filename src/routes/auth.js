@@ -9,6 +9,7 @@ import * as V from '../views/auth.js';
 import { rateLimiter } from './public.js';
 import { BIZ_COOKIE, SESSION_COOKIE } from './context.js';
 import { ensureDemo } from '../demo.js';
+import { lang, LANG_COOKIE } from '../lang.js';
 
 const CHALLENGE_COOKIE = 'l2';
 // "Sign in with Google": the round trip's state, and a sign-up waiting for its business name (both sealed).
@@ -56,6 +57,8 @@ export function authRoutes(ctx) {
     // operator already named the admins (SUPERADMIN_EMAILS).
     const named = String(process.env.SUPERADMIN_EMAILS ?? '').trim();
     if (first && !named) store.setSuperadmin(id, true);
+    // Someone who signed up in English keeps reading English.
+    if (lang() === 'en') store.setUserLang(id, 'en');
     return id;
   }
 
@@ -64,7 +67,7 @@ export function authRoutes(ctx) {
   // Closed unless DEMO_OPEN=1: the landing page shows screenshots instead.
   router.get('/demo', (req, res) => {
     if (process.env.DEMO_OPEN !== '1') return res.redirect(303, '/#screens');
-    const { userId, businessId } = ensureDemo(store);
+    const { userId, businessId } = ensureDemo(store, lang());
     ctx.startSession(res, userId);
     res.cookie(BIZ_COOKIE, String(businessId), { ...ctx.cookieOpts, maxAge: 864e5 });
     res.redirect(303, '/admin');
@@ -396,6 +399,13 @@ export function authRoutes(ctx) {
     const name = String(req.body.name ?? '').trim().slice(0, 80);
     if (name) store.updateUserName(req.user.id, name);
     res.redirect(303, '/account?ok=1');
+  });
+
+  router.post('/account/lang', ctx.requireAuth, (req, res) => {
+    const value = req.body.lang === 'en' ? 'en' : 'he';
+    store.setUserLang(req.user.id, value === 'en' ? 'en' : '');
+    res.cookie(LANG_COOKIE, value, { ...ctx.cookieOpts, httpOnly: false, maxAge: 365 * 864e5 });
+    res.redirect(303, '/account?ok=1#lang');
   });
 
   router.post('/account/marketing', ctx.requireAuth, (req, res) => {

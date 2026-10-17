@@ -8,6 +8,7 @@ import { limitLabel } from '../plans.js';
 import { normalizeQuestions, STATUSES } from '../store.js';
 import { templateQuestions, TEMPLATES } from '../templates.js';
 import { clampInt, csvEscape, errorPage, googleReviewUrl, inviteMessage, isEmail, normalizeInviteTemplate, safeUrl, waLink, waNumber } from '../util.js';
+import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
 import { googleOverview } from './performance.js';
@@ -544,7 +545,7 @@ export function adminRoutes(ctx) {
     const link = `${ctx.baseUrl(req)}/r/${c.slug}?i=${t}`;
     // The text edited in the send window for this customer, else the business's wording.
     const template = normalizeInviteTemplate(req.body.message) || req.business.invite_template;
-    res.redirect(303, waLink(phone, inviteMessage({ name, businessName: req.business.name, link, template })));
+    res.redirect(303, waLink(phone, inviteMessage({ name, businessName: req.business.name, link, template, english: isEn() })));
   });
 
   return admin;
