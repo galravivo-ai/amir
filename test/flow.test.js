@@ -1392,3 +1392,18 @@ test('system admin: each new customer\'s progress, and who to call', async () =>
   assert.match(page, /act-chip no">✗ גוגל/);
   assert.ok(store.userByEmail('stuck@example.com').last_seen_at, 'the visit is remembered');
 });
+
+test('"Need help?" in the menu sends a message to the operator', async () => {
+  const owner = await registeredOwner('help@example.com');
+  const dash = (await owner.req('/admin')).text;
+  assert.match(dash, /צריכים עזרה\? כתבו לנו/);
+  const r = await owner.req('/admin/help', { method: 'POST', form: { _csrf: await csrfOf(owner), message: 'לא מצליח לחבר את גוגל', phone: '050-1234567', back: '/admin/google' } });
+  assert.equal(r.location, '/admin/google?help=sent');
+  const lead = store.recentLeads()[0];
+  assert.deepEqual([lead.kind, lead.email, lead.message], ['support', 'help@example.com', 'לא מצליח לחבר את גוגל']);
+  assert.ok(outbox('lead').some((m) => /לא מצליח לחבר את גוגל/.test(m.body)));
+  assert.match((await owner.req(r.location)).text, /קיבלנו את הפנייה/);
+  // Never sent back outside the app.
+  const away = await owner.req('/admin/help', { method: 'POST', form: { _csrf: await csrfOf(owner), message: 'x', back: 'https://evil.example' } });
+  assert.equal(away.location, '/admin?help=sent');
+});

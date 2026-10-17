@@ -76,7 +76,7 @@ export function createContext(
           business: b,
           businesses: req.businesses,
           csrf: req.user?.csrf,
-          flash: req.query?.ok ? 'נשמר בהצלחה' : '',
+          flash: req.query?.help === 'sent' ? 'קיבלנו את הפנייה. נחזור אליכם בהקדם.' : req.query?.ok ? 'נשמר בהצלחה' : '',
           isSuperadmin: ctx.isSuperadmin(req.user),
           current: req.originalUrl,
           brand: ctx.brandFor(req),

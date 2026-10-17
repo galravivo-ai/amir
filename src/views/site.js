@@ -168,7 +168,7 @@ function heroVisual() {
   </div>`;
 }
 
-export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר' };
+export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר', support: 'פנייה לעזרה מתוך המערכת' };
 
 function contactForm(error = '', v = {}) {
   const val = (k) => h(v[k] ?? '');

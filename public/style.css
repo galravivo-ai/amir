@@ -2641,3 +2641,10 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .act-sum { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .act-sum b { font-size: 1.3rem; }
 .act-list { margin: 0; padding-inline-start: 1.2rem; display: grid; gap: 6px; }
+/* "Need help?" in the menu, and its window */
+.side-help { display: flex; align-items: center; gap: 10px; width: 100%; margin: 6px 0; padding: 9px 12px; border: 1px dashed rgba(255, 207, 58, .55); border-radius: 10px; background: transparent; color: #ffe07a; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; text-align: start; }
+.side-help:hover { background: rgba(255, 207, 58, .1); }
+.side-help .icon { color: #ffcf3a; }
+.help-dlg { width: min(480px, calc(100vw - 24px)); padding: 24px; border: 0; border-radius: 16px; box-shadow: 0 30px 80px -20px rgba(20, 12, 70, .5); }
+.help-dlg::backdrop { background: rgba(14, 10, 46, .55); }
+.help-dlg h2 { margin: 0; font-size: 1.25rem; }

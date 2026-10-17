@@ -30,6 +30,28 @@ export function adminRoutes(ctx) {
   });
 
   // ---------- dashboard ----------
+  // "Need help?" from the menu: a message to the operator, kept with the website leads.
+  admin.post('/help', async (req, res) => {
+    const message = String(req.body.message ?? '').trim().slice(0, 1000);
+    const back = /^\/admin(\/|\?|$)/.test(String(req.body.back ?? '')) ? String(req.body.back).replace(/[?&]help=\w+/, '') : '/admin';
+    const sep = back.includes('?') ? '&' : '?';
+    if (!message) return res.redirect(303, `${back}${sep}help=empty`);
+    const lead = {
+      kind: 'support',
+      name: req.user.name,
+      email: req.user.email,
+      phone: String(req.body.phone ?? '').replace(/[^0-9+()\s.-]/g, '').slice(0, 20),
+      company: req.business.name,
+      size: '',
+      message,
+    };
+    store.createLead(lead);
+    await ctx.notifier
+      ?.leadReceived({ lead, kindLabel: 'פנייה לעזרה מתוך המערכת', admins: ctx.adminEmails() })
+      .catch((err) => console.error('[notify] help request failed:', err.message));
+    res.redirect(303, `${back}${sep}help=sent`);
+  });
+
   admin.post('/onboarding/dismiss', manager, (req, res) => {
     store.setOnboardingFlag(req.business.id, 'dismissed');
     res.redirect(303, '/admin');

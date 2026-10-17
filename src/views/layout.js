@@ -262,6 +262,7 @@ b.addEventListener('click',function(){var c=!g.classList.contains('folded');set(
 function t(open){b.classList.toggle('nav-open',open);o.setAttribute('aria-expanded',String(open));sc.hidden=!open;if(open)document.querySelector('.m-close').focus()}
 o.addEventListener('click',function(){t(true)});sc.addEventListener('click',function(){t(false)});document.querySelector('.m-close').addEventListener('click',function(){t(false);o.focus()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList.contains('nav-open')){t(false);o.focus()}})})();</script>
+  <button type="button" class="side-help" onclick="document.getElementById('help-dlg').showModal()">${icon('chat', 18)}<span>צריכים עזרה? כתבו לנו</span></button>
   ${usageBlock}
   <form method="post" action="/logout" class="side-user">
     <input type="hidden" name="_csrf" value="${h(csrf)}">
@@ -269,6 +270,17 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList
     <button class="icon-btn" aria-label="יציאה" title="יציאה">${icon('logout', 18)}</button>
   </form>
 </aside>
+<dialog id="help-dlg" class="help-dlg" aria-labelledby="help-title">
+  <form method="post" action="/admin/help" class="stack">
+    <input type="hidden" name="_csrf" value="${h(csrf)}">
+    <input type="hidden" name="back" value="${h(current)}">
+    <h2 id="help-title">איך אפשר לעזור?</h2>
+    <p class="muted small">כתבו מה קרה או מה לא ברור, ונחזור אליכם במייל${business ? ` (${h(user.email)})` : ''} או בטלפון.</p>
+    <label>ההודעה<textarea name="message" rows="5" required maxlength="1000" placeholder="למשל: לא מצליח לחבר את פרופיל הגוגל"></textarea></label>
+    <label>טלפון לחזרה <span class="muted small">(לא חובה)</span><input name="phone" type="tel" maxlength="20" dir="ltr" autocomplete="tel"></label>
+    <div class="row compact"><button class="btn primary">שליחה</button><button type="button" class="btn" onclick="this.closest('dialog').close()">ביטול</button></div>
+  </form>
+</dialog>
 <main class="app-main" id="main">
   ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">פתיחת חשבון לעסק שלכם</a></div>` : accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
