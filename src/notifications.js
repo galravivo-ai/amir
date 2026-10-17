@@ -435,6 +435,71 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
      * with the real screens, then a link to a short guide for each feature.
      * Sent on sign-up, and again from the system panel.
      */
+    /**
+     * During the trial, by the business's progress: a day in without Google
+     * (connect), and on day 3 either what is already visible with the ways to
+     * get reviews and climb in Maps, or a second, more helpful nudge to connect.
+     * Replies go to the operator.
+     */
+    async trialNudge({ business, owner, kind, summary = null, daysLeft = null, replyTo = '' }) {
+      const first = h(String(owner.name || '').split(' ')[0] || '');
+      const hi = first ? `<p>היי ${first},</p>` : '';
+      const help = '<p style="color:#6b7280;font-size:14px">נתקעתם? פשוט עונים למייל הזה, ונעזור לכם.</p>';
+      const li = (title, text) => `<li style="margin:0 0 10px"><b>${title}</b><br><span style="color:#4b5563">${text}</span></li>`;
+      const box = (value, label) => `<td style="padding:10px;border:1px solid #eee;text-align:center"><div style="font-size:22px;font-weight:bold">${value}</div><div style="color:#6b7280;font-size:13px">${label}</div></td>`;
+      const mails = {
+        connect: [
+          `עוד צעד אחד ו-${business.name} מתחיל לעבוד`,
+          'עוד צעד אחד: מחברים את פרופיל הגוגל',
+          `${hi}<p>נרשמתם ל-GoFive, אבל פרופיל העסק בגוגל עוד לא מחובר. בלי החיבור המערכת לא רואה את הביקורות, הצפיות והשיחות של <b>${h(business.name)}</b>.</p>
+            <p><b>זה לוקח דקה:</b></p>
+            <ol style="padding-right:20px;line-height:1.8"><li>לוחצים על הכפתור למטה</li><li>בוחרים את חשבון הגוגל שמנהל את העסק ומאשרים</li><li>בוחרים את הסניף, וזהו. הנתונים נטענים לבד</li></ol>
+            ${emailButton(url('/admin?connect=1'), 'לחיבור פרופיל הגוגל')}${help}`,
+        ],
+        connect_again: [
+          `${business.name}: הנתונים מחכים לחיבור`,
+          'עוד לא ראיתם את המערכת עובדת',
+          `${hi}<p>עברו כמה ימים מתקופת הניסיון${daysLeft != null ? ` (נשארו ${daysLeft} ימים)` : ''}, והפרופיל של <b>${h(business.name)}</b> עדיין לא מחובר. חבל לבזבז את ימי הניסיון בלי לראות נתונים.</p>
+            <p>אם אין לכם גישה לחשבון הגוגל של העסק, יש שתי דרכים:</p>
+            <ul style="padding-right:20px;line-height:1.8"><li>מי שמנהל את הפרופיל מוסיף אתכם כמנהלים (בגוגל: "אנשים וגישה")</li><li>או מתחילים בינתיים במעקב לפי קישור: מדביקים את הקישור לעסק מגוגל מפות</li></ul>
+            ${emailButton(url('/admin?connect=1'), 'לחיבור עכשיו')}
+            <p style="color:#6b7280;font-size:14px">רוצים שנחבר יחד בטלפון? עונים למייל הזה עם מספר, ונתקשר.</p>`,
+        ],
+        progress: [
+          `${business.name}: מה כבר רואים, ואיך מביאים עוד ביקורות`,
+          'כמה ימים ב-GoFive',
+          `${hi}${
+            summary?.total
+              ? `<p>ככה ${h(business.name)} נראה בגוגל כרגע:</p>
+                <table style="width:100%;border-collapse:collapse;margin:8px 0 16px"><tr>${box(`${summary.avg.toFixed(1)}★`, 'דירוג בגוגל')}${box(summary.total.toLocaleString('he-IL'), 'ביקורות')}${box(summary.unanswered, 'מחכות לתשובה')}</tr></table>
+                ${summary.unanswered ? `<p>יש <b>${summary.unanswered}</b> ביקורות בלי תשובה. עונים להן ישר מהמערכת, עם טיוטה מוכנה בלחיצה. <a href="${url('/admin/google/reviews?filter=unanswered')}">לביקורות</a></p>` : ''}`
+              : `<p>הפרופיל של ${h(business.name)} מחובר, והנתונים כבר נאספים.</p>`
+          }
+            <h3 style="margin:22px 0 8px">איך מביאים עוד ביקורות? בוחרים מה שמתאים לעסק</h3>
+            <ul style="padding-right:20px;margin:0">
+              ${li('שלט QR בקופה או על השולחנות', 'מתאים לעסק שהלקוחות מגיעים אליו: מסעדה, חנות, מספרה. מעצבים ומדפיסים בדקה.')}
+              ${li('קישור אישי בוואטסאפ, SMS או מייל', 'מתאים לשירות: קליניקה, משרד, בעל מקצוע. אחרי פגישה או עבודה שולחים ללקוח קישור קצר עם השם שלו.')}
+              ${li('שליחה אוטומטית אחרי כל ביקור', 'בוואטסאפ או במייל, בלי לזכור לשלוח בכל פעם.')}
+            </ul>
+            <p style="color:#4b5563;font-size:14px">בכל הדרכים לקוח מרוצה מגיע לכתוב ביקורת בגוגל, ולקוח פחות מרוצה כותב ישירות אליכם.</p>
+            ${emailButton(url('/admin/campaigns'), 'לבחירת דרך ושליחה')}
+            <h3 style="margin:22px 0 8px">לעלות בגוגל מפות</h3>
+            <p>כשמישהו באזור מחפש בגוגל מפות את מה שאתם עושים (למשל "מסעדה איטלקית" או "עורך דין"), באיזה מקום אתם מופיעים? ב<b>מיקום במפות</b> מגדירים חיפוש ורואים את המיקום בכל שכונה מול המתחרים, וב<b>בריאות הפרופיל</b> מקבלים רשימת תיקונים שעוזרים לעלות.</p>
+            ${emailButton(url('/admin/rankings'), 'לבדיקת המיקום במפות')}
+            ${daysLeft != null ? `<p style="color:#6b7280;font-size:14px">נשארו ${daysLeft} ימים לתקופת הניסיון. שאלות? עונים למייל הזה.</p>` : help}`,
+        ],
+      };
+      const [subject, title, body] = mails[kind];
+      return mailer.send({
+        kind: `trial_${kind}`,
+        businessId: business.id,
+        to: owner.email,
+        replyTo,
+        subject,
+        html: emailLayout({ title, brand: true, body }),
+      });
+    },
+
     async welcomeGuide({ user, business }) {
       const c = CONNECT_GUIDE;
       const cell = 'padding:8px 10px;border-bottom:1px solid #eee';

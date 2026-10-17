@@ -1407,3 +1407,36 @@ test('"Need help?" in the menu sends a message to the operator', async () => {
   const away = await owner.req('/admin/help', { method: 'POST', form: { _csrf: await csrfOf(owner), message: 'x', back: 'https://evil.example' } });
   assert.equal(away.location, '/admin?help=sent');
 });
+
+test('trial emails: connect after a day, then progress or a second nudge on day 3', async () => {
+  const { jobs } = createApp(store.db, { ai: null, backups: false });
+  const mails = (email) => store.db.prepare("SELECT kind, subject, body FROM outbox WHERE to_addr = ? AND kind LIKE 'trial\\_%' ESCAPE '\\' ORDER BY id").all(email);
+  await registeredOwner('nudge-a@example.com');
+  await registeredOwner('nudge-b@example.com');
+  const biz = (email) => store.businessesFor(store.userByEmail(email).id)[0];
+  const age = (email, days) => store.db.prepare(`UPDATE businesses SET created_at = datetime('now', '-${days * 24} hours') WHERE id = ?`).run(biz(email).id);
+  // Too new: nothing.
+  await jobs.trialNudges();
+  assert.equal(mails('nudge-a@example.com').length, 0);
+  age('nudge-a@example.com', 1.5);
+  await jobs.trialNudges();
+  await jobs.trialNudges();
+  let a = mails('nudge-a@example.com');
+  assert.deepEqual(a.map((m) => m.kind), ['trial_connect'], 'once');
+  assert.match(a[0].body, /\/admin\?connect=1/);
+  // Day 3, still not connected: the second nudge.
+  age('nudge-a@example.com', 3.2);
+  await jobs.trialNudges();
+  a = mails('nudge-a@example.com');
+  assert.deepEqual(a.map((m) => m.kind), ['trial_connect', 'trial_connect_again']);
+  // Day 3, connected: what is visible, the ways to get reviews, and Maps.
+  store.db.prepare("INSERT INTO google_locations (business_id, name, source, place_id, title, enabled, avg_rating, total_reviews) VALUES (?, 'serp:nudge', 'serp', 'nudge', 'קפה', 1, 4.6, 120)").run(biz('nudge-b@example.com').id);
+  age('nudge-b@example.com', 3.5);
+  await jobs.trialNudges();
+  const b = mails('nudge-b@example.com');
+  assert.deepEqual(b.map((m) => m.kind), ['trial_progress'], 'no connect email for a connected business');
+  assert.match(b[0].body, /4\.6★/);
+  assert.match(b[0].body, /שלט QR/);
+  assert.match(b[0].body, /קישור אישי בוואטסאפ/);
+  assert.match(b[0].body, /לעלות בגוגל מפות/);
+});

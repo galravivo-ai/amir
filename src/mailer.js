@@ -7,11 +7,11 @@ import { h } from './util.js';
  */
 export function resendTransport(apiKey, fetchImpl = globalThis.fetch) {
   return {
-    async sendMail({ from, to, subject, html, text }) {
+    async sendMail({ from, to, subject, html, text, replyTo }) {
       const res = await fetchImpl('https://api.resend.com/emails', {
         method: 'POST',
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ from, to: String(to).split(','), subject, html, text }),
+        body: JSON.stringify({ from, to: String(to).split(','), subject, html, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
         signal: AbortSignal.timeout(20e3),
       });
       if (!res.ok) {
@@ -63,7 +63,8 @@ export function createMailer(
   return {
     enabled: Boolean(transporter),
     /** Never throws: failures are logged in the outbox. */
-    async send({ to, subject, html, text, kind = 'general', businessId = null }) {
+    /** `replyTo`: where a reply goes (the operator), when the sender address takes no mail. */
+    async send({ to, subject, html, text, kind = 'general', businessId = null, replyTo = '' }) {
       const recipients = [].concat(to).map((x) => String(x).trim()).filter(Boolean);
       if (!recipients.length) return false;
       const body = html || `<pre>${h(text)}</pre>`;
@@ -72,7 +73,7 @@ export function createMailer(
         return true;
       }
       try {
-        await transporter.sendMail({ from: sender, to: recipients.join(','), subject, html: body, text });
+        await transporter.sendMail({ from: sender, to: recipients.join(','), subject, html: body, text, ...(replyTo ? { replyTo } : {}) });
         log.run(businessId, kind, recipients.join(','), subject, body, 'sent', '');
         return true;
       } catch (err) {

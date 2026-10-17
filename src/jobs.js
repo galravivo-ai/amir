@@ -87,6 +87,41 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return sent;
   }
 
+  /**
+   * During a trial: a day in without Google, a nudge to connect; from day 3,
+   * either what is already visible (connected) or a second nudge. Each once.
+   */
+  async function trialNudges() {
+    let sent = 0;
+    const t = now().getTime();
+    const replyTo = String(process.env.CONTACT_EMAIL || '').trim() || store.superadminEmails()[0] || '';
+    for (const business of store.allBusinesses()) {
+      if (business.billing !== 'trial' || !business.owner_email) continue;
+      const age = t - Date.parse(`${String(business.created_at).replace(' ', 'T')}Z`);
+      if (!(age >= 864e5)) continue;
+      const flags = (() => { try { return JSON.parse(business.onboarding || '{}'); } catch { return {}; } })();
+      const access = accessOf(business, t);
+      const daysLeft = access.state === 'trial' ? access.daysLeft : null;
+      const owner = { name: business.owner_name, email: business.owner_email };
+      let kind = null;
+      let flag = null;
+      if (age >= 3 * 864e5 && !flags.mail_d3) {
+        kind = business.has_google ? 'progress' : 'connect_again';
+        flag = 'mail_d3';
+      } else if (age < 3 * 864e5 && !business.has_google && !flags.mail_d1) {
+        kind = 'connect';
+        flag = 'mail_d1';
+      }
+      if (!kind) continue;
+      store.setOnboardingFlag(business.id, flag);
+      // A business that joined days ago and never got the first one: only the day-3 email.
+      if (flag === 'mail_d3') store.setOnboardingFlag(business.id, 'mail_d1');
+      const summary = kind === 'progress' ? store.googleSummary(business.id) : null;
+      if (await notifier.trialNudge({ business, owner, kind, summary, daysLeft, replyTo })) sent++;
+    }
+    return sent;
+  }
+
   /** One email the day before a trial ends, and one when it has ended. */
   async function trialNotices() {
     let sent = 0;
@@ -197,7 +232,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, dropAlerts, weeklyReports, monthlyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, trialNudges, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, dropAlerts, weeklyReports, monthlyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -223,6 +258,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     slaAlerts,
     weeklyReports,
     trialNotices,
+    trialNudges,
     googleReviews,
     aiVisibility,
     dailyBackup,
