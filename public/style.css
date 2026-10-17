@@ -2678,3 +2678,15 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 /* Hebrew / English switch in the site header */
 .site-cta > a.lang-switch { font-weight: 600; font-size: .85rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .2rem .7rem; }
 .site-cta > a.lang-switch:hover { color: var(--purple); border-color: var(--purple); }
+
+/* Landing: the maps growth tile, a week's plan next to the rank grid */
+.lp-maps { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.lp-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lp-plan li { display: grid; gap: 2px; background: #f8f7fd; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .86rem; }
+.lp-plan em { justify-self: start; font-style: normal; font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--purple-soft); color: var(--purple-deep); }
+.lp-plan em.pro { background: #fff4d1; color: #8a5a00; }
+.lp-plan em.dis { background: #e6f4ff; color: #0b5b9c; }
+.lp-plan small { color: var(--muted); font-size: .78rem; }
+.lp-maps-side { display: grid; justify-items: center; gap: 12px; }
+.lp-maps-score { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); font-weight: 600; }
+@media (max-width: 560px) { .lp-maps { grid-template-columns: minmax(0, 1fr); } }

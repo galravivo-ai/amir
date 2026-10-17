@@ -2278,5 +2278,21 @@
 "נובמבר {y} ב{b}": "November {y} at {b}",
 "דצמבר {y} ב{b}": "December {y} at {b}",
 "הדירוג בגוגל ירד ל-{n}": "Your Google rating dropped to {n}",
-"ציון הנראות ב-AI ירד ל-{n}": "Your AI visibility score dropped to {n}"
+"ציון הנראות ב-AI ירד ל-{n}": "Your AI visibility score dropped to {n}",
+"איך GoFive עוזרת לעלות בגוגל מפות?": "How does GoFive help you climb on Google Maps?",
+"גוגל מדרגת עסקים במפות לפי שלושה דברים: כמה הפרופיל מתאים לחיפוש, כמה העסק בולט ופעיל (ביקורות, תשובות, פוסטים), וכמה הוא קרוב למי שמחפש. בעמוד \"קידום במפות\" GoFive בודקת את כל אלה, ובונה לכם כל שבוע תוכנית קצרה מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות לעומת המוביל באזור, ובאיזה כיוון סביב העסק אתם חלשים. הבדיקה השבועית מראה אם עליתם.": "Google ranks businesses on Maps by three things: how well your profile matches the search, how prominent and active the business is (reviews, replies, posts), and how close it is to the searcher. On the “Maps growth” page GoFive checks all of these, and builds you a short plan every week from your own data: what to complete in your profile, how many reviews you need to match the local leader, and which direction around your business you're weak in. The weekly check shows whether you've climbed.",
+"אפשר להשתמש במערכת באנגלית?": "Is the system available in English?",
+"כן. המערכת, המיילים וטיוטות ה-AI זמינים בעברית ובאנגלית, ומחליפים שפה בכל רגע בעמוד \"החשבון שלי\". הסקר ללקוחות זמין בעברית, ערבית, אנגלית ורוסית.": "Yes. The system, emails and AI drafts are available in English and Hebrew, and you can switch language anytime on the “My account” page. The customer survey is available in English, Hebrew, Arabic and Russian.",
+"להשלים תיאור עסק מלא": "Complete your business description",
+"למוביל באזור 212 ביקורות, ולכם 87": "The local leader has 212 reviews, you have 87",
+"לחזק את האזור: מזרח": "Strengthen the area: East",
+"תוכנית קצרה לכל שבוע, מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות מול המוביל באזור, ובאיזה כיוון סביב העסק אתם חלשים. בדיקה שבועית מ-9 נקודות מראה אם עליתם.": "A short plan every week, from your own data: what to complete in your profile, how many reviews you need to match the local leader, and which direction around your business you're weak in. A weekly check from 9 points shows whether you've climbed.",
+"השוואה למתחרים": "Competitor comparison",
+"עברית ואנגלית": "English and Hebrew",
+"תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.": "A short weekly plan to climb on Maps, and replies the AI already drafted.",
+"להשלים את תיאור העסק": "Complete the business description",
+"לבקש דירוג מ-5 לקוחות": "Ask 5 customers for a rating",
+"מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, קידום ומיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית שבועית לעלות במפות, והתראות.": "Manage your Google Business Profile in one place: reviews with AI replies, profile views and calls, growing your Google Maps rank, competitors, and visibility in ChatGPT, Gemini and Perplexity. A weekly plan to climb on Maps, and alerts.",
+"קידום במפות: תוכנית שבועית ובריאות הפרופיל": "Maps growth: a weekly plan and profile health",
+"✓ קידום במפות: תוכנית שבועית ובריאות הפרופיל": "✓ Maps growth: a weekly plan and profile health"
 }

@@ -236,6 +236,10 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
       'יותר ויותר אנשים שואלים עוזר AI "איפה יש מסעדה טובה ליד…" במקום לחפש. GoFive שואלת את עוזרי ה-AI בכל שבוע את השאלות המקומיות שהלקוחות שלכם שואלים, מראה אם ממליצים עליכם ועל מי ממליצים במקומכם, ונותנת תוכנית פעולה כדי להופיע.',
     ],
     [
+      'איך GoFive עוזרת לעלות בגוגל מפות?',
+      'גוגל מדרגת עסקים במפות לפי שלושה דברים: כמה הפרופיל מתאים לחיפוש, כמה העסק בולט ופעיל (ביקורות, תשובות, פוסטים), וכמה הוא קרוב למי שמחפש. בעמוד "קידום במפות" GoFive בודקת את כל אלה, ובונה לכם כל שבוע תוכנית קצרה מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות לעומת המוביל באזור, ובאיזה כיוון סביב העסק אתם חלשים. הבדיקה השבועית מראה אם עליתם.',
+    ],
+    [
       'מאיפה מגיעים הנתונים של הצפיות והשיחות?',
       'ישירות מגוגל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד. ביקורות, דירוג, בריאות הפרופיל ומיקום במפות עובדים כבר מהרגע שמדביקים את הקישור לעסק.',
     ],
@@ -257,6 +261,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
       'יש לי כמה סניפים. כמה זה עולה?',
       'המחיר הוא לכל פרופיל בגוגל, כולל מע״מ. עסק עם שלושה סניפים משלם שלוש פעמים את מחיר המסלול, ומקבל את כל הפיצ\'רים בכל סניף: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים באמצע החודש מחויב רק מהחידוש הבא.',
     ],
+    ['אפשר להשתמש במערכת באנגלית?', 'כן. המערכת, המיילים וטיוטות ה-AI זמינים בעברית ובאנגלית, ומחליפים שפה בכל רגע בעמוד "החשבון שלי". הסקר ללקוחות זמין בעברית, ערבית, אנגלית ורוסית.'],
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
   const start = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
   const trial = signupOpen ? `<a class="btn lp-cta" href="/register">${start}</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
@@ -293,13 +298,21 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
   const rivals = `<div class="lp-art lp-bars">${[['אתם', 82, 'me'], ['ביסטרו 61', 64, ''], ['פסטה דה לוקה', 51, '']]
     .map(([n, v, c]) => `<span class="${c}"><b>${n}</b><i><u style="width:${v}%"></u></i></span>`)
     .join('')}</div>`;
+  const mapsArt = `<div class="lp-art lp-maps">
+    <ul class="lp-plan">
+      <li><em class="rel">התאמה לחיפוש</em><b>להשלים תיאור עסק מלא</b></li>
+      <li><em class="pro">בולטות ופעילות</em><b>לבקש דירוג מ-5 לקוחות השבוע</b><small>למוביל באזור 212 ביקורות, ולכם 87</small></li>
+      <li><em class="dis">מרחק</em><b>לחזק את האזור: מזרח</b></li>
+    </ul>
+    <div class="lp-maps-side">${rankGrid.replace('lp-art lp-rank', 'lp-rank')}<span class="lp-maps-score"><span class="lp-ring" style="--p:84"><b>84</b></span><small>בריאות הפרופיל</small></span></div>
+  </div>`;
   const health = `<div class="lp-art lp-health"><span class="lp-ring big" style="--p:84"><b>84</b></span><ul><li class="ok">שעות פתיחה</li><li class="ok">תמונות</li><li class="no">תיאור קצר מדי</li></ul></div>`;
   const alert = `<div class="lp-art lp-toast"><span>⚠</span><div><b>המיקום במפות ירד</b><small>"ביסטרו": מ-2.4 ל-3.6</small></div></div>`;
   const qr = `<div class="lp-art lp-qr"><span class="lp-qr-code">${'<i></i>'.repeat(9)}</span><span class="lp-wa">וואטסאפ ✓✓<small>נו, איך היה אצלנו?</small></span></div>`;
 
   return sitePage({
     title: `${operatorInfo().brand} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI`,
-    description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, מיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית פעולה שבועית והתראות.',
+    description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, קידום ומיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית שבועית לעלות במפות, והתראות.',
     signupOpen,
     path: '/',
     body: `
@@ -397,16 +410,16 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
   <div class="lp-bento">
     ${tile('wide accent', 'chart', 'כל נתוני גוגל מיי ביזנס בדשבורד אחד', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', dashArt)}
     ${tile('', 'star', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת שנשאר רק לאשר.', review)}
-    ${tile('', 'pin', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות מ-9 נקודות סביב העסק, כל שבוע.', rankGrid)}
-    ${tile('', 'shield', 'בריאות הפרופיל', 'ציון לפרופיל הגוגל, מה חסר, ותיאור מוכן להדבקה.', health)}
+    ${tile('wide', 'pin', 'קידום בגוגל מפות', 'תוכנית קצרה לכל שבוע, מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות מול המוביל באזור, ובאיזה כיוון סביב העסק אתם חלשים. בדיקה שבועית מ-9 נקודות מראה אם עליתם.', mapsArt)}
     ${tile('', 'qr', 'עוד ביקורות בגוגל', 'שלט QR מעוצב ובקשת דירוג בוואטסאפ, גם אוטומטית אחרי כל ביקור.', qr)}
   </div>
   <div class="lp-more">
     <span>${icon('bell', 16)} התראה כשמשהו יורד</span>
-    <span>${icon('check', 16)} 3 משימות בשבוע</span>
+    <span>${icon('rivals', 16)} השוואה למתחרים</span>
     <span>${icon('report', 16)} דוח חודשי</span>
     <span>${icon('chat', 16)} פוסטים עם AI</span>
     <a href="#network">${icon('branches', 16)} רשתות וסניפים</a>
+    <span>${icon('check', 16)} עברית ואנגלית</span>
   </div>
 </section>
 
@@ -462,11 +475,11 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
     <div class="lp-step">
       <div class="lp-step-top"><span class="lp-step-n">3</span><em>10 דקות בשבוע</em></div>
       <h3>עושים את מה שחשוב</h3>
-      <p>שלוש משימות בשבוע, ותשובות שה-AI כבר ניסח.</p>
+      <p>תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.</p>
       <div class="lp-step-art lp-todo" aria-hidden="true">
         <span class="ok"><i>✓</i> לענות ל-4 ביקורות</span>
-        <span class="ok"><i>✓</i> להעלות 5 תמונות</span>
-        <span><i></i> לפרסם פוסט על המבצע</span>
+        <span class="ok"><i>✓</i> להשלים את תיאור העסק</span>
+        <span><i></i> לבקש דירוג מ-5 לקוחות</span>
       </div>
     </div>
   </div>
