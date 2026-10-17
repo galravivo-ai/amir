@@ -546,7 +546,7 @@ body.site { background: #fff; }
 }
 @media (max-width: 420px) {
   /* the login link moves into the menu */
-  .site-cta > a:not(.btn) { display: none; }
+  .site-cta > a:not(.btn):not(.lang-switch) { display: none; }
   .site-head .brand { font-size: 1.2rem; }
 }
 .site-head nav .nav-login { display: none; }
@@ -2674,3 +2674,7 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .mp-tips { margin-top: 28px; }
 .mp-tips summary { cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .mp-tips ul { padding-inline-start: 20px; display: grid; gap: 6px; }
+
+/* Hebrew / English switch in the site header */
+.site-cta > a.lang-switch { font-weight: 600; font-size: .85rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .2rem .7rem; }
+.site-cta > a.lang-switch:hover { color: var(--purple); border-color: var(--purple); }

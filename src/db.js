@@ -674,6 +674,10 @@ const MIGRATIONS = [
   `
   ALTER TABLE users ADD COLUMN last_seen_at TEXT;
   `,
+  // v37: the language a person reads the interface in ('' = Hebrew)
+  `
+  ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

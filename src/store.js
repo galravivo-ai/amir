@@ -109,6 +109,7 @@ export function createStore(db) {
     /** The user, their sessions and memberships, and the businesses they own (cascades). */
     deleteUser: (id) => q('DELETE FROM users WHERE id = ?').run(id),
     updateUserName: (id, name) => q('UPDATE users SET name = ? WHERE id = ?').run(name, id),
+    setUserLang: (id, value) => q('UPDATE users SET lang = ? WHERE id = ?').run(value, id),
     // Every change of mind is timestamped, so we can show when consent was given or withdrawn.
     setMarketingConsent: (id, on) =>
       q("UPDATE users SET marketing_consent = ?, marketing_consent_at = datetime('now') WHERE id = ? AND marketing_consent IS NOT ?").run(on ? 1 : 0, id, on ? 1 : 0),

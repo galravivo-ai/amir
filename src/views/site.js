@@ -1,3 +1,4 @@
+import { isEn } from '../lang.js';
 import { payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { asset, h } from '../util.js';
 import { icon, logoMark, wordmark } from './icons.js';
@@ -52,12 +53,14 @@ export const publicBase = () => String(process.env.PUBLIC_URL || 'https://gofive
 function shareMeta({ title, description, path }) {
   const base = publicBase();
   const image = `${base}/static/brand/og-image.jpg`;
+  const canon = path === '/' && isEn() ? '/en' : path;
   return `<meta property="og:type" content="website">
 <meta property="og:site_name" content="${h(operatorInfo().brand)}">
-<meta property="og:locale" content="he_IL">
+<meta property="og:locale" content="${isEn() ? 'en_US' : 'he_IL'}">
+${path === '/' ? `<link rel="alternate" hreflang="he" href="${h(base)}/"><link rel="alternate" hreflang="en" href="${h(base)}/en"><link rel="alternate" hreflang="x-default" href="${h(base)}/">` : ''}
 <meta property="og:title" content="${h(title)}">
 ${description ? `<meta property="og:description" content="${h(description)}">` : ''}
-${path ? `<meta property="og:url" content="${h(base + path)}"><link rel="canonical" href="${h(base + path)}">` : ''}
+${path ? `<meta property="og:url" content="${h(base + canon)}"><link rel="canonical" href="${h(base + canon)}">` : ''}
 <meta property="og:image" content="${h(image)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -87,7 +90,7 @@ ${shareMeta({ title, description, path })}
 <body class="site">
 <a class="skip-link" href="#main">דלג לתוכן</a>
 <header class="site-head">
-  <a class="brand" href="/">${logoMark(38)}${wordmark(op.brand)}</a>
+  <a class="brand" href="${isEn() ? '/en' : '/'}">${logoMark(38)}${wordmark(op.brand)}</a>
   <button type="button" class="site-menu-btn" aria-label="תפריט" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
   <nav id="site-nav" aria-label="ניווט באתר">
     <a href="/#features">מה מקבלים</a>
@@ -97,6 +100,7 @@ ${shareMeta({ title, description, path })}
     <a class="nav-login" href="/login">כניסה לחשבון</a>
   </nav>
   <div class="site-cta">
+    ${isEn() ? '<a class="lang-switch" href="/?lang=he" lang="he" hreflang="he">עברית</a>' : '<a class="lang-switch" href="/en" lang="en" hreflang="en">English</a>'}
     <a href="/login">כניסה לחשבון</a>
     ${signupOpen ? '<a class="btn primary" href="/register">פתיחת חשבון</a>' : ''}
   </div>

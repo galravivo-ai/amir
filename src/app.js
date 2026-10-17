@@ -18,6 +18,7 @@ import { createMeter, withBusiness } from './meter.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { mapsRoutes } from './routes/maps.js';
+import { languageMiddleware } from './routes/lang.js';
 import { reportRoutes } from './routes/reports.js';
 import { createHealth } from './healthRun.js';
 import { branchGate, networkRoutes } from './routes/network.js';
@@ -141,6 +142,7 @@ export function createApp(db, options = {}) {
   app.use(widgetRoutes(store));
 
   app.use(ctx.session);
+  app.use(languageMiddleware(ctx));
   app.use(siteRoutes(store, { signupOpen: ctx.signupOpen, trialOpen: () => Boolean(billing) || signupTrialDays() > 0, notifier, adminEmails: ctx.adminEmails, contactLimit: options.contactLimit }));
   app.use(authRoutes(ctx));
   app.use(pushRoutes(ctx, pusher));

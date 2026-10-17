@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { errorPage, isEmail } from '../util.js';
+import { isEn } from '../lang.js';
 import { accessibilityView, cookiesView, guideConnectView, guideFeatureView, guideHubView, landingView, LEAD_KINDS, operatorInfo, privacyView, publicBase, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
 import { FEATURE_GUIDES, featureGuide } from '../guide.js';
@@ -43,12 +44,15 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
     res.redirect(303, done);
   });
 
-  router.get('/', (req, res) => {
+  const landing = (req, res) => {
     if (req.user) return res.redirect('/admin');
     // An agency's own domain is for its clients: no platform marketing page there.
     if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
     res.send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
-  });
+  };
+  // Someone who chose English gets the English address (and back to Hebrew with ?lang=he).
+  router.get('/', (req, res) => (isEn() && !req.query.lang && !req.user ? res.redirect(`/en${req.originalUrl.slice(1)}`) : landing(req, res)));
+  router.get('/en', landing);
   // Caddy asks here before issuing an HTTPS certificate on demand, so
   // certificates are only issued for domains that belong to an agency.
   router.get('/.well-known/tls-check', (req, res) => {
@@ -58,7 +62,7 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
 
   // Installable app ("Add to home screen")
   // Search engines: the public pages only (never the app, the surveys or the API), and where the sitemap is.
-  const PUBLIC_PATHS = () => ['/', '/guide', '/guide/connect', ...FEATURE_GUIDES.map((g) => `/guide/${g.slug}`), '/terms', '/privacy', '/cookies', '/accessibility'];
+  const PUBLIC_PATHS = () => ['/', '/en', '/guide', '/guide/connect', ...FEATURE_GUIDES.map((g) => `/guide/${g.slug}`), '/terms', '/privacy', '/cookies', '/accessibility'];
   router.get('/robots.txt', (req, res) => {
     res.type('text/plain').send(
       ['User-agent: *', ...['/admin', '/superadmin', '/account', '/agency', '/api', '/auth', '/login', '/register', '/forgot', '/reset', '/join', '/r/', '/f/', '/m/', '/go/', '/billing', '/demo'].map((p) => `Disallow: ${p}`), 'Allow: /', '', `Sitemap: ${publicBase()}/sitemap.xml`, ''].join('\n'),
@@ -66,7 +70,7 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
   });
   router.get('/sitemap.xml', (req, res) => {
     const base = publicBase();
-    const urls = PUBLIC_PATHS().map((p) => `  <url><loc>${base}${p}</loc>${p === '/' ? '<priority>1.0</priority>' : ''}</url>`);
+    const urls = PUBLIC_PATHS().map((p) => `  <url><loc>${base}${p}</loc>${p === '/' || p === '/en' ? '<priority>1.0</priority>' : ''}</url>`);
     res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
   });
 
