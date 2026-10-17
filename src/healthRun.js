@@ -1,6 +1,7 @@
 import { withBusiness } from './meter.js';
 import { activityOf, healthChecks } from './health.js';
 import { accessOf, planOf } from './plans.js';
+import { withBusinessLang } from './lang.js';
 
 /**
  * Checks each followed Google place: reads its public profile through SerpApi
@@ -56,7 +57,8 @@ export function createHealth({ store, serp, ai = null, everyDays = 7 }) {
   }
 
   // Searches and AI requests made here are counted against the business.
-  const checkLocation = (business, loc) => withBusiness(business.id, () => checkLocationUnscoped(business, loc));
+  // The AI's advice is written in the owner's language.
+  const checkLocation = (business, loc) => withBusiness(business.id, () => withBusinessLang(store, business, () => checkLocationUnscoped(business, loc)));
 
   return { checkLocation, checkBusiness, runDue };
 }

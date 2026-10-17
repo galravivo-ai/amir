@@ -2,6 +2,7 @@ import { withBusiness } from './meter.js';
 import { parseJson } from './db.js';
 import { accessOf, hasAiPlus } from './plans.js';
 import { ENGINES, MAX_QUERIES, PLUS_ENGINES, PLUS_MAX_QUERIES, matchAnswer, namesOf } from './visibility.js';
+import { withBusinessLang } from './lang.js';
 
 /**
  * Asks each AI engine the business's questions and records whether the answer
@@ -108,7 +109,8 @@ export function createVisibility({ store, serp = null, ai = null, extra = {}, ev
   }
 
   // Searches and AI requests made here are counted against the business.
-  const runBusiness = (business, onProgress) => withBusiness(business.id, () => runBusinessUnscoped(business, onProgress));
+  // The action plan is written in the owner's language.
+  const runBusiness = (business, onProgress) => withBusiness(business.id, () => withBusinessLang(store, business, () => runBusinessUnscoped(business, onProgress)));
 
   return { engines, maxQueries, runBusiness, runDue };
 }

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { isEn } from './lang.js';
 
 export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5-5';
 
@@ -31,6 +32,10 @@ const TAG_SCHEMA = {
 };
 
 export class AiError extends Error {}
+
+const ENGLISH = `
+
+The person reading this uses the system in English. Write your whole answer in English, keeping the format described above (translate any Hebrew headings it asks for). A reply to a customer or to a review still follows the language that customer wrote in.`;
 
 const REPLY_SYSTEM = `אתה עוזר לבעלי עסקים קטנים בישראל לחזור ללקוחות שלא היו מרוצים.
 כתוב טיוטת הודעה קצרה (3-5 משפטים) שבעל העסק ישלח ללקוח בוואטסאפ או במייל.
@@ -151,6 +156,8 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
   const anthropic = client || new Anthropic({ apiKey });
 
   async function ask(system, content, effort, format) {
+    // For someone who uses the system in English (tags stay the fixed Hebrew topic names).
+    if (isEn() && system !== TAG_SYSTEM) system += ENGLISH;
     try {
       const message = await anthropic.beta.messages.create({
         model,

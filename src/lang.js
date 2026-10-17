@@ -147,3 +147,12 @@ export function englishEmail(html) {
     .replace(/(padding|margin|border)-left/g, '$1-right')
     .replace(/(padding|margin|border)-@@/g, '$1-left');
 }
+
+/**
+ * Work for a business done in the background (weekly checks, monthly reports)
+ * follows its owner's language; inside a request, the reader's language holds.
+ */
+export function withBusinessLang(store, business, fn) {
+  if (als.getStore()) return fn();
+  return runWithLang(store.userById(business.user_id)?.lang === 'en' ? 'en' : 'he', fn);
+}

@@ -18,7 +18,7 @@ function tipsBlock(tips, id) {
     .map((part) => {
       const [title, ...rest] = part.split('\n');
       const body = rest.join('\n').trim();
-      if (/תיאור/.test(title)) {
+      if (/תיאור|description/i.test(title)) {
         return `<div class="hl-desc"><h4>${h(title.trim())}</h4>
           <textarea id="desc-${id}" rows="5" readonly>${h(body)}</textarea>
           <button type="button" class="btn" onclick="var t=document.getElementById('desc-${id}');navigator.clipboard.writeText(t.value).then(function(){event.target.textContent='הועתק ✓'})">העתקה</button>

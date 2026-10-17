@@ -5,6 +5,7 @@ import { amountFor } from './billing.js';
 import { buildReport, lastMonth, monthRange } from './report.js';
 import { monthlySummary } from './routes/reports.js';
 import { sendWhatsAppInvite } from './whatsapp.js';
+import { withBusinessLang } from './lang.js';
 
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
@@ -174,7 +175,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
       if (accessOf(business).state === 'paused') continue;
       const report = buildReport(store, business, range, t.getTime());
       if (report.empty) continue;
-      const summary = ctx ? await monthlySummary(ctx, business, range, report, planOf(business).ai) : { text: '' };
+      const summary = ctx ? await withBusinessLang(store, business, () => monthlySummary(ctx, business, range, report, planOf(business).ai)) : { text: '' };
       if (await notifier.monthlyReport({ business, range, report, summary: summary.text })) sent++;
     }
     return sent;
