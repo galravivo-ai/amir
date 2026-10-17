@@ -168,7 +168,7 @@ export function branchView({ row: r, network, reviews, period, scoped, canReply 
           <dt>מיקום ממוצע במפות</dt><dd>${r.rank == null ? '<span class="muted">אין חיפושים במעקב</span>' : `${fmt1(r.rank)} ${vsNet(r.rank, avg('rank'), '', true) ? `<span class="muted small">${vsNet(r.rank, avg('rank'), '', true)}</span>` : ''}`}</dd>
           <dt>ביקורות 3★ ומטה בתקופה</dt><dd>${r.low}</dd>
         </dl>
-        ${scoped ? '' : `<div class="row compact"><a class="btn btn-sm" href="/admin/profile">בריאות הפרופיל</a><a class="btn btn-sm" href="/admin/rankings">מיקום במפות</a></div>`}
+        ${scoped ? '' : `<div class="row compact"><a class="btn btn-sm" href="/admin/maps#health">בריאות הפרופיל</a><a class="btn btn-sm" href="/admin/maps#rank">מיקום במפות</a></div>`}
       </section>
     </div>
   </div>`;

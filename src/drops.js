@@ -41,7 +41,7 @@ export function findDrops(store, business, { now = Date.now() } = {}) {
         detail: worse
           ? `המיקום הממוצע ירד מ-${prev.avg_rank.toFixed(1)} ל-${last.avg_rank.toFixed(1)}.`
           : `העסק מופיע עכשיו ב-${last.found} נקודות מתוך 9, לעומת ${prev.found} בבדיקה הקודמת.`,
-        href: '/admin/rankings',
+        href: '/admin/maps#rank',
       });
     }
   }

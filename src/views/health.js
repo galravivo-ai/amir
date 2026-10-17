@@ -29,12 +29,13 @@ function tipsBlock(tips, id) {
     .join('');
 }
 
-export function healthView({ audits, locations, running, csrf, can, available, aiOn, runsLeft = null, notice = '', error = '' }) {
+/** The profile check: a score and checklist per place, inside the maps page. */
+export function healthSection({ audits, locations, running, csrf, can, available, runsLeft = null }) {
   const byLoc = new Map(audits.map((a) => [a.location_id, a]));
   const cards = locations
     .map((loc) => {
       const a = byLoc.get(loc.id);
-      if (!a) return `<section class="card"><h3>${h(loc.title)}</h3><p class="muted">עוד לא נבדק. לחצו "בדיקה עכשיו".</p></section>`;
+      if (!a) return `<section class="card"><h3>${h(loc.title)}</h3><p class="muted">עוד לא נבדק. לחצו "בדיקת פרופיל".</p></section>`;
       if (a.error) return `<section class="card"><h3>${h(loc.title)}</h3><p class="danger-text">הבדיקה האחרונה נכשלה: ${h(a.error)}</p></section>`;
       const items = parseJson(a.items, []);
       const todo = items.filter((i) => i.state === 'fail' || i.state === 'partial');
@@ -54,26 +55,21 @@ export function healthView({ audits, locations, running, csrf, can, available, a
               ${i.state === 'fail' || i.state === 'partial' ? `<div class="small">${h(i.fix)}</div>` : i.state === 'unknown' ? '<div class="small muted">גוגל לא החזירה את המידע הזה, אז הוא לא נספר בציון.</div>' : ''}</div></li>`;
           })
           .join('')}</ul>
-        ${a.tips ? `<div class="hl-tips"><h4>${icon('spark', 18)} המלצות ה-AI</h4>${tipsBlock(a.tips, a.id)}</div>` : aiOn ? '' : ''}
+        ${a.tips ? `<div class="hl-tips"><h4>${icon('spark', 18)} המלצות ה-AI</h4>${tipsBlock(a.tips, a.id)}</div>` : ''}
       </section>`;
     })
     .join('');
 
-  return `<div class="page-head"><h1>${icon('shield', 26)} בריאות פרופיל הגוגל</h1>
+  return `<section class="mp-sec" id="health">
+    <div class="mp-sec-head"><div><h2>${icon('shield', 22)} בריאות הפרופיל</h2>
+      <p class="muted small">מה חסר בפרופיל בגוגל ומה לתקן קודם. נבדק לבד פעם בשבוע.</p></div>
       ${
         can('manager') && available && locations.length
           ? `<form method="post" action="/admin/profile/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn primary ai-btn" ${running || runsLeft === 0 ? 'disabled' : ''}>${icon('spark', 16)} <span>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</span></button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
+              <button class="btn ai-btn" ${running || runsLeft === 0 ? 'disabled' : ''}>${icon('spark', 16)} <span>${running ? 'בודק עכשיו…' : 'בדיקת פרופיל'}</span></button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
           : ''
       }</div>
-    <p class="page-intro">גוגל מציגה גבוה יותר עסקים עם פרופיל מלא ופעיל: ביקורות טריות, מענה ללקוחות, שעות, תמונות ותיאור. כאן רואים מה חסר בפרופיל שלכם ומה לעשות קודם. הבדיקה רצה לבד פעם בשבוע.</p>
-    ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
-    ${error ? `<div class="error">${h(error)}</div>` : ''}
-    ${running ? '<div class="warn">הבדיקה רצה עכשיו, זה לוקח עד דקה. הדף יתרענן לבד.</div><script>setTimeout(function(){location.replace(location.pathname)},10000)</script>' : ''}
     ${available ? '' : '<div class="warn">הבדיקה עובדת דרך SerpApi. מנהל המערכת מגדיר אותו ב-Railway (SERPAPI_KEY).</div>'}
-    ${
-      locations.length
-        ? cards
-        : `<section class="card empty"><p>כדי לבדוק את הפרופיל, הוסיפו קודם את העסק ב<a href="/admin/google">עמוד הביקורות בגוגל</a>.</p></section>`
-    }`;
+    ${cards}
+  </section>`;
 }

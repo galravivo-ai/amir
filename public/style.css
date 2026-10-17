@@ -2655,3 +2655,22 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 /* the logo reads as drawn: the star before (left of) the name, also on Hebrew pages */
 .site-head .brand, .side-brand, .m-brand { direction: ltr; }
 .m-brand { justify-content: flex-end; }
+
+/* Climbing in Google Maps: summary, the week's plan, then rank and profile sections */
+.mp-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.mp-stat { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px; color: inherit; text-decoration: none; }
+.mp-stat:hover { border-color: #d9d2ff; }
+.mp-stat b { font-size: 1.6rem; font-weight: 800; color: var(--purple-deep); }
+.mp-stat b small { font-size: .9rem; font-weight: 600; color: var(--muted); }
+.mp-plan h2, .mp-sec h2 { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; margin: 0 0 12px; }
+.mp-plan .task-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 200px; }
+.mp-factor { align-self: flex-start; font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--purple-soft); color: var(--purple-deep); }
+.mp-factor.prominence { background: #fff4d1; color: #8a5a00; }
+.mp-factor.distance { background: #e6f4ff; color: #0b5b9c; }
+.mp-sec { margin-top: 28px; scroll-margin-top: 16px; }
+.mp-sec-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.mp-sec-head > div:first-child { flex: 1; min-width: 240px; }
+.mp-sec-head p { margin: 0; max-width: 62ch; }
+.mp-tips { margin-top: 28px; }
+.mp-tips summary { cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.mp-tips ul { padding-inline-start: 20px; display: grid; gap: 6px; }

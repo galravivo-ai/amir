@@ -243,7 +243,8 @@ function sendDialog(campaigns, csrf, template, waAuto = null) {
       }
     </form>
   </dialog>
-  <div id="wa-sent" class="toast" role="status" hidden>וואטסאפ נפתח בחלון חדש. אפשר לשלוח ללקוח הבא.</div>`;
+  <div id="wa-sent" class="toast" role="status" hidden>וואטסאפ נפתח בחלון חדש. אפשר לשלוח ללקוח הבא.</div>
+  <script>if(location.hash==='#send'){var wd=document.getElementById('wa-send');if(wd&&wd.showModal)wd.showModal()}</script>`;
 }
 
 /** This week's three things to do, each with a link and a "done" button. */
@@ -461,10 +462,10 @@ export function dashboardView({
   const prevActions = (pt.CALL_CLICKS || 0) + (pt.BUSINESS_DIRECTION_REQUESTS || 0) + (pt.WEBSITE_CLICKS || 0) + (pt.BUSINESS_CONVERSATIONS || 0);
   const lastStat =
     pub?.rank != null
-      ? stat('pin', 'מיקום ממוצע במפות', (Math.round(pub.rank * 10) / 10).toString(), pub.rankBefore != null && Math.round((pub.rank - pub.rankBefore) * 10) ? `${pub.rank < pub.rankBefore ? '▲ עלה' : '▼ ירד'} ${Math.abs(Math.round((pub.rank - pub.rankBefore) * 10) / 10)} מקומות` : `${pub.rankKeywords} חיפושים`, pub.rankBefore != null ? (pub.rank < pub.rankBefore ? 'up' : pub.rank > pub.rankBefore ? 'down' : '') : '', '/admin/rankings')
+      ? stat('pin', 'מיקום ממוצע במפות', (Math.round(pub.rank * 10) / 10).toString(), pub.rankBefore != null && Math.round((pub.rank - pub.rankBefore) * 10) ? `${pub.rank < pub.rankBefore ? '▲ עלה' : '▼ ירד'} ${Math.abs(Math.round((pub.rank - pub.rankBefore) * 10) / 10)} מקומות` : `${pub.rankKeywords} חיפושים`, pub.rankBefore != null ? (pub.rank < pub.rankBefore ? 'up' : pub.rank > pub.rankBefore ? 'down' : '') : '', '/admin/maps#rank')
       : pub?.health != null
-        ? stat('shield', 'בריאות הפרופיל', `${pub.health}<small>/100</small>`, pub.healthBefore != null && pub.health !== pub.healthBefore ? `${pub.health > pub.healthBefore ? '▲' : '▼'} ${Math.abs(pub.health - pub.healthBefore)} נק׳` : '', pub.healthBefore != null ? (pub.health > pub.healthBefore ? 'up' : pub.health < pub.healthBefore ? 'down' : '') : '', '/admin/profile')
-        : stat('pin', 'מיקום במפות', '<span class="st-lock">—</span>', 'להתחיל מעקב ←', 'muted', '/admin/rankings');
+        ? stat('shield', 'בריאות הפרופיל', `${pub.health}<small>/100</small>`, pub.healthBefore != null && pub.health !== pub.healthBefore ? `${pub.health > pub.healthBefore ? '▲' : '▼'} ${Math.abs(pub.health - pub.healthBefore)} נק׳` : '', pub.healthBefore != null ? (pub.health > pub.healthBefore ? 'up' : pub.health < pub.healthBefore ? 'down' : '') : '', '/admin/maps#health')
+        : stat('pin', 'מיקום במפות', '<span class="st-lock">—</span>', 'להתחיל מעקב ←', 'muted', '/admin/maps#rank');
   const headline = `<div class="stats">
     ${stat('star', 'דירוג בגוגל', rating != null ? `${rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', ratingDiff ? `${ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(ratingDiff).toFixed(1)}` : pub?.total || g.total ? `${(pub?.total || g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', ratingDiff ? (ratingDiff > 0 ? 'up' : 'down') : '', rating != null ? '/admin/google/reviews' : '/admin/google')}
     ${stat('chat', 'ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint ? countHint.replace(' מהתקופה הקודמת', '') : sources || 'אין בתקופה', countTrend)}

@@ -16,7 +16,8 @@ function grid(points) {
     .join('')}</div>`;
 }
 
-export function rankingsView({ keywords, checks, locations, limit, running, available, csrf, can, runsLeft = null, error = '', notice = '' }) {
+/** Rank tracking: one card per search, with its 3×3 grid, inside the maps page. */
+export function rankSection({ keywords, checks, locations, limit, running, available, csrf, can, runsLeft = null }) {
   const cards = keywords
     .map((k) => {
       const [last, prev] = (checks.get(k.id) || []).filter((c) => !c.error);
@@ -82,20 +83,18 @@ export function rankingsView({ keywords, checks, locations, limit, running, avai
             </form></section>`
       : '';
 
-  return `<div class="page-head"><h1>${icon('pin', 26)} מיקום במפות</h1>
+  return `<section class="mp-sec" id="rank">
+    <div class="mp-sec-head"><div><h2>${icon('pin', 22)} המיקום שלכם במפות</h2>
+      <p class="muted small">כשמישהו ליד העסק מחפש "בית קפה", באיזה מקום אתם מופיעים? בודקים מ-9 נקודות סביב העסק, כי התוצאות משתנות לפי איפה המחפש עומד. ירוק זה שלושת הראשונים.</p></div>
       ${
         can('manager') && available && keywords.length
           ? `<form method="post" action="/admin/rankings/run"><input type="hidden" name="_csrf" value="${h(csrf)}">
-              <button class="btn primary" ${running || (runsLeft != null && runsLeft < keywords.length) ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקה עכשיו'}</button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
+              <button class="btn" ${running || (runsLeft != null && runsLeft < keywords.length) ? 'disabled' : ''}>${running ? 'בודק עכשיו…' : 'בדיקת מיקום'}</button>${runsLeft != null ? `<div class="muted small">נשארו ${runsLeft} בדיקות ידניות החודש</div>` : ''}</form>`
           : ''
       }</div>
-    <p class="page-intro">כשמישהו ליד העסק מחפש בגוגל מפות "בית קפה", באיזה מקום אתם מופיעים? בודקים מ-9 נקודות סביב העסק, כי התוצאות משתנות לפי איפה המחפש עומד. ירוק זה שלושת הראשונים, המקומות שרוב האנשים לוחצים עליהם.</p>
-    ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
-    ${error ? `<div class="error">${h(error)}</div>` : ''}
-    ${running ? '<div class="warn">הבדיקה רצה עכשיו, זה לוקח עד דקה. הדף יתרענן לבד.</div><script>setTimeout(function(){location.replace(location.pathname)},12000)</script>' : ''}
     ${available ? '' : '<div class="warn">המעקב עובד דרך SerpApi. מנהל המערכת מגדיר אותו ב-Railway (SERPAPI_KEY).</div>'}
-    ${available && !locations.length ? '<section class="card empty"><p>כדי לעקוב, הוסיפו קודם את העסק ב<a href="/admin/google">עמוד הביקורות בגוגל</a>.</p></section>' : ''}
     ${cards}
     ${form}
-    <p class="muted small">כל חיפוש נבדק לבד פעם בשבוע. כל בדיקה היא 9 חיפושים בגוגל מפות.</p>`;
+    <p class="muted small">כל חיפוש נבדק לבד פעם בשבוע. כל בדיקה היא 9 חיפושים בגוגל מפות.</p>
+  </section>`;
 }

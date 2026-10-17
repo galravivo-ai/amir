@@ -485,7 +485,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
             ${emailButton(url('/admin/campaigns'), 'לבחירת דרך ושליחה')}
             <h3 style="margin:22px 0 8px">לעלות בגוגל מפות</h3>
             <p>כשמישהו באזור מחפש בגוגל מפות את מה שאתם עושים (למשל "מסעדה איטלקית" או "עורך דין"), באיזה מקום אתם מופיעים? ב<b>מיקום במפות</b> מגדירים חיפוש ורואים את המיקום בכל שכונה מול המתחרים, וב<b>בריאות הפרופיל</b> מקבלים רשימת תיקונים שעוזרים לעלות.</p>
-            ${emailButton(url('/admin/rankings'), 'לבדיקת המיקום במפות')}
+            ${emailButton(url('/admin/maps#rank'), 'לבדיקת המיקום במפות')}
             ${daysLeft != null ? `<p style="color:#6b7280;font-size:14px">נשארו ${daysLeft} ימים לתקופת הניסיון. שאלות? עונים למייל הזה.</p>` : help}`,
         ],
       };

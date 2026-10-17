@@ -65,11 +65,11 @@ test('follow a search: a grid of ranks, the average, and who leads', async () =>
   await req('/register', { method: 'POST', form: { name: 'גל', email: 'rk@example.com', password: 'password123', business: 'ג׳קו סטריט', terms: '1' } });
   const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
   const biz = created.store.businessesFor(created.store.userByEmail('rk@example.com').id)[0];
-  assert.match((await req('/admin/rankings')).text, /הוסיפו קודם את העסק/);
+  assert.match((await req('/admin/maps')).text, /חברו קודם את העסק/);
   const loc = created.store.addSerpLocation(biz.id, { dataId: '0x1:0xmine', placeId: 'ChIJmine12345', title: 'ג׳קו סטריט' });
 
   const added = await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: '  בית   קפה ', location: String(loc.id), radius: '1000' } });
-  assert.equal(added.location, '/admin/rankings?added=1');
+  assert.equal(added.location, '/admin/maps?added=1#rank');
   // The first check runs in the background; wait for it.
   for (let i = 0; i < 50 && !created.store.rankChecks(created.store.rankKeywords(biz.id)[0].id, 1).length; i++) await new Promise((r) => setTimeout(r, 20));
   const [k] = created.store.rankKeywords(biz.id);
@@ -81,8 +81,9 @@ test('follow a search: a grid of ranks, the average, and who leads', async () =>
   assert.equal(check.found, 6, 'the 3 northern points don\'t find us');
   assert.equal(check.avg_rank, +((6 * 2 + 3 * 21) / 9).toFixed(1));
 
-  const page = (await req('/admin/rankings')).text;
-  assert.match(page, /href="\/admin\/rankings"/, 'in the menu');
+  const page = (await req('/admin/maps')).text;
+  assert.match(page, /href="\/admin\/maps"/, 'in the menu');
+  assert.equal((await req('/admin/rankings')).location, '/admin/maps#rank', 'the old address leads here');
   assert.match(page, /«בית קפה»/);
   assert.match(page, /6 מתוך 9/);
   assert.match(page, /קפה לנדוור <span class="muted small">\(9 מתוך 9\)/);
@@ -90,7 +91,7 @@ test('follow a search: a grid of ranks, the average, and who leads', async () =>
 
   // The plan's limit (basic: 2 searches).
   created.store.updateBusiness(biz.id, { plan: 'basic', billing: 'active' });
-  assert.equal((await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'ארוחת בוקר', location: String(loc.id), radius: '1000' } })).location, '/admin/rankings?added=1');
+  assert.equal((await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'ארוחת בוקר', location: String(loc.id), radius: '1000' } })).location, '/admin/maps?added=1#rank');
   for (let i = 0; i < 50 && created.store.rankKeywords(biz.id).some((x) => !created.store.rankChecks(x.id, 1).length); i++) await new Promise((r) => setTimeout(r, 20));
   const over = await req('/admin/rankings', { method: 'POST', form: { _csrf: token, keyword: 'בראנץ׳', location: String(loc.id), radius: '1000' } });
   assert.match(over.text, /עד 2 חיפושים/);
@@ -118,7 +119,7 @@ test('monthly limits on actions started by hand', async () => {
   await new Promise((r) => setTimeout(r, 50));
   const over = await req('/admin/rankings/run', { method: 'POST', form: { _csrf: token } });
   assert.match(over.text, /הגעתם למגבלה החודשית/);
-  assert.match((await req('/admin/rankings')).text, /נשארו 0 בדיקות ידניות החודש/);
+  assert.match((await req('/admin/maps')).text, /נשארו 0 בדיקות ידניות החודש/);
 
   // Shown on the plan page; a system admin can reset it.
   const plan = (await req('/admin/plan')).text;

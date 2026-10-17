@@ -41,12 +41,12 @@ export function weeklyTasks(store, business, { serpOn = false, aiOn = false, now
     if (fresh < 4 && campaigns.length) add('ask', 75, 'לבקש דירוג מ-5 לקוחות השבוע', `ב-30 הימים האחרונים הגיעו ${fresh} ביקורות חדשות בגוגל. ביקורות טריות מעלות את העסק בתוצאות.`, '/admin', 'wa');
 
     const audits = store.latestAudits(id).filter((a) => !a.error);
-    if (!audits.length && serpOn) add('health', 60, 'לבדוק את בריאות פרופיל הגוגל', 'בדיקה של דקה מראה מה חסר בפרופיל ומה הכי ישפיע על המיקום שלכם בגוגל.', '/admin/profile');
+    if (!audits.length && serpOn) add('health', 60, 'לבדוק את בריאות פרופיל הגוגל', 'בדיקה של דקה מראה מה חסר בפרופיל ומה הכי ישפיע על המיקום שלכם בגוגל.', '/admin/maps#health');
     for (const a of audits) {
       const worst = parseJson(a.items, [])
         .filter((i) => i.state === 'fail' && !['rating', 'reviews', 'fresh', 'replies'].includes(i.key))
         .sort((x, y) => y.weight - x.weight)[0];
-      if (worst) add(`profile-${worst.key}`, 55 + worst.weight, `לשפר בפרופיל: ${worst.label}`, worst.fix, '/admin/profile');
+      if (worst) add(`profile-${worst.key}`, 55 + worst.weight, `לשפר בפרופיל: ${worst.label}`, worst.fix, '/admin/maps#health');
     }
 
     if (serpOn && !store.competitorsFor(id).length) add('competitors', 35, 'להוסיף 2-3 מתחרים להשוואה', 'כדי לדעת אם אתם מקבלים מספיק ביקורות לעומת העסקים באזור.', '/admin/competitors');

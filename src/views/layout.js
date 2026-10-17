@@ -164,7 +164,7 @@ ${SKIP()}
       key: 'profile',
       label: 'פרופיל הגוגל',
       items: [
-        ['/admin/profile', 'בריאות הפרופיל', 'shield'],
+        ['/admin/maps', 'קידום במפות', 'pin', 0, { tip: 'מה חסר בפרופיל, באיזה מקום אתם מופיעים סביב העסק, ומה לעשות השבוע כדי לעלות' }],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],
     },
@@ -172,7 +172,6 @@ ${SKIP()}
       key: 'visibility',
       label: 'נראות ומתחרים',
       items: [
-        ['/admin/rankings', 'מיקום במפות', 'pin'],
         ['/admin/competitors', 'מתחרים', 'rivals'],
         ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { hl: true, tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן' }],
       ],

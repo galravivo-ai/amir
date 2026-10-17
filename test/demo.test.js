@@ -38,9 +38,9 @@ test('demo: anyone can look around a full sample business, and change nothing', 
     assert.match(dash, /צפיות בפרופיל<\/span><span class="st-value">[\d,]+</, 'the Google profile numbers are there');
     assert.match((await req('/admin/ai-visibility')).text, /איך להופיע ב-AI/);
     assert.match((await req('/admin/ai-visibility')).text, /על מי ממליצים במקומכם/);
-    assert.match((await req('/admin/rankings')).text, /ביסטרו/);
+    assert.match((await req('/admin/maps')).text, /ביסטרו/);
     assert.match((await req('/admin/competitors')).text, /פסטה דה לוקה/);
-    assert.match((await req('/admin/profile')).text, /מתוך 100/);
+    assert.match((await req('/admin/maps')).text, /מתוך 100/);
     // A network of four branches, one of them needing attention.
     const net = (await req('/admin/network')).text;
     assert.match(net, /4 סניפים/);

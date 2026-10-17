@@ -59,7 +59,7 @@ export function adminRoutes(ctx) {
 
   admin.post('/tasks/:key/done', (req, res) => {
     store.markTaskDone(req.business.id, weekKey(), String(req.params.key).slice(0, 60));
-    res.redirect(303, '/admin#tasks');
+    res.redirect(303, req.body.back === 'maps' ? '/admin/maps#plan' : '/admin#tasks');
   });
 
   admin.get('/', (req, res) => {

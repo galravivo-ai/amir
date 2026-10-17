@@ -65,21 +65,24 @@ test('the profile page: check, score, fixes and AI advice', async () => {
   await req('/register', { method: 'POST', form: { name: 'גל', email: 'hl@example.com', password: 'password123', business: 'ג׳קו סטריט', terms: '1' } });
   const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
   const biz = created.store.businessesFor(created.store.userByEmail('hl@example.com').id)[0];
-  assert.match((await req('/admin/profile')).text, /הוסיפו קודם את העסק/);
+  assert.match((await req('/admin/maps')).text, /חברו קודם את העסק/);
 
   const loc = created.store.addSerpLocation(biz.id, { dataId: '0x1:0x1', placeId: 'ChIJplace12345', title: 'ג׳קו סטריט' });
   const at = new Date(Date.now() - 3 * 864e5).toISOString();
   created.store.upsertGoogleReview(loc.id, { name: 'a', reviewer: 'x', photo: '', rating: 5, comment: '', createTime: at, updateTime: at, reply: 'תודה', replyTime: at });
   created.store.upsertGoogleReview(loc.id, { name: 'b', reviewer: 'x', photo: '', rating: 4, comment: '', createTime: at, updateTime: at, reply: '', replyTime: '' });
 
-  assert.equal((await req('/admin/profile/run', { method: 'POST', form: { _csrf: token } })).location, '/admin/profile?started=1');
+  assert.equal((await req('/admin/profile/run', { method: 'POST', form: { _csrf: token } })).location, '/admin/maps?started=1#health');
   await created.health.checkBusiness(created.store.businessById(biz.id));
   const [audit] = created.store.latestAudits(biz.id);
   assert.ok(audit.score > 0 && audit.score < 100, `score ${audit.score}`);
   assert.match(tipsAsked, /מה חסר או חלקי: .*מספר טלפון/);
 
-  const page = (await req('/admin/profile')).text;
-  assert.match(page, /href="\/admin\/profile"/, 'in the menu');
+  const page = (await req('/admin/maps')).text;
+  assert.match(page, /href="\/admin\/maps"/, 'in the menu');
+  assert.match(page, /מה לעשות השבוע/);
+  assert.match(page, /להשלים בפרופיל: /, 'the plan picks up what the check found');
+  assert.equal((await req('/admin/profile')).location, '/admin/maps#health', 'the old address leads here');
   assert.match(page, new RegExp(`<b>${audit.score}</b>`));
   assert.match(page, /הוסיפו טלפון לפרופיל/);
   assert.match(page, /50% נענו/);
