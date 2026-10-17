@@ -106,10 +106,34 @@ export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, 
  */
 export const TRIAL_PLAN = 'pro';
 export const TRIAL_DAYS = 7;
-export const signupTrialDays = () => Math.max(0, Math.min(60, Number(process.env.SIGNUP_TRIAL_DAYS) || 0));
+/** Every new account starts with a free week, no card (SIGNUP_TRIAL_DAYS changes it; 0 turns it off). */
+export const signupTrialDays = () => {
+  const raw = String(process.env.SIGNUP_TRIAL_DAYS ?? '').trim();
+  if (raw === '') return TRIAL_DAYS;
+  return Math.max(0, Math.min(60, Number(raw) || 0));
+};
+
+/**
+ * Paying through an iCount payment page: one address per plan and cycle
+ * (ICOUNT_URL_PRO_MONTHLY …), or one page for all (ICOUNT_PAY_URL). The
+ * operator activates the plan after the payment arrives.
+ */
+const cleanEnv = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '').trim();
+export function icountUrl(plan, cycle) {
+  const url = cleanEnv(process.env[`ICOUNT_URL_${String(plan).toUpperCase()}_${String(cycle).toUpperCase()}`]) || cleanEnv(process.env.ICOUNT_PAY_URL);
+  return /^https:\/\/[^\s]+$/.test(url) ? url : '';
+}
+/** How customers pay: by card on Cardcom (automatic), on an iCount page, or by arrangement. */
+export function payProvider() {
+  if (cleanEnv(process.env.CARDCOM_TERMINAL)) return 'cardcom';
+  if (Object.keys(process.env).some((k) => (k === 'ICOUNT_PAY_URL' || k.startsWith('ICOUNT_URL_')) && cleanEnv(process.env[k]))) return 'icount';
+  return 'manual';
+}
 /** How a new account starts: on a trial when there is one, otherwise waiting for its first payment. */
 export const newBusiness = (name) => {
-  const days = signupTrialDays();
+  // With Cardcom the trial starts when a card is saved (unless SIGNUP_TRIAL_DAYS says otherwise).
+  const explicit = String(process.env.SIGNUP_TRIAL_DAYS ?? '').trim() !== '';
+  const days = payProvider() === 'cardcom' && !explicit ? 0 : signupTrialDays();
   return days ? { name, plan: TRIAL_PLAN, trialDays: days } : { name, plan: TRIAL_PLAN, billing: 'unpaid' };
 };
 /** Yearly billing: pay for this many months, get twelve. */

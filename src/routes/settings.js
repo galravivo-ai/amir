@@ -3,7 +3,8 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { CYCLES, hasApi, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
+import { CYCLES, hasApi, icountUrl, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
+import { amountFor } from '../billing.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -241,7 +242,9 @@ export function settingsRoutes(ctx) {
     await ctx.notifier
       ?.planRequested({ business: req.business, plan: PLANS[plan], cycle: CYCLES[cycle], user: req.user, admins: ctx.adminEmails() })
       .catch((err) => console.error('[notify] planRequested failed:', err));
-    res.redirect(303, '/admin/plan?requested=1');
+    // An iCount payment page: off to pay; the operator activates after the payment arrives.
+    const pay = PLANS[plan].price != null ? icountUrl(plan, cycle) : '';
+    res.redirect(303, pay || '/admin/plan?requested=1');
   });
 
   // Cardcom sends the customer back here after the payment page.
@@ -264,7 +267,10 @@ export function settingsRoutes(ctx) {
     const plan = Object.hasOwn(PLANS, req.query.plan) && !PLANS[req.query.plan].hidden ? req.query.plan : null;
     const cycle = Object.hasOwn(CYCLES, req.query.cycle) ? req.query.cycle : req.business.billing_cycle || 'monthly';
     if (!plan) return res.redirect(303, '/admin/plan');
-    const quote = ctx.billing ? ctx.billing.quote(req.business, plan, cycle) : { kind: 'request', amount: null, profiles: profilesOf(store, req.business.id) };
+    const profiles = profilesOf(store, req.business.id);
+    const quote = ctx.billing
+      ? ctx.billing.quote(req.business, plan, cycle)
+      : { kind: icountUrl(plan, cycle) ? 'icount' : 'request', amount: amountFor(plan, cycle, profiles), profiles };
     render(req, res, 'שינוי מסלול', V.planChangeView({ business: req.business, current: req.plan, access: req.access, plan, cycle, quote, csrf: req.user.csrf }));
   });
 

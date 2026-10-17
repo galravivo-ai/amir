@@ -1,4 +1,4 @@
-import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, PLANS, TRIAL_DAYS } from '../plans.js';
+import { accessOf, AI_PLUS, CYCLES, INTEGRATIONS, limitLabel, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { parseJson } from '../db.js';
@@ -469,7 +469,9 @@ export function planView({
       ? `<div class="flash">${requested ? 'הבקשה נשלחה. ' : ''}${
           request.plan === 'enterprise'
             ? 'ביקשת הצעת מחיר לרשת. ניצור איתך קשר בקרוב.'
-            : `ביקשת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). ניצור איתך קשר כדי להשלים את התשלום ולהפעיל את המסלול.`
+            : payProvider() === 'icount'
+              ? `בחרת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). אם כבר שילמתם בדף של iCount, נפעיל את המסלול בקרוב ונעדכן אתכם במייל. עוד לא שילמתם? <a href="/admin/plan/change?plan=${h(request.plan)}&cycle=${h(request.cycle || 'monthly')}">לדף התשלום</a>`
+              : `ביקשת את מסלול <b>${h(PLANS[request.plan].label)}</b> (${h(CYCLES[request.cycle] || '')}). ניצור איתך קשר כדי להשלים את התשלום ולהפעיל את המסלול.`
         }</div>`
       : '';
   const op = operatorInfo();
@@ -517,7 +519,9 @@ export function planView({
           : trialOffer
           ? `${TRIAL_DAYS} ימי ניסיון חינם. הכרטיס נשמר בדף המאובטח של קארדקום ומחויב רק בסוף הניסיון, אם לא ביטלתם. אחרי זה המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.`
           : 'התשלום בכרטיס אשראי, בדף המאובטח של קארדקום. המנוי מתחדש לבד, ואפשר לבטל בכל רגע. חשבונית נשלחת במייל.'
-        : 'התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.'
+        : payProvider() === 'icount'
+          ? 'התשלום בדף המאובטח של iCount, והחשבונית נשלחת במייל. אחרי התשלום נפעיל את המסלול ונעדכן אתכם.'
+          : 'התשלום עדיין לא אונליין: אחרי הבחירה נחזור אליכם להשלמת התשלום ונפעיל את המסלול.'
     } <a href="/terms#billing">התנאים המלאים: תשלום, שינוי וביטול</a>${op.email ? ` · שאלות? <span dir="ltr">${h(op.email)}</span>` : ''}</p>
   </section>
   ${
@@ -549,10 +553,14 @@ export function planChangeView({ business, current, access, plan, cycle, quote, 
     ],
     trial_switch: ['המסלול מתחלף מיד, ואתם עדיין בתקופת הניסיון, בלי חיוב.', `בסוף הניסיון, ב-${h(day(quote.at))}: <b>${money(quote.amount)}</b> ${per}, כולל מע״מ.`],
     request: ['נקבל את הבקשה ונחזור אליכם להשלמת התשלום ולהפעלת המסלול.'],
+    icount: [
+      `תועברו לדף התשלום המאובטח של iCount, לתשלום של <b>${money(quote.amount)}</b> ${per} (${quote.profiles > 1 ? `${quote.profiles} פרופילים, ` : ''}כולל מע״מ). החשבונית נשלחת במייל.`,
+      'אחרי התשלום נפעיל את המסלול ונעדכן אתכם במייל, בדרך כלל תוך כמה שעות בימי עסקים. עד אז הכול ממשיך לעבוד.',
+    ],
   }[quote.kind];
   const lose = current.aiPlus && !p.aiPlus ? '<div class="warn">במסלול גוגל אין בדיקה ב-ChatGPT, Gemini, Perplexity ו-Claude, ואין תוכנית פעולה אחרי כל בדיקה. הנתונים שכבר נאספו נשמרים.</div>' : '';
   const gain = !current.aiPlus && p.aiPlus ? `<ul class="sub-gain">${['נראות ב-ChatGPT, Gemini, Perplexity ו-Claude', 'תוכנית פעולה ו"על מי ממליצים במקומכם"', `מיקום במפות: ${p.rankKeywords} חיפושים · ${p.competitors} מתחרים`].map((x) => `<li>${icon('check', 16)}${h(x)}</li>`).join('')}</ul>` : '';
-  const button = { trial: 'להמשך: שמירת כרטיס', trial_switch: 'אישור המעבר', checkout: 'להמשך לתשלום', upgrade: quote.charge ? `אישור ותשלום ${money(quote.charge)}` : 'אישור השדרוג', scheduled: 'אישור השינוי', kept: 'חזרה', request: 'שליחת הבקשה' }[quote.kind];
+  const button = { icount: 'להמשך לתשלום', trial: 'להמשך: שמירת כרטיס', trial_switch: 'אישור המעבר', checkout: 'להמשך לתשלום', upgrade: quote.charge ? `אישור ותשלום ${money(quote.charge)}` : 'אישור השדרוג', scheduled: 'אישור השינוי', kept: 'חזרה', request: 'שליחת הבקשה' }[quote.kind];
   return `<p><a href="/admin/plan">→ חזרה לתוכנית שלי</a></p>
   <h1>${quote.kind === 'trial' ? `${quote.days} ימים חינם במסלול ${h(p.label)}` : `${quote.kind === 'upgrade' ? 'שדרוג' : 'מעבר'} למסלול ${h(p.label)}`}</h1>
   <section class="card stack sub-confirm">

@@ -3,7 +3,13 @@ import { PLANS, TRIAL_DAYS } from '../plans.js';
 
 /** Before signing up: how the start works and what is charged when. */
 const startTerms = (trialOpen) =>
-  trialOpen
+  trialOpen === 'free'
+    ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, בלי כרטיס אשראי</b>
+        <ul><li>נרשמים ומתחילים מיד, עם כל האפשרויות.</li>
+        <li>בסוף הניסיון בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ).</li>
+        <li>לא בחרתם? הסקרים פשוט נעצרים, בלי שום חיוב, והנתונים נשמרים.</li></ul>
+        <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`
+    : trialOpen
     ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
         <ul><li>אחרי ההרשמה בוחרים מסלול ושומרים כרטיס בדף המאובטח של קארדקום. <b>היום לא מחויבים.</b></li>
         <li>בסוף הניסיון מתחיל המנוי: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש לכל פרופיל בגוגל (כולל מע״מ), ומתחדש כל חודש.</li>

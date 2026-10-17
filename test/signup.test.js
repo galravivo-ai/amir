@@ -164,3 +164,49 @@ test('the system admin can delete a user and the businesses they own', async () 
     server.close();
   }
 });
+
+test('a free week without a card, then paying on an iCount page; the operator activates', async () => {
+  const saved = { trial: process.env.SIGNUP_TRIAL_DAYS, url: process.env.ICOUNT_URL_BASIC_MONTHLY };
+  delete process.env.SIGNUP_TRIAL_DAYS;
+  process.env.ICOUNT_URL_BASIC_MONTHLY = 'https://app.icount.co.il/m/test-basic';
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const { store } = created;
+  try {
+    const op = client(base);
+    await op('/register', { method: 'POST', form: { name: 'מפעיל', email: 'op@example.com', password: 'password123', business: 'GoFive', terms: '1' } });
+    store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
+    const me = client(base);
+    const form = (await me('/register')).text;
+    assert.match(form, /7 ימים חינם, בלי כרטיס אשראי/);
+    await me('/register', { method: 'POST', form: { name: 'דנה', email: 'icount@example.com', password: 'password123', business: 'קפה', terms: '1' } });
+    const biz = () => store.businessesFor(store.userByEmail('icount@example.com').id)[0];
+    assert.equal(biz().billing, 'trial', 'straight in, no card');
+    assert.equal((await me('/admin')).status, 200);
+    assert.match((await me('/terms')).text, /בלי כרטיס אשראי/);
+
+    const confirm = (await me('/admin/plan/change?plan=basic&cycle=monthly')).text;
+    assert.match(confirm, /לדף התשלום המאובטח של iCount, לתשלום של <b>₪99<\/b> לחודש/);
+    const token = confirm.match(/name="_csrf" value="([^"]+)"/)[1];
+    const go = await me('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'basic', cycle: 'monthly' } });
+    assert.equal(go.location, 'https://app.icount.co.il/m/test-basic');
+    assert.match(biz().plan_request, /"plan":"basic"/);
+    // Back on the plan page: paid? it will be activated.
+    assert.match((await me('/admin/plan')).text, /אם כבר שילמתם בדף של iCount/);
+    // A plan without its own page and no general page: the request stays manual.
+    const pro = await me('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'monthly' } });
+    assert.equal(pro.location, '/admin/plan?requested=1');
+    // The operator activates.
+    const opToken = (await op('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+    await op(`/superadmin/businesses/${biz().id}/plan`, { method: 'POST', form: { _csrf: opToken, plan: 'basic', cycle: 'monthly', do: 'activate' } });
+    assert.equal(biz().billing, 'active');
+  } finally {
+    server.close();
+    for (const [k, v] of [['SIGNUP_TRIAL_DAYS', saved.trial], ['ICOUNT_URL_BASIC_MONTHLY', saved.url]]) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+});

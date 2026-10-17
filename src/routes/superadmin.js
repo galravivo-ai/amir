@@ -2,7 +2,7 @@ import express from 'express';
 import { monthKey } from '../usage.js';
 import { lastBackupAge } from '../backup.js';
 import { statusView } from '../views/status.js';
-import { CYCLES, PLANS, TRIAL_DAYS } from '../plans.js';
+import { CYCLES, icountUrl, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
 import { csvEscape } from '../util.js';
 
@@ -210,6 +210,7 @@ export function superadminRoutes(ctx) {
       { name: 'ChatGPT · Gemini · Perplexity', state: ['chatgpt', 'gemini', 'perplexity'].every((e) => engines.includes(e)) ? 'ok' : engines.some((e) => ['chatgpt', 'gemini', 'perplexity'].includes(e)) ? 'warn' : 'off',
         detail: ['claude', 'chatgpt', 'gemini', 'perplexity'].map((e) => `${engines.includes(e) ? '✓' : '✗'} ${e}`).join(' · '), what: 'נראות בעוזרי AI (מסלול גוגל + AI)' },
       { name: 'תשלום בכרטיס (Cardcom)', state: ctx.billing ? 'ok' : 'off', detail: ctx.billing ? 'מסוף מוגדר' : 'CARDCOM_TERMINAL חסר: בחירת מסלול שולחת בקשה ידנית', what: 'תשלום אונליין וחידוש אוטומטי' },
+      { name: 'דף תשלום (iCount)', state: payProvider() === 'icount' ? 'ok' : 'off', detail: payProvider() === 'icount' ? ['basic', 'pro'].flatMap((p) => ['monthly', 'annual'].map((c) => `${p}/${c}: ${icountUrl(p, c) ? '✓' : '—'}`)).join(' · ') : 'ICOUNT_URL_BASIC_MONTHLY וכו\' (או ICOUNT_PAY_URL) לא מוגדרים', what: 'תשלום על המסלולים (ההפעלה אחרי תשלום ידנית)' },
       { name: 'וואטסאפ אוטומטי (Meta)', state: ctx.whatsapp ? (set('WHATSAPP_APP_SECRET') ? 'ok' : 'warn') : 'off', detail: ctx.whatsapp ? (set('WHATSAPP_APP_SECRET') ? 'פעיל' : 'פעיל, בלי WHATSAPP_APP_SECRET לא יגיעו סטטוסי מסירה') : 'לא מוגדר: שליחה פותחת את הוואטסאפ של המשתמש', what: 'בקשות דירוג אוטומטיות בוואטסאפ' },
       { name: 'פרטי קשר', state: set('CONTACT_EMAIL') && set('CONTACT_PHONE') ? 'ok' : 'warn', detail: [set('CONTACT_EMAIL') ? '✓ מייל' : '✗ CONTACT_EMAIL', set('CONTACT_PHONE') ? '✓ טלפון' : '✗ CONTACT_PHONE'].join(' · '), what: 'מופיעים בתקנון, בפרטיות ובהצהרת הנגישות (חובה)' },
       { name: 'גיבוי יומי', state: backupHours < 26 ? 'ok' : 'warn', detail: Number.isFinite(backupHours) ? `האחרון לפני ${Math.round(backupHours)} שעות` : 'עוד לא נוצר', what: 'גיבוי של מסד הנתונים (נשמר על השרת)' },
