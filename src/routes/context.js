@@ -113,10 +113,13 @@ export function createContext(
         req.business = store.business(id, req.user.id);
         req.businesses = [req.business];
       }
-      // A system admin's own businesses are never on a trial (fixes accounts made before this rule).
-      if (['trial', 'unpaid'].includes(req.business.billing) && req.business.user_id === req.user.id && ctx.isSuperadmin(req.user)) {
-        store.updateBusiness(req.business.id, { billing: 'active', plan: 'business', trial_ends_at: null });
-        req.business = { ...req.business, billing: 'active', plan: 'business', trial_ends_at: null };
+      // A system admin's own businesses are always open: never on a trial, never paused,
+      // never billed. One that wasn't is moved to a plan with every feature (also fixes
+      // accounts made before this rule); after that its plan can be changed for testing.
+      if (req.business.user_id === req.user.id && ctx.isSuperadmin(req.user) && (req.business.billing !== 'active' || req.business.paid_until)) {
+        const open = { billing: 'active', plan: req.business.billing === 'active' ? req.business.plan : 'business', trial_ends_at: null, paid_until: null, auto_renew: 0, pay_failures: 0, trial_notice: null };
+        store.updateBusiness(req.business.id, open);
+        req.business = { ...req.business, ...open };
       }
       req.role = req.business.role;
       // A member limited to one branch (see branchGate).

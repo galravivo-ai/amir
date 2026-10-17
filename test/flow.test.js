@@ -1459,3 +1459,18 @@ test('system admin: reset a business\'s data, with its name typed to confirm', a
   assert.ok(store.businessById(biz.id), 'the business stays');
   assert.equal(store.campaignsFor(biz.id).length, 1, 'and its campaign');
 });
+
+test("a system admin's own business is always open, with every feature, even after it was paused", async () => {
+  const c = await registeredOwner('admin-owner@example.com');
+  const user = store.userByEmail('admin-owner@example.com');
+  store.setSuperadmin(user.id, true);
+  const biz = store.businessesFor(user.id)[0];
+  store.updateBusiness(biz.id, { billing: 'paused', plan: 'basic', paid_until: '2020-01-01 00:00:00', auto_renew: 1 });
+  const page = await c.req('/admin');
+  assert.equal(page.status, 200);
+  assert.doesNotMatch(page.text, /החשבון מושהה/);
+  const after = store.businessById(biz.id);
+  assert.equal(after.billing, 'active');
+  assert.equal(after.plan, 'business', 'every feature, AI included');
+  assert.equal(after.paid_until, null);
+});
