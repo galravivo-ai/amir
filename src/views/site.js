@@ -90,14 +90,10 @@ ${shareMeta({ title, description, path })}
   <a class="brand" href="/">${logoMark(38)}${wordmark(op.brand)}</a>
   <button type="button" class="site-menu-btn" aria-label="תפריט" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
   <nav id="site-nav" aria-label="ניווט באתר">
-    <a href="/#how">איך זה עובד</a>
-    <a href="/#features">פיצ'רים</a>
-    <a href="/#ai">נראות ב-AI</a>
-    <a href="/#network">רשתות וסניפים</a>
-    <a href="/#video">סרטון</a>
-    <a href="/#screens">צילומי מסך</a>
+    <a href="/#features">מה מקבלים</a>
     <a href="/#pricing">מחירים</a>
-    <a href="/#faq">שאלות</a>
+    <a href="/guide">מדריכים</a>
+    <a href="/#faq">שאלות נפוצות</a>
     <a class="nav-login" href="/login">כניסה לחשבון</a>
   </nav>
   <div class="site-cta">
@@ -212,9 +208,9 @@ function talkForm(sent, error = '', v = {}) {
 const SCREENS = [
   ['dashboard', 'דשבורד', 'כל העסק במסך אחד: דירוג, ביקורות, צפיות, שיחות ומיקום במפות.'],
   ['reviews', 'ביקורות', 'כל הביקורות מגוגל ומהסקרים במקום אחד, עם תשובה מוכנה בלחיצה.'],
+  ['maps', 'קידום במפות', 'תוכנית קצרה לכל שבוע: מה לתקן בפרופיל ומה לעשות כדי לעלות בגוגל מפות.'],
   ['rank', 'מיקום במפות', 'איפה אתם מופיעים בגוגל מפות בכל שכונה, מול המתחרים.'],
   ['ai', 'נראות ב-AI', 'האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן.'],
-  ['health', 'בריאות הפרופיל', 'ציון לפרופיל בגוגל ורשימת תיקונים לפי סדר חשיבות.'],
   ['report', 'דוח חודשי', 'דוח מסודר בכל חודש, להדפסה או לשליחה.'],
 ];
 
