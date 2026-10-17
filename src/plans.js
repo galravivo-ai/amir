@@ -123,6 +123,11 @@ export function icountUrl(plan, cycle) {
   const url = cleanEnv(process.env[`ICOUNT_URL_${String(plan).toUpperCase()}_${String(cycle).toUpperCase()}`]) || cleanEnv(process.env.ICOUNT_PAY_URL);
   return /^https:\/\/[^\s]+$/.test(url) ? url : '';
 }
+/** The iCount page for one more branch (a standing order at the branch price). */
+export function branchPayUrl(plan, cycle) {
+  const url = cleanEnv(process.env[`ICOUNT_URL_BRANCH_${String(plan).toUpperCase()}_${String(cycle).toUpperCase()}`]) || cleanEnv(process.env.ICOUNT_URL_BRANCH);
+  return /^https:\/\/[^\s]+$/.test(url) ? url : '';
+}
 /** How customers pay: by card on Cardcom (automatic), on an iCount page, or by arrangement. */
 export function payProvider() {
   if (cleanEnv(process.env.CARDCOM_TERMINAL)) return 'cardcom';

@@ -240,7 +240,7 @@ export function settingsRoutes(ctx) {
       plan_request: JSON.stringify({ plan, cycle, by: req.user.email, at: new Date().toISOString() }),
     });
     await ctx.notifier
-      ?.planRequested({ business: req.business, plan: PLANS[plan], cycle: CYCLES[cycle], user: req.user, admins: ctx.adminEmails() })
+      ?.planRequested({ business: req.business, plan: PLANS[plan], cycle: CYCLES[cycle], user: req.user, admins: ctx.adminEmails(), profiles: profilesOf(store, req.business.id), amount: amountFor(plan, cycle, profilesOf(store, req.business.id)) })
       .catch((err) => console.error('[notify] planRequested failed:', err));
     // An iCount payment page: off to pay; the operator activates after the payment arrives.
     const pay = PLANS[plan].price != null ? icountUrl(plan, cycle) : '';

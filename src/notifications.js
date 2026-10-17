@@ -343,7 +343,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     /** A business asked for a plan: tell the people who activate plans. */
-    async planRequested({ business, plan, cycle, user, admins }) {
+    async planRequested({ business, plan, cycle, user, admins, profiles = 1, amount = null }) {
       if (!admins.length) return false;
       return send({
         kind: 'plan_request',
@@ -354,6 +354,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           title: 'עסק ביקש מסלול',
           brand: true,
           body: `<p><b>${h(business.name)}</b> ביקש את מסלול <b>${h(plan.label)}</b>, תשלום ${h(cycle)}.</p>
+            ${profiles > 1 && amount ? `<p><b>${profiles} פרופילים בגוגל</b>: הסכום לחיוב הוא <b>₪${amount.toLocaleString('he-IL')}</b> (הסניפים ב-20% הנחה), ולא המחיר של פרופיל אחד. כדאי לוודא שהוראת הקבע ב-iCount על הסכום הזה.</p>` : ''}
             <p>מבקש: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
             ${emailButton(url('/superadmin#businesses'), 'להפעלה בניהול המערכת')}`,
         }),
@@ -428,6 +429,45 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
             <p>תודה שבחרת ב${h(business.name)}. נשמח לדעת איך הייתה החוויה, זה לוקח פחות מדקה.</p>
             <p style="font-size:28px;letter-spacing:4px;color:#f5a300">★★★★★</p>
             ${emailButton(link, 'לדירוג', color)}`,
+          footer: h(business.name),
+        }),
+      });
+    },
+
+    /** A paying business went to pay for one more branch: the operator activates it once the payment arrives. */
+    async branchRequested({ business, location, user, cycle, amount, total, admins }) {
+      if (!admins.length) return false;
+      const per = cycle === 'annual' ? 'לשנה' : 'לחודש';
+      return send({
+        kind: 'branch_request',
+        businessId: business.id,
+        to: admins,
+        subject: `סניף נוסף ממתין לתשלום · ${business.name}`,
+        html: emailLayout({
+          title: 'סניף נוסף ממתין לתשלום',
+          brand: true,
+          body: `<p><b>${h(business.name)}</b> הוסיף סניף: <b>${h(location.title || location.address || 'סניף חדש')}</b>${location.address && location.title ? ` · ${h(location.address)}` : ''}.</p>
+            <p>הסניף עלה לדף התשלום: <b>₪${amount.toLocaleString('he-IL')} ${per}</b> (20% הנחה). מעכשיו הסכום הכולל של העסק: <b>₪${total.toLocaleString('he-IL')} ${per}</b>, כולל מע״מ.</p>
+            <p>כשהתשלום מגיע, מעדכנים את הוראת הקבע ב-iCount לסכום הכולל, ומפעילים את הסניף בלחיצה בניהול המערכת.</p>
+            <p>מבקש: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
+            ${emailButton(url('/superadmin#branches'), 'להפעלת הסניף')}`,
+        }),
+      });
+    },
+
+    /** The branch was paid for and opened. */
+    async branchActivated({ business, location }) {
+      const color = safeColor(business.brand_color);
+      return send({
+        kind: 'branch_active',
+        businessId: business.id,
+        to: recipients(business),
+        subject: `הסניף ${location.title || ''} פעיל · ${business.name}`.replace(/\s+/g, ' '),
+        html: emailLayout({
+          color,
+          title: 'הסניף החדש פעיל',
+          body: `<p>התשלום התקבל, והסניף <b>${h(location.title || location.address)}</b> נפתח. הביקורות והנתונים שלו נטענים עכשיו, ותוך כמה דקות הם יופיעו בדשבורד ובעמוד רשת הסניפים.</p>
+            ${emailButton(url('/admin/network'), 'לרשת הסניפים', color)}`,
           footer: h(business.name),
         }),
       });

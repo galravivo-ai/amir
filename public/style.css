@@ -2690,3 +2690,6 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .lp-maps-side { display: grid; justify-items: center; gap: 12px; }
 .lp-maps-score { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); font-weight: 600; }
 @media (max-width: 560px) { .lp-maps { grid-template-columns: minmax(0, 1fr); } }
+
+/* A branch waiting for its payment */
+.g-pending { display: grid; gap: 6px; justify-items: start; }

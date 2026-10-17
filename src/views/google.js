@@ -31,7 +31,26 @@ function googleSetupCheck({ clientId, secretLooksRight, secretLength, redirectUr
   </ul></details>`;
 }
 
-function locationsTable(locations, { campaigns, csrf, can, deletable, debug = false }) {
+/** A branch waiting for its payment, in place of the tracking controls. */
+function pendingCell(l, { csrf, can, deletable, branchCost }) {
+  const price = branchCost ? `₪${branchCost.amount.toLocaleString('he-IL')} ${branchCost.annual ? 'לשנה' : 'לחודש'}` : '';
+  const cancel = deletable
+    ? `<form method="post" action="/admin/google/locations/${l.id}/delete"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link danger-text">ביטול</button></form>`
+    : `<form method="post" action="/admin/google/locations/${l.id}"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link danger-text">ביטול</button></form>`;
+  return `<div class="g-pending"><span class="badge st-late">ממתין לתשלום</span>
+    ${
+      l.pay_requested_at
+        ? '<span class="muted small">קיבלנו את הבקשה. אחרי שהתשלום יאושר, הסניף ייפתח.</span>'
+        : `<span class="muted small">סניף נוסף${price ? `: ${price}, כולל מע״מ (20% הנחה)` : ''}. הסניף ייפתח אחרי התשלום.</span>`
+    }
+    ${
+      can('manager')
+        ? `<div class="row compact"><form method="post" action="/admin/google/locations/${l.id}/pay"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn primary">${l.pay_requested_at ? 'לדף התשלום שוב' : 'לתשלום'}</button></form>${cancel}</div>`
+        : ''
+    }</div>`;
+}
+
+function locationsTable(locations, { campaigns, csrf, can, deletable, debug = false, branchCost = null }) {
   const campaignOptions = (cur) =>
     `<option value="">— בלי שיוך —</option>${campaigns
       .map((c) => `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${h(c.name)}</option>`)
@@ -42,9 +61,11 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
           ${l.sync_error ? `<div class="danger-text small">הבדיקה האחרונה נכשלה: ${h(l.sync_error)}</div>` : ''}
           ${debug && l.source === 'serp' ? `<a class="small" href="/admin/google/locations/${l.id}/debug">בדיקת SerpApi</a>` : ''}</td>
         <td data-l="דירוג">${l.total_reviews ? `${Number(l.avg_rating).toFixed(1)} ★ <span class="muted small">(${Number(l.total_reviews).toLocaleString('he-IL')})</span>` : '—'}
-          <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : l.source === 'serp' && !l.sync_error ? '<span class="g-loading">טוען ביקורות…</span>' : ''}</div></td>
+          <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : l.source === 'serp' && !l.sync_error && !l.pending_pay ? '<span class="g-loading">טוען ביקורות…</span>' : ''}</div></td>
         <td data-l="מעקב">${
-          can('manager')
+          l.pending_pay
+            ? pendingCell(l, { csrf, can, deletable, branchCost })
+            : can('manager')
             ? `<div class="row compact"><form method="post" action="/admin/google/locations/${l.id}" class="row compact">
                 <input type="hidden" name="_csrf" value="${h(csrf)}">
                 <label class="check"><input type="checkbox" name="enabled" value="1" ${l.enabled ? 'checked' : ''}> מעקב</label>
@@ -62,7 +83,7 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
     .join('')}</tbody></table>`;
 }
 
-function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial = false }) {
+function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial = false }) {
   const full = places.length >= branchLimit;
   // Second to the full connection: folded away until asked for (or already in use).
   const open = !partial || places.length || matches || query;
@@ -70,7 +91,7 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
     <summary><h2>${partial ? 'אין גישה לחשבון הגוגל? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2></summary>
     ${partial ? '<p class="g-partial">זה חיבור חלקי: ביקורות ודירוג בלבד. בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת.</p>' : ''}
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
-    ${places.length ? '<p class="muted small">אפשר להוסיף סניפים בלי הגבלה. כל סניף נוסף מחויב ב-20% הנחה ממחיר המסלול, מהחידוש הבא.</p>' : ''}
+    ${places.length ? '<p class="muted small">אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף ב-20% הנחה ממחיר המסלול. בחשבון בתשלום, סניף נוסף נפתח אחרי התשלום עליו.</p>' : ''}
     ${
       can('manager') && !full
         ? `<form method="post" action="/admin/google/places/find" class="row compact g-find">
@@ -102,7 +123,7 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
           : ''
         : ''
     }
-    ${places.length ? locationsTable(places, { campaigns, csrf, can, deletable: true, debug }) : ''}
+    ${places.length ? locationsTable(places, { campaigns, csrf, can, deletable: true, debug, branchCost }) : ''}
     ${
       places.some((l) => !l.synced_at && !l.sync_error)
         ? '<script>setTimeout(function(){location.replace(location.pathname)},8000)</script>'
@@ -119,6 +140,7 @@ export function googleConnectView({
   serpAvailable = false,
   serpHours,
   branchLimit = Infinity,
+  branchCost = null,
   serpMissing = false,
   locations,
   matches = null,
@@ -151,7 +173,7 @@ export function googleConnectView({
 `;
 
   const serpPart = serpAvailable
-    ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, partial: gbpAvailable && !conn })
+    ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial: gbpAvailable && !conn })
     : '';
 
   let gbpPart = '';
@@ -189,7 +211,7 @@ export function googleConnectView({
       <p class="muted small">מסמנים אילו סניפים לעקוב אחריהם, ומשייכים כל אחד לקמפיין. אם לקמפיין עוד אין קישור לביקורת, הקישור מגוגל נכנס אליו לבד.</p>
       ${
         gbpLocations.length
-          ? locationsTable(gbpLocations, { campaigns, csrf, can, deletable: false })
+          ? locationsTable(gbpLocations, { campaigns, csrf, can, deletable: false, branchCost })
           : '<p class="muted">לא נמצאו סניפים בחשבון הזה. ודאו שהתחברתם עם החשבון שמנהל את פרופיל העסק בגוגל.</p>'
       }
       ${

@@ -678,6 +678,11 @@ const MIGRATIONS = [
   `
   ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT '';
   `,
+  // v38: a branch added to a paying account waits for its payment before it opens
+  `
+  ALTER TABLE google_locations ADD COLUMN pending_pay INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE google_locations ADD COLUMN pay_requested_at TEXT;
+  `,
 ];
 
 function migrate(db) {

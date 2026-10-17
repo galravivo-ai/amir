@@ -31,10 +31,20 @@ export function superadminRoutes(ctx) {
         meId: req.user.id,
         marketingCount: store.marketingList().length,
         passes: store.allPasses(),
+        branches: store.pendingBranches(),
         baseUrl: ctx.baseUrl(req),
         unpaidCount: store.db.prepare("SELECT COUNT(*) AS n FROM businesses WHERE billing = 'unpaid' AND is_demo = 0").get().n,
       }),
     );
+  });
+
+  // A branch was paid for: it opens, and the business hears.
+  router.post('/branches/:id/activate', async (req, res) => {
+    const loc = store.db.prepare('SELECT * FROM google_locations WHERE id = ?').get(Number(req.params.id));
+    if (loc && store.activateBranch(loc.id)) {
+      await ctx.notifier?.branchActivated({ business: store.businessById(loc.business_id), location: loc }).catch((err) => console.error('[notify] branchActivated failed:', err));
+    }
+    res.redirect(303, '/superadmin#branches');
   });
 
   // Users who opted in to marketing email, for import into a mailing tool.

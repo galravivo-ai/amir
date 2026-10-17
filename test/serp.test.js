@@ -218,3 +218,55 @@ test('a share.google link leads to a search by the place name', async () => {
   const search = fake.calls.slice(before).find((u) => u.includes('engine=google_maps'));
   assert.equal(new URL(search).searchParams.get('q'), 'קפה לנדוור', 'searched by the name, not the share token');
 });
+
+test('a paying account pays for a new branch before it opens; the system admin activates it', async () => {
+  const { store } = created;
+  process.env.ICOUNT_URL_BRANCH = 'https://app.icount.co.il/m/branch';
+  try {
+    const admin = client();
+    await admin('/login', { method: 'POST', form: { email: 'serp-admin@example.com', password: 'password123' } });
+    const req = client();
+    await req('/register', { method: 'POST', form: { name: 'Payer', email: 'serp-payer@example.com', password: 'password123', business: 'Cafe Pay', terms: '1' } });
+    const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
+    const biz = store.businessesFor(store.userByEmail('serp-payer@example.com').id)[0];
+    store.updateBusiness(biz.id, { billing: 'active', plan: 'pro', billing_cycle: 'monthly', trial_ends_at: null });
+
+    // The first place opens right away; the second waits for its payment.
+    const add = (d, p) => req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: d, place_id: p, title: 'סניף', address: '' } });
+    assert.equal((await add('0x7:0x7', 'ChIJpay1111111')).location, '/admin/google?added=1');
+    const second = await add('0x8:0x8', 'ChIJpay2222222');
+    const pending = store.googleLocations(biz.id).find((l) => l.data_id === '0x8:0x8');
+    assert.equal(second.location, `/admin/google?pending=${pending.id}`);
+    assert.equal(pending.enabled, 0, 'not followed, and not billed, before it is paid');
+    assert.equal(pending.pending_pay, 1);
+    const page = await req('/admin/google');
+    assert.match(page.text, /ממתין לתשלום/);
+    assert.match(page.text, /₪135 לחודש/);
+    assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>1<\/dd>/);
+
+    // Paying: off to the branch's payment page, and the operator hears with the new total.
+    const pay = await req(`/admin/google/locations/${pending.id}/pay`, { method: 'POST', form: { _csrf: token } });
+    assert.equal(pay.location, 'https://app.icount.co.il/m/branch');
+    const mail = store.db.prepare("SELECT * FROM outbox WHERE kind = 'branch_request' ORDER BY id DESC").get();
+    assert.match(mail.to_addr, /serp-admin@example\.com/);
+    assert.match(mail.body, /₪135 לחודש/);
+    assert.match(mail.body, /₪304 לחודש/);
+
+    // The system admin sees it and opens it; the business hears.
+    const sa = await admin('/superadmin');
+    assert.match(sa.text, /סניפים שממתינים לתשלום/);
+    const saToken = sa.text.match(/name="_csrf" value="([^"]+)"/)[1];
+    await admin(`/superadmin/branches/${pending.id}/activate`, { method: 'POST', form: { _csrf: saToken } });
+    const opened = store.googleLocation(pending.id, biz.id);
+    assert.equal(opened.enabled, 1);
+    assert.equal(opened.pending_pay, 0);
+    assert.ok(store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'branch_active' AND business_id = ?").get(biz.id));
+    assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>2<\/dd>.*<b>₪304<\/b>/s);
+
+    // A business on its trial adds branches freely.
+    store.updateBusiness(biz.id, { billing: 'trial', trial_ends_at: new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 19).replace('T', ' ') });
+    assert.equal((await add('0x9:0x9', 'ChIJpay3333333')).location, '/admin/google?added=1');
+  } finally {
+    delete process.env.ICOUNT_URL_BRANCH;
+  }
+});

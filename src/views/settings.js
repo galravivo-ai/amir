@@ -722,6 +722,26 @@ const chip = (ok, label) => `<span class="act-chip ${ok ? 'ok' : 'no'}">${ok ? '
 const progressChips = (b) => `<div class="act-chips">${chip(b.has_google, b.has_gbp ? 'גוגל (מלא)' : b.has_google ? 'גוגל (קישור)' : 'גוגל')}${chip(b.campaigns > 0, 'קמפיין')}${chip(b.total_responses > 0, 'דירוג ראשון')}</div><div class="small muted">${seen(b.owner_seen_at)}</div>`;
 
 /** New customers (last 14 days) who haven't connected Google yet: the ones to call. */
+/** Branches added to paying accounts, waiting for their payment. */
+function branchesBlock(branches, csrf) {
+  if (!branches.length) return '';
+  return `<section class="card stack" id="branches">
+    <h3>סניפים שממתינים לתשלום</h3>
+    <p class="muted small">עסק בתשלום שמוסיף סניף עובר לדף התשלום של הסניף. כשהתשלום מגיע: מעדכנים ב-iCount את הוראת הקבע לסכום הכולל, ולוחצים "הפעלה". העסק יקבל מייל שהסניף פעיל.</p>
+    <table class="table responsive"><thead><tr><th>עסק</th><th>סניף</th><th>מחיר הסניף</th><th>מצב</th><th></th></tr></thead><tbody>${branches
+      .map((b) => {
+        const plan = PLANS[b.plan] || PLANS.basic;
+        const annual = b.billing_cycle === 'annual';
+        return `<tr><td data-l="עסק">${h(b.business_name)}<div class="muted small" dir="ltr">${h(b.owner_email || '')}</div></td>
+          <td data-l="סניף">${h(b.title || '—')}<div class="muted small">${h(b.address || '')}</div></td>
+          <td data-l="מחיר">₪${(branchPrice(plan) * (annual ? ANNUAL_MONTHS : 1)).toLocaleString('he-IL')} ${annual ? 'לשנה' : 'לחודש'}</td>
+          <td data-l="מצב">${b.pay_requested_at ? `<span class="badge st-in_progress">עבר לתשלום ${h(formatDate(`${b.pay_requested_at.replace(' ', 'T')}Z`))}</span>` : '<span class="badge st-new">עוד לא עבר לתשלום</span>'}</td>
+          <td><form method="post" action="/superadmin/branches/${b.id}/activate" onsubmit="return confirm('התשלום על הסניף התקבל? הסניף ייפתח והעסק יקבל מייל.')">${csrfField(csrf)}<button class="btn primary">הפעלה</button></form></td></tr>`;
+      })
+      .join('')}</tbody></table>
+  </section>`;
+}
+
 function stuckBlock(businesses) {
   const fresh = businesses.filter((b) => !b.has_google && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5 && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) > 864e5);
   const recent = businesses.filter((b) => Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5);
@@ -741,7 +761,7 @@ function stuckBlock(businesses) {
   </section>`;
 }
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], baseUrl = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], branches = [], baseUrl = '' }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">${b.pilot ? 'התנסות חינם' : a.card ? 'ניסיון עם כרטיס' : 'ניסיון'} · עוד ${a.daysLeft} ימים</span>`;
@@ -817,6 +837,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
           .join(', ')}. אחרי שהתשלום הוסדר, לוחצים "הפעלה" בשורה של העסק.</div>`
       : ''
   }
+  ${branchesBlock(branches, csrf)}
   ${stuckBlock(businesses)}
   <section class="card" id="businesses">
     <div class="row between"><h3>עסקים</h3>

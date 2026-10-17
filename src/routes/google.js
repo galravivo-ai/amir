@@ -8,6 +8,8 @@ import { GoogleError } from '../google.js';
 import { SerpError, writeReviewUrl } from '../serp.js';
 import { h, imageMime, safeUrl } from '../util.js';
 import * as V from '../views/google.js';
+import { amountFor } from '../billing.js';
+import { ANNUAL_MONTHS, branchPayUrl, branchPrice, payProvider, PLANS, profilesOf } from '../plans.js';
 
 const STATE_COOKIE = 'gstate';
 
@@ -37,9 +39,30 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     render(req, res, 'ביקורות גוגל', V.googleSetupView({ configured: false, isSuperadmin: ctx.isSuperadmin(req.user), redirectUri: redirectUri(req) }));
   });
 
+  /**
+   * A paying account pays for a new branch before it opens (iCount and manual
+   * payments; Cardcom charges it with the next renewal). Trials, free-access
+   * links, the demo and the system admin's own businesses add branches freely.
+   */
+  function branchNeedsPayment(req) {
+    const b = req.business;
+    if (b.billing !== 'active' || b.is_demo || b.pilot || payProvider() === 'cardcom' || PLANS[b.plan]?.price == null) return false;
+    if (ctx.isSuperadmin(store.userById(b.user_id))) return false;
+    return store.googleLocations(b.id).some((l) => l.enabled);
+  }
+  // What one more branch costs this business, per its billing period.
+  const branchCost = (b) => {
+    const annual = b.billing_cycle === 'annual';
+    return { amount: branchPrice(PLANS[b.plan] || PLANS.basic) * (annual ? ANNUAL_MONTHS : 1), annual };
+  };
+
   router.get('/google', connectPage);
   function connectPage(req, res) {
-    const notice = req.query.started
+    const notice = req.query.pending
+      ? 'הסניף נוסף וממתין לתשלום. אחרי התשלום נפעיל אותו, בדרך כלל תוך כמה שעות בימי עסקים.'
+      : req.query.pay === 'requested'
+      ? 'קיבלנו את הבקשה. נחזור אליכם להשלמת התשלום, ומיד אחריו הסניף ייפתח.'
+      : req.query.started
       ? 'הניסיון התחיל! עכשיו הצעד הכי חשוב: לחבר את פרופיל העסק בגוגל, עם החשבון שמנהל אותו.'
       : req.query.connected
       ? 'החשבון חובר. סמנו את הסניפים שתרצו לעקוב אחריהם.'
@@ -60,6 +83,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         serpAvailable: Boolean(serp),
         serpHours: serpSync?.intervalHours,
         branchLimit: req.plan.campaigns,
+        branchCost: branchCost(req.business),
         locations: store.googleLocations(req.business.id),
         matches: res.locals.matches || null,
         query: res.locals.query || '',
@@ -117,7 +141,15 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     const loc = store.googleLocation(Number(req.params.id), req.business.id);
     if (!loc) return notFound(res);
     const campaign = req.body.campaign ? store.campaign(Number(req.body.campaign), req.business.id) : null;
-    store.updateGoogleLocation(loc.id, { enabled: req.body.enabled === '1', campaignId: campaign?.id ?? null });
+    const wanted = req.body.enabled === '1';
+    // Turning on one more branch of a paying account: it waits for its payment.
+    if (wanted && !loc.enabled && (loc.pending_pay || branchNeedsPayment(req))) {
+      store.updateGoogleLocation(loc.id, { enabled: false, campaignId: campaign?.id ?? null });
+      store.setLocationPending(loc.id, true);
+      return res.redirect(303, `/admin/google?pending=${loc.id}`);
+    }
+    if (!wanted && loc.pending_pay) store.setLocationPending(loc.id, false);
+    store.updateGoogleLocation(loc.id, { enabled: wanted, campaignId: campaign?.id ?? null });
     // Fill the campaign's review link from Google when it has none yet.
     if (campaign && !campaign.google_review_url && safeUrl(loc.review_url)) store.setCampaignGoogleUrl(campaign.id, loc.review_url);
     res.redirect(303, '/admin/google?ok=1');
@@ -163,7 +195,12 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res.locals.error = `המסלול שלכם כולל עד ${req.plan.campaigns} סניפים. כדי להוסיף עוד, שדרגו את המסלול או הסירו סניף.`;
       return connectPage(req, res);
     }
+    const pay = !already && branchNeedsPayment(req);
     const loc = store.addSerpLocation(req.business.id, { ...p, reviewUrl: writeReviewUrl(p.placeId) });
+    if (pay) {
+      store.setLocationPending(loc.id, true);
+      return res.redirect(303, `/admin/google?pending=${loc.id}`);
+    }
     // The first load reads up to a year of reviews (several searches), so it
     // runs in the background; the page shows it loading and refreshes.
     const business = req.business;
@@ -173,6 +210,27 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     });
     res.redirect(303, '/admin/google?added=1');
   }
+
+  // A branch waiting for its payment: the operator hears, and the customer goes to pay.
+  router.post('/google/locations/:id/pay', manager, async (req, res) => {
+    const loc = store.googleLocation(Number(req.params.id), req.business.id);
+    if (!loc?.pending_pay) return res.redirect(303, '/admin/google');
+    const b = req.business;
+    const cycle = b.billing_cycle === 'annual' ? 'annual' : 'monthly';
+    store.markBranchPayRequested(loc.id);
+    await ctx.notifier
+      ?.branchRequested({
+        business: b,
+        location: loc,
+        user: req.user,
+        cycle,
+        amount: branchCost(b).amount,
+        total: amountFor(b.plan, cycle, profilesOf(store, b.id) + 1),
+        admins: ctx.adminEmails(),
+      })
+      .catch((err) => console.error('[notify] branchRequested failed:', err));
+    res.redirect(303, branchPayUrl(b.plan, cycle) || '/admin/google?pay=requested');
+  });
 
   // ---- posts to the Google Business Profile ----
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });

@@ -166,6 +166,18 @@ export function createStore(db) {
     googleLocation: (id, businessId) => q('SELECT * FROM google_locations WHERE id = ? AND business_id = ?').get(id, businessId) || null,
     updateGoogleLocation: (id, { enabled, campaignId }) =>
       q('UPDATE google_locations SET enabled = ?, campaign_id = ? WHERE id = ?').run(enabled ? 1 : 0, campaignId ?? null, id),
+    /** A branch waiting for its payment: not followed (and not billed) until it's paid. */
+    setLocationPending: (id, on) =>
+      q(`UPDATE google_locations SET pending_pay = ?, pay_requested_at = CASE WHEN ? THEN pay_requested_at ELSE NULL END,
+           enabled = CASE WHEN ? THEN 0 ELSE enabled END WHERE id = ?`).run(on ? 1 : 0, on ? 1 : 0, on ? 1 : 0, id),
+    markBranchPayRequested: (id) => q("UPDATE google_locations SET pay_requested_at = datetime('now') WHERE id = ?").run(id),
+    /** The branch was paid for: it opens. */
+    activateBranch: (id) => q('UPDATE google_locations SET pending_pay = 0, pay_requested_at = NULL, enabled = 1 WHERE id = ? AND pending_pay = 1').run(id).changes > 0,
+    /** For the system admin: branches waiting for a payment, the ones whose owner went to pay first. */
+    pendingBranches: () =>
+      q(`SELECT l.id, l.title, l.address, l.pay_requested_at, b.id AS business_id, b.name AS business_name, b.plan, b.billing_cycle, u.email AS owner_email
+         FROM google_locations l JOIN businesses b ON b.id = l.business_id LEFT JOIN users u ON u.id = b.user_id
+         WHERE l.pending_pay = 1 ORDER BY l.pay_requested_at IS NULL, l.pay_requested_at DESC, l.id DESC`).all(),
     googleLocationStats: (id, avg, total) =>
       q(`UPDATE google_locations SET avg_rating = ?, total_reviews = ?, synced_at = datetime('now') WHERE id = ?`).run(avg, total, id),
     /** Returns true when the review is new to us. */
