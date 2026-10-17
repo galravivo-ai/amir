@@ -21,7 +21,7 @@ export function findDrops(store, business, { now = Date.now() } = {}) {
         kind: 'rating',
         ref: `${loc.id}:${today.rating.toFixed(1)}:${today.day.slice(0, 7)}`,
         title: `הדירוג בגוגל ירד ל-${today.rating.toFixed(1)}`,
-        detail: `${loc.title}: מ-${before.rating.toFixed(1)} לפני שבוע. כדאי לבדוק את הביקורות האחרונות ולענות עליהן.`,
+        detail: `${loc.title}: לפני שבוע הדירוג היה ${before.rating.toFixed(1)}. כדאי לבדוק את הביקורות האחרונות ולענות עליהן.`,
         href: '/admin/google/reviews',
       });
     }
@@ -57,7 +57,7 @@ export function findDrops(store, business, { now = Date.now() } = {}) {
         kind: 'ai',
         ref: last.run_at,
         title: `ציון הנראות ב-AI ירד ל-${a}`,
-        detail: `מ-${b} בבדיקה הקודמת. בעמוד הנראות יש תוכנית פעולה ורשימה של מי ממליצים במקומכם.`,
+        detail: `בבדיקה הקודמת הציון היה ${b}. בעמוד הנראות ב-AI יש תוכנית פעולה ורשימה של העסקים שממליצים עליהם במקומכם.`,
         href: '/admin/ai-visibility',
       });
     }

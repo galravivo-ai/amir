@@ -180,9 +180,10 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           color,
           title: drops.length === 1 ? first.title : 'כמה דברים ירדו, כדאי להציץ',
           body: `${drops
-            .map((d) => `<p style="margin:0 0 14px"><b>${h(d.title)}</b><br>${h(d.detail)}<br><a href="${h(url(d.href))}" style="color:${color}">לפרטים ←</a></p>`)
+            // With one drop, the title is already the heading above.
+            .map((d) => `<p style="margin:0 0 14px">${drops.length > 1 ? `<b>${h(d.title)}</b><br>` : ''}${h(d.detail)}<br><a href="${h(url(d.href))}" style="color:${color}">לפרטים ←</a></p>`)
             .join('')}
-            <p style="color:#6b7280;font-size:13px">ירידה קטנה קורית. מה שחשוב הוא לתפוס אותה מוקדם. אפשר לכבות את ההתראות האלה בהגדרות העסק.</p>`,
+            <p style="color:#6b7280;font-size:13px">ירידות קטנות קורות, ומה שחשוב הוא לתפוס אותן מוקדם. אפשר לכבות את ההתראות האלה בהגדרות העסק.</p>`,
           footer: h(business.name),
         }),
       });

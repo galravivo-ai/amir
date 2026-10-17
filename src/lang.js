@@ -142,6 +142,8 @@ export function untranslated(html) {
 /** An email, in English: the text, and the layout turned left-to-right. */
 export function englishEmail(html) {
   return translate(html)
+    .replace(/dir="rtl"/g, 'dir="ltr"')
+    .replace(/direction:\s*rtl/g, 'direction:ltr')
     .replace(/text-align:\s*right/g, 'text-align:left')
     .replace(/(padding|margin|border)-right/g, '$1-@@')
     .replace(/(padding|margin|border)-left/g, '$1-right')

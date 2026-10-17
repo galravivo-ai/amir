@@ -85,8 +85,9 @@ export function createMailer(
   };
 }
 
-/** Wraps email content in a simple RTL Hebrew layout. */
 /**
+ * Wraps email content in a simple right-to-left layout. The direction is set on
+ * the content itself too, since some mail apps (Gmail) drop the <html> attributes.
  * `brand: true` puts the product logo on top. Only for emails from the
  * platform itself; emails about a business carry that business's colors.
  */
@@ -97,9 +98,9 @@ export function emailLayout({ title, body, color = '#4b2bd6', footer = '', brand
       ? `<div style="text-align:right;margin:0 0 14px"><img src="${h(base)}/static/brand/gofive-logo-email.png" width="180" height="44" alt="GoFive" style="display:inline-block;border:0"></div>`
       : '';
   return `<!doctype html><html lang="he" dir="rtl"><body style="margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#1f2330">
-<div style="max-width:560px;margin:0 auto;padding:24px 16px">
+<div dir="rtl" style="max-width:560px;margin:0 auto;padding:24px 16px;direction:rtl">
 ${logo}
-<div style="background:#fff;border-radius:12px;padding:24px;border-top:4px solid ${color};text-align:right">
+<div dir="rtl" style="background:#fff;border-radius:12px;padding:24px;border-top:4px solid ${color};text-align:right;direction:rtl">
 <h2 style="margin:0 0 12px">${h(title)}</h2>
 ${body}
 </div>

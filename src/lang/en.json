@@ -1196,12 +1196,10 @@
 "אירעה שגיאה בשרת, נסו שוב מאוחר יותר": "Something went wrong on the server, please try again later",
 "מתחרה": "Competitor",
 "הדירוג בגוגל ירד ל-": "Your Google rating dropped to",
-": מ-{a} לפני שבוע. כדאי לבדוק את הביקורות האחרונות ולענות עליהן.": ": from {a} a week ago. Check your latest reviews and reply to them.",
 "ירידה במפות בחיפוש \"{a}\"": "Maps drop for the search “{a}”",
 "המיקום הממוצע ירד מ-{a} ל-{b}.": "The average rank dropped from {a} to {b}.",
 "העסק מופיע עכשיו ב-{a} נקודות מתוך 9, לעומת {b} בבדיקה הקודמת.": "The business now appears at {a} of 9 points, compared with {b} in the previous check.",
 "ציון הנראות ב-AI ירד ל-": "Your AI visibility score dropped to",
-"מ-{a} בבדיקה הקודמת. בעמוד הנראות יש תוכנית פעולה ורשימה של מי ממליצים במקומכם.": "from {a} in the previous check. The visibility page has an action plan and a list of who's recommended instead of you.",
 "הכניסה עם גוגל לא אומתה. נסו שוב.": "The Google sign-in couldn't be verified. Please try again.",
 "כתובת המייל בחשבון הגוגל לא מאומתת.": "The email address on that Google account isn't verified.",
 "גוגל לא החזירה הרשאה קבועה. נסו להתחבר שוב.": "Google didn't return a lasting permission. Try connecting again.",
@@ -2160,9 +2158,7 @@
 "משהו ירד השבוע · {b}": "Something dropped this week · {b}",
 "כמה דברים ירדו, כדאי להציץ": "A few things dropped, worth a look",
 "משהו ירד, כדאי להציץ": "Something dropped, worth a look",
-"{l}: מ-{a} לפני שבוע. כדאי לבדוק את הביקורות האחרונות ולענות עליהן.": "{l}: from {a} a week ago. Check your latest reviews and reply to them.",
 "לפרטים ←": "Details →",
-"ירידה קטנה קורית. מה שחשוב הוא לתפוס אותה מוקדם. אפשר לכבות את ההתראות האלה בהגדרות העסק.": "Small drops happen. What matters is catching them early. You can turn these alerts off in the business settings.",
 "הלקוח ענה שהטיפול לא עזר · הלקוח חזר לרשימת הלא מרוצים": "The customer said it didn't help · back on the unhappy list",
 "הלקוח ענה שהטיפול לא עזר · {c}": "The customer said it didn't help · {c}",
 "פנייה נפתחה מחדש": "Request reopened",
@@ -2294,5 +2290,8 @@
 "לבקש דירוג מ-5 לקוחות": "Ask 5 customers for a rating",
 "מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, קידום ומיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית שבועית לעלות במפות, והתראות.": "Manage your Google Business Profile in one place: reviews with AI replies, profile views and calls, growing your Google Maps rank, competitors, and visibility in ChatGPT, Gemini and Perplexity. A weekly plan to climb on Maps, and alerts.",
 "קידום במפות: תוכנית שבועית ובריאות הפרופיל": "Maps growth: a weekly plan and profile health",
-"✓ קידום במפות: תוכנית שבועית ובריאות הפרופיל": "✓ Maps growth: a weekly plan and profile health"
+"✓ קידום במפות: תוכנית שבועית ובריאות הפרופיל": "✓ Maps growth: a weekly plan and profile health",
+"{l}: לפני שבוע הדירוג היה {a}. כדאי לבדוק את הביקורות האחרונות ולענות עליהן.": "{l}: a week ago the rating was {a}. Check your latest reviews and reply to them.",
+"בבדיקה הקודמת הציון היה {n}. בעמוד הנראות ב-AI יש תוכנית פעולה ורשימה של העסקים שממליצים עליהם במקומכם.": "In the previous check the score was {n}. The AI visibility page has an action plan and a list of the businesses recommended instead of you.",
+"ירידות קטנות קורות, ומה שחשוב הוא לתפוס אותן מוקדם. אפשר לכבות את ההתראות האלה בהגדרות העסק.": "Small drops happen, and what matters is catching them early. You can turn these alerts off in the business settings."
 }
