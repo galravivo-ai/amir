@@ -2648,3 +2648,10 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .help-dlg { width: min(480px, calc(100vw - 24px)); padding: 24px; border: 0; border-radius: 16px; box-shadow: 0 30px 80px -20px rgba(20, 12, 70, .5); }
 .help-dlg::backdrop { background: rgba(14, 10, 46, .55); }
 .help-dlg h2 { margin: 0; font-size: 1.25rem; }
+/* the new mark on dark backgrounds: a lighter purple star so it stands out */
+.side-brand .logo-mark .lm-star, .m-top .logo-mark .lm-star { fill: #8b74ff; stroke: #8b74ff; }
+.side-brand .logo-mark .lm-speed, .m-top .logo-mark .lm-speed { stroke: #8b74ff; }
+.logo-mark { border-radius: 0; }
+/* the logo reads as drawn: the star before (left of) the name, also on Hebrew pages */
+.site-head .brand, .side-brand, .m-brand { direction: ltr; }
+.m-brand { justify-content: flex-end; }
