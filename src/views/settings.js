@@ -821,7 +821,8 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>מסלול ותשלום</th><th>התקדמות</th><th>סוכנות</th><th>צוות</th><th>דירוגים החודש</th><th>נוצר</th></tr></thead>
     <tbody>${businesses
       .map(
-        (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}${b.owner_email ? `<form method="post" action="/superadmin/businesses/${b.id}/guide" class="small">${csrfField(csrf)}<button class="btn-link">שליחת מדריך</button></form>` : ''}</td>
+        (b) => `<tr><td data-l="עסק">${h(b.name)}</td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}${b.owner_email ? `<form method="post" action="/superadmin/businesses/${b.id}/guide" class="small">${csrfField(csrf)}<button class="btn-link">שליחת מדריך</button></form>` : ''}
+          <form method="post" action="/superadmin/businesses/${b.id}/reset-data" class="small" data-name="${h(b.name)}" onsubmit="var v=prompt('איפוס הנתונים של ' + this.dataset.name + ': מקומות וביקורות מגוגל, מיקום במפות, בריאות, מתחרים, בדיקות AI ותשובות לסקרים יימחקו. החשבון, ההגדרות והקמפיינים נשארים. אי אפשר לבטל. כדי לאשר, הקלידו את שם העסק:');if(v===null)return false;this.confirm.value=v;return true">${csrfField(csrf)}<input type="hidden" name="confirm"><button class="btn-link danger-text">איפוס נתונים</button></form></td>
           <td data-l="מסלול">${planSelect(b)}</td><td data-l="התקדמות">${progressChips(b)}</td><td data-l="סוכנות">${agencySelect(b)}</td><td data-l="צוות">${b.members}</td>
           <td data-l="החודש">${b.month_responses}</td><td data-l="נוצר" class="small">${h(formatDate(b.created_at))}</td></tr>`,
       )

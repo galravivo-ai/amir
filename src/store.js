@@ -1058,6 +1058,38 @@ export function createStore(db) {
     paymentsFor: (businessId, limit = 24) => q('SELECT * FROM payments WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),
     /** Card subscriptions whose paid period is over. */
     // Paid periods that ended, and card trials that ended (their first charge).
+    /**
+     * Clears what was collected for a business (Google places and reviews, map
+     * rankings, health, competitors, AI checks, survey answers and reports).
+     * The account stays: the business, its team, settings, campaigns and billing.
+     */
+    resetBusinessData(id) {
+      const statements = [
+        'DELETE FROM google_locations WHERE business_id = ?',
+        'DELETE FROM google_connections WHERE business_id = ?',
+        'DELETE FROM google_posts WHERE business_id = ?',
+        'DELETE FROM competitors WHERE business_id = ?',
+        'DELETE FROM ai_checks WHERE business_id = ?',
+        'DELETE FROM ai_plans WHERE business_id = ?',
+        'DELETE FROM ai_insights WHERE business_id = ?',
+        'DELETE FROM drop_alerts WHERE business_id = ?',
+        'DELETE FROM monthly_reports WHERE business_id = ?',
+        'DELETE FROM weekly_tasks_done WHERE business_id = ?',
+        'DELETE FROM responses WHERE campaign_id IN (SELECT id FROM campaigns WHERE business_id = ?)',
+        'DELETE FROM events WHERE campaign_id IN (SELECT id FROM campaigns WHERE business_id = ?)',
+        'DELETE FROM invites WHERE campaign_id IN (SELECT id FROM campaigns WHERE business_id = ?)',
+      ];
+      db.exec('BEGIN');
+      try {
+        for (const sql of statements) q(sql).run(id);
+        q('UPDATE businesses SET ai_checked_at = NULL WHERE id = ?').run(id);
+        db.exec('COMMIT');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
+    },
+
     // ---------- free-access links (pilot customers) ----------
     createPass({ plan, days, maxUses, note }) {
       const code = token(9);

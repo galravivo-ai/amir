@@ -1440,3 +1440,22 @@ test('trial emails: connect after a day, then progress or a second nudge on day 
   assert.match(b[0].body, /קישור אישי בוואטסאפ/);
   assert.match(b[0].body, /לעלות בגוגל מפות/);
 });
+
+test('system admin: reset a business\'s data, with its name typed to confirm', async () => {
+  const owner = await registeredOwner('reset@example.com');
+  const campaign = await createCampaign(owner);
+  await completeSurvey(campaign.slug, 2, { comment: 'בדיקה' });
+  const biz = store.businessesFor(store.userByEmail('reset@example.com').id)[0];
+  store.db.prepare("INSERT INTO google_locations (business_id, name, source, place_id, title, enabled) VALUES (?, 'serp:gecko', 'serp', 'gecko', 'הגקו', 1)").run(biz.id);
+  const root = await registeredOwner('reset-root@example.com');
+  store.setSuperadmin(store.userByEmail('reset-root@example.com').id, true);
+  const token = await csrfOf(root);
+  const count = () => store.db.prepare('SELECT (SELECT COUNT(*) FROM google_locations WHERE business_id = ?) + (SELECT COUNT(*) FROM responses r JOIN campaigns c ON c.id = r.campaign_id WHERE c.business_id = ?) AS n').get(biz.id, biz.id).n;
+  assert.equal(count(), 2);
+  await root.req(`/superadmin/businesses/${biz.id}/reset-data`, { method: 'POST', form: { _csrf: token, confirm: 'שם אחר' } });
+  assert.equal(count(), 2, 'a wrong name changes nothing');
+  await root.req(`/superadmin/businesses/${biz.id}/reset-data`, { method: 'POST', form: { _csrf: token, confirm: biz.name } });
+  assert.equal(count(), 0);
+  assert.ok(store.businessById(biz.id), 'the business stays');
+  assert.equal(store.campaignsFor(biz.id).length, 1, 'and its campaign');
+});

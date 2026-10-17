@@ -135,6 +135,18 @@ export function superadminRoutes(ctx) {
     const owner = store.membersOf(business.id).find((m) => m.role === 'owner');
     return owner ? ctx.notifier.welcomeGuide({ user: owner, business }) : null;
   };
+  // Empties a business's dashboard (test data, a place followed by mistake); the account stays.
+  // The business name is typed to confirm.
+  router.post('/businesses/:id/reset-data', (req, res) => {
+    const business = store.businessById(Number(req.params.id));
+    if (!business || business.is_demo || String(req.body.confirm ?? '').trim() !== business.name) {
+      return res.redirect(303, '/superadmin?err=' + encodeURIComponent('הנתונים לא נמחקו.'));
+    }
+    store.resetBusinessData(business.id);
+    console.log(`[superadmin] ${req.user.email} reset the data of business ${business.id}`);
+    res.redirect(303, '/superadmin?ok=1#businesses');
+  });
+
   router.post('/businesses/:id/guide', async (req, res) => {
     const business = store.businessById(Number(req.params.id));
     if (business && !business.is_demo) await sendGuide(business);
