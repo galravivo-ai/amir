@@ -18,17 +18,21 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
   // translated); everyone else, and mail to a business's customers, stays as written.
   async function send(msg) {
     const all = [].concat(msg.to).map((x) => String(x ?? '').trim()).filter(Boolean);
-    const english = (e) => {
+    const readsEnglish = (e) => {
       const user = store.userByEmail(e);
       return user ? user.lang === 'en' : isEn();
     };
-    const en = all.filter(english);
+    const en = all.filter(readsEnglish);
     if (!en.length) return mailer.send(msg);
     const he = all.filter((e) => !en.includes(e));
     const sent = he.length ? await mailer.send({ ...msg, to: he }) : true;
-    const translated = await mailer.send({ ...msg, to: en, subject: translateText(h(msg.subject)).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), html: msg.html && englishEmail(msg.html), text: msg.text && translateText(msg.text) });
+    const translated = await mailer.send({ ...english(msg), to: en });
     return sent && translated;
   }
+
+  const english = (msg) => ({ ...msg, subject: translateText(h(msg.subject)).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), html: msg.html && englishEmail(msg.html), text: msg.text && translateText(msg.text) });
+  // Mail to a business's customers follows the campaign's language: English when the campaign is.
+  const toCustomer = (msg, campaign) => mailer.send(campaign?.lang === 'en' ? english(msg) : msg);
 
   function recipients(business) {
     const custom = emailList(business.alert_emails);
@@ -116,7 +120,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     /** "Did we solve it?" email to the customer after a ticket is resolved. */
     async followUp({ business, response, link }) {
       const color = safeColor(business.brand_color);
-      return mailer.send({
+      return toCustomer({
         kind: 'followup',
         businessId: business.id,
         to: response.email,
@@ -129,7 +133,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
             ${emailButton(link, 'לתשובה בלחיצה אחת', color)}`,
           footer: h(business.name),
         }),
-      });
+      }, store.campaignById(response.campaign_id));
     },
 
     /** The customer said the fix did not help: the ticket is open again. */
@@ -417,7 +421,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       const color = safeColor(business.brand_color);
       const link = url(`/r/${campaign.slug}?i=${invite.token}`);
       const hello = invite.customer_name ? `היי ${h(invite.customer_name)},` : 'היי,';
-      return mailer.send({
+      return toCustomer({
         kind: reminder ? 'customer_reminder' : 'customer_invite',
         businessId: business.id,
         to: invite.email,
@@ -431,7 +435,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
             ${emailButton(link, 'לדירוג', color)}`,
           footer: h(business.name),
         }),
-      });
+      }, campaign);
     },
 
     /** A paying business went to pay for one more branch: the operator activates it once the payment arrives. */

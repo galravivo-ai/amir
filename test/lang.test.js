@@ -165,3 +165,24 @@ test('emails to someone who reads English go out in English, left to right', asy
   assert.doesNotMatch(english.body, /text-align:right/);
   assert.equal(mail('korea@example.com').subject, 'איפוס סיסמה');
 });
+
+test("a business's customers get its emails in the campaign's language", async () => {
+  const owner = store.createUser({ email: 'owner-en@example.com', name: 'Owner', passwordHash: 'x' });
+  const business = store.businessById(store.createBusiness(owner, { name: 'Vine Bistro' }));
+  const send = async (lang, email) => {
+    const campaign = store.campaignById(store.createCampaign(business.id, { name: lang, lang, slug: `c-${lang}` }));
+    store.createInvite(campaign.id, { customer_name: 'Emma', phone: '', email });
+    const invite = store.db.prepare('SELECT * FROM invites WHERE email = ?').get(email);
+    await notifier.customerInvite({ business, campaign, invite });
+    await notifier.followUp({ business, response: { email, customer_name: '', campaign_id: campaign.id }, link: 'https://example.com/c/1' });
+    return store.db.prepare('SELECT subject, body FROM outbox WHERE to_addr = ? ORDER BY id').all(email);
+  };
+  const [invite, followUp] = await send('en', 'emma@customer.example');
+  assert.equal(invite.subject, 'How was Vine Bistro?');
+  assert.equal(followUp.subject, 'Vine Bistro: did we solve it?');
+  for (const m of [invite, followUp]) {
+    assert.match(m.body, /dir="ltr"/);
+    assert.deepEqual(untranslated(m.body), []);
+  }
+  assert.equal((await send('he', 'dana@customer.example'))[0].subject, 'איך היה בVine Bistro?');
+});

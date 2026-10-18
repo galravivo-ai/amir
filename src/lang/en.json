@@ -2332,5 +2332,16 @@
 "לרשת הסניפים": "To the branch network",
 "פרופיל (סניף) שנוסף לחשבון בתשלום נפתח אחרי התשלום עליו, ומאז מחויב בכל חידוש. בזמן תקופת הניסיון אפשר להוסיף סניפים בלי תשלום, ופרופיל שהוסר מפסיק להיות מחויב מהחידוש הבא. אין זיכוי על החלק של התקופה הנוכחית.": "A profile (branch) added to a paid account opens once it's paid for, and is then charged at every renewal. During the trial you can add branches without paying, and a removed profile stops being charged from the next renewal. There's no credit for the rest of the current period.",
 "פרופיל שנוסף באמצע תקופה מחויב מהחידוש הבא, ופרופיל שהוסר מפסיק להיות מחויב מהחידוש הבא. אין זיכוי על החלק של התקופה הנוכחית.": "A profile added mid-period is charged from the next renewal, and a removed profile stops being charged from the next renewal. There's no credit for the rest of the current period.",
-"הסניף הראשון במחיר המסלול, וכל סניף נוסף ב-{n} הנחה: ₪{n} לחודש במסלול \"גוגל\" ו-₪{n} במסלול \"גוגל + AI\", כולל מע״מ. כל סניף מקבל את כל הפיצ'רים: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים לחשבון בתשלום נפתח מיד אחרי התשלום עליו.": "Your first branch is at the plan's price, and every extra branch is {n} off: ₪{n} a month on “Google” and ₪{n} on “Google + AI”, including VAT. Every branch gets every feature: reviews, views and calls, Maps rank and AI visibility. All branches are managed from one account, and a branch added to a paid account opens right after it's paid for."
+"הסניף הראשון במחיר המסלול, וכל סניף נוסף ב-{n} הנחה: ₪{n} לחודש במסלול \"גוגל\" ו-₪{n} במסלול \"גוגל + AI\", כולל מע״מ. כל סניף מקבל את כל הפיצ'רים: ביקורות, צפיות ושיחות, מיקום במפות ונראות ב-AI. כל הסניפים מנוהלים מחשבון אחד, וסניף שמוסיפים לחשבון בתשלום נפתח מיד אחרי התשלום עליו.": "Your first branch is at the plan's price, and every extra branch is {n} off: ₪{n} a month on “Google” and ₪{n} on “Google + AI”, including VAT. Every branch gets every feature: reviews, views and calls, Maps rank and AI visibility. All branches are managed from one account, and a branch added to a paid account opens right after it's paid for.",
+"איך היה ב{b}?": "How was {b}?",
+"תזכורת: איך היה ב{b}?": "Reminder: how was {b}?",
+"נשמח לשמוע ממך": "We'd love to hear from you",
+"עוד רגע אחד מזמנך?": "One more moment of your time?",
+"תודה שבחרת ב{b}. נשמח לדעת איך הייתה החוויה, זה לוקח פחות מדקה.": "Thanks for choosing {b}. We'd love to know how it went. It takes less than a minute.",
+"לדירוג": "Rate us",
+"{b}: האם הטיפול עזר?": "{b}: did we solve it?",
+"האם הטיפול בפנייה שלך עזר?": "Did we solve your issue?",
+"היי,": "Hi,",
+"פנית ל{b} לאחרונה, וטיפלנו בזה. חשוב לנו לדעת אם הצלחנו.": "You contacted {b} recently, and we took care of it. We'd like to know if it helped.",
+"לתשובה בלחיצה אחת": "Answer in one click"
 }
