@@ -95,3 +95,22 @@ test('the system admin sees the address to give iCount', async () => {
   const page = await (await fetch(`${base}/superadmin`, { headers: { cookie } })).text();
   assert.match(page, new RegExp(`/billing/icount/ipn/${SECRET}`));
 });
+
+test('the call is read whatever its format, and an empty check is not kept', async () => {
+  const count = () => store.db.prepare('SELECT COUNT(*) AS n FROM icount_payments').get().n;
+  const before = count();
+  await fetch(`${base}/billing/icount/ipn/${SECRET}`, { method: 'POST' });
+  assert.equal(count(), before, 'an empty call is iCount checking the address');
+
+  const send = (body, type) => fetch(`${base}/billing/icount/ipn/${SECRET}`, { method: 'POST', headers: { 'content-type': type }, body });
+  const last = () => store.db.prepare('SELECT email, amount FROM icount_payments ORDER BY id DESC').get();
+  await send(JSON.stringify({ client_email: 'json@example.com', cc_total: 99 }), 'text/plain');
+  assert.deepEqual({ ...last() }, { email: 'json@example.com', amount: 99 });
+  const fd = new FormData();
+  fd.append('email', 'multi@example.com');
+  fd.append('sum', '135');
+  await fetch(`${base}/billing/icount/ipn/${SECRET}`, { method: 'POST', body: fd });
+  assert.deepEqual({ ...last() }, { email: 'multi@example.com', amount: 135 });
+  await send('<ipn><email>xml@example.com</email><totalsum>790</totalsum></ipn>', 'text/xml');
+  assert.deepEqual({ ...last() }, { email: 'xml@example.com', amount: 790 });
+});

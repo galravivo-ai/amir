@@ -8,17 +8,49 @@ import { CYCLES, PLANS } from '../plans.js';
  * trust nothing they're sent: Cardcom's payment is re-read from Cardcom, and
  * WhatsApp's updates must carry Meta's signature.
  */
+/** A body as text: JSON, a form, or multipart fields; else kept as it is. */
+function parseBody(text, type = '') {
+  const t = text.trim();
+  if (!t) return {};
+  if (/^[[{]/.test(t)) {
+    try {
+      const v = JSON.parse(t);
+      return v && typeof v === 'object' ? v : { body: t };
+    } catch {
+      /* not JSON */
+    }
+  }
+  if (/multipart\/form-data/i.test(type)) {
+    const out = {};
+    for (const m of t.matchAll(/name="([^"]+)"\r?\n(?:[^\r\n]+\r?\n)*\r?\n([\s\S]*?)\r?\n--/g)) out[m[1]] = m[2];
+    return Object.keys(out).length ? out : { body: t.slice(0, 5000) };
+  }
+  if (t.startsWith('<')) {
+    const out = {};
+    for (const m of t.matchAll(/<([\w:-]+)[^>]*>([^<]*)<\/\1>/g)) out[m[1]] = m[2].trim();
+    return Object.keys(out).length ? out : { body: t.slice(0, 5000) };
+  }
+  if (/^[^=&\s]+=/.test(t)) return Object.fromEntries(new URLSearchParams(t));
+  return { body: t.slice(0, 5000) };
+}
+
 export function webhookRoutes(store, { billing = null, notifier = null, adminEmails = () => [] } = {}) {
   const router = express.Router();
 
   // iCount's IPN: called after each payment on an iCount payment page. The
   // secret in the address is the proof; see src/icount.js for what opens on its own.
-  router.all('/billing/icount/ipn/:secret', express.json({ limit: '100kb' }), async (req, res) => {
+  // Whatever format the call comes in (form, JSON, multipart, plain text) is
+  // read, and kept as it came, so a format we didn't expect can still be seen.
+  router.all('/billing/icount/ipn/:secret', express.text({ type: () => true, limit: '100kb' }), async (req, res) => {
     if (!secretMatches(req.params.secret)) return res.sendStatus(404);
-    const payload = { ...req.query, ...(req.body && typeof req.body === 'object' ? req.body : {}) };
-    const raw = JSON.stringify(payload);
+    const body = typeof req.body === 'string' ? parseBody(req.body, req.get('content-type')) : req.body && typeof req.body === 'object' ? req.body : {};
+    const payload = { ...req.query, ...body };
     const { emails, amounts } = readPayment(payload);
-    const id = store.recordIcountPayment({ digest: crypto.createHash('sha256').update(raw).digest('hex'), payload: raw.slice(0, 20000), email: emails[0], amount: amounts[0] });
+    // A call with nothing in it: iCount checking the address when it's saved.
+    if (!Object.keys(payload).length) return res.send('OK');
+    const raw = JSON.stringify(payload);
+    const kept = JSON.stringify({ ...payload, _method: req.method, _type: req.get('content-type') || '' });
+    const id = store.recordIcountPayment({ digest: crypto.createHash('sha256').update(raw).digest('hex'), payload: kept.slice(0, 20000), email: emails[0], amount: amounts[0] });
     if (!id) return res.send('OK'); // the same call again
     const match = matchPayment(store, { emails, amounts });
     let what = '';
