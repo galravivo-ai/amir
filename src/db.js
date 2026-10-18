@@ -683,6 +683,19 @@ const MIGRATIONS = [
   ALTER TABLE google_locations ADD COLUMN pending_pay INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE google_locations ADD COLUMN pay_requested_at TEXT;
   `,
+  // v39: payments reported by iCount (IPN), kept as they came, with what was done with each
+  `
+  CREATE TABLE icount_payments (
+    id INTEGER PRIMARY KEY,
+    digest TEXT NOT NULL UNIQUE,
+    payload TEXT NOT NULL,
+    email TEXT,
+    amount REAL,
+    result TEXT NOT NULL DEFAULT 'received',
+    business_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  `,
 ];
 
 function migrate(db) {

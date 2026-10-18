@@ -5,6 +5,7 @@ import { statusView } from '../views/status.js';
 import { CYCLES, icountUrl, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import * as V from '../views/settings.js';
 import { csvEscape } from '../util.js';
+import { secretMatches } from '../icount.js';
 
 /** System-wide administration: businesses, plans, users and the email outbox. */
 export function superadminRoutes(ctx) {
@@ -32,6 +33,7 @@ export function superadminRoutes(ctx) {
         marketingCount: store.marketingList().length,
         passes: store.allPasses(),
         branches: store.pendingBranches(),
+        icount: { payments: store.recentIcountPayments(), ipnUrl: secretMatches(process.env.ICOUNT_IPN_SECRET) ? `${ctx.baseUrl(req)}/billing/icount/ipn/${String(process.env.ICOUNT_IPN_SECRET).trim()}` : '' },
         baseUrl: ctx.baseUrl(req),
         unpaidCount: store.db.prepare("SELECT COUNT(*) AS n FROM businesses WHERE billing = 'unpaid' AND is_demo = 0").get().n,
       }),

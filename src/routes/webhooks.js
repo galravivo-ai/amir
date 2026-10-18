@@ -1,13 +1,41 @@
 import crypto from 'node:crypto';
 import express from 'express';
+import { matchPayment, readPayment, secretMatches } from '../icount.js';
+import { CYCLES, PLANS } from '../plans.js';
 
 /**
  * Calls from payment and messaging providers. They carry no session, so they
  * trust nothing they're sent: Cardcom's payment is re-read from Cardcom, and
  * WhatsApp's updates must carry Meta's signature.
  */
-export function webhookRoutes(store, { billing = null } = {}) {
+export function webhookRoutes(store, { billing = null, notifier = null, adminEmails = () => [] } = {}) {
   const router = express.Router();
+
+  // iCount's IPN: called after each payment on an iCount payment page. The
+  // secret in the address is the proof; see src/icount.js for what opens on its own.
+  router.all('/billing/icount/ipn/:secret', express.json({ limit: '100kb' }), async (req, res) => {
+    if (!secretMatches(req.params.secret)) return res.sendStatus(404);
+    const payload = { ...req.query, ...(req.body && typeof req.body === 'object' ? req.body : {}) };
+    const raw = JSON.stringify(payload);
+    const { emails, amounts } = readPayment(payload);
+    const id = store.recordIcountPayment({ digest: crypto.createHash('sha256').update(raw).digest('hex'), payload: raw.slice(0, 20000), email: emails[0], amount: amounts[0] });
+    if (!id) return res.send('OK'); // the same call again
+    const match = matchPayment(store, { emails, amounts });
+    let what = '';
+    if (match?.kind === 'plan') {
+      store.updateBusiness(match.business.id, { plan: match.plan, billing_cycle: match.cycle, billing: 'active', plan_request: null, trial_notice: null });
+      what = `מסלול ${PLANS[match.plan].label}, ${CYCLES[match.cycle]}`;
+    } else if (match?.kind === 'branch' && store.activateBranch(match.branch.id)) {
+      what = `סניף ${match.branch.title || match.branch.address || ''}`.trim();
+      const loc = store.db.prepare('SELECT * FROM google_locations WHERE id = ?').get(match.branch.id);
+      await notifier?.branchActivated({ business: store.businessById(match.business.id), location: loc }).catch((err) => console.error('[notify] branchActivated failed:', err));
+    }
+    store.setIcountResult(id, what ? `activated: ${what}` : 'manual', match?.business.id ?? null);
+    await notifier
+      ?.icountPayment({ admins: adminEmails(), done: Boolean(what), business: match && store.businessById(match.business.id), what, email: emails[0], amount: amounts[0] ?? null })
+      .catch((err) => console.error('[notify] icountPayment failed:', err));
+    res.send('OK');
+  });
 
   router.post('/billing/cardcom/webhook', express.json({ limit: '100kb' }), async (req, res) => {
     const id = Number(req.query.p);

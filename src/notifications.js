@@ -459,6 +459,28 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** iCount reported a payment: opened on its own, or waiting for the operator. */
+    async icountPayment({ admins, done, business = null, what = '', email = '', amount = null }) {
+      if (!admins.length) return false;
+      const sum = amount != null ? `₪${amount.toLocaleString('he-IL')}` : 'סכום לא ידוע';
+      return send({
+        kind: 'icount_payment',
+        businessId: business?.id ?? null,
+        to: admins,
+        subject: done ? `תשלום התקבל והופעל · ${business.name}` : `תשלום ב-iCount שלא הופעל אוטומטית · ${sum}`,
+        html: emailLayout({
+          title: done ? 'תשלום התקבל, והמערכת הפעילה אותו' : 'תשלום התקבל, וצריך להפעיל ידנית',
+          brand: true,
+          body: done
+            ? `<p><b>${h(business.name)}</b> שילם ${sum} ב-iCount, והמערכת הפעילה לבד: <b>${h(what)}</b>.</p>
+              <p>אין צורך לעשות כלום.${what.includes('סניף') ? ' רק לוודא שהוראת הקבע ב-iCount על הסכום הכולל של העסק.' : ''}</p>`
+            : `<p>iCount דיווח על תשלום של <b>${sum}</b>${email ? ` מ-<span dir="ltr">${h(email)}</span>` : ''}, אבל המערכת לא מצאה בקשה אחת שמתאימה בדיוק למייל ולסכום (למשל: שולם במייל אחר מזה של החשבון, או בסכום אחר).</p>
+              <p>בודקים ב-iCount מי שילם, ומפעילים בניהול המערכת כמו קודם.</p>
+              ${emailButton(url('/superadmin#icount'), 'לניהול המערכת')}`,
+        }),
+      });
+    },
+
     /** The branch was paid for and opened. */
     async branchActivated({ business, location }) {
       const color = safeColor(business.brand_color);

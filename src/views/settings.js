@@ -755,6 +755,41 @@ function branchesBlock(branches, csrf) {
   </section>`;
 }
 
+const prettyJson = (text) => {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 1);
+  } catch {
+    return text;
+  }
+};
+
+/** Payments iCount reported, and the address to give it. */
+function icountBlock({ payments = [], ipnUrl = '' } = {}) {
+  if (payProvider() !== 'icount') return '';
+  return `<section class="card stack" id="icount">
+    <h3>תשלומים מ-iCount</h3>
+    ${
+      ipnUrl
+        ? `<p class="muted small">הכתובת להדבקה ב-iCount, תחת אוטומציות ← כתובת IPN. תשלום שהמייל והסכום שלו מתאימים בדיוק לבקשה של עסק נפתח לבד; כל השאר מגיע אליך במייל להפעלה ידנית.</p>
+          <input readonly dir="ltr" value="${h(ipnUrl)}" onclick="this.select()" aria-label="כתובת IPN">`
+        : '<p class="muted small">כדי שתשלומים ייפתחו לבד: מוסיפים ב-Railway משתנה <code dir="ltr">ICOUNT_IPN_SECRET</code> עם מחרוזת אקראית של 16 תווים לפחות, ואז הכתובת להדבקה ב-iCount תופיע כאן.</p>'
+    }
+    ${
+      payments.length
+        ? `<table class="table responsive"><thead><tr><th>מתי</th><th>מייל</th><th>סכום</th><th>מה נעשה</th></tr></thead><tbody>${payments
+            .map(
+              (p) => `<tr><td data-l="מתי">${h(formatDate(`${p.created_at.replace(' ', 'T')}Z`))}</td>
+                <td data-l="מייל" dir="ltr">${h(p.email || '—')}</td>
+                <td data-l="סכום">${p.amount != null ? `₪${Number(p.amount).toLocaleString('he-IL')}` : '—'}</td>
+                <td data-l="מה נעשה">${p.result.startsWith('activated') ? `<span class="badge st-resolved">הופעל: ${h(p.result.replace(/^activated: /, ''))}${p.business_name ? ` · ${h(p.business_name)}` : ''}</span>` : '<span class="badge st-new">להפעלה ידנית</span>'}
+                  <details class="small"><summary>מה iCount שלח</summary><pre dir="ltr" style="white-space:pre-wrap;max-width:40rem">${h(prettyJson(p.payload))}</pre></details></td></tr>`,
+            )
+            .join('')}</tbody></table>`
+        : '<p class="muted small">עוד לא התקבלו תשלומים מ-iCount.</p>'
+    }
+  </section>`;
+}
+
 function stuckBlock(businesses) {
   const fresh = businesses.filter((b) => !b.has_google && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5 && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) > 864e5);
   const recent = businesses.filter((b) => Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5);
@@ -774,7 +809,7 @@ function stuckBlock(businesses) {
   </section>`;
 }
 
-export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], branches = [], baseUrl = '' }) {
+export function superadminView({ businesses, users, outbox, csrf, mailEnabled, aiEnabled, aiTest = null, meId, agencies = [], leads = [], error = '', marketingCount = 0, unpaidCount = 0, passes = [], branches = [], icount = {}, baseUrl = '' }) {
   const statusBadge = (b) => {
     const a = accessOf(b);
     if (a.state === 'trial') return `<span class="badge st-in_progress">${b.pilot ? 'התנסות חינם' : a.card ? 'ניסיון עם כרטיס' : 'ניסיון'} · עוד ${a.daysLeft} ימים</span>`;
@@ -851,6 +886,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
       : ''
   }
   ${branchesBlock(branches, csrf)}
+  ${icountBlock(icount)}
   ${stuckBlock(businesses)}
   <section class="card" id="businesses">
     <div class="row between"><h3>עסקים</h3>

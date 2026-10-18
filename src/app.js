@@ -137,7 +137,7 @@ export function createApp(db, options = {}) {
       baseUrl: (req) => process.env.PUBLIC_URL?.replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`,
     }),
   );
-  app.use(webhookRoutes(store, { billing }));
+  app.use(webhookRoutes(store, { billing, notifier, adminEmails: () => ctx.adminEmails() }));
   app.use(publicRoutes(store, { ...options, notifier }));
   app.use(widgetRoutes(store));
 

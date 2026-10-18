@@ -174,6 +174,14 @@ export function createStore(db) {
     markBranchPayRequested: (id) => q("UPDATE google_locations SET pay_requested_at = datetime('now') WHERE id = ?").run(id),
     /** The branch was paid for: it opens. */
     activateBranch: (id) => q('UPDATE google_locations SET pending_pay = 0, pay_requested_at = NULL, enabled = 1 WHERE id = ? AND pending_pay = 1').run(id).changes > 0,
+    /** A payment iCount reported; null when the same call already came (iCount retries). */
+    recordIcountPayment: ({ digest, payload, email, amount }) => {
+      const r = q('INSERT OR IGNORE INTO icount_payments (digest, payload, email, amount) VALUES (?, ?, ?, ?)').run(digest, payload, email ?? null, amount ?? null);
+      return r.changes ? Number(r.lastInsertRowid) : null;
+    },
+    setIcountResult: (id, result, businessId = null) => q('UPDATE icount_payments SET result = ?, business_id = ? WHERE id = ?').run(result, businessId, id),
+    recentIcountPayments: (limit = 20) =>
+      q(`SELECT p.*, b.name AS business_name FROM icount_payments p LEFT JOIN businesses b ON b.id = p.business_id ORDER BY p.id DESC LIMIT ?`).all(limit),
     /** For the system admin: branches waiting for a payment, the ones whose owner went to pay first. */
     pendingBranches: () =>
       q(`SELECT l.id, l.title, l.address, l.pay_requested_at, b.id AS business_id, b.name AS business_name, b.plan, b.billing_cycle, u.email AS owner_email
