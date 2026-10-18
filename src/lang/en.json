@@ -2343,5 +2343,7 @@
 "האם הטיפול בפנייה שלך עזר?": "Did we solve your issue?",
 "היי,": "Hi,",
 "פנית ל{b} לאחרונה, וטיפלנו בזה. חשוב לנו לדעת אם הצלחנו.": "You contacted {b} recently, and we took care of it. We'd like to know if it helped.",
-"לתשובה בלחיצה אחת": "Answer in one click"
+"לתשובה בלחיצה אחת": "Answer in one click",
+"חודשי · ₪{n} לחודש": "Monthly · ₪{n} a month",
+"שנתי · ₪{n} לשנה": "Annual · ₪{n} a year"
 }

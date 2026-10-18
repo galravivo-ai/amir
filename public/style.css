@@ -2693,3 +2693,6 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 
 /* A branch waiting for its payment */
 .g-pending { display: grid; gap: 6px; justify-items: start; }
+.cycle-choice { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cycle-choice a { flex: 1 1 12rem; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .7rem 1rem; border-radius: 12px; border: 1.5px solid var(--line); color: var(--ink-2); font-weight: 600; text-decoration: none; text-align: center; }
+.cycle-choice a.on { border-color: var(--night); background: var(--night); color: #fff; }

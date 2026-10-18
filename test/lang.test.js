@@ -191,3 +191,11 @@ test('the connection video comes in the reader\'s language', async () => {
   assert.match((await client({ lang: 'en' }).req('/guide/connect')).text, /media\/guide-connect-en\.mp4/);
   assert.match((await client().req('/guide/connect')).text, /media\/guide-connect\.mp4/);
 });
+
+test('the plan confirmation page lets you switch between monthly and annual', async () => {
+  const c = client();
+  await c.req('/register', { method: 'POST', form: { name: 'Cy', email: 'cycle@example.com', password: 'password123', business: 'Cycle', terms: '1' } });
+  const page = (await c.req('/admin/plan/change?plan=pro&cycle=monthly')).text;
+  assert.match(page, /class="on" href="\/admin\/plan\/change\?plan=pro&cycle=monthly"/);
+  assert.match(page, /href="\/admin\/plan\/change\?plan=pro&cycle=annual"[^>]*>שנתי · ₪1,690 לשנה/);
+});

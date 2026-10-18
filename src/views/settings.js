@@ -540,6 +540,18 @@ export function planView({
 }
 
 /** Before a plan change: what happens and what is charged, then confirm. */
+// Monthly or annual, chosen here too: the toggle above the plan cards is easy to miss.
+function cycleChoice(plan, cycle, profiles = 1) {
+  const p = PLANS[plan];
+  if (p.price == null) return '';
+  const option = (c, label) =>
+    `<a class="${c === cycle ? 'on' : ''}" href="/admin/plan/change?plan=${plan}&cycle=${c}" ${c === cycle ? 'aria-current="true"' : ''}>${label}</a>`;
+  return `<div class="cycle-choice" role="group" aria-label="תדירות תשלום">
+    ${option('monthly', `חודשי · ${money(priceFor(p, 'monthly', profiles))} לחודש`)}
+    ${option('annual', `שנתי · ${money(priceFor(p, 'annual', profiles))} לשנה <span class="save-chip">חודשיים חינם</span>`)}
+  </div>`;
+}
+
 export function planChangeView({ business, current, access, plan, cycle, quote, csrf }) {
   const p = PLANS[plan];
   const per = cycle === 'annual' ? 'לשנה' : 'לחודש';
@@ -569,6 +581,7 @@ export function planChangeView({ business, current, access, plan, cycle, quote, 
   <h1>${quote.kind === 'trial' ? `${quote.days} ימים חינם במסלול ${h(p.label)}` : `${quote.kind === 'upgrade' ? 'שדרוג' : 'מעבר'} למסלול ${h(p.label)}`}</h1>
   <section class="card stack sub-confirm">
     <div class="sub-from-to"><span>${h(current.label)}${access?.state === 'active' ? ` · ${h(CYCLES[business.billing_cycle] || CYCLES.monthly)}` : ''}</span><b>←</b><span><b>${h(p.label)}</b> · ${h(CYCLES[cycle])}</span></div>
+    ${cycleChoice(plan, cycle, quote.profiles)}
     ${gain}${lose}
     <ul class="sub-lines">${lines.map((l) => `<li>${l}</li>`).join('')}</ul>
     ${
