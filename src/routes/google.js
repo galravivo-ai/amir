@@ -369,8 +369,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     }
   });
 
-  router.post('/google/disconnect', requireRole('owner'), (req, res) => {
+  router.post('/google/disconnect', requireRole('owner'), async (req, res) => {
+    const conn = store.googleConnection(req.business.id);
     store.deleteGoogleConnection(req.business.id);
+    // The same Google account may still serve another business here; revoking
+    // would cut that one off too, so the permission is withdrawn with the last one.
+    if (conn && google.revoke && !store.googleConnectionsByEmail(conn.email).length) {
+      await google.revoke(google.open(conn.refresh_token)).catch((err) => console.warn('[google] revoke failed:', err.message));
+    }
     res.redirect(303, '/admin/google');
   });
 

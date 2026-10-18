@@ -115,6 +115,11 @@ export function createGoogle({
     open,
     setupCheck: () => ({ clientId, secretLooksRight: clientSecret.startsWith('GOCSPX-'), secretLength: clientSecret.length }),
 
+    /** Withdraw the permission at Google too, so it's gone from the user's Google account. */
+    async revoke(refreshToken) {
+      await call('https://oauth2.googleapis.com/revoke', { method: 'POST', form: { token: refreshToken } });
+    },
+
     /** "Sign in with Google": who the person is (name and email), nothing more. */
     signInUrl({ redirectUri, state }) {
       const q = new URLSearchParams({

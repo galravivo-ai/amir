@@ -228,10 +228,11 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   await googleSync.syncBusiness(store.businessById(biz.id));
   assert.ok(fakeGoogle.calls.some(([, u, b]) => u.includes('oauth2') && String(b).includes('refresh_token')));
 
-  // Disconnect removes the connection and the stored reviews.
+  // Disconnect removes the connection and the stored reviews, and withdraws the permission at Google.
   await req('/admin/google/disconnect', { method: 'POST', form: { _csrf: token } });
   assert.equal(store.googleConnection(biz.id), null);
   assert.equal(store.googleReviews(biz.id).length, 0);
+  assert.ok(fakeGoogle.calls.some(([m, u]) => m === 'POST' && u === 'https://oauth2.googleapis.com/revoke'));
 });
 
 test('without Google credentials the page explains the setup to the system admin', async () => {

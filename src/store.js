@@ -131,6 +131,7 @@ export function createStore(db) {
     },
     // ---------- Google Business Profile ----------
     googleConnection: (businessId) => q('SELECT * FROM google_connections WHERE business_id = ?').get(businessId) || null,
+    googleConnectionsByEmail: (email) => q('SELECT business_id FROM google_connections WHERE email = ?').all(email).map((r) => r.business_id),
     saveGoogleConnection(businessId, f) {
       q(`INSERT INTO google_connections (business_id, email, refresh_token, access_token, expires_at, connected_by)
          VALUES (?, ?, ?, ?, ?, ?)
