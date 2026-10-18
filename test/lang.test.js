@@ -186,3 +186,8 @@ test("a business's customers get its emails in the campaign's language", async (
   }
   assert.equal((await send('he', 'dana@customer.example'))[0].subject, 'איך היה בVine Bistro?');
 });
+
+test('the connection video comes in the reader\'s language', async () => {
+  assert.match((await client({ lang: 'en' }).req('/guide/connect')).text, /media\/guide-connect-en\.mp4/);
+  assert.match((await client().req('/guide/connect')).text, /media\/guide-connect\.mp4/);
+});

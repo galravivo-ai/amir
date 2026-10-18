@@ -208,6 +208,16 @@ function talkForm(sent, error = '', v = {}) {
   </form>`;
 }
 
+/** The connection video, in the reader's language. */
+const connectVideo = () => {
+  const file = isEn() ? 'guide-connect-en' : 'guide-connect';
+  return `<div class="guide-video">
+    <video controls playsinline preload="none" poster="${asset(`media/${file}.jpg`)}" aria-label="סרטון: מחברים את העסק לגוגל">
+      <source src="${asset(`media/${file}.mp4`)}" type="video/mp4">
+    </video>
+  </div>`;
+};
+
 /** Screenshots of the app, in the reader's language (public/media/guide, guide-en). */
 const shot = (file) => asset(`media/${isEn() ? 'guide-en' : 'guide'}/${file}`);
 
@@ -592,11 +602,7 @@ export function guideHubView({ signupOpen }) {
     <span>החיבור המלא לחשבון הגוגל של העסק מביא למערכת את כל הנתונים. שתי דקות, פעם אחת.</span>
     <i>למדריך החיבור ←</i>
   </a>
-  ${isEn() ? '' : `<div class="guide-video">
-    <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
-      <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
-    </video>
-  </div>`}
+  ${connectVideo()}
   ${GUIDE_GROUPS.map(
     ([key, label]) => `<h2 class="guide-group">${h(label)}</h2>
   <div class="guide-cards">${FEATURE_GUIDES.filter((g) => g.group === key)
@@ -621,11 +627,7 @@ export function guideConnectView({ signupOpen }) {
     body: `<section class="guide">
   <a class="guide-back" href="/guide">→ כל המדריכים</a>
   <header class="guide-head"><h1>${h(c.title)}</h1><p>${h(c.intro)}</p></header>
-  ${isEn() ? '' : `<div class="guide-video">
-    <video controls playsinline preload="none" poster="${asset('media/guide-connect.jpg')}" aria-label="סרטון: מחברים את העסק לגוגל">
-      <source src="${asset('media/guide-connect.mp4')}" type="video/mp4">
-    </video>
-  </div>`}
+  ${connectVideo()}
   <div class="guide-why"><h2>למה חיבור מלא?</h2>${compareTable()}</div>
   ${c.steps
     .map(
