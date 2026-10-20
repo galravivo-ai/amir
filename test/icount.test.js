@@ -114,3 +114,28 @@ test('the call is read whatever its format, and an empty check is not kept', asy
   await send('<ipn><email>xml@example.com</email><totalsum>790</totalsum></ipn>', 'text/xml');
   assert.deepEqual({ ...last() }, { email: 'xml@example.com', amount: 790 });
 });
+
+test('paid with another email: matched by the amount when only one business went to pay it', async () => {
+  const biz = owner('account@example.com');
+  store.updateBusiness(biz.id, { plan_request: JSON.stringify({ plan: 'pro', cycle: 'monthly', at: new Date().toISOString() }) });
+  // an older request for the same amount doesn't count
+  const old = owner('old@example.com');
+  store.updateBusiness(old.id, { plan_request: JSON.stringify({ plan: 'pro', cycle: 'monthly', at: new Date(Date.now() - 10 * 864e5).toISOString() }) });
+  await ipn({ email: 'private.mail@example.com', sum: '169' });
+  assert.equal(store.businessById(biz.id).billing, 'active');
+  assert.match(store.recentIcountPayments()[0].result, /לפי הסכום/);
+  assert.equal(store.businessById(old.id).billing, 'trial');
+});
+
+test('two businesses waiting on the same amount: the operator decides', async () => {
+  const a = owner('twin-a@example.com');
+  const b = owner('twin-b@example.com');
+  for (const x of [a, b]) store.updateBusiness(x.id, { plan_request: JSON.stringify({ plan: 'basic', cycle: 'annual', at: new Date().toISOString() }) });
+  await ipn({ email: 'someone@example.com', sum: '990' });
+  assert.equal(store.businessById(a.id).billing, 'trial');
+  assert.equal(store.businessById(b.id).billing, 'trial');
+  assert.equal(store.recentIcountPayments()[0].result, 'manual');
+  // with the account's email it's clear again
+  await ipn({ email: 'twin-b@example.com', sum: '990', doc: '2' });
+  assert.equal(store.businessById(b.id).billing, 'active');
+});

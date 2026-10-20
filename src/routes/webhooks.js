@@ -62,6 +62,7 @@ export function webhookRoutes(store, { billing = null, notifier = null, adminEma
       const loc = store.db.prepare('SELECT * FROM google_locations WHERE id = ?').get(match.branch.id);
       await notifier?.branchActivated({ business: store.businessById(match.business.id), location: loc }).catch((err) => console.error('[notify] branchActivated failed:', err));
     }
+    if (what && match.by === 'amount') what += ' (זוהה לפי הסכום, לא לפי המייל)';
     store.setIcountResult(id, what ? `activated: ${what}` : 'manual', match?.business.id ?? null);
     await notifier
       ?.icountPayment({ admins: adminEmails(), done: Boolean(what), business: match && store.businessById(match.business.id), what, email: emails[0], amount: amounts[0] ?? null })

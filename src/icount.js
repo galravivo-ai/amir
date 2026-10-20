@@ -39,31 +39,49 @@ export const secretMatches = (given) => {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
-/** What this payment pays for: one plan request or one waiting branch, or null. */
-export function matchPayment(store, { emails, amounts }) {
-  const found = [];
-  for (const email of emails) {
-    const user = store.userByEmail(email);
-    if (!user) continue;
-    for (const b of store.businessesFor(user.id).filter((x) => x.role === 'owner')) {
-      const request = parseJson(b.plan_request, null);
-      const plan = request && PLANS[request.plan];
-      if (plan?.price != null) {
-        const cycle = request.cycle === 'annual' ? 'annual' : 'monthly';
-        // The plan's own page charges one profile; a single page for everything may charge them all.
-        const prices = new Set([priceFor(plan, cycle, 1), priceFor(plan, cycle, profilesOf(store, b.id))]);
-        if (amounts.some((a) => prices.has(a))) found.push({ kind: 'plan', business: b, plan: request.plan, cycle });
-      }
-      const current = PLANS[b.plan];
-      if (current?.price != null) {
-        const price = branchPrice(current) * (b.billing_cycle === 'annual' ? ANNUAL_MONTHS : 1);
-        const branch = store
-          .pendingBranches()
-          .filter((l) => l.business_id === b.id && l.pay_requested_at)
-          .sort((x, y) => x.pay_requested_at.localeCompare(y.pay_requested_at))[0];
-        if (branch && amounts.includes(price)) found.push({ kind: 'branch', business: b, branch });
-      }
-    }
+// A payment whose email isn't the account's can still be matched by its amount,
+// when exactly one business went to pay that amount in the last few days.
+const RECENT = 3 * 864e5;
+const when = (t) => Date.parse(/Z|[+-]\d\d:?\d\d$/.test(t) ? t : `${String(t).replace(' ', 'T')}Z`) || 0;
+
+/** Everything waiting for a payment: plan requests and branches sent to pay. */
+function waiting(store) {
+  const out = [];
+  const emailsOf = (b) =>
+    new Set([...store.membersOf(b.id).map((m) => m.email), ...String(b.alert_emails ?? '').split(/[,;\s]+/)].map((e) => String(e).trim().toLowerCase()).filter(Boolean));
+  for (const b of store.db.prepare('SELECT * FROM businesses WHERE plan_request IS NOT NULL').all()) {
+    const request = parseJson(b.plan_request, null);
+    const plan = request && PLANS[request.plan];
+    if (plan?.price == null) continue;
+    const cycle = request.cycle === 'annual' ? 'annual' : 'monthly';
+    // The plan's own page charges one profile; a single page for everything may charge them all.
+    const prices = new Set([priceFor(plan, cycle, 1), priceFor(plan, cycle, profilesOf(store, b.id))]);
+    out.push({ kind: 'plan', business: b, plan: request.plan, cycle, prices, emails: emailsOf(b), at: when(request.at) });
   }
-  return found.length === 1 ? found[0] : null;
+  const seen = new Set();
+  const branches = store.pendingBranches().filter((l) => l.pay_requested_at).sort((x, y) => x.pay_requested_at.localeCompare(y.pay_requested_at));
+  for (const branch of branches) {
+    if (seen.has(branch.business_id)) continue; // one payment opens the branch that waited longest
+    seen.add(branch.business_id);
+    const b = store.businessById(branch.business_id);
+    const current = PLANS[b?.plan];
+    if (current?.price == null) continue;
+    const price = branchPrice(current) * (b.billing_cycle === 'annual' ? ANNUAL_MONTHS : 1);
+    out.push({ kind: 'branch', business: b, branch, prices: new Set([price]), emails: emailsOf(b), at: when(branch.pay_requested_at) });
+  }
+  return out;
+}
+
+/**
+ * What this payment pays for: one plan request or one waiting branch, or null.
+ * First by the payer's email (anyone on the business's team) and the amount;
+ * else by the amount alone, when only one business went to pay it lately.
+ */
+export function matchPayment(store, { emails, amounts }, now = Date.now()) {
+  const priced = waiting(store).filter((w) => amounts.some((a) => w.prices.has(a)));
+  const byEmail = priced.filter((w) => emails.some((e) => w.emails.has(e)));
+  if (byEmail.length === 1) return { ...byEmail[0], by: 'email' };
+  if (byEmail.length > 1) return null;
+  const recent = priced.filter((w) => now - w.at < RECENT);
+  return recent.length === 1 ? { ...recent[0], by: 'amount' } : null;
 }
