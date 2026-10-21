@@ -39,11 +39,11 @@ export function rankSection({ keywords, checks, locations, limit, running, avail
             ? `<div class="rk-body">
                 ${grid(points)}
                 <div class="rk-facts">
-                  <div><span class="muted small">מיקום ממוצע</span><b class="rk-avg">${avgLabel(last.avg_rank)}</b>${
+                  <div><span class="muted small">בשלושת הראשונים במפות</span><b class="rk-avg">${points.filter((p) => p.rank != null && p.rank <= 3).length} מתוך 9</b> <span class="muted small">אזורים סביב העסק</span>${
                     change && Math.abs(change) >= 0.1
-                      ? `<span class="cmp-change ${change > 0 ? 'up' : 'down'}">${change > 0 ? '▲ עלה' : '▼ ירד'} ${Math.abs(change).toFixed(1)} מקומות</span>`
+                      ? `<span class="cmp-change ${change > 0 ? 'up' : 'down'}">${change > 0 ? '▲ עלייה' : '▼ ירידה'} מהבדיקה הקודמת</span>`
                       : ''
-                  }</div>
+                  }<div class="muted small">מיקום ממוצע: ${avgLabel(last.avg_rank)}</div></div>
                   <div><span class="muted small">מופיעים ב-20 הראשונים</span><b>${last.found} מתוך 9</b> <span class="muted small">נקודות</span></div>
                   ${
                     leaders.length

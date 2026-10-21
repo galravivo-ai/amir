@@ -310,7 +310,8 @@ function feed(items, empty) {
   return `<div class="waiting">${items.map(feedRow).join('')}</div>`;
 }
 
-export function dashboardView({
+function dashboardParts({
+  maps = null,
   overview = null,
   refreshed = false,
   stats,
@@ -461,12 +462,12 @@ export function dashboardView({
   const views = viewsOf(t);
   const actions = (t.CALL_CLICKS || 0) + (t.BUSINESS_DIRECTION_REQUESTS || 0) + (t.WEBSITE_CLICKS || 0) + (t.BUSINESS_CONVERSATIONS || 0);
   const prevActions = (pt.CALL_CLICKS || 0) + (pt.BUSINESS_DIRECTION_REQUESTS || 0) + (pt.WEBSITE_CLICKS || 0) + (pt.BUSINESS_CONVERSATIONS || 0);
-  const lastStat =
-    pub?.rank != null
-      ? stat('pin', 'מיקום ממוצע במפות', (Math.round(pub.rank * 10) / 10).toString(), pub.rankBefore != null && Math.round((pub.rank - pub.rankBefore) * 10) ? `${pub.rank < pub.rankBefore ? '▲ עלה' : '▼ ירד'} ${Math.abs(Math.round((pub.rank - pub.rankBefore) * 10) / 10)} מקומות` : `${pub.rankKeywords} חיפושים`, pub.rankBefore != null ? (pub.rank < pub.rankBefore ? 'up' : pub.rank > pub.rankBefore ? 'down' : '') : '', '/admin/maps#rank')
-      : pub?.health != null
-        ? stat('shield', 'בריאות הפרופיל', `${pub.health}<small>/100</small>`, pub.healthBefore != null && pub.health !== pub.healthBefore ? `${pub.health > pub.healthBefore ? '▲' : '▼'} ${Math.abs(pub.health - pub.healthBefore)} נק׳` : '', pub.healthBefore != null ? (pub.health > pub.healthBefore ? 'up' : pub.health < pub.healthBefore ? 'down' : '') : '', '/admin/maps#health')
-        : stat('pin', 'מיקום במפות', '<span class="st-lock">—</span>', 'להתחיל מעקב ←', 'muted', '/admin/maps#rank');
+  // Maps in words anyone reads: in how many places around the business it's in the top 3.
+  const lastStat = maps
+    ? stat('pin', 'בטופ 3 במפות', `${Math.round((maps.top / maps.total) * 100)}<small>%</small>`, 'מהאזורים סביב העסק', maps.top / maps.total >= 0.5 ? 'up' : 'warn-t', '/admin/maps#rank')
+    : pub?.health != null
+      ? stat('shield', 'בריאות הפרופיל', `${pub.health}<small>/100</small>`, pub.healthBefore != null && pub.health !== pub.healthBefore ? `${pub.health > pub.healthBefore ? '▲' : '▼'} ${Math.abs(pub.health - pub.healthBefore)} נק׳` : 'מה חסר בפרופיל ←', pub.healthBefore != null ? (pub.health > pub.healthBefore ? 'up' : pub.health < pub.healthBefore ? 'down' : '') : '', '/admin/maps#health')
+      : stat('pin', 'מיקום במפות', '<span class="st-lock">—</span>', 'להתחיל מעקב ←', 'muted', '/admin/maps#rank');
   const headline = `<div class="stats">
     ${stat('star', 'דירוג בגוגל', rating != null ? `${rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', ratingDiff ? `${ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(ratingDiff).toFixed(1)}` : pub?.total || g.total ? `${(pub?.total || g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', ratingDiff ? (ratingDiff > 0 ? 'up' : 'down') : '', rating != null ? '/admin/google/reviews' : '/admin/google')}
     ${stat('chat', 'ביקורות ודירוגים', total.toLocaleString('he-IL'), countHint ? countHint.replace(' מהתקופה הקודמת', '') : sources || 'אין בתקופה', countTrend)}
@@ -476,41 +477,108 @@ export function dashboardView({
     ${lastStat}
   </div>`;
 
-  return `${cover}
+  return { lastStat, cover, filter, headline, daily, sources, dist, toHandle, waitingItems, handleLink, surveySection, connectCard, checklist, g, stats, pub, m, hasMetrics, t, pt, pctChange, stat, locked, rating, ratingDiff, total, countHint, countTrend, actions, prevActions };
+}
+
+/** Google reviews to answer right on the dashboard: a reply ready, AI on a click, published from here. */
+function replyCard({ toReply, unanswered, csrf, ai, replied, error, canManage, demo = false }) {
+  const items = toReply
+    .map((r) => {
+      const name = r.reviewer || 'לקוח אנונימי';
+      const form =
+        canManage && r.canPublish
+          ? `<form method="post" action="/admin/google/reviews/${r.id}/reply" class="rq-form">${csrfField(csrf)}<input type="hidden" name="back" value="dashboard">
+              <textarea name="reply" rows="3" required aria-label="תשובה ל${h(name)}" placeholder="כתבו תשובה, או לחצו על טיוטה ב-AI">${h(r.suggested)}</textarea>
+              <div class="rq-actions"><button class="btn primary small-btn">פרסום בגוגל</button>${ai ? `<button type="button" class="btn small-btn" onclick="gfDraft(this,${r.id})">${icon('spark', 14)} טיוטה ב-AI</button>` : ''}<a class="small" href="/admin/google/reviews/${r.id}">לביקורת המלאה</a></div>
+            </form>`
+          : `<a class="btn small-btn" href="/admin/google/reviews/${r.id}">לתשובה</a>`;
+      return `<article class="rq">
+        <div class="rq-head"><span class="w-avatar">${h(name.trim().charAt(0))}</span><span><b>${h(name)}</b> ${stars(r.rating)}<span class="muted small"> · ${h(formatDate(r.create_time))}${r.location_title ? ` · ${h(r.location_title)}` : ''}</span></span></div>
+        <p class="rq-text">${r.comment ? h(r.comment) : '<span class="muted">בלי טקסט, רק דירוג.</span>'}</p>
+        ${form}
+      </article>`;
+    })
+    .join('');
+  return `<section class="card reply-card" id="reply">
+    <div class="card-head"><h3>${icon('chat', 18)} ביקורות שמחכות לתשובה${unanswered ? ` <span class="count-pill">${unanswered}</span>` : ''}</h3>${unanswered > toReply.length ? '<a class="small" href="/admin/google/reviews?filter=unanswered">לכל הביקורות</a>' : ''}</div>
+    ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
+    ${error ? `<div class="error">${h(error)}</div>` : ''}
+    ${items || '<p class="muted">אין ביקורות שמחכות לתשובה. כל הכבוד!</p>'}
+    ${ai && demo ? `<script>function gfDraft(b){b.form.reply.value='תודה רבה על הביקורת! שמחנו לארח אתכם, ונשמח לראות אתכם שוב בקרוב.';b.form.reply.focus()}</script>` : ''}
+    ${ai && !demo ? `<script>function gfDraft(b,id){var f=b.form,l=b.innerHTML;b.disabled=true;b.textContent='מנסח…';fetch('/admin/google/reviews/'+id+'/draft',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'json=1&_csrf='+encodeURIComponent(f._csrf.value)}).then(function(r){return r.json()}).then(function(d){if(d.draft){f.reply.value=d.draft;f.reply.focus()}else alert(d.error||'לא הצלחנו לנסח טיוטה')}).catch(function(){alert('לא הצלחנו לנסח טיוטה, נסו שוב')}).then(function(){b.disabled=false;b.innerHTML=l})}</script>` : ''}
+  </section>`;
+}
+
+/** The main page: where the business stands, in five numbers, and what to do now. */
+export function dashboardView(args) {
+  const { quotaWarning = '', tasks = [], csrf = '', toReply = [], replyAi = false, replied = false, replyError = '', demo = false, manages = false } = args;
+  const P = dashboardParts(args);
+  const { stat, locked } = P;
+  const mapsStat = P.lastStat;
+  const headline = `<div class="stats stats-5">
+    ${stat('star', 'דירוג בגוגל', P.rating != null ? `${P.rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', P.ratingDiff ? `${P.ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(P.ratingDiff).toFixed(1)}` : P.pub?.total || P.g.total ? `${(P.pub?.total || P.g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', P.ratingDiff ? (P.ratingDiff > 0 ? 'up' : 'down') : '', P.rating != null ? '/admin/google/reviews' : '/admin/google')}
+    ${stat('chat', 'ביקורות חדשות', P.total.toLocaleString('he-IL'), P.countHint ? P.countHint.replace(' מהתקופה הקודמת', '') : P.sources || 'אין בתקופה', P.countTrend, '/admin/google/reviews')}
+    ${stat('alert', 'מחכים לתשובה', P.toHandle.toLocaleString('he-IL'), P.toHandle ? 'לטפל עכשיו ←' : 'הכול טופל ✓', P.toHandle ? 'warn-t' : 'up', P.toHandle ? (P.g.unanswered ? '#reply' : P.handleLink) : '')}
+    ${P.hasMetrics ? stat('phone', 'פניות מגוגל', P.actions.toLocaleString('he-IL'), ...P.pctChange(P.actions, P.prevActions), '/admin/data#profile') : locked('phone', 'פניות מגוגל')}
+    ${mapsStat}
+  </div>`;
+  const surveyWaiting = P.waitingItems.filter((x) => !x.google);
+  return `${P.cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
-    ${connectCard}
-    ${checklist}
+    ${P.connectCard}
+    ${P.checklist}
     ${
-      stats.overdue
+      P.stats.overdue
         ? `<a class="alert-bar" href="/admin/responses?overdue=1">${icon('alert')}<span>${
-            stats.overdue === 1 ? 'לקוח לא מרוצה אחד מחכה' : `${stats.overdue} לקוחות לא מרוצים מחכים`
+            P.stats.overdue === 1 ? 'לקוח לא מרוצה אחד מחכה' : `${P.stats.overdue} לקוחות לא מרוצים מחכים`
           } יותר מזמן הטיפול שהגדרתם</span>לטיפול ←</a>`
         : ''
     }
     ${headline}
+    <div class="dash-main reply-first">
+      <div class="dash-col">
+        ${replyCard({ toReply, unanswered: P.g.unanswered, csrf, ai: replyAi, replied, error: replyError, canManage: manages, demo })}
+      </div>
+      <div class="dash-col">
+        ${tasksCard(tasks, csrf)}
+        ${
+          surveyWaiting.length
+            ? `<section class="card"><div class="card-head"><h3>${icon('alert', 18)} לקוחות לא מרוצים מהסקרים</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>${feed(surveyWaiting, '')}</section>`
+            : ''
+        }
+        <a class="card data-link" href="/admin/data">${icon('chart', 20)}<span><b>כל הנתונים</b><small>צפיות, שיחות וחיפושים בגוגל, ביקורות לפי יום, התפלגות כוכבים, נושאים חוזרים וסקרים</small></span><i>←</i></a>
+      </div>
+    </div>`;
+}
+
+/** All the numbers, for whoever wants to dig in: what used to fill the main page. */
+export function dataView(args) {
+  const { quotaWarning = '', overview = null, refreshed = false, topics = [], period } = args;
+  const P = dashboardParts(args);
+  return `<div class="page-head"><h1>${icon('chart', 26)} כל הנתונים</h1><a class="small" href="/admin">→ לדשבורד</a></div>
+    <p class="page-intro">כל המספרים של העסק ${h(period.label)}: גוגל וסקרים, עם אפשרות לסנן לפי קמפיין ותקופה.</p>
+    <div class="data-filters">${P.filter}</div>
+    ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
+    ${P.headline}
     <div class="dash-main">
       <div class="dash-col">
         <section class="card">
           <div class="card-head"><h3>${icon('chat', 18)} ביקורות ודירוגים לפי יום</h3>
             <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
           </div>
-          ${dailyChart(daily)}
-          <p class="muted small chart-note">${sources ? `${sources} ${h(period.label)}` : 'גוגל וסקרים יחד'}. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
+          ${dailyChart(P.daily)}
+          <p class="muted small chart-note">${P.sources ? `${P.sources} ${h(period.label)}` : 'גוגל וסקרים יחד'}. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
         </section>
-        ${overview ? profileCard({ ...overview, refreshed }) : ''}
-        <section class="card"><h3>${icon('star', 18)} התפלגות כוכבים</h3>${distribution(dist)}</section>
+        ${overview ? `<div id="profile">${profileCard({ ...overview, refreshed })}</div>` : ''}
       </div>
       <div class="dash-col">
-        ${tasksCard(tasks, csrf)}
-        <section class="card">
-          <div class="card-head"><h3>${icon('alert', 18)} מחכים לטיפול</h3><a href="${handleLink}" class="small">הכול</a></div>
-          ${feed(waitingItems, 'אין ביקורות שליליות או לקוחות לא מרוצים שמחכים. כל הכבוד!')}
-        </section>
+        <section class="card"><h3>${icon('star', 18)} התפלגות כוכבים</h3>${distribution(P.dist)}</section>
         ${topicsCard(topics)}
       </div>
     </div>
-    ${surveySection ? `<details class="card dash-more"${stats.scans || stats.responses ? '' : ''}><summary><span>${icon('qr', 18)} סקרים ו-QR</span><span class="muted small">${stats.scans.toLocaleString('he-IL')} סריקות · ${stats.responses.toLocaleString('he-IL')} מילאו סקר · ${stats.reviewClicks.toLocaleString('he-IL')} הופנו לגוגל</span></summary>${surveySection}</details>` : ''}`;
+    ${P.surveySection ? `<section class="card"><h3>${icon('qr', 18)} סקרים ו-QR</h3>${P.surveySection}</section>` : ''}`;
 }
+
 
 // ---------------------------------------------------------------- responses
 

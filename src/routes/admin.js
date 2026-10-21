@@ -13,6 +13,8 @@ import { parseJson } from '../db.js';
 import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
 import { googleOverview } from './performance.js';
 import { weekKey, weeklyTasks } from '../tasks.js';
+import { mapsTop3 } from '../rankings.js';
+import { fillTemplate, templatesFor } from '../network.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
 
@@ -63,7 +65,8 @@ export function adminRoutes(ctx) {
     res.redirect(303, req.body.back === 'maps' ? '/admin/maps#plan' : '/admin#tasks');
   });
 
-  admin.get('/', (req, res) => {
+  // What the dashboard and the full-data page both show.
+  const dashboardData = (req) => {
     const campaigns = store.campaignsFor(req.business.id);
     const onboarding = store.onboarding(req.business);
     const campaignId = campaigns.find((c) => c.id === Number(req.query.campaign))?.id ?? null;
@@ -72,43 +75,67 @@ export function adminRoutes(ctx) {
     const stats = store.stats(req.business.id, range);
     const span = (period.to ?? Date.now()) - period.from;
     const prev = store.periodSummary(req.business.id, { campaignId, from: period.from - span, to: period.from });
-    const topics = store.topicCounts(req.business.id, range);
-    const waiting = store.listResponses(req.business.id, { campaignId, sentiment: 'negative', status: 'new', limit: 5 });
     const monthly = store.monthlyResponseCount(req.business.id);
     const quotaWarning =
       monthly > req.plan.monthlyResponses
         ? `החודש התקבלו ${monthly} דירוגים, מעל המכסה של ${limitLabel(req.plan.monthlyResponses)} בתוכנית ${req.plan.label}. הסקרים ממשיכים לעבוד, אבל כדאי לשדרג.`
         : '';
-    const google = store.googleStats(req.business.id, range);
+    return {
+      overview: googleOverview(ctx, req, period, { refreshing: ctx.metricsRunning.has(req.business.id) }),
+      refreshed: Boolean(req.query.refreshed),
+      stats,
+      prev,
+      campaigns,
+      campaignId,
+      period,
+      business: req.business,
+      waiting: store.listResponses(req.business.id, { campaignId, sentiment: 'negative', status: 'new', limit: 5 }),
+      topics: store.topicCounts(req.business.id, range),
+      google: store.googleStats(req.business.id, range),
+      userName: req.user.name,
+      quotaWarning,
+      can: req.can,
+      onboarding,
+      csrf: req.user.csrf,
+      maps: mapsTop3(store, req.business.id),
+      connect: { connected: store.googleConnected(req.business.id), gbp: Boolean(ctx.google), canConnect: req.can('manager'), open: req.query.connect === '1' },
+    };
+  };
+
+  admin.get('/', (req, res) => {
+    const data = dashboardData(req);
+    // Reviews to answer right here: a reply ready from the business's templates, AI on a click.
+    // The demo shows everything a manager sees; saving is blocked there anyway.
+    const demo = Boolean(req.business.is_demo);
+    const manages = req.can('manager') || demo;
+    const canPublish = demo || Boolean(ctx.google && store.googleConnection(req.business.id));
+    const toReply = store.googleReviews(req.business.id, { locationId: req.branchId || null, filter: 'unanswered', limit: 4 }).map((r) => ({
+      ...r,
+      canPublish: canPublish && (demo || r.source === 'gbp'),
+      suggested: templatesFor(store.replyTemplates(req.business.id), r.rating).map((t) => fillTemplate(t.body, r))[0] || '',
+    }));
     render(
       req,
       res,
       'דשבורד ראשי',
       V.dashboardView({
-        overview: googleOverview(ctx, req, period, { refreshing: ctx.metricsRunning.has(req.business.id) }),
-        refreshed: Boolean(req.query.refreshed),
-        stats,
-        prev,
-        campaigns,
-        campaignId,
-        period,
-        business: req.business,
-        waiting,
-        topics,
-        google,
-        userName: req.user.name,
-        quotaWarning,
-        can: req.can,
-        onboarding,
-        csrf: req.user.csrf,
+        ...data,
+        toReply,
+        replyAi: demo || (Boolean(ctx.ai) && req.plan.ai),
+        demo,
+        manages,
+        replied: req.query.replied === '1',
+        replyError: String(req.query.replyErr ?? '').slice(0, 300),
         sendError: req.query.send === 'bad',
-        connect: { connected: store.googleConnected(req.business.id), gbp: Boolean(ctx.google), canConnect: req.can('manager'), open: req.query.connect === '1' },
-        tasks: req.can('manager') ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp), aiOn: Boolean(ctx.ai) && req.plan.ai }) : [],
+        tasks: manages ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp) || demo, aiOn: (Boolean(ctx.ai) && req.plan.ai) || demo }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
         waResult: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,
       }),
     );
   });
+
+  // Everything in numbers, for whoever wants to dig: charts, the profile's activity, stars, topics, surveys.
+  admin.get('/data', (req, res) => render(req, res, 'כל הנתונים', V.dataView(dashboardData(req))));
 
   // ---------- responses ----------
   function responseFilters(req) {

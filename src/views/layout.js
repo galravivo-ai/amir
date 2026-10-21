@@ -180,6 +180,7 @@ ${SKIP()}
       key: 'growth',
       label: 'צמיחה ודוחות',
       items: [
+        ['/admin/data', 'כל הנתונים', 'chart'],
         ['/admin/insights', 'תובנות AI', 'spark'],
         ['/admin/reports/monthly', 'דוח חודשי', 'report'],
         ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],

@@ -438,12 +438,15 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     if (review) reviewPage(req, res, review, { saved: req.query.saved === '1' });
   });
 
+  // From the review's page, or from the dashboard (json=1), which puts the draft in place without reloading.
   router.post('/google/reviews/:id/draft', manager, async (req, res) => {
     const review = loadReview(req, res);
     if (!review) return;
-    if (!ctx.ai || !req.plan.ai) return reviewPage(req, res, review, { error: 'עוזר ה-AI לא פעיל.' });
+    const json = req.body.json === '1';
+    const answer = (extra) => (json ? res.status(extra.error ? 400 : 200).json(extra) : reviewPage(req, res, review, extra));
+    if (!ctx.ai || !req.plan.ai) return answer({ error: 'עוזר ה-AI לא פעיל.' });
     const over = ctx.usage.take(req.business, 'ai_draft');
-    if (over) return reviewPage(req, res, review, { error: over });
+    if (over) return answer({ error: over });
     try {
       const draft = await ctx.ai.draftGoogleReply({
         businessName: req.business.name,
@@ -451,10 +454,10 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         comment: review.comment,
         reviewer: review.reviewer,
       });
-      reviewPage(req, res, review, { draft });
+      answer({ draft });
     } catch (err) {
       ctx.usage.give(req.business, 'ai_draft');
-      reviewPage(req, res, review, { error: err instanceof AiError ? err.message : 'ה-AI לא הצליח לנסח טיוטה, נסו שוב.' });
+      answer({ error: err instanceof AiError ? err.message : 'ה-AI לא הצליח לנסח טיוטה, נסו שוב.' });
     }
   });
 
@@ -463,11 +466,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     if (!review) return;
     if (review.source !== 'gbp' || !google) return notFound(res);
     const text = String(req.body.reply ?? '').trim().slice(0, 4000);
-    if (!text) return reviewPage(req, res, review, { error: 'התשובה ריקה.' });
+    // Answered from the dashboard: back there, to the next review.
+    const fromDashboard = req.body.back === 'dashboard';
+    if (!text) return fromDashboard ? res.redirect(303, `/admin?replyErr=${encodeURIComponent('התשובה ריקה.')}#reply`) : reviewPage(req, res, review, { error: 'התשובה ריקה.' });
     try {
       await sync.reply(req.business.id, review, text);
-      res.redirect(303, `/admin/google/reviews/${review.id}?saved=1`);
+      res.redirect(303, fromDashboard ? '/admin?replied=1#reply' : `/admin/google/reviews/${review.id}?saved=1`);
     } catch (err) {
+      if (fromDashboard) return res.redirect(303, `/admin?replyErr=${encodeURIComponent(humanError(err))}#reply`);
       reviewPage(req, res, review, { draft: text, error: humanError(err) });
     }
   });

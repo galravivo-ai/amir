@@ -103,7 +103,7 @@ export function performanceRoutes(ctx, { sync }) {
   const { store, requireRole } = ctx;
   const router = express.Router();
 
-  router.get('/performance', (req, res) => res.redirect(301, '/admin#google'));
+  router.get('/performance', (req, res) => res.redirect(301, '/admin/data#profile'));
 
   router.post('/performance/refresh', requireRole('manager'), (req, res) => {
     const id = req.business.id;

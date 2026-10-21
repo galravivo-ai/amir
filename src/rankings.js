@@ -1,5 +1,6 @@
 import { withBusiness } from './meter.js';
 import { accessOf } from './plans.js';
+import { parseJson } from './db.js';
 
 // Map rank tracking: for a search like "בית קפה", where does the business show
 // in Google Maps when people search from around it? A 3×3 grid of points, the
@@ -73,4 +74,21 @@ export function createRankings({ store, serp, everyDays = 7 }) {
   const check = (k) => withBusiness(k.business_id, () => checkUnscoped(k));
 
   return { check, checkBusiness, runDue };
+}
+
+/**
+ * Where the business stands in Maps, in words anyone reads: in how many of the
+ * places checked around it (the latest check of every search) it's in the top 3.
+ */
+export function mapsTop3(store, businessId) {
+  let top = 0;
+  let total = 0;
+  for (const k of store.rankKeywords(businessId)) {
+    const last = store.rankChecks(k.id, 1).find((c) => !c.error);
+    for (const p of last ? parseJson(last.points, []) : []) {
+      total++;
+      if (p.rank != null && p.rank <= 3) top++;
+    }
+  }
+  return total ? { top, total } : null;
 }

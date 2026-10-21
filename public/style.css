@@ -2696,3 +2696,25 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .cycle-choice { display: flex; flex-wrap: wrap; gap: .5rem; }
 .cycle-choice a { flex: 1 1 12rem; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .7rem 1rem; border-radius: 12px; border: 1.5px solid var(--line); color: var(--ink-2); font-weight: 600; text-decoration: none; text-align: center; }
 .cycle-choice a.on { border-color: var(--night); background: var(--night); color: #fff; }
+
+/* Dashboard: five numbers, then what to do */
+.stats.stats-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1200px) { .stats.stats-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .stats.stats-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats.stats-5 > :last-child { grid-column: 1 / -1; } }
+.count-pill { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--purple-soft); color: var(--purple); font-size: .8rem; font-weight: 700; vertical-align: middle; }
+.reply-card .rq { padding: 14px 0; border-top: 1px solid var(--line-2); }
+.reply-card .rq:first-of-type { border-top: 0; padding-top: 4px; }
+.rq-head { display: flex; gap: 10px; align-items: center; }
+.rq-text { margin: 8px 0 10px; white-space: pre-line; }
+.rq-form { display: flex; flex-direction: column; gap: 8px; }
+.rq-form textarea { min-height: 76px; resize: vertical; }
+.rq-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rq-actions .small { margin-inline-start: auto; }
+.data-link { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; }
+.data-link > span { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.data-link small { color: var(--ink-2); line-height: 1.5; }
+.data-link i { font-style: normal; font-weight: 700; color: var(--purple); }
+.data-link:hover b { color: var(--purple); }
+.data-filters { margin: 0 0 14px; }
+.data-filters .cover-filters select, .data-filters .cover-filters input { border-color: var(--line); }
+@media (max-width: 900px) { .dash-main.reply-first > .dash-col:last-child { order: 0; } }

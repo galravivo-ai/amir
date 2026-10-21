@@ -216,6 +216,19 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   assert.equal(JSON.parse(put[2]).comment, 'מצטערים, נשמח לדבר');
   assert.equal(store.googleReview(review.id, biz.id).reply, 'מצטערים, נשמח לדבר');
 
+  // Answered right from the dashboard: a form for each review waiting, an AI draft in place, back to the dashboard.
+  const waitingOne = store.googleReviews(biz.id, { filter: 'unanswered' })[0];
+  if (waitingOne) {
+    const board = (await req('/admin')).text;
+    assert.match(board, new RegExp(`action="/admin/google/reviews/${waitingOne.id}/reply"`));
+    assert.match(board, /name="back" value="dashboard"/);
+    const json = await req(`/admin/google/reviews/${waitingOne.id}/draft`, { method: 'POST', form: { _csrf: token, json: '1' } });
+    assert.ok(JSON.parse(json.text).draft, 'the draft comes back as data');
+    const back = await req(`/admin/google/reviews/${waitingOne.id}/reply`, { method: 'POST', form: { _csrf: token, reply: 'תודה רבה!', back: 'dashboard' } });
+    assert.equal(back.location, '/admin?replied=1#reply');
+    assert.match((await req('/admin?replied=1')).text, /התשובה פורסמה בגוגל/);
+  }
+
   // Another business cannot see or answer these reviews.
   const other = await owner('g-other@example.com');
   assert.doesNotMatch((await other('/admin/google')).text, /פרטים טכניים של החיבור/, 'only the system admin sees the setup check');
@@ -336,8 +349,8 @@ test('profile performance: views, calls, directions and searches from Google', a
   const biz = store.businessesFor(store.userByEmail('perf-owner@example.com').id)[0];
 
   // Not connected: the dashboard previews the numbers and asks to connect.
-  assert.equal((await req('/admin/performance')).location, '/admin#google', 'the old page now lives on the dashboard');
-  const locked = (await req('/admin')).text;
+  assert.equal((await req('/admin/performance')).location, '/admin/data#profile', 'the old page now lives on the data page');
+  const locked = (await req('/admin/data')).text;
   assert.match(locked, /הגרף מאחור הוא דוגמה/);
   assert.match(locked, /צפיות בפרופיל<\/span><span class="st-value"><span class="st-lock">—/);
 
@@ -354,14 +367,14 @@ test('profile performance: views, calls, directions and searches from Google', a
 
   // 30 days: 40 views a day, 6 actions a day.
   const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
-  const page = (await req(`/admin?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
+  const page = (await req(`/admin/data?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
   assert.match(page, /צפיות בפרופיל<\/span><span class="st-value">1,200</);
   assert.match(page, /שיחות, הגעה ואתר<\/span><span class="st-value">180</, 'calls, directions and website clicks');
   assert.match(page, /שיחות: 2/, 'per-day detail in the chart');
   assert.match(page, /בית קפה תל אביב/);
   assert.match(page, /&lt;15/);
   assert.match(page, /מפות <b>900<\/b> \(75%\)/);
-  assert.match((await req('/admin?range=365d')).text, /לפי שבוע/);
+  assert.match((await req('/admin/data?range=365d')).text, /לפי שבוע/);
 
   // Reputation from the reviews sits next to the private numbers.
   assert.match(page, /דירוג בגוגל/);

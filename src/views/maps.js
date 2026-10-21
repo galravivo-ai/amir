@@ -1,24 +1,28 @@
 import { h } from '../util.js';
 import { FACTORS } from '../maps.js';
-import { NOT_FOUND } from '../rankings.js';
+import { parseJson } from '../db.js';
 import { healthSection } from './health.js';
 import { rankSection } from './rankings.js';
 import { icon } from './icons.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
 
-/** Where the business stands, in two numbers: profile score and average rank. */
+/** Where the business stands, in two numbers: profile score, and how often it's in the Maps top 3 around it. */
 function summary(audits, keywords, checks) {
   const scores = audits.filter((a) => !a.error).map((a) => a.score);
-  const ranks = keywords
-    .map((k) => (checks.get(k.id) || []).find((c) => !c.error)?.avg_rank)
-    .filter((r) => r != null);
-  const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
-  const score = scores.length ? Math.round(avg(scores)) : null;
-  const rank = ranks.length ? avg(ranks) : null;
+  const score = scores.length ? Math.round(scores.reduce((s, x) => s + x, 0) / scores.length) : null;
+  let top = 0;
+  let total = 0;
+  for (const k of keywords) {
+    const last = (checks.get(k.id) || []).find((c) => !c.error);
+    for (const p of last ? parseJson(last.points, []) : []) {
+      total++;
+      if (p.rank != null && p.rank <= 3) top++;
+    }
+  }
   return `<div class="mp-sum">
     <a href="#health" class="mp-stat"><span class="muted small">בריאות הפרופיל</span><b>${score == null ? '—' : `${score}<small>/100</small>`}</b></a>
-    <a href="#rank" class="mp-stat"><span class="muted small">מיקום ממוצע במפות</span><b>${rank == null ? '—' : rank >= NOT_FOUND - 0.05 ? 'לא נמצא' : rank.toFixed(1)}</b></a>
+    <a href="#rank" class="mp-stat"><span class="muted small">בטופ 3 במפות</span><b>${total ? `${Math.round((top / total) * 100)}<small>%</small>` : '—'}</b>${total ? `<span class="muted small">ב-${top} מתוך ${total} אזורים שנבדקו סביב העסק</span>` : ''}</a>
   </div>`;
 }
 

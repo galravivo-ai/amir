@@ -210,7 +210,7 @@ export function createStore(db) {
       }
       if (filter === 'unanswered') where.push("r.reply = ''");
       if (filter === 'negative') where.push('r.rating <= 3');
-      return q(`SELECT r.*, l.title AS location_title FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
+      return q(`SELECT r.*, l.title AS location_title, l.source FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
                 WHERE ${where.join(' AND ')} ORDER BY r.create_time DESC LIMIT ?`).all(...args, limit);
     },
     googleReviewByName: (name) =>
