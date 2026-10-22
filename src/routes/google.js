@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import express from 'express';
+import { dataArrival } from '../arrival.js';
 import multer from 'multer';
 import { fillTemplate, templatesFor } from '../network.js';
 import { CTA_TYPES, googlePostBody, POST_TOPICS, readPost } from '../posts.js';
@@ -95,6 +96,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         setupCheck: ctx.isSuperadmin(req.user) && google ? { ...google.setupCheck(), redirectUri: redirectUri(req) } : null,
         serpMissing: !serp && ctx.isSuperadmin(req.user),
         debug: ctx.isSuperadmin(req.user),
+        arrival: google && store.googleConnection(req.business.id) ? dataArrival(store, req.business, { serpOn: Boolean(serp), aiPlus: Boolean(req.plan.aiPlus) }) : null,
       }),
     );
   }
@@ -150,6 +152,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     }
     if (!wanted && loc.pending_pay) store.setLocationPending(loc.id, false);
     store.updateGoogleLocation(loc.id, { enabled: wanted, campaignId: campaign?.id ?? null });
+    // A branch just turned on: its reviews and numbers load now, not at the next half-hourly sync.
+    if (wanted && !loc.enabled && loc.source !== 'serp' && sync) {
+      const business = store.businessById(req.business.id);
+      sync
+        .syncBusiness(business)
+        .then(() => sync.syncMetrics(store.businessById(business.id)))
+        .catch((err) => console.warn('[google] first load failed:', err.message));
+    }
     // Fill the campaign's review link from Google when it has none yet.
     if (campaign && !campaign.google_review_url && safeUrl(loc.review_url)) store.setCampaignGoogleUrl(campaign.id, loc.review_url);
     res.redirect(303, '/admin/google?ok=1');

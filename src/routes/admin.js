@@ -14,6 +14,7 @@ import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
 import { googleOverview } from './performance.js';
 import { weekKey, weeklyTasks } from '../tasks.js';
 import { mapsTop3 } from '../rankings.js';
+import { dataArrival } from '../arrival.js';
 import { fillTemplate, templatesFor } from '../network.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
@@ -122,6 +123,7 @@ export function adminRoutes(ctx) {
         ...data,
         toReply,
         replyAi: demo || (Boolean(ctx.ai) && req.plan.ai),
+        arrival: demo ? null : dataArrival(store, req.business, { serpOn: Boolean(ctx.serp), aiPlus: Boolean(req.plan.aiPlus) }),
         demo,
         manages,
         replied: req.query.replied === '1',

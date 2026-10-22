@@ -2718,3 +2718,16 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .data-filters { margin: 0 0 14px; }
 .data-filters .cover-filters select, .data-filters .cover-filters input { border-color: var(--line); }
 @media (max-width: 900px) { .dash-main.reply-first > .dash-col:last-child { order: 0; } }
+
+/* After connecting Google: what arrives when */
+.arrival h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.arr-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.arr-list li { display: flex; gap: 10px; align-items: flex-start; }
+.arr-list li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.arr-list small { color: var(--ink-2); line-height: 1.5; }
+.arr-mark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--line-2); font-size: .8rem; }
+.arr-list li.done .arr-mark { background: #dcfce7; color: #15803d; font-weight: 700; }
+.arr-state { font-size: .75rem; font-weight: 600; color: var(--ink-2); }
+.arr-list li.done .arr-state { color: #15803d; }
+.arrival.compact .arr-list { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.g-conn-status + .arrival { margin-top: 4px; }

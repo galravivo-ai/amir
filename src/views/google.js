@@ -134,6 +134,24 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
   <script>if(location.hash==='#partial'){var p=document.getElementById('partial');if(p)p.open=true}</script>`;
 }
 
+/** After connecting: what arrives when, with what already arrived ticked. */
+export function arrivalCard(arrival, { compact = false, reload = false } = {}) {
+  const rows = arrival.items
+    .map(
+      (i) => `<li class="${i.done ? 'done' : ''}"><span class="arr-mark" aria-hidden="true">${i.done ? '✓' : '⏳'}</span>
+        <div><b>${h(i.title)}</b> <span class="arr-state">${i.done ? 'הגיע' : 'בדרך'}</span><small>${h(i.when)}</small>
+        ${i.todo ? `<a class="small" href="${h(i.href)}">${h(i.todo)} ←</a>` : i.done && i.href ? `<a class="small" href="${h(i.href)}">לצפייה ←</a>` : ''}</div></li>`,
+    )
+    .join('');
+  const head = arrival.pending ? 'הנתונים בדרך' : 'כל הנתונים הגיעו';
+  return `<section class="card arrival${compact ? ' compact' : ''}" id="arrival">
+    <h3>${icon('clock', 18)} ${head}</h3>
+    <p class="muted small">${arrival.pending ? `מה מגיע מגוגל אחרי החיבור, ומתי.${reload ? ' הדף מתעדכן לבד כשמשהו מגיע.' : ''}` : 'מכאן הכול מתעדכן לבד: ביקורות כל חצי שעה, מספרים כל יום, ובדיקות כל שבוע.'}</p>
+    <ul class="arr-list">${rows}</ul>
+    ${!reload || !arrival.items.some((i) => !i.done && !i.todo) ? '' : '<script>setTimeout(function(){var a=document.activeElement;if(!a||!/INPUT|TEXTAREA|SELECT/.test(a.tagName))location.reload()},60000)</script>'}
+  </section>`;
+}
+
 export function googleConnectView({
   conn,
   gbpAvailable = true,
@@ -152,6 +170,7 @@ export function googleConnectView({
   error = '',
   setupCheck = null,
   debug = false,
+  arrival = null,
 }) {
   const places = locations.filter((l) => l.source === 'serp');
   const gbpLocations = locations.filter((l) => l.source !== 'serp');
@@ -190,6 +209,7 @@ export function googleConnectView({
         <span class="g-connect-badge">${GOOGLE_G}<span>Google Business Profile</span></span>
         <h2>מחברים את פרופיל העסק בגוגל</h2>
         <p>חיבור אחד, בערך דקה, ומכאן הכול מתעדכן לבד. זה מה שמפעיל את רוב המערכת.</p>
+        <p class="muted small">אחרי החיבור: ביקורות ודירוג תוך דקה, צפיות ושיחות תוך כמה דקות (18 חודשים אחורה), ובדיקת הפרופיל תוך כרבע שעה.</p>
         ${
           can('manager')
             ? `<form method="post" action="/admin/google/connect"><input type="hidden" name="_csrf" value="${h(csrf)}">
@@ -207,6 +227,7 @@ export function googleConnectView({
       <div class="g-conn-status"><span class="g-conn-dot" aria-hidden="true"></span>
         <div><b>מחובר לגוגל</b>${conn.email ? ` <span class="muted" dir="ltr">${h(conn.email)}</span>` : ''}
         <div class="muted small">סנכרון אחרון: ${conn.last_sync_at ? h(formatDate(conn.last_sync_at)) : 'עוד לא'} · מתעדכן כל חצי שעה</div></div></div>
+      ${arrival && gbpLocations.some((l) => l.enabled) ? arrivalCard(arrival, { compact: true, reload: true }) : ''}
       <h3>הסניפים</h3>
       <p class="muted small">מסמנים אילו סניפים לעקוב אחריהם, ומשייכים כל אחד לקמפיין. אם לקמפיין עוד אין קישור לביקורת, הקישור מגוגל נכנס אליו לבד.</p>
       ${

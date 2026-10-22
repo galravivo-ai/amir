@@ -5,6 +5,7 @@ import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { profileCard, viewsOf } from './performance.js';
+import { arrivalCard } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -511,7 +512,7 @@ function replyCard({ toReply, unanswered, csrf, ai, replied, error, canManage, d
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
-  const { quotaWarning = '', tasks = [], csrf = '', toReply = [], replyAi = false, replied = false, replyError = '', demo = false, manages = false } = args;
+  const { quotaWarning = '', tasks = [], csrf = '', toReply = [], replyAi = false, replied = false, replyError = '', demo = false, manages = false, arrival = null } = args;
   const P = dashboardParts(args);
   const { stat, locked } = P;
   const mapsStat = P.lastStat;
@@ -535,6 +536,7 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
+    ${arrival?.connected && arrival.fresh && arrival.pending ? arrivalCard(arrival, { compact: true }) : ''}
     <div class="dash-main reply-first">
       <div class="dash-col">
         ${replyCard({ toReply, unanswered: P.g.unanswered, csrf, ai: replyAi, replied, error: replyError, canManage: manages, demo })}
