@@ -287,22 +287,10 @@ export function visibilityView({
     ${running || business.is_demo ? '' : failureNote(latest, allEngines, admin)}
     ${running ? progressCard(running) : ''}
     ${
-      engines.length || business.is_demo
-        ? ''
-        : '<div class="warn">כדי לבדוק צריך לפחות מנוע אחד: SerpApi (לגוגל) או מפתח Anthropic (ל-Claude). מנהל המערכת מגדיר אותם ב-Railway.</div>'
-    }
-    ${
-      last
-        ? dashboard({ runs, latest, shownEngines, allEngines, byQuery, business, plan, planOn })
-        : queries.length
-          ? '<div class="card empty"><p class="muted">עוד לא בוצעה בדיקה. לחצו "בדיקה עכשיו", או חכו לבדיקה השבועית.</p></div>'
-          : ''
-    }
-    ${offer}
-    ${
       can('manager')
-        ? `<section class="card stack" id="setup">
-            <h3>מה לבדוק</h3>
+        ? `<details class="fold" id="setup"${queries.length ? '' : ' open'}>
+            <summary>${icon('search', 20)}<span><b>השאלות שבודקים</b><small>${queries.length ? h(queries.join(' · ')) : 'עוד לא נבחרו שאלות. מתחילים כאן.'}</small></span></summary>
+            <div class="fold-body stack">
             <form method="post" action="/admin/ai-visibility/settings" class="stack">
               <input type="hidden" name="_csrf" value="${h(csrf)}">
               <div class="stack tight-stack"><span class="label-text">השאלות שלקוחות שואלים (עד ${maxQueries})</span>
@@ -325,7 +313,23 @@ export function visibilityView({
               </div>
             </form>
             <p class="muted small">כל שאלה נבדקת בכל מנוע שפעיל אצלכם: ${shownEngines.map((e) => h(allEngines[e])).join(', ')}.</p>
-          </section>`
+            </div>
+          </details>
+          <script>if(location.hash==='#setup'){var d=document.getElementById('setup');if(d)d.open=true}</script>`
         : ''
-    }`;
+    }
+    ${
+      engines.length || business.is_demo
+        ? ''
+        : '<div class="warn">כדי לבדוק צריך לפחות מנוע אחד: SerpApi (לגוגל) או מפתח Anthropic (ל-Claude). מנהל המערכת מגדיר אותם ב-Railway.</div>'
+    }
+    ${
+      last
+        ? dashboard({ runs, latest, shownEngines, allEngines, byQuery, business, plan, planOn })
+        : queries.length
+          ? '<div class="card empty"><p class="muted">עוד לא בוצעה בדיקה. לחצו "בדיקה עכשיו", או חכו לבדיקה השבועית.</p></div>'
+          : ''
+    }
+    ${offer}
+`;
 }

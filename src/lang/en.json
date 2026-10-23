@@ -2496,5 +2496,7 @@
 "{e}: מפתח ה-API לא תקין או בלי הרשאה.": "{e}: the API key is invalid or lacks permission.",
 "{e}: נגמרה היתרה או המכסה בחשבון.": "{e}: the account ran out of credit or quota.",
 "{e}: המודל שהוגדר לא קיים.": "{e}: the configured model doesn't exist.",
-"אנחנו מטפלים בזה, והבדיקה הבאה תנסה שוב לבד.": "We're on it, and the next check will try again on its own."
+"אנחנו מטפלים בזה, והבדיקה הבאה תנסה שוב לבד.": "We're on it, and the next check will try again on its own.",
+"השאלות שבודקים": "The questions we check",
+"עוד לא נבחרו שאלות. מתחילים כאן.": "No questions chosen yet. Start here."
 }
