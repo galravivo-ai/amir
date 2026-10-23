@@ -147,6 +147,9 @@ test('Hebrew stays the default, untouched', async () => {
   await c.req('/register', { method: 'POST', form: { name: 'גל', email: 'gal@example.com', password: 'password123', business: 'קפה', terms: '1' } });
   const page = await c.req('/admin/plan');
   assert.match(page.text, /<html lang="he" dir="rtl">/);
+  // The website widget is off the menu for a business that doesn't use it, and its page still works.
+  assert.doesNotMatch(page.text, /href="\/admin\/widget"/);
+  assert.equal((await c.req('/admin/widget')).status, 200);
   assert.ok(HEB.test(page.text));
   assert.equal(store.userByEmail('gal@example.com').lang, '');
 });

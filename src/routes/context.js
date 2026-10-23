@@ -84,6 +84,8 @@ export function createContext(
           openCount: b ? store.openIssuesCount(b.id) : 0,
           googlePending: b ? store.googleSummary(b.id).unanswered : 0,
           notConnected: b ? !store.googleConnected(b.id) : false,
+          // The website widget is off the menu; a business already showing it keeps managing it.
+          widgetInUse: b ? Boolean(b.widget_auto_publish) || store.publishedTestimonials(b.id, 1).length > 0 : false,
           usage: b
             ? {
                 used: store.monthlyResponseCount(b.id),

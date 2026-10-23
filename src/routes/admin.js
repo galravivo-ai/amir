@@ -239,7 +239,7 @@ export function adminRoutes(ctx) {
         aiReason: !req.plan.ai
           ? 'ניסוח תשובה עם AI אינו כלול במסלול הנוכחי.'
           : 'עוזר ה-AI עוד לא הופעל בשרת. מנהל המערכת צריך להגדיר מפתח AI.',
-        widgetAvailable: req.plan.widget,
+        widgetAvailable: req.plan.widget && (Boolean(req.business.widget_auto_publish) || store.publishedTestimonials(req.business.id, 1).length > 0),
         aiError: req.query.aierr ? String(req.query.aierr).slice(0, 200) : '',
       }),
     );

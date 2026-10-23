@@ -99,6 +99,7 @@ export function adminPage({
   openCount = 0,
   googlePending = 0,
   notConnected = false,
+  widgetInUse = false,
   usage = null,
   brand: brandInfo = null,
   isAgency = false,
@@ -157,7 +158,7 @@ ${SKIP()}
         ['/admin/responses', 'משוב מהסקר', 'inbox', openCount, { tip: 'מה שלקוחות כתבו בסקר שלכם, דרך שלט ה-QR או קישור ששלחתם. פרטי, לא מתפרסם בגוגל' }],
         ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
         ['/admin/poster', 'עיצוב שלט QR', 'print'],
-        role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
+        widgetInUse && role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
       ],
     },
     {
