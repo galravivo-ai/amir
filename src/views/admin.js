@@ -490,7 +490,7 @@ function fold({ id, ic, title, hint = '', body, open = false, tone = '' }) {
     <div class="fold-body">${body}</div>
   </details>`;
 }
-const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold').forEach(function(d){var k='gf-fold-'+d.id;try{var v=localStorage.getItem(k);if(v!==null)d.open=v==='1'}catch(e){}if(location.hash==='#'+d.id||(d.id==='data'&&location.hash==='#profile'))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})})()</script>`;
+const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold').forEach(function(d){var k='gf-fold2-'+d.id;try{var v=localStorage.getItem(k);if(v!==null)d.open=v==='1'}catch(e){}if(location.hash==='#'+d.id||(d.id==='data'&&location.hash==='#profile'))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})})()</script>`;
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
@@ -530,12 +530,12 @@ export function dashboardView(args) {
     }
     ${
       args.overview?.metrics?.daily?.size
-        ? fold({ id: 'google-sum', ic: 'search', title: 'מהפרופיל בגוגל', hint: profileHint(args.overview.metrics), body: profileSummaryCard({ metrics: args.overview.metrics }) })
+        ? fold({ id: 'google-sum', ic: 'search', title: 'מהפרופיל בגוגל', hint: profileHint(args.overview.metrics), body: profileSummaryCard({ metrics: args.overview.metrics }), open: true })
         : ''
     }
     ${
       arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending))
-        ? fold({ id: 'arrival', ic: 'clock', title: arrival.failed ? 'חלק מהנתונים לא הגיעו' : 'הנתונים בדרך', hint: arrival.failed ? 'לפרטים ואיך לתקן' : `${arrival.pending} עוד בדרך`, tone: arrival.failed ? 'warn' : '', open: arrival.failed, body: arrivalCard(arrival, { compact: true }) })
+        ? fold({ id: 'arrival', ic: 'clock', title: arrival.failed ? 'חלק מהנתונים לא הגיעו' : 'הנתונים בדרך', hint: arrival.failed ? 'לפרטים ואיך לתקן' : `${arrival.pending} עוד בדרך`, tone: arrival.failed ? 'warn' : '', open: true, body: arrivalCard(arrival, { compact: true }) })
         : ''
     }
     ${dataSection(args, P)}
