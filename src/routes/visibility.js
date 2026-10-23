@@ -37,6 +37,7 @@ export function visibilityRoutes(ctx, { visibility }) {
       'נראות ב-AI',
       V.visibilityView({
         business: req.business,
+        admin: ctx.isSuperadmin(req.user),
         cityGuess: req.business.ai_city ? '' : localContext(store, req.business).city,
         queries: parseJson(req.business.ai_queries, []),
         data: store.aiVisibility(req.business.id),

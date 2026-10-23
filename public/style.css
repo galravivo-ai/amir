@@ -2817,3 +2817,4 @@ details.fold.warn > summary > .icon { color: #dc2626; }
   .cover-bar .cover-wa svg { width: 16px; height: 16px; }
 }
 @media (max-width: 640px) { .cover-bar .cover-wa { grid-column: 1 / -1; } }
+.vis-fail ul { margin: 6px 0; padding-inline-start: 1.2em; } .vis-fail li { margin: 2px 0; }

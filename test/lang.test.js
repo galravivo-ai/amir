@@ -202,3 +202,17 @@ test('the plan confirmation page lets you switch between monthly and annual', as
   assert.match(page, /class="on" href="\/admin\/plan\/change\?plan=pro&cycle=monthly"/);
   assert.match(page, /href="\/admin\/plan\/change\?plan=pro&cycle=annual"[^>]*>שנתי · ₪1,690 לשנה/);
 });
+
+test('AI visibility says why an engine failed on the last check', async () => {
+  const c = client();
+  await c.req('/register', { method: 'POST', form: { name: 'V', email: 'vis-fail@example.com', password: 'password123', business: 'Vis', terms: '1' } });
+  const biz = store.businessesFor(store.userByEmail('vis-fail@example.com').id)[0];
+  store.updateBusiness(biz.id, { plan: 'pro', billing: 'active', ai_queries: JSON.stringify(['בית קפה']) });
+  const runAt = '2026-10-20 10:00:00';
+  store.saveAiCheck(biz.id, runAt, { query: 'בית קפה', engine: 'google_ai_overview', error: 'שירות הבדיקות של המערכת הגיע למכסת החיפושים החודשית.' });
+  store.saveAiCheck(biz.id, runAt, { query: 'בית קפה', engine: 'chatgpt', error: 'HTTP 401 Incorrect API key provided' });
+  const page = (await c.req('/admin/ai-visibility')).text;
+  assert.match(page, /2 מנועים לא ענו בבדיקה האחרונה/);
+  assert.match(page, /נגמרו החיפושים החודשיים בשירות הבדיקות/);
+  assert.match(page, /מפתח ה-API לא תקין/);
+});

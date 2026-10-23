@@ -232,10 +232,35 @@ function plusCard({ offer, can }) {
   </section>`;
 }
 
+/**
+ * Why engines failed on the last check, in words: the reason for each engine
+ * that errored. The system admin also gets what to change; a business owner
+ * hears that it's being handled.
+ */
+const ENGINE_ENV = { chatgpt: 'OPENAI', gemini: 'GEMINI', perplexity: 'PERPLEXITY' };
+function failureNote(latest, allEngines, admin) {
+  const byEngine = new Map();
+  for (const r of latest) if (r.error && r.error !== 'no_answer' && !byEngine.has(r.engine)) byEngine.set(r.engine, r.error);
+  if (!byEngine.size) return '';
+  const reason = (engine, err) => {
+    const name = allEngines[engine] || engine;
+    const env = ENGINE_ENV[engine];
+    if (/מכסת החיפושים|run out of searches/i.test(err)) return `${name}: נגמרו החיפושים החודשיים בשירות הבדיקות (SerpApi).${admin ? ' מגדילים חבילה ב-serpapi.com.' : ''}`;
+    if (/401|403|api.?key|unauthori[sz]ed|permission|invalid.*key/i.test(err)) return `${name}: מפתח ה-API לא תקין או בלי הרשאה.${admin && env ? ` בודקים את ${env}_API_KEY ב-Railway.` : ''}`;
+    if (/429|rate.?limit|insufficient_quota|quota|billing|credit/i.test(err)) return `${name}: נגמרה היתרה או המכסה בחשבון.${admin ? ' טוענים יתרה בחשבון של השירות.' : ''}`;
+    if (/model|404|not.?found/i.test(err)) return `${name}: המודל שהוגדר לא קיים.${admin && env ? ` מוחקים או מעדכנים את ${env}_MODEL ב-Railway.` : ''}`;
+    return `${name}: ${err}`;
+  };
+  const lines = [...byEngine].map(([e, err]) => `<li>${h(reason(e, err))}</li>`).join('');
+  return `<div class="warn vis-fail"><b>${byEngine.size === 1 ? 'מנוע אחד לא ענה בבדיקה האחרונה' : `${byEngine.size} מנועים לא ענו בבדיקה האחרונה`}</b>
+    <ul>${lines}</ul>
+    ${admin ? '' : '<span class="small">אנחנו מטפלים בזה, והבדיקה הבאה תנסה שוב לבד.</span>'}</div>`;
+}
+
 export function visibilityView({
   business, queries, data, engines, allEngines, running, aiAvailable, csrf, can,
   maxQueries = 5, plus = false, plusOffer = null, runsLeft = null, notice = '', error = '', suggested = null,
-  cityGuess = '', suggestedCity = '', plan = null, planOn = false,
+  cityGuess = '', suggestedCity = '', plan = null, planOn = false, admin = false,
 }) {
   const { runs, latest } = data;
   const last = runs.at(-1);
@@ -259,6 +284,7 @@ export function visibilityView({
     <p class="page-intro">יותר ויותר לקוחות שואלים עוזר AI "איפה כדאי…" במקום לחפש בגוגל. כאן רואים אם התשובות ממליצות עליכם, ואם הן מצטטות את האתר או את פרופיל הגוגל שלכם. הבדיקה רצה לבד פעם בשבוע.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
+    ${running || business.is_demo ? '' : failureNote(latest, allEngines, admin)}
     ${running ? progressCard(running) : ''}
     ${
       engines.length || business.is_demo

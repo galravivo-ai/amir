@@ -2488,5 +2488,13 @@
 "{n} מחכים לטיפול": "{n} waiting",
 "לכל המשובים ←": "All feedback →",
 "לפרטים ואיך לתקן": "Details and how to fix",
-"{n} עוד בדרך": "{n} still on the way"
+"{n} עוד בדרך": "{n} still on the way",
+"מנוע אחד לא ענה בבדיקה האחרונה": "One engine didn't answer on the last check",
+"{n} מנועים לא ענו בבדיקה האחרונה": "{n} engines didn't answer on the last check",
+"{e}: נגמרו החיפושים החודשיים בשירות הבדיקות (SerpApi).": "{e}: the checking service (SerpApi) ran out of monthly searches.",
+"{e}: נגמרו החיפושים החודשיים בשירות הבדיקות (SerpApi). מגדילים חבילה ב-serpapi.com.": "{e}: the checking service (SerpApi) ran out of monthly searches. Raise the plan at serpapi.com.",
+"{e}: מפתח ה-API לא תקין או בלי הרשאה.": "{e}: the API key is invalid or lacks permission.",
+"{e}: נגמרה היתרה או המכסה בחשבון.": "{e}: the account ran out of credit or quota.",
+"{e}: המודל שהוגדר לא קיים.": "{e}: the configured model doesn't exist.",
+"אנחנו מטפלים בזה, והבדיקה הבאה תנסה שוב לבד.": "We're on it, and the next check will try again on its own."
 }
