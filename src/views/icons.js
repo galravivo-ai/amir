@@ -47,7 +47,8 @@ export function icon(name, size = 20, extra = '') {
 const MARK_GLYPH = `<g stroke-linejoin="round" stroke-linecap="round"> <polygon class="lm-star" points="61.7,11.2 70.0,41.5 101.0,46.6 74.8,63.9 79.5,95.0 55.0,75.4 26.9,89.4 37.9,60.1 15.9,37.7 47.2,39.1" fill="#4E2EF6" stroke="#4E2EF6" stroke-width="7"/> <path class="lm-speed" d="M3 59 H24 M17 68 H34" stroke="#4E2EF6" stroke-width="5.5" fill="none"/> <circle cx="9.5" cy="68" r="2.3" fill="#8f80f0"/> <path d="M53 40.5 L45.5 54 C 55 49 69 52 66 63 C 63.5 72 52 75 42 71" fill="none" stroke="#fff" stroke-width="7.5"/> <path d="M53 33 L97 33 L83 47.5 L75.5 47.5 L82.5 40 L49 40 Z" fill="#FFC83A" stroke="#FFC83A" stroke-width="2.5"/> </g>`;
 
 export function logoMark(size = 34) {
-  return `<svg class="logo-mark" width="${size}" height="${size}" viewBox="0 0 110 110" aria-hidden="true">${MARK_GLYPH}</svg>`;
+  // The viewBox is centered on the drawing (speed lines included), so the mark sits square in any frame.
+  return `<svg class="logo-mark" width="${size}" height="${size}" viewBox="2 3 100 100" aria-hidden="true">${MARK_GLYPH}</svg>`;
 }
 
 /** The product name as a wordmark: "Go" in ink, "Five" in purple. Other names stay plain. */
