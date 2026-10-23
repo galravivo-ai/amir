@@ -270,3 +270,12 @@ test('a paying account pays for a new branch before it opens; the system admin a
     delete process.env.ICOUNT_URL_BRANCH;
   }
 });
+
+test('reviews of a place followed by link are answered from the list: copy, then reply on Google', async () => {
+  const req = client();
+  await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const list = (await req('/admin/google/reviews')).text;
+  assert.match(list, /העתקה ומענה בגוגל/);
+  assert.match(list, /onclick="gfCopy\(this,'https:\/\/maps\.google\.com\/r1'\)"/, 'Google opens at the review');
+  assert.match(list, /<p class="" dir="auto">מקום מעולה/, 'review text keeps its own direction');
+});

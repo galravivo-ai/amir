@@ -15,7 +15,7 @@ import { googleOverview } from './performance.js';
 import { weekKey, weeklyTasks } from '../tasks.js';
 import { mapsTop3 } from '../rankings.js';
 import { dataArrival } from '../arrival.js';
-import { fillTemplate, templatesFor } from '../network.js';
+import { withSuggestions } from '../replies.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
 
@@ -109,12 +109,10 @@ export function adminRoutes(ctx) {
     // The demo shows everything a manager sees; saving is blocked there anyway.
     const demo = Boolean(req.business.is_demo);
     const manages = req.can('manager') || demo;
-    const canPublish = demo || Boolean(ctx.google && store.googleConnection(req.business.id));
-    const toReply = store.googleReviews(req.business.id, { locationId: req.branchId || null, filter: 'unanswered', limit: 4 }).map((r) => ({
-      ...r,
-      canPublish: canPublish && (demo || r.source === 'gbp'),
-      suggested: templatesFor(store.replyTemplates(req.business.id), r.rating).map((t) => fillTemplate(t.body, r))[0] || '',
-    }));
+    const toReply = withSuggestions(store, req.business, store.googleReviews(req.business.id, { locationId: req.branchId || null, filter: 'unanswered', limit: 4 }), {
+      connected: Boolean(ctx.google && store.googleConnection(req.business.id)),
+      demo,
+    });
     render(
       req,
       res,

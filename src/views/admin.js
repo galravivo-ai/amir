@@ -5,7 +5,7 @@ import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { profileCard, viewsOf } from './performance.js';
-import { arrivalCard } from './google.js';
+import { arrivalCard, inlineReply, replyScripts } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -486,17 +486,10 @@ function replyCard({ toReply, unanswered, csrf, ai, replied, error, canManage, d
   const items = toReply
     .map((r) => {
       const name = r.reviewer || 'לקוח אנונימי';
-      const form =
-        canManage && r.canPublish
-          ? `<form method="post" action="/admin/google/reviews/${r.id}/reply" class="rq-form">${csrfField(csrf)}<input type="hidden" name="back" value="dashboard">
-              <textarea name="reply" rows="3" required aria-label="תשובה ל${h(name)}" placeholder="כתבו תשובה, או לחצו על טיוטה ב-AI">${h(r.suggested)}</textarea>
-              <div class="rq-actions"><button class="btn primary small-btn">פרסום בגוגל</button>${ai ? `<button type="button" class="btn small-btn" onclick="gfDraft(this,${r.id})">${icon('spark', 14)} טיוטה ב-AI</button>` : ''}<a class="small" href="/admin/google/reviews/${r.id}">לביקורת המלאה</a></div>
-            </form>`
-          : `<a class="btn small-btn" href="/admin/google/reviews/${r.id}">לתשובה</a>`;
       return `<article class="rq">
         <div class="rq-head"><span class="w-avatar">${h(name.trim().charAt(0))}</span><span><b>${h(name)}</b> ${stars(r.rating)}<span class="muted small"> · ${h(formatDate(r.create_time))}${r.location_title ? ` · ${h(r.location_title)}` : ''}</span></span></div>
-        <p class="rq-text">${r.comment ? h(r.comment) : '<span class="muted">בלי טקסט, רק דירוג.</span>'}</p>
-        ${form}
+        <p class="rq-text" ${r.comment ? 'dir="auto"' : ''}>${r.comment ? h(r.comment) : '<span class="muted">בלי טקסט, רק דירוג.</span>'}</p>
+        ${canManage ? inlineReply(r, { csrf, ai, back: 'dashboard' }) : `<a class="btn small-btn" href="/admin/google/reviews/${r.id}">לתשובה</a>`}
       </article>`;
     })
     .join('');
@@ -505,8 +498,7 @@ function replyCard({ toReply, unanswered, csrf, ai, replied, error, canManage, d
     ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     ${items || '<p class="muted">אין ביקורות שמחכות לתשובה. כל הכבוד!</p>'}
-    ${ai && demo ? `<script>function gfDraft(b){b.form.reply.value='תודה רבה על הביקורת! שמחנו לארח אתכם, ונשמח לראות אתכם שוב בקרוב.';b.form.reply.focus()}</script>` : ''}
-    ${ai && !demo ? `<script>function gfDraft(b,id){var f=b.form,l=b.innerHTML;b.disabled=true;b.textContent='מנסח…';fetch('/admin/google/reviews/'+id+'/draft',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'json=1&_csrf='+encodeURIComponent(f._csrf.value)}).then(function(r){return r.json()}).then(function(d){if(d.draft){f.reply.value=d.draft;f.reply.focus()}else alert(d.error||'לא הצלחנו לנסח טיוטה')}).catch(function(){alert('לא הצלחנו לנסח טיוטה, נסו שוב')}).then(function(){b.disabled=false;b.innerHTML=l})}</script>` : ''}
+    ${canManage && items ? replyScripts({ ai, demo }) : ''}
   </section>`;
 }
 

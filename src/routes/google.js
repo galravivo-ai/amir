@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import { dataArrival } from '../arrival.js';
+import { withSuggestions } from '../replies.js';
 import multer from 'multer';
 import { fillTemplate, templatesFor } from '../network.js';
 import { CTA_TYPES, googlePostBody, POST_TOPICS, readPost } from '../posts.js';
@@ -410,7 +411,16 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res,
       'ביקורות גוגל',
       V.googleReviewsView({
-        reviews: store.googleReviews(req.business.id, { locationId: filters.location || null, filter: filters.filter }),
+        reviews: withSuggestions(store, req.business, store.googleReviews(req.business.id, { locationId: filters.location || null, filter: filters.filter }), {
+          connected: Boolean(google && store.googleConnection(req.business.id)),
+          demo: Boolean(req.business.is_demo),
+        }),
+        csrf: req.user.csrf,
+        manages: req.can('manager') || Boolean(req.business.is_demo),
+        ai: Boolean(req.business.is_demo) || (Boolean(ctx.ai) && req.plan.ai),
+        demo: Boolean(req.business.is_demo),
+        replied: req.query.replied === '1',
+        replyError: String(req.query.replyErr ?? '').slice(0, 300),
         locations,
         filters,
         summary: req.branchId ? branchSummary(req.business.id, req.branchId, locations) : store.googleSummary(req.business.id),
@@ -476,14 +486,16 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     if (!review) return;
     if (review.source !== 'gbp' || !google) return notFound(res);
     const text = String(req.body.reply ?? '').trim().slice(0, 4000);
-    // Answered from the dashboard: back there, to the next review.
-    const fromDashboard = req.body.back === 'dashboard';
-    if (!text) return fromDashboard ? res.redirect(303, `/admin?replyErr=${encodeURIComponent('התשובה ריקה.')}#reply`) : reviewPage(req, res, review, { error: 'התשובה ריקה.' });
+    // Answered in place (the dashboard or the reviews list): back there, to the next review.
+    const q = new URLSearchParams(String(req.body.backq ?? ''));
+    const keep = new URLSearchParams([...q].filter(([k]) => k === 'filter' || k === 'location'));
+    const backTo = { dashboard: (p) => `/admin?${p}#reply`, reviews: (p) => `/admin/google/reviews?${keep.toString() ? `${keep}&` : ''}${p}` }[req.body.back];
+    if (!text) return backTo ? res.redirect(303, backTo(`replyErr=${encodeURIComponent('התשובה ריקה.')}`)) : reviewPage(req, res, review, { error: 'התשובה ריקה.' });
     try {
       await sync.reply(req.business.id, review, text);
-      res.redirect(303, fromDashboard ? '/admin?replied=1#reply' : `/admin/google/reviews/${review.id}?saved=1`);
+      res.redirect(303, backTo ? backTo('replied=1') : `/admin/google/reviews/${review.id}?saved=1`);
     } catch (err) {
-      if (fromDashboard) return res.redirect(303, `/admin?replyErr=${encodeURIComponent(humanError(err))}#reply`);
+      if (backTo) return res.redirect(303, backTo(`replyErr=${encodeURIComponent(humanError(err))}`));
       reviewPage(req, res, review, { draft: text, error: humanError(err) });
     }
   });

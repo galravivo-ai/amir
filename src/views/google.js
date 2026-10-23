@@ -248,7 +248,40 @@ export function googleConnectView({
   return `${head}${arrivalPart}${gbpPart}${serpPart}${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
 }
 
-export function googleReviewsView({ reviews, locations, filters, summary }) {
+/**
+ * Answering a review in place. With a connected Business Profile the reply is
+ * published from here; for a place followed by link it's copied, and Google
+ * opens at the review to paste it.
+ */
+export function inlineReply(r, { csrf, ai = false, back = '', backq = '' }) {
+  const name = r.reviewer || 'לקוח אנונימי';
+  const box = `<textarea name="reply" rows="3" ${r.canPublish ? 'required' : ''} maxlength="4000" dir="auto" aria-label="תשובה ל${h(name)}" placeholder="כתבו תשובה, או לחצו על טיוטה ב-AI">${h(r.suggested)}</textarea>`;
+  const aiBtn = ai ? `<button type="button" class="btn small-btn" onclick="gfDraft(this,${r.id})">${icon('spark', 14)} טיוטה ב-AI</button>` : '';
+  const more = `<a class="small" href="/admin/google/reviews/${r.id}">לביקורת המלאה</a>`;
+  if (r.canPublish) {
+    return `<form method="post" action="/admin/google/reviews/${r.id}/reply" class="rq-form"><input type="hidden" name="_csrf" value="${h(csrf)}"><input type="hidden" name="back" value="${h(back)}"><input type="hidden" name="backq" value="${h(backq)}">
+      ${box}
+      <div class="rq-actions"><button class="btn primary small-btn">פרסום בגוגל</button>${aiBtn}${more}</div>
+    </form>`;
+  }
+  return `<form class="rq-form" onsubmit="return false"><input type="hidden" name="_csrf" value="${h(csrf)}">
+    ${box}
+    <div class="rq-actions"><button type="button" class="btn primary small-btn" onclick="gfCopy(this,'${h(r.googleLink)}')">${r.googleLink ? 'העתקה ומענה בגוגל ↗' : 'העתקה'}</button>${aiBtn}${more}</div>
+  </form>`;
+}
+
+/** The scripts the in-place replies use: an AI draft without reloading, and copy-then-open-Google. */
+export function replyScripts({ ai = false, demo = false } = {}) {
+  const draft = !ai
+    ? ''
+    : demo
+      ? "function gfDraft(b){b.form.reply.value='תודה רבה על הביקורת! שמחנו לארח אתכם, ונשמח לראות אתכם שוב בקרוב.';b.form.reply.focus()}"
+      : "function gfDraft(b,id){var f=b.form,l=b.innerHTML;b.disabled=true;b.textContent='מנסח…';fetch('/admin/google/reviews/'+id+'/draft',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'json=1&_csrf='+encodeURIComponent(f._csrf.value)}).then(function(r){return r.json()}).then(function(d){if(d.draft){f.reply.value=d.draft;f.reply.focus()}else alert(d.error||'לא הצלחנו לנסח טיוטה')}).catch(function(){alert('לא הצלחנו לנסח טיוטה, נסו שוב')}).then(function(){b.disabled=false;b.innerHTML=l})}";
+  const copy = "function gfCopy(b,u){var t=b.form.reply;if(!t.value.trim()){t.focus();return}var ok=function(){b.textContent='הועתק ✓ הדביקו בגוגל'};t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(ok,ok);else{document.execCommand('copy');ok()}if(u)window.open(u,'_blank','noopener')}";
+  return `<script>${draft}${copy}</script>`;
+}
+
+export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '' }) {
   const opt = (v, l, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(l)}</option>`;
   return `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1>
       <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
@@ -258,17 +291,25 @@ export function googleReviewsView({ reviews, locations, filters, summary }) {
       ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
       <noscript><button class="btn">סינון</button></noscript>
     </form></div>
+  ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
+  ${replyError ? `<div class="error">${h(replyError)}</div>` : ''}
   ${
     reviews.length
       ? `<div class="g-list">${reviews
           .map(
-            (r) => `<a class="card g-item ${r.reply ? '' : 'pending'}" href="/admin/google/reviews/${r.id}">
-              <div class="g-head">${stars(r.rating)}<b>${h(r.reviewer || 'לקוח אנונימי')}</b><span class="muted small">${h(formatDate(r.create_time))}${locations.length > 1 ? ` · ${h(r.location_title)}` : ''}</span></div>
-              <p class="${r.comment ? '' : 'muted'}">${h(r.comment || 'דירוג בלי טקסט')}</p>
-              ${r.reply ? `<div class="g-reply small"><b>התשובה שלכם:</b> ${h(r.reply)}</div>` : '<span class="badge st-new">ממתינה לתשובה</span>'}
-            </a>`,
+            (r) => `<article class="card g-item ${r.reply ? '' : 'pending'}" id="rv-${r.id}">
+              <div class="g-head">${stars(r.rating)}<a href="/admin/google/reviews/${r.id}"><b>${h(r.reviewer || 'לקוח אנונימי')}</b></a><span class="muted small">${h(formatDate(r.create_time))}${locations.length > 1 ? ` · ${h(r.location_title)}` : ''}</span></div>
+              <p class="${r.comment ? '' : 'muted'}" ${r.comment ? 'dir="auto"' : ''}>${h(r.comment || 'דירוג בלי טקסט')}</p>
+              ${
+                r.reply
+                  ? `<div class="g-reply small"><b>התשובה שלכם:</b> <span dir="auto">${h(r.reply)}</span> <a href="/admin/google/reviews/${r.id}">עריכה</a></div>`
+                  : manages
+                    ? inlineReply(r, { csrf, ai, back: 'reviews', backq: new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString() })
+                    : '<span class="badge st-new">ממתינה לתשובה</span>'
+              }
+            </article>`,
           )
-          .join('')}</div>`
+          .join('')}</div>${manages ? replyScripts({ ai, demo }) : ''}`
       : '<div class="card empty"><p class="muted">אין ביקורות להצגה. אם רק הוספתם עסק, לחצו "בדיקה עכשיו" בהגדרות.</p></div>'
   }`;
 }
@@ -321,7 +362,7 @@ export function googleReviewView({ review, draft = '', csrf, can, aiAvailable, c
   ${saved ? '<div class="flash">התשובה פורסמה בגוגל.</div>' : ''}
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   <section class="card stack">
-    <p class="g-comment ${review.comment ? '' : 'muted'}">${h(review.comment || 'הלקוח דירג בלי לכתוב טקסט.')}</p>
+    <p class="g-comment ${review.comment ? '' : 'muted'}" ${review.comment ? 'dir="auto"' : ''}>${h(review.comment || 'הלקוח דירג בלי לכתוב טקסט.')}</p>
   </section>
   ${answer}`;
 }
