@@ -2756,19 +2756,16 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .stats.stats-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dash-main.single { grid-template-columns: minmax(0, 1fr); }
 
-/* The brand in the app's dark bars (sidebar, mobile bar and menu): the official
-   mark on a white tile in its exact colors, the name beside it on one line. */
-body.app .side-brand, body.app .m-brand { display: inline-flex; align-items: center; gap: 10px; line-height: 1; text-decoration: none; }
-body.app .side-brand .logo-mark, body.app .m-brand .logo-mark {
-  box-sizing: border-box; padding: 4px; border-radius: 10px; background: #fff;
-  box-shadow: 0 2px 8px rgba(8, 5, 30, .35);
-}
-body.app .m-brand .logo-mark { border-radius: 9px; padding: 3px; }
-body.app .side-brand .logo-mark .lm-star, body.app .m-top .logo-mark .lm-star { fill: #4E2EF6; stroke: #4E2EF6; }
-body.app .side-brand .logo-mark .lm-speed, body.app .m-top .logo-mark .lm-speed { stroke: #4E2EF6; }
+/* The brand in the app's dark bars (sidebar, mobile bar and menu): the mark
+   straight on the dark, in a brighter tone of the brand purple so it reads there,
+   the name beside it on one line. */
+body.app .side-brand, body.app .m-brand { display: inline-flex; align-items: center; gap: 8px; line-height: 1; text-decoration: none; }
+body.app .side-brand .logo-mark .lm-star, body.app .m-top .logo-mark .lm-star { fill: #7a5cff; stroke: #7a5cff; }
+body.app .side-brand .logo-mark .lm-speed, body.app .m-top .logo-mark .lm-speed { stroke: #7a5cff; }
+body.app .side-brand .logo-mark, body.app .m-brand .logo-mark { filter: drop-shadow(0 2px 6px rgba(122, 92, 255, .35)); }
 body.app .side-brand .wordmark, body.app .m-brand .wordmark { display: inline-block; line-height: 1; transform: translateY(1px); }
 body.app .side-brand .wm-go, body.app .m-brand .wm-go { color: #fff; }
-body.app .side-brand .wm-five, body.app .m-brand .wm-five { color: var(--yellow); }
+body.app .side-brand .wm-five, body.app .m-brand .wm-five { color: #a594ff; }
 
 /* Dashboard: what people did on the Google profile, and how they found it */
 .pf-sum .card-head h3 { display: flex; align-items: center; gap: 8px; }
