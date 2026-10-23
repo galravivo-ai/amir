@@ -2735,3 +2735,6 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .arr-list li.failed .arr-state { color: #b91c1c; }
 .arr-list li.off { opacity: .75; }
 [dir="rtl"] textarea[dir="auto"]:placeholder-shown { direction: rtl; }
+.g-edit { margin-top: 8px; }
+.g-edit summary { cursor: pointer; color: var(--purple); font-weight: 600; font-size: .9rem; }
+.g-edit[open] summary { margin-bottom: 8px; }

@@ -279,3 +279,10 @@ test('reviews of a place followed by link are answered from the list: copy, then
   assert.match(list, /onclick="gfCopy\(this,'https:\/\/maps\.google\.com\/r1'\)"/, 'Google opens at the review');
   assert.match(list, /<p class="" dir="auto">מקום מעולה/, 'review text keeps its own direction');
 });
+
+test('a review that already has a reply can be answered again from the list', async () => {
+  const req = client();
+  await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const list = (await req('/admin/google/reviews')).text;
+  assert.match(list, /<summary>עדכון התשובה<\/summary>[\s\S]*?<textarea name="reply"[^>]*>תודה!<\/textarea>/);
+});

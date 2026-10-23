@@ -302,7 +302,11 @@ export function googleReviewsView({ reviews, locations, filters, summary, csrf =
               <p class="${r.comment ? '' : 'muted'}" ${r.comment ? 'dir="auto"' : ''}>${h(r.comment || 'דירוג בלי טקסט')}</p>
               ${
                 r.reply
-                  ? `<div class="g-reply small"><b>התשובה שלכם:</b> <span dir="auto">${h(r.reply)}</span> <a href="/admin/google/reviews/${r.id}">עריכה</a></div>`
+                  ? `<div class="g-reply small"><b>התשובה שלכם:</b> <span dir="auto">${h(r.reply)}</span></div>${
+                      manages
+                        ? `<details class="g-edit"><summary>עדכון התשובה</summary>${inlineReply({ ...r, suggested: r.reply }, { csrf, ai, back: 'reviews', backq: new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString() })}</details>`
+                        : ''
+                    }`
                   : manages
                     ? inlineReply(r, { csrf, ai, back: 'reviews', backq: new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString() })
                     : '<span class="badge st-new">ממתינה לתשובה</span>'
