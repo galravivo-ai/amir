@@ -86,6 +86,21 @@ const CONTENT = {
 - להוסיף בפרופיל הגוגל את הקטגוריה "מסעדה איטלקית" ואת השירות "ארוחת צהריים עסקית".
 - לכתוב בתיאור הפרופיל ובאתר את השכונה ("הצפון הישן, ליד כיכר דיזנגוף"). התשובות מחפשות התאמה למיקום.
 - לבקש בביקורות להזכיר מנה ספציפית ("הפסטה", "הטירמיסו"). ה-AI מצטט ביקורות עם פרטים.`,
+    insight: `## בשורה התחתונה
+העסק במצב טוב: דירוג גבוה בגוגל, יותר צפיות ושיחות מהחודש הקודם, ולקוחות שחוזרים. מה שמעכב הוא זמן ההמתנה למנות בערבים העמוסים, ועשרות ביקורות בגוגל שעוד מחכות לתשובה.
+## מה הלקוחות אומרים
+- **עובד:** הפסטה והטירמיסו ("הטירמיסו שווה את ההגעה"), השירות החם והאווירה. חוזרים על זה בגוגל ובסקרים כאחד.
+- **לתקן:** זמן המתנה למנה העיקרית ("חיכינו 40 דקות"), חוזר בכמה ביקורות בשבועיים האחרונים, בעיקר בסופי שבוע.
+- **לתקן:** תחושה של מחיר גבוה ביחס לגודל המנות.
+## הפרופיל בגוגל
+הצפיות והשיחות עלו מול התקופה הקודמת, ורוב האנשים מוצאים אתכם במפות. מחפשים בעיקר את שם המסעדה ו"מסעדה בדיזנגוף", כלומר רוב הלקוחות החדשים מגיעים מחיפוש לפי שכונה.
+## מול המתחרים ובמפות
+אתם בשלושת הראשונים בערך בחצי מהאזורים סביב העסק. המוביל באזור מקבל יותר ביקורות חדשות בחודש, וזה מה שסוגר את הפער.
+## מה לעשות השבוע
+- לענות לביקורות שמחכות, קודם לנמוכות. התשובות מוכנות בעמוד הביקורות.
+- לשלוח בקשת דירוג בוואטסאפ ל-5 לקוחות מרוצים.
+- להוסיף מלצר בערבי חמישי-שישי, או לעדכן את הלקוחות על זמן ההמתנה כבר בהזמנה.
+- לפרסם פוסט בגוגל על מנה ספציפית, כמו הטירמיסו.`,
     branches: [
       { title: 'ביסטרו הגפן · רמת אביב', address: 'איינשטיין 40, תל אביב-יפו' },
       { title: 'ביסטרו הגפן · הרצליה פיתוח', address: 'המנופים 8, הרצליה' },
@@ -156,6 +171,21 @@ You're recommended in almost half of the answers, mostly in questions about date
 - Add the category “Italian restaurant” and the service “Business lunch” to your Google profile.
 - Mention the neighborhood in your profile description and on your website (“downtown, by Market Square”). Answers look for a location match.
 - Ask customers to mention a specific dish in reviews (“the pasta”, “the tiramisu”). The AI quotes reviews with details.`,
+    insight: `## The bottom line
+The business is doing well: a high Google rating, more views and calls than last month, and customers who come back. What holds it back is the wait for mains on busy evenings, and dozens of Google reviews still waiting for a reply.
+## What customers say
+- **Works:** the pasta and the tiramisu ("the tiramisu alone is worth the trip"), the warm service and the atmosphere. It comes up on Google and in the surveys alike.
+- **To fix:** the wait for the main course ("waited 40 minutes"), mentioned in several reviews in the last two weeks, mostly on weekends.
+- **To fix:** a sense of high prices for the portion size.
+## Your Google profile
+Views and calls are up against the previous period, and most people find you on Maps. They mostly search for the restaurant's name and for restaurants downtown, so most new customers come from searching by neighborhood.
+## Against competitors and on Maps
+You're in the top 3 in about half the areas around the business. The local leader gets more new reviews each month, and that's what closes the gap.
+## What to do this week
+- Reply to the reviews that are waiting, the low ones first. The replies are ready on the reviews page.
+- Send a WhatsApp review request to 5 happy customers.
+- Add a server on Thursday and Friday evenings, or tell customers about the wait when they book.
+- Post on Google about a specific dish, like the tiramisu.`,
     branches: [
       { title: 'Vine Bistro · Riverside', address: '40 River Road, Riverside' },
       { title: 'Vine Bistro · Business Park', address: '8 Innovation Way, Business Park' },
@@ -342,6 +372,8 @@ function build(store, lang) {
 
   BRANCHES.forEach((b, i) => addBranch(store, bizId, { ...b, ...C.branches[i] }, r, now, C));
   for (const t of C.templates) store.addReplyTemplate(bizId, t);
+  // A sample AI insight on the whole business: reviews, the profile, Maps and competitors.
+  store.saveInsight({ business_id: bizId, days: 30, response_count: 38, review_count: 82, content: C.insight });
   return bizId;
 }
 

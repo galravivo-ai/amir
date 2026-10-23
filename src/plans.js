@@ -191,7 +191,7 @@ export function accessOf(business, now = Date.now()) {
 
 export const FEATURE_LABELS = {
   emailInvites: 'בקשות ותזכורות ללקוחות במייל',
-  ai: 'עוזר AI: תשובות ללקוחות, סיכומים ותיוג',
+  ai: 'עוזר AI: תשובות ללקוחות, תובנות על כל העסק ותיוג',
   widget: 'ווידג\'ט המלצות לאתר',
 };
 

@@ -698,7 +698,15 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
       ? insights
           .map(
             (i) => `<section class="card insight">
-              <div class="muted small">${h(formatDate(i.created_at))} · ${i.campaign_name ? `סקרים: ${h(i.campaign_name)} · ` : ''}${i.days} ימים · ${[i.review_count ? `${i.review_count} ביקורות בגוגל` : '', i.response_count ? `${i.response_count} משובים מסקרים` : ''].filter(Boolean).join(' · ') || 'נתוני הפרופיל'}${i.author ? ` · ${h(i.author)}` : ''}</div>
+              <div class="muted small">${[
+                h(formatDate(i.created_at)),
+                i.campaign_name ? `סקרים: ${h(i.campaign_name)}` : '',
+                `${i.days} ימים`,
+                i.review_count ? `${i.review_count} ביקורות בגוגל` : '',
+                i.response_count ? `${i.response_count} משובים מסקרים` : '',
+                i.review_count || i.response_count ? '' : 'נתוני הפרופיל',
+                i.author ? h(i.author) : '',
+              ].filter(Boolean).map((x) => `<span>${x}</span>`).join(' · ')}</div>
               ${renderInsight(i.content)}
             </section>`,
           )
