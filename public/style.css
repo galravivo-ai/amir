@@ -2819,3 +2819,4 @@ details.fold.warn > summary > .icon { color: #dc2626; }
   .cover-bar .cover-wa, .cover-bar .cover-btn { min-height: 36px; padding: 6px 10px; font-size: .9rem; justify-content: center; }
   .cover-bar .cover-wa svg { width: 16px; height: 16px; }
 }
+@media (max-width: 640px) { .cover-bar .cover-wa { grid-column: 1 / -1; } }

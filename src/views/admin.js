@@ -375,7 +375,6 @@ function dashboardParts({
       <div class="cover-bar">
         ${filter}
         ${can('manager') && campaigns.length ? `<button type="button" class="btn cover-wa" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} שליחה בוואטסאפ</button>` : ''}
-        ${can('manager') ? '<a class="btn cover-btn" href="/admin/campaigns/new">+ קמפיין חדש</a>' : ''}
         ${can('manager') && connect?.connected ? '<a class="cover-link" href="/admin/google">⚙ חיבור לגוגל וסניפים</a>' : ''}
       </div>
     </header>
