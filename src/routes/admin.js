@@ -134,8 +134,11 @@ export function adminRoutes(ctx) {
     );
   });
 
-  // Everything in numbers, for whoever wants to dig: charts, the profile's activity, stars, topics, surveys.
-  admin.get('/data', (req, res) => render(req, res, 'כל הנתונים', V.dataView(dashboardData(req))));
+  // The data page now lives folded at the bottom of the dashboard.
+  admin.get('/data', (req, res) => {
+    const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+    res.redirect(301, `/admin${qs}#data`);
+  });
 
   // ---------- responses ----------
   function responseFilters(req) {

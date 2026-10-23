@@ -349,8 +349,8 @@ test('profile performance: views, calls, directions and searches from Google', a
   const biz = store.businessesFor(store.userByEmail('perf-owner@example.com').id)[0];
 
   // Not connected: the dashboard previews the numbers and asks to connect.
-  assert.equal((await req('/admin/performance')).location, '/admin/data#profile', 'the old page now lives on the data page');
-  const locked = (await req('/admin/data')).text;
+  assert.equal((await req('/admin/performance')).location, '/admin#data', 'the old page now lives at the bottom of the dashboard');
+  const locked = (await req('/admin')).text;
   assert.match(locked, /הגרף מאחור הוא דוגמה/);
   assert.match(locked, /צפיות בפרופיל<\/span><span class="st-value"><span class="st-lock">—/);
 
@@ -367,14 +367,14 @@ test('profile performance: views, calls, directions and searches from Google', a
 
   // 30 days: 40 views a day, 6 actions a day.
   const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
-  const page = (await req(`/admin/data?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
+  const page = (await req(`/admin?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
   assert.match(page, /צפיות בפרופיל<\/span><span class="st-value">1,200</);
-  assert.match(page, /שיחות, הגעה ואתר<\/span><span class="st-value">180</, 'calls, directions and website clicks');
+  assert.match(page, /פניות מגוגל<\/span><span class="st-value">180</, 'calls, directions and website clicks');
   assert.match(page, /שיחות: 2/, 'per-day detail in the chart');
   assert.match(page, /בית קפה תל אביב/);
   assert.match(page, /&lt;15/);
   assert.match(page, /מפות <b>900<\/b> \(75%\)/);
-  assert.match((await req('/admin/data?range=365d')).text, /לפי שבוע/);
+  assert.match((await req('/admin?range=365d')).text, /לפי שבוע/);
 
   // Reputation from the reviews sits next to the private numbers.
   assert.match(page, /דירוג בגוגל/);

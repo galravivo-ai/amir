@@ -205,9 +205,9 @@ test('the dashboard follows the chosen range', async () => {
   assert.match(all, /בשנה האחרונה/);
   assert.match(all, /חיכינו שעה/);
   // A range before any review counts none of them; reviews still waiting for a reply stay on the dashboard.
-  const old = (await req('/admin/data?range=custom&from=2025-01-01&to=2025-01-31')).text;
+  const old = (await req('/admin?range=custom&from=2025-01-01&to=2025-01-31')).text;
   assert.match(old, /בין 1\.1\.2025 ל-31\.1\.2025/);
-  assert.match(old, /ביקורות ודירוגים<\/span><span class="st-value">0</);
+  assert.match(old, /ביקורות חדשות<\/span><span class="st-value">0</);
 });
 
 test('a share.google link leads to a search by the place name', async () => {

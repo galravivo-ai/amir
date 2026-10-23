@@ -2744,3 +2744,13 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .g-search input { flex: 1; min-width: 0; }
 .g-count { margin: 0 0 10px; }
 @media (max-width: 640px) { .g-filters select { flex: 1 1 calc(50% - 8px); } .g-search { flex-basis: 100%; } }
+.dash-data { margin-top: 16px; }
+.dash-data > summary { list-style: none; display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); cursor: pointer; }
+.dash-data > summary::-webkit-details-marker { display: none; }
+.dash-data > summary > span { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.dash-data > summary small { color: var(--ink-2); line-height: 1.5; }
+.dash-data > summary::after { content: '▾'; color: var(--purple); font-size: 1.1rem; }
+.dash-data[open] > summary { margin-bottom: 16px; }
+.dash-data[open] > summary::after { content: '▴'; }
+.dash-data > summary .icon { color: var(--purple); }
+.stats.stats-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

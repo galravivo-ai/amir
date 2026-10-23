@@ -512,7 +512,7 @@ export function dashboardView(args) {
     ${stat('star', 'דירוג בגוגל', P.rating != null ? `${P.rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', P.ratingDiff ? `${P.ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(P.ratingDiff).toFixed(1)}` : P.pub?.total || P.g.total ? `${(P.pub?.total || P.g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', P.ratingDiff ? (P.ratingDiff > 0 ? 'up' : 'down') : '', P.rating != null ? '/admin/google/reviews' : '/admin/google')}
     ${stat('chat', 'ביקורות חדשות', P.total.toLocaleString('he-IL'), P.countHint ? P.countHint.replace(' מהתקופה הקודמת', '') : P.sources || 'אין בתקופה', P.countTrend, '/admin/google/reviews')}
     ${stat('alert', 'מחכים לתשובה', P.toHandle.toLocaleString('he-IL'), P.toHandle ? 'לטפל עכשיו ←' : 'הכול טופל ✓', P.toHandle ? 'warn-t' : 'up', P.toHandle ? (P.g.unanswered ? '#reply' : P.handleLink) : '')}
-    ${P.hasMetrics ? stat('phone', 'פניות מגוגל', P.actions.toLocaleString('he-IL'), ...P.pctChange(P.actions, P.prevActions), '/admin/data#profile') : locked('phone', 'פניות מגוגל')}
+    ${P.hasMetrics ? stat('phone', 'פניות מגוגל', P.actions.toLocaleString('he-IL'), ...P.pctChange(P.actions, P.prevActions), '#data') : locked('phone', 'פניות מגוגל')}
     ${mapsStat}
   </div>`;
   const surveyWaiting = P.waitingItems.filter((x) => !x.google);
@@ -540,20 +540,20 @@ export function dashboardView(args) {
             ? `<section class="card"><div class="card-head"><h3>${icon('alert', 18)} לקוחות לא מרוצים מהסקרים</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>${feed(surveyWaiting, '')}</section>`
             : ''
         }
-        <a class="card data-link" href="/admin/data">${icon('chart', 20)}<span><b>כל הנתונים</b><small>צפיות, שיחות וחיפושים בגוגל, ביקורות לפי יום, התפלגות כוכבים, נושאים חוזרים וסקרים</small></span><i>←</i></a>
       </div>
-    </div>`;
+    </div>
+    ${dataSection(args, P)}`;
 }
 
-/** All the numbers, for whoever wants to dig in: what used to fill the main page. */
-export function dataView(args) {
-  const { quotaWarning = '', overview = null, refreshed = false, topics = [], period } = args;
-  const P = dashboardParts(args);
-  return `<div class="page-head"><h1>${icon('chart', 26)} כל הנתונים</h1><a class="small" href="/admin">→ לדשבורד</a></div>
-    <p class="page-intro">כל המספרים של העסק ${h(period.label)}: גוגל וסקרים, עם אפשרות לסנן לפי קמפיין ותקופה.</p>
-    <div class="data-filters">${P.filter}</div>
-    ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
-    ${P.headline}
+/** All the numbers, folded at the bottom of the dashboard for whoever wants to dig in. */
+function dataSection(args, P) {
+  const { overview = null, refreshed = false, topics = [], period } = args;
+  return `<details class="dash-data" id="data">
+    <summary>${icon('chart', 20)}<span><b>כל הנתונים והגרפים</b><small>צפיות, שיחות וחיפושים בגוגל, ביקורות לפי יום, התפלגות כוכבים, נושאים חוזרים וסקרים</small></span></summary>
+    <div class="stats stats-2">
+      ${P.hasMetrics ? P.stat('search', 'צפיות בפרופיל', viewsOf(P.t).toLocaleString('he-IL'), ...P.pctChange(viewsOf(P.t), viewsOf(P.pt))) : P.locked('search', 'צפיות בפרופיל')}
+      ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
+    </div>
     <div class="dash-main">
       <div class="dash-col">
         <section class="card">
@@ -570,9 +570,10 @@ export function dataView(args) {
         ${topicsCard(topics)}
       </div>
     </div>
-    ${P.surveySection ? `<section class="card"><h3>${icon('qr', 18)} סקרים ו-QR</h3>${P.surveySection}</section>` : ''}`;
+    ${P.surveySection ? `<section class="card"><h3>${icon('qr', 18)} סקרים ו-QR</h3>${P.surveySection}</section>` : ''}
+  </details>
+  <script>(function(){var d=document.getElementById('data');if(!d)return;var k='gf-data-open';try{if(localStorage.getItem(k)==='1')d.open=true}catch(e){}if(/^#(data|profile)$/.test(location.hash))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})()</script>`;
 }
-
 
 // ---------------------------------------------------------------- responses
 

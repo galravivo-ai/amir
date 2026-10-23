@@ -128,7 +128,7 @@ test('someone who signs up in English gets the dashboard in English, and can swi
 test('the sample business in English, with no Hebrew interface text left', async () => {
   const c = client({ lang: 'en' });
   await c.req('/demo');
-  const pages = ['/admin', '/admin/data', '/admin/maps', '/admin/ai-visibility', '/admin/google/reviews', '/admin/responses', '/admin/competitors', '/admin/reports/monthly', '/admin/network', '/admin/campaigns', '/admin/plan', '/account'];
+  const pages = ['/admin', '/admin/maps', '/admin/ai-visibility', '/admin/google/reviews', '/admin/responses', '/admin/competitors', '/admin/reports/monthly', '/admin/network', '/admin/campaigns', '/admin/plan', '/account'];
   for (const p of pages) {
     const page = await c.req(p);
     assert.equal(page.status, 200, p);

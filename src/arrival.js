@@ -32,11 +32,11 @@ export function dataArrival(store, business, { serpOn = false, aiPlus = false } 
           when: 'תוך כמה דקות, 18 חודשים אחורה. גוגל מוסרת את המספרים באיחור של כמה ימים, ולכן הימים האחרונים מתמלאים בהדרגה.',
           done: metrics,
           error: metrics ? '' : metricsError,
-          href: '/admin/data#profile',
+          href: '/admin#data',
         },
     byLinkOnly
       ? { key: 'searches', title: 'מה חיפשו כשמצאו אתכם', done: false, ...fullOnly }
-      : { key: 'searches', title: 'מה חיפשו כשמצאו אתכם', when: 'לפי חודש: החודש שעבר מופיע בתחילת החודש הבא.', done: metrics, href: '/admin/data#profile' },
+      : { key: 'searches', title: 'מה חיפשו כשמצאו אתכם', when: 'לפי חודש: החודש שעבר מופיע בתחילת החודש הבא.', done: metrics, href: '/admin#data' },
   ];
   if (serpOn) {
     items.push({ key: 'health', title: 'בריאות הפרופיל ותוכנית לקידום במפות', when: 'תוך כרבע שעה, ואז בדיקה חדשה כל שבוע.', done: audits, href: '/admin/maps' });

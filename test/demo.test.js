@@ -36,7 +36,8 @@ test('demo: anyone can look around a full sample business, and change nothing', 
     assert.match(dash, /חשבון דמו/);
     assert.match(dash, /ביסטרו הגפן/);
     assert.match(dash, /פניות מגוגל<\/span><span class="st-value">[\d,]+</, 'the Google profile numbers are there');
-    assert.match((await req('/admin/data')).text, /צפיות בפרופיל<\/span><span class="st-value">[\d,]+</, 'and all of them on the data page');
+    assert.match(dash, /צפיות בפרופיל<\/span><span class="st-value">[\d,]+</, 'and all of them folded below');
+    assert.equal((await req('/admin/data')).location, '/admin#data', 'the old data page leads there');
     assert.match((await req('/admin/ai-visibility')).text, /איך להופיע ב-AI/);
     assert.match((await req('/admin/ai-visibility')).text, /על מי ממליצים במקומכם/);
     assert.match((await req('/admin/maps')).text, /ביסטרו/);
