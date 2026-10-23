@@ -4,7 +4,7 @@ import { asset, DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishToke
 import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
-import { profileCard, profileSummaryCard, viewsOf } from './performance.js';
+import { profileCard, profileHint, profileSummaryCard, viewsOf } from './performance.js';
 import { arrivalCard } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
@@ -481,6 +481,18 @@ function dashboardParts({
   return { lastStat, cover, filter, headline, daily, sources, dist, toHandle, waitingItems, handleLink, surveySection, connectCard, checklist, g, stats, pub, m, hasMetrics, t, pt, pctChange, stat, locked, rating, ratingDiff, total, countHint, countTrend, actions, prevActions };
 }
 
+/**
+ * A dashboard section that folds: a one-line summary always shown, the
+ * content on a click. Each remembers being opened or closed (per browser).
+ */
+function fold({ id, ic, title, hint = '', body, open = false, tone = '' }) {
+  return `<details class="fold${tone ? ` ${tone}` : ''}" id="${id}" data-open="${open ? 1 : 0}"${open ? ' open' : ''}>
+    <summary>${icon(ic, 20)}<span><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</span></summary>
+    <div class="fold-body">${body}</div>
+  </details>`;
+}
+const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold').forEach(function(d){var k='gf-fold-'+d.id;try{var v=localStorage.getItem(k);if(v!==null)d.open=v==='1'}catch(e){}if(location.hash==='#'+d.id||(d.id==='data'&&location.hash==='#profile'))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})})()</script>`;
+
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
   const { quotaWarning = '', tasks = [], csrf = '', arrival = null } = args;
@@ -507,28 +519,34 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
-    ${args.overview?.metrics ? profileSummaryCard({ metrics: args.overview.metrics }) : ''}
-    ${arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending)) ? arrivalCard(arrival, { compact: true }) : ''}
     ${
-      tasks.length || surveyWaiting.length
-        ? `<div class="dash-main${tasks.length && surveyWaiting.length ? '' : ' single'}">
-      ${tasks.length ? `<div class="dash-col">${tasksCard(tasks, csrf)}</div>` : ''}
-      ${
-        surveyWaiting.length
-          ? `<div class="dash-col"><section class="card"><div class="card-head"><h3>${icon('alert', 18)} לקוחות לא מרוצים מהסקרים</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>${feed(surveyWaiting, '')}</section></div>`
-          : ''
-      }
-    </div>`
+      tasks.length
+        ? fold({ id: 'tasks', ic: 'check', title: 'המשימות השבוע', hint: tasks.length === 1 ? 'משימה אחת' : `${tasks.length} משימות`, body: tasksCard(tasks, csrf), open: true })
         : ''
     }
-    ${dataSection(args, P)}`;
+    ${
+      surveyWaiting.length
+        ? fold({ id: 'unhappy', ic: 'alert', title: 'לקוחות לא מרוצים מהסקרים', hint: `${surveyWaiting.length} מחכים לטיפול`, tone: 'warn', open: true, body: `${feed(surveyWaiting, '')}<p class="small"><a href="/admin/responses?sentiment=negative&status=new">לכל המשובים ←</a></p>` })
+        : ''
+    }
+    ${
+      args.overview?.metrics?.daily?.size
+        ? fold({ id: 'google-sum', ic: 'search', title: 'מהפרופיל בגוגל', hint: profileHint(args.overview.metrics), body: profileSummaryCard({ metrics: args.overview.metrics }) })
+        : ''
+    }
+    ${
+      arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending))
+        ? fold({ id: 'arrival', ic: 'clock', title: arrival.failed ? 'חלק מהנתונים לא הגיעו' : 'הנתונים בדרך', hint: arrival.failed ? 'לפרטים ואיך לתקן' : `${arrival.pending} עוד בדרך`, tone: arrival.failed ? 'warn' : '', open: arrival.failed, body: arrivalCard(arrival, { compact: true }) })
+        : ''
+    }
+    ${dataSection(args, P)}
+    ${FOLD_SCRIPT}`;
 }
 
 /** All the numbers, folded at the bottom of the dashboard for whoever wants to dig in. */
 function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
-  return `<details class="dash-data" id="data">
-    <summary>${icon('chart', 20)}<span><b>כל הנתונים והגרפים</b><small>צפיות, שיחות וחיפושים בגוגל, ביקורות לפי יום, התפלגות כוכבים, נושאים חוזרים וסקרים</small></span></summary>
+  return fold({ id: 'data', ic: 'chart', title: 'כל הנתונים והגרפים', hint: 'ביקורות לפי יום, פעולות בפרופיל, התפלגות כוכבים, נושאים חוזרים וסקרים', body: `
     <div class="stats stats-1">
       ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
     </div>
@@ -549,8 +567,7 @@ function dataSection(args, P) {
       </div>
     </div>
     ${P.surveySection ? `<section class="card"><h3>${icon('qr', 18)} סקרים ו-QR</h3>${P.surveySection}</section>` : ''}
-  </details>
-  <script>(function(){var d=document.getElementById('data');if(!d)return;var k='gf-data-open';try{if(localStorage.getItem(k)==='1')d.open=true}catch(e){}if(/^#(data|profile)$/.test(location.hash))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})()</script>`;
+  ` });
 }
 
 // ---------------------------------------------------------------- responses

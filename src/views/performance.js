@@ -221,3 +221,9 @@ export function profileSummaryCard({ metrics }) {
     </div>
   </section>`;
 }
+
+/** The profile in one line, for the folded section's summary. */
+export function profileHint(metrics) {
+  const t = metrics.totals;
+  return [`${num(viewsOf(t))} צפיות`, `${num(t.CALL_CLICKS)} שיחות`, `${num(t.BUSINESS_DIRECTION_REQUESTS)} בקשות הגעה`, `${num(t.WEBSITE_CLICKS)} כניסות לאתר`].join(' · ');
+}

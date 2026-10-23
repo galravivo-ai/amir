@@ -2784,3 +2784,38 @@ body.app .side-brand .wm-five, body.app .m-brand .wm-five { color: var(--yellow)
 .pf-found .pf-sub { margin: 0 0 4px; }
 .pf-found .pf-kw-list { margin: 8px 0 6px; }
 .stats.stats-1 { grid-template-columns: minmax(0, 260px); }
+
+/* Dashboard sections that fold: a one-line summary, the content on a click */
+details.fold { margin: 0 0 12px; }
+details.fold > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); cursor: pointer; box-shadow: var(--shadow-xs); }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary > .icon { color: var(--purple); flex: none; }
+details.fold > summary > span { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+details.fold > summary b { font-size: 1rem; }
+details.fold > summary small { color: var(--ink-2); line-height: 1.45; }
+details.fold > summary::after { content: '▾'; color: var(--purple); font-size: 1.1rem; flex: none; }
+details.fold[open] > summary { border-radius: 16px 16px 0 0; border-bottom-color: transparent; }
+details.fold[open] > summary::after { content: '▴'; }
+details.fold > .fold-body { background: var(--card); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 16px 16px; padding: 4px 18px 16px; }
+details.fold.warn > summary { border-color: #fecaca; background: #fff7f7; }
+details.fold.warn > summary > .icon { color: #dc2626; }
+/* Cards inside a fold lose their own frame and title: the fold's summary is the title. */
+.fold-body > .card, .fold-body > section.card { border: 0; box-shadow: none; padding: 0; margin: 0; background: transparent; }
+.fold-body > .card > h3:first-child, .fold-body > .card > .card-head > h3, .fold-body > .tasks-card > h3 { display: none; }
+.fold-body > .card > .card-head { justify-content: flex-end; }
+.fold-body > .arrival > p.muted:first-of-type { display: none; }
+#data > .fold-body { background: transparent; border: 0; padding: 12px 0 0; }
+#data > .fold-body .card { border: 1px solid var(--line); box-shadow: var(--shadow-xs); background: var(--card); padding: 16px 18px; }
+#data[open] > summary { border-radius: 16px; border-bottom-color: var(--line); }
+
+/* The dashboard's head on a phone: just the name, the period and two small buttons */
+@media (max-width: 640px) {
+  .dash-cover { padding: 12px 14px; margin-bottom: 12px; }
+  .cover-greet, .cover-sub, .cover-logo, .cover-link { display: none !important; }
+  .cover-text h1 { font-size: 1.15rem; }
+  .cover-bar { margin-top: 10px; padding-top: 10px; gap: 6px; display: grid; grid-template-columns: 1fr 1fr; }
+  .cover-bar .cover-filters { grid-column: 1 / -1; flex-wrap: nowrap; }
+  .cover-bar .cover-filters select { min-height: 36px; padding-block: 4px; font-size: .9rem; }
+  .cover-bar .cover-wa, .cover-bar .cover-btn { min-height: 36px; padding: 6px 10px; font-size: .9rem; justify-content: center; }
+  .cover-bar .cover-wa svg { width: 16px; height: 16px; }
+}

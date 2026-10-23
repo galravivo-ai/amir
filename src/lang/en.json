@@ -2480,5 +2480,13 @@
 "באוקטובר {n}": "in October {n}",
 "בנובמבר {n}": "in November {n}",
 "בדצמבר {n}": "in December {n}",
-"החיפושים {a} עד {b}, לפי מספר הפעמים שהפרופיל הופיע בהם.": "Searches from {a} to {b}, by how many times the profile showed up in them."
+"החיפושים {a} עד {b}, לפי מספר הפעמים שהפרופיל הופיע בהם.": "Searches from {a} to {b}, by how many times the profile showed up in them.",
+"משימה אחת": "1 task",
+"{n} משימות": "{n} tasks",
+"{n} צפיות · {n} שיחות · {n} בקשות הגעה · {n} כניסות לאתר": "{n} views · {n} calls · {n} direction requests · {n} website visits",
+"ביקורות לפי יום, פעולות בפרופיל, התפלגות כוכבים, נושאים חוזרים וסקרים": "Reviews by day, profile actions, star breakdown, recurring topics and surveys",
+"{n} מחכים לטיפול": "{n} waiting",
+"לכל המשובים ←": "All feedback →",
+"לפרטים ואיך לתקן": "Details and how to fix",
+"{n} עוד בדרך": "{n} still on the way"
 }
