@@ -495,7 +495,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `<p>שירות הבדיקות של המערכת הגיע למכסה החודשית שלו, ולכן עצרו עד שהמכסה תתחדש: בריאות הפרופיל, מיקום במפות, מתחרים, נראות ב-AI, ומעקב ביקורות לפי קישור.</p>
             <p>מה עושים: נכנסים ל-serpapi.com ← Dashboard, ומגדילים את החבילה או מחכים לחידוש החודשי. מיד אחרי זה הבדיקות חוזרות לרוץ לבד.</p>
             ${detail ? `<p class="muted" dir="ltr" style="text-align:left">${h(detail)}</p>` : ''}
-            ${emailButton(url('/admin/status'), 'למצב המערכת')}`,
+            ${emailButton(url('/superadmin/status'), 'למצב המערכת')}`,
         }),
       });
     },

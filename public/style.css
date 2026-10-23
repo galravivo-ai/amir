@@ -2818,3 +2818,6 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 }
 @media (max-width: 640px) { .cover-bar .cover-wa { grid-column: 1 / -1; } }
 .vis-fail ul { margin: 6px 0; padding-inline-start: 1.2em; } .vis-fail li { margin: 2px 0; }
+/* The head's decorative circle stays behind its content, so it never catches a tap. */
+.dash-cover::before { pointer-events: none; z-index: 0; }
+.dash-cover > * { position: relative; z-index: 1; }

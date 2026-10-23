@@ -122,6 +122,9 @@ export function adminRoutes(ctx) {
     );
   });
 
+  // The system status page lives under /superadmin; this address leads there.
+  admin.get('/status', (req, res) => res.redirect(301, '/superadmin/status'));
+
   // The data page now lives folded at the bottom of the dashboard.
   admin.get('/data', (req, res) => {
     const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
