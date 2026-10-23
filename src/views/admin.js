@@ -358,10 +358,9 @@ function dashboardParts({
       </span>
       <noscript><button class="btn">סינון</button></noscript>
     </form>`;
-  // The executive cover: the business's own logo and color, the period and the filters.
-  const brand = safeColor(business?.brand_color, '#4b2bd6');
+  // The executive cover in GoFive's colors (not the business's), with its logo, the period and the filters.
   const logo = logoSrc(business);
-  const cover = `<header class="dash-cover" style="--cover:${brand}">
+  const cover = `<header class="dash-cover">
       <div class="cover-top">
         <div class="cover-text">
           <span class="cover-greet">${h(greeting(userName))}</span>
