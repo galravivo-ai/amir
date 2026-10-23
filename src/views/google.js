@@ -286,16 +286,22 @@ export function googleReviewsView({ reviews, locations, filters, summary, csrf =
   return `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1>
       <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
       <p class="muted">${summary.total ? `דירוג ${summary.avg.toFixed(1)} ★ מתוך ${summary.total} ביקורות` : 'עוד אין נתונים מגוגל'}${summary.unanswered ? ` · <b>${summary.unanswered} ממתינות לתשובה</b>` : ''}</p></div>
-    <form method="get" class="filters">
-      <select name="filter" onchange="this.form.submit()" aria-label="סינון">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}</select>
+    <form method="get" class="filters g-filters">
+      <select name="filter" onchange="this.form.submit()" aria-label="מצב">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('answered', 'עם תשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}${opt('positive', '4-5 כוכבים', filters.filter)}</select>
+      <select name="stars" onchange="this.form.submit()" aria-label="כוכבים">${opt('', 'כל הדירוגים', filters.stars)}${[5, 4, 3, 2, 1].map((n) => opt(n, `${'★'.repeat(n)} (${n})`, filters.stars)).join('')}</select>
+      <select name="days" onchange="this.form.submit()" aria-label="תקופה">${opt('', 'מכל הזמנים', filters.days)}${opt('7', 'השבוע האחרון', filters.days)}${opt('30', '30 הימים האחרונים', filters.days)}${opt('90', '3 החודשים האחרונים', filters.days)}${opt('365', 'השנה האחרונה', filters.days)}</select>
+      <select name="text" onchange="this.form.submit()" aria-label="טקסט">${opt('', 'עם ובלי טקסט', filters.text)}${opt('with', 'רק עם טקסט', filters.text)}${opt('without', 'רק דירוג בלי טקסט', filters.text)}</select>
       ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
-      <noscript><button class="btn">סינון</button></noscript>
+      <select name="sort" onchange="this.form.submit()" aria-label="מיון">${opt('', 'החדשות קודם', filters.sort)}${opt('old', 'הישנות קודם', filters.sort)}${opt('low', 'הנמוכות קודם', filters.sort)}${opt('high', 'הגבוהות קודם', filters.sort)}</select>
+      <span class="g-search"><input type="search" name="q" value="${h(filters.q || '')}" placeholder="חיפוש בטקסט או בשם" aria-label="חיפוש בביקורות"><button class="btn">חיפוש</button></span>
+      ${Object.values(filters).some(Boolean) ? '<a class="small" href="/admin/google/reviews">ניקוי הסינון</a>' : ''}
     </form></div>
   ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
   ${replyError ? `<div class="error">${h(replyError)}</div>` : ''}
+  ${Object.values(filters).some(Boolean) ? `<p class="muted small g-count">${reviews.length > 100 ? 'מוצגות 100 הביקורות הראשונות שמתאימות לסינון' : reviews.length === 1 ? 'נמצאה ביקורת אחת' : `נמצאו ${reviews.length} ביקורות`}</p>` : ''}
   ${
     reviews.length
-      ? `<div class="g-list">${reviews
+      ? `<div class="g-list">${reviews.slice(0, 100)
           .map(
             (r) => `<article class="card g-item ${r.reply ? '' : 'pending'}" id="rv-${r.id}">
               <div class="g-head">${stars(r.rating)}<a href="/admin/google/reviews/${r.id}"><b>${h(r.reviewer || 'לקוח אנונימי')}</b></a><span class="muted small">${h(formatDate(r.create_time))}${locations.length > 1 ? ` · ${h(r.location_title)}` : ''}</span></div>
@@ -314,7 +320,9 @@ export function googleReviewsView({ reviews, locations, filters, summary, csrf =
             </article>`,
           )
           .join('')}</div>${manages ? replyScripts({ ai, demo }) : ''}`
-      : '<div class="card empty"><p class="muted">אין ביקורות להצגה. אם רק הוספתם עסק, לחצו "בדיקה עכשיו" בהגדרות.</p></div>'
+      : Object.values(filters).some(Boolean)
+        ? '<div class="card empty"><p class="muted">אין ביקורות שמתאימות לסינון. <a href="/admin/google/reviews">ניקוי הסינון</a></p></div>'
+        : '<div class="card empty"><p class="muted">אין ביקורות להצגה. אם רק הוספתם עסק, לחצו "בדיקה עכשיו" בהגדרות.</p></div>'
   }`;
 }
 

@@ -16,6 +16,8 @@ import { ANNUAL_MONTHS, branchPayUrl, branchPrice, payProvider, PLANS, profilesO
 const STATE_COOKIE = 'gstate';
 
 /** Google Business Profile: connect, choose locations, read and answer reviews. */
+const REVIEWS_SHOWN = 100;
+
 export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }) {
   const { store, render, requireRole, notFound } = ctx;
   const router = express.Router();
@@ -401,8 +403,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
   router.get('/google/reviews', (req, res) => {
     const locations = store.googleLocations(req.business.id).filter((l) => l.enabled && (!req.branchId || l.id === req.branchId));
     const wanted = req.branchId || Number(req.query.location);
+    const pick = (v, allowed) => (allowed.includes(String(v ?? '')) ? String(v) : '');
     const filters = {
-      filter: ['unanswered', 'negative'].includes(req.query.filter) ? req.query.filter : '',
+      filter: pick(req.query.filter, ['unanswered', 'answered', 'negative', 'positive']),
+      stars: pick(req.query.stars, ['1', '2', '3', '4', '5']),
+      text: pick(req.query.text, ['with', 'without']),
+      days: pick(req.query.days, ['7', '30', '90', '365']),
+      sort: pick(req.query.sort, ['old', 'low', 'high']),
+      q: String(req.query.q ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
       location: locations.some((l) => l.id === wanted) ? wanted : '',
     };
     if (!store.googleLocations(req.business.id).length) return res.redirect(303, '/admin/google');
@@ -411,7 +419,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res,
       'ביקורות גוגל',
       V.googleReviewsView({
-        reviews: withSuggestions(store, req.business, store.googleReviews(req.business.id, { locationId: filters.location || null, filter: filters.filter }), {
+        reviews: withSuggestions(store, req.business, store.googleReviews(req.business.id, { ...filters, locationId: filters.location || null, stars: Number(filters.stars), days: Number(filters.days), limit: REVIEWS_SHOWN + 1 }), {
           connected: Boolean(google && store.googleConnection(req.business.id)),
           demo: Boolean(req.business.is_demo),
         }),
@@ -488,7 +496,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     const text = String(req.body.reply ?? '').trim().slice(0, 4000);
     // Answered in place (the dashboard or the reviews list): back there, to the next review.
     const q = new URLSearchParams(String(req.body.backq ?? ''));
-    const keep = new URLSearchParams([...q].filter(([k]) => k === 'filter' || k === 'location'));
+    const keep = new URLSearchParams([...q].filter(([k]) => ['filter', 'stars', 'text', 'days', 'sort', 'q', 'location'].includes(k)));
     const backTo = { dashboard: (p) => `/admin?${p}#reply`, reviews: (p) => `/admin/google/reviews?${keep.toString() ? `${keep}&` : ''}${p}` }[req.body.back];
     if (!text) return backTo ? res.redirect(303, backTo(`replyErr=${encodeURIComponent('התשובה ריקה.')}`)) : reviewPage(req, res, review, { error: 'התשובה ריקה.' });
     try {

@@ -286,3 +286,21 @@ test('a review that already has a reply can be answered again from the list', as
   const list = (await req('/admin/google/reviews')).text;
   assert.match(list, /<summary>עדכון התשובה<\/summary>[\s\S]*?<textarea name="reply"[^>]*>תודה!<\/textarea>/);
 });
+
+test('reviews filter by stars, status, text, period and search, and sort', async () => {
+  const req = client();
+  await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const has = async (qs, re) => re.test((await req(`/admin/google/reviews?${qs}`)).text);
+  assert.ok(await has('stars=5', /מקום מעולה/));
+  assert.ok(!(await has('stars=4', /מקום מעולה/)));
+  assert.ok(await has('filter=answered', /<p class="" dir="auto">טוב</));
+  assert.ok(!(await has('filter=answered', /מקום מעולה/)));
+  const found = (await req('/admin/google/reviews?q=' + encodeURIComponent('מעולה'))).text;
+  assert.match(found, /נמצא/);
+  assert.match(found, /מקום מעולה/);
+  assert.doesNotMatch(found, /<p class="" dir="auto">טוב</);
+  assert.ok(await has('q=' + encodeURIComponent('%'), /אין ביקורות שמתאימות לסינון/), 'a % is searched as itself');
+  assert.ok(await has('text=without', /אין ביקורות שמתאימות לסינון/));
+  const low = (await req('/admin/google/reviews?sort=low')).text;
+  assert.ok(low.indexOf('>טוב<') < low.indexOf('מקום מעולה'), 'lowest first');
+});

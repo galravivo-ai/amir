@@ -201,7 +201,12 @@ export function createStore(db) {
       );
       return !existing;
     },
-    googleReviews(businessId, { locationId = null, filter = '', limit = 100 } = {}) {
+    /**
+     * A business's Google reviews, newest first unless sorted otherwise. Filters:
+     * status (unanswered/answered, negative = 3★ and below, positive = 4-5★),
+     * exact stars, with or without text, the last N days, and a text search.
+     */
+    googleReviews(businessId, { locationId = null, filter = '', stars = 0, text = '', days = 0, q: search = '', sort = '', limit = 100 } = {}) {
       const where = ['l.business_id = ?', 'l.enabled = 1'];
       const args = [businessId];
       if (locationId) {
@@ -209,9 +214,27 @@ export function createStore(db) {
         args.push(locationId);
       }
       if (filter === 'unanswered') where.push("r.reply = ''");
+      if (filter === 'answered') where.push("r.reply != ''");
       if (filter === 'negative') where.push('r.rating <= 3');
+      if (filter === 'positive') where.push('r.rating >= 4');
+      if (stars >= 1 && stars <= 5) {
+        where.push('r.rating = ?');
+        args.push(stars);
+      }
+      if (text === 'with') where.push("TRIM(COALESCE(r.comment, '')) != ''");
+      if (text === 'without') where.push("TRIM(COALESCE(r.comment, '')) = ''");
+      if (days > 0) {
+        where.push('r.create_time >= ?');
+        args.push(new Date(Date.now() - days * 864e5).toISOString());
+      }
+      if (search) {
+        where.push("(r.comment LIKE ? ESCAPE '\\' OR r.reviewer LIKE ? ESCAPE '\\' OR r.reply LIKE ? ESCAPE '\\')");
+        const like = `%${String(search).replace(/[\\%_]/g, '\\$&')}%`;
+        args.push(like, like, like);
+      }
+      const order = { old: 'r.create_time ASC', low: 'r.rating ASC, r.create_time DESC', high: 'r.rating DESC, r.create_time DESC' }[sort] || 'r.create_time DESC';
       return q(`SELECT r.*, l.title AS location_title, l.source, l.place_id FROM google_reviews r JOIN google_locations l ON l.id = r.location_id
-                WHERE ${where.join(' AND ')} ORDER BY r.create_time DESC LIMIT ?`).all(...args, limit);
+                WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ?`).all(...args, limit);
     },
     googleReviewByName: (name) =>
       q(`SELECT r.*, l.title AS location_title FROM google_reviews r JOIN google_locations l ON l.id = r.location_id WHERE r.name = ?`).get(name) || null,

@@ -2738,3 +2738,9 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .g-edit { margin-top: 8px; }
 .g-edit summary { cursor: pointer; color: var(--purple); font-weight: 600; font-size: .9rem; }
 .g-edit[open] summary { margin-bottom: 8px; }
+.g-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.g-filters select { width: auto; flex: 0 1 auto; }
+.g-search { display: inline-flex; gap: 6px; flex: 1 1 220px; }
+.g-search input { flex: 1; min-width: 0; }
+.g-count { margin: 0 0 10px; }
+@media (max-width: 640px) { .g-filters select { flex: 1 1 calc(50% - 8px); } .g-search { flex-basis: 100%; } }
