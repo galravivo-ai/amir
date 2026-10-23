@@ -352,7 +352,7 @@ test('profile performance: views, calls, directions and searches from Google', a
   assert.equal((await req('/admin/performance')).location, '/admin#data', 'the old page now lives at the bottom of the dashboard');
   const locked = (await req('/admin')).text;
   assert.match(locked, /הגרף מאחור הוא דוגמה/);
-  assert.match(locked, /צפיות בפרופיל<\/span><span class="st-value"><span class="st-lock">—/);
+  assert.doesNotMatch(locked, /class="card pf-sum"/, 'no profile card before the numbers arrive');
 
   const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
   await req(`/admin/google/callback?code=abc&state=${new URL(start.location).searchParams.get('state')}`);
@@ -368,7 +368,8 @@ test('profile performance: views, calls, directions and searches from Google', a
   // 30 days: 40 views a day, 6 actions a day.
   const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   const page = (await req(`/admin?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
-  assert.match(page, /צפיות בפרופיל<\/span><span class="st-value">1,200</);
+  assert.match(page, /צפיות בפרופיל<\/span><b>1,200</);
+  assert.match(page, /איך מצאו אתכם בגוגל/);
   assert.match(page, /פניות מגוגל<\/span><span class="st-value">180</, 'calls, directions and website clicks');
   assert.match(page, /שיחות: 2/, 'per-day detail in the chart');
   assert.match(page, /בית קפה תל אביב/);

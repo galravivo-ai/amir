@@ -4,7 +4,7 @@ import { asset, DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishToke
 import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
-import { profileCard, viewsOf } from './performance.js';
+import { profileCard, profileSummaryCard, viewsOf } from './performance.js';
 import { arrivalCard } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
@@ -507,6 +507,7 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
+    ${args.overview?.metrics ? profileSummaryCard({ metrics: args.overview.metrics }) : ''}
     ${arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending)) ? arrivalCard(arrival, { compact: true }) : ''}
     ${
       tasks.length || surveyWaiting.length
@@ -528,8 +529,7 @@ function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
   return `<details class="dash-data" id="data">
     <summary>${icon('chart', 20)}<span><b>כל הנתונים והגרפים</b><small>צפיות, שיחות וחיפושים בגוגל, ביקורות לפי יום, התפלגות כוכבים, נושאים חוזרים וסקרים</small></span></summary>
-    <div class="stats stats-2">
-      ${P.hasMetrics ? P.stat('search', 'צפיות בפרופיל', viewsOf(P.t).toLocaleString('he-IL'), ...P.pctChange(viewsOf(P.t), viewsOf(P.pt))) : P.locked('search', 'צפיות בפרופיל')}
+    <div class="stats stats-1">
       ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
     </div>
     <div class="dash-main">

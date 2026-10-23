@@ -2769,3 +2769,18 @@ body.app .side-brand .logo-mark .lm-speed, body.app .m-top .logo-mark .lm-speed 
 body.app .side-brand .wordmark, body.app .m-brand .wordmark { display: inline-block; line-height: 1; transform: translateY(1px); }
 body.app .side-brand .wm-go, body.app .m-brand .wm-go { color: #fff; }
 body.app .side-brand .wm-five, body.app .m-brand .wm-five { color: var(--yellow); }
+
+/* Dashboard: what people did on the Google profile, and how they found it */
+.pf-sum .card-head h3 { display: flex; align-items: center; gap: 8px; }
+.pf-sum .g-logo { width: 20px; height: 20px; }
+.pf-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 6px 0 16px; }
+.pf-tile { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line-2); }
+.pf-tl { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--ink-2); }
+.pf-tl .icon { color: var(--purple); }
+.pf-tile b { font-size: 1.45rem; font-family: var(--font-head); line-height: 1.1; }
+.pf-tr { font-size: .78rem; font-weight: 600; color: var(--ink-2); }
+.pf-tr.up { color: #15803d; }
+.pf-tr.down { color: #b91c1c; }
+.pf-found .pf-sub { margin: 0 0 4px; }
+.pf-found .pf-kw-list { margin: 8px 0 6px; }
+.stats.stats-1 { grid-template-columns: minmax(0, 260px); }

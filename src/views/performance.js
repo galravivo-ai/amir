@@ -1,5 +1,6 @@
 import { formatDate, h } from '../util.js';
 import { icon } from './icons.js';
+import { GOOGLE_G } from './google.js';
 
 // The profile's own numbers from Google: how many saw it, and what they did.
 
@@ -179,6 +180,44 @@ export function profileCard({ connected, metrics, lastSync, errors, googleReady,
       <p>${why}</p>
       ${!connected && googleReady && canConnect ? '<a class="btn primary" href="/admin/google">חיבור לגוגל</a>' : ''}
       <span class="muted small">הגרף מאחור הוא דוגמה</span>
+    </div>
+  </section>`;
+}
+
+/**
+ * On the dashboard, right under the headline numbers: what people did on the
+ * Google profile (views, calls, directions, website, messages, against the
+ * period before) and the searches they found it with.
+ */
+export function profileSummaryCard({ metrics }) {
+  if (!metrics?.daily?.size) return '';
+  const t = metrics.totals;
+  const p = metrics.prev || {};
+  const change = (now, before) => {
+    if (!before || before < 5) return '';
+    const c = Math.round(((now - before) / before) * 100);
+    return c ? `<span class="pf-tr ${c > 0 ? 'up' : 'down'}">${c > 0 ? '▲' : '▼'} ${Math.abs(c)}%</span>` : '<span class="pf-tr">ללא שינוי</span>';
+  };
+  const tile = (ic, label, now, before) => `<div class="pf-tile"><span class="pf-tl">${icon(ic, 16)}${h(label)}</span><b>${num(now)}</b>${change(now, before)}</div>`;
+  const shown = ACTIONS.filter(([k], i) => i < 3 || t[k] || p[k]);
+  const kw = metrics.keywords.slice(0, 5);
+  const maps = sum(t, MAPS);
+  const search = sum(t, SEARCH);
+  return `<section class="card pf-sum">
+    <div class="card-head"><h3>${GOOGLE_G} מהפרופיל בגוגל</h3><a class="small" href="#data">לגרפים המלאים ↓</a></div>
+    <div class="pf-tiles">
+      ${tile('eye', 'צפיות בפרופיל', viewsOf(t), viewsOf(p))}
+      ${shown.map(([k, label, ic]) => tile(ic, label, t[k] || 0, p[k] || 0)).join('')}
+    </div>
+    <div class="pf-found">
+      <h4 class="pf-sub">איך מצאו אתכם בגוגל</h4>
+      ${maps + search ? `<p class="muted small">${num(maps)} ראו אתכם במפות ו-${num(search)} בחיפוש בגוגל.</p>` : ''}
+      ${
+        kw.length
+          ? `<ol class="pf-kw-list">${kw.map((k) => `<li><span dir="auto">${h(k.keyword)}</span><b>${k.value ? num(k.value) : `&lt;${num(k.threshold)}`}</b></li>`).join('')}</ol>
+             <p class="muted small">החיפושים ${h(metrics.keywordMonths || '')}, לפי מספר הפעמים שהפרופיל הופיע בהם.</p>`
+          : '<p class="muted small">החיפושים מגיעים מגוגל לפי חודש, ויופיעו כאן בתחילת החודש הבא.</p>'
+      }
     </div>
   </section>`;
 }
