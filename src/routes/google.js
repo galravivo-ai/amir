@@ -96,7 +96,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         setupCheck: ctx.isSuperadmin(req.user) && google ? { ...google.setupCheck(), redirectUri: redirectUri(req) } : null,
         serpMissing: !serp && ctx.isSuperadmin(req.user),
         debug: ctx.isSuperadmin(req.user),
-        arrival: google && store.googleConnection(req.business.id) ? dataArrival(store, req.business, { serpOn: Boolean(serp), aiPlus: Boolean(req.plan.aiPlus) }) : null,
+        arrival: dataArrival(store, req.business, { serpOn: Boolean(serp), aiPlus: Boolean(req.plan.aiPlus) }),
       }),
     );
   }

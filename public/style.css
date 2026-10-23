@@ -2731,3 +2731,6 @@ body.app .side-nav a.hl.active .icon { color: #4e2ef6; }
 .arr-list li.done .arr-state { color: #15803d; }
 .arrival.compact .arr-list { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .g-conn-status + .arrival { margin-top: 4px; }
+.arr-list li.failed .arr-mark { background: #fee2e2; color: #b91c1c; font-weight: 700; }
+.arr-list li.failed .arr-state { color: #b91c1c; }
+.arr-list li.off { opacity: .75; }

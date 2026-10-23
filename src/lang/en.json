@@ -2414,5 +2414,13 @@
 "מעקב": "Follow",
 "לנתק את החיבור לגוגל? הביקורות שנשמרו מהחשבון יימחקו מכאן, בגוגל לא ישתנה כלום.": "Disconnect Google? The reviews saved from this account will be deleted here; nothing changes on Google.",
 "ניתוק החשבון": "Disconnect account",
-"מעקב אחרי הביקורות בגוגל": "Follow Google reviews"
+"מעקב אחרי הביקורות בגוגל": "Follow Google reviews",
+"חלק מהנתונים לא הגיעו": "Some of your data didn't arrive",
+"נכשל": "Failed",
+"לא בחיבור הזה": "Not with this connection",
+"{e}. אפשר לנסות שוב עם &quot;בדיקה עכשיו&quot; בעמוד חיבור לגוגל.": "{e}. You can try again with “Check now” on the Connect Google page.",
+"מגיע רק בחיבור מלא לחשבון הגוגל שמנהל את העסק. במעקב לפי קישור מגיעים ביקורות ודירוג בלבד.": "Arrives only with a full connection to the Google account that manages the business. Following by link brings reviews and rating only.",
+"לחיבור מלא ←": "Full connection →",
+"תוך כמה דקות מההוספה (שנה אחורה)": "Within a few minutes of adding (a year back)",
+"נבדק כמה פעמים ביום, ומגיעה התראה על כל ביקורת חדשה.": "Checked several times a day, with an alert for every new review."
 }

@@ -138,12 +138,13 @@ function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, 
 export function arrivalCard(arrival, { compact = false, reload = false } = {}) {
   const rows = arrival.items
     .map(
-      (i) => `<li class="${i.done ? 'done' : ''}"><span class="arr-mark" aria-hidden="true">${i.done ? '✓' : '⏳'}</span>
-        <div><b>${h(i.title)}</b> <span class="arr-state">${i.done ? 'הגיע' : 'בדרך'}</span><small>${h(i.when)}</small>
+      (i) => `<li class="${i.done ? 'done' : i.error ? 'failed' : i.unavailable ? 'off' : ''}"><span class="arr-mark" aria-hidden="true">${i.done ? '✓' : i.error ? '!' : i.unavailable ? '–' : '⏳'}</span>
+        <div><b>${h(i.title)}</b> <span class="arr-state">${i.done ? 'הגיע' : i.error ? 'נכשל' : i.unavailable ? 'לא בחיבור הזה' : 'בדרך'}</span><small>${h(i.when)}</small>
+        ${i.error ? `<small class="danger-text">${h(String(i.error).replace(/[.\s]+$/, ''))}. אפשר לנסות שוב עם "בדיקה עכשיו" בעמוד חיבור לגוגל.</small>` : ''}
         ${i.todo ? `<a class="small" href="${h(i.href)}">${h(i.todo)} ←</a>` : i.done && i.href ? `<a class="small" href="${h(i.href)}">לצפייה ←</a>` : ''}</div></li>`,
     )
     .join('');
-  const head = arrival.pending ? 'הנתונים בדרך' : 'כל הנתונים הגיעו';
+  const head = arrival.failed ? 'חלק מהנתונים לא הגיעו' : arrival.pending ? 'הנתונים בדרך' : 'כל הנתונים הגיעו';
   return `<section class="card arrival${compact ? ' compact' : ''}" id="arrival">
     <h3>${icon('clock', 18)} ${head}</h3>
     <p class="muted small">${arrival.pending ? `מה מגיע מגוגל אחרי החיבור, ומתי.${reload ? ' הדף מתעדכן לבד כשמשהו מגיע.' : ''}` : 'מכאן הכול מתעדכן לבד: ביקורות כל חצי שעה, מספרים כל יום, ובדיקות כל שבוע.'}</p>
@@ -227,7 +228,7 @@ export function googleConnectView({
       <div class="g-conn-status"><span class="g-conn-dot" aria-hidden="true"></span>
         <div><b>מחובר לגוגל</b>${conn.email ? ` <span class="muted" dir="ltr">${h(conn.email)}</span>` : ''}
         <div class="muted small">סנכרון אחרון: ${conn.last_sync_at ? h(formatDate(conn.last_sync_at)) : 'עוד לא'} · מתעדכן כל חצי שעה</div></div></div>
-      ${arrival && gbpLocations.some((l) => l.enabled) ? arrivalCard(arrival, { compact: true, reload: true }) : ''}
+
       <h3>הסניפים</h3>
       <p class="muted small">מסמנים אילו סניפים לעקוב אחריהם, ומשייכים כל אחד לקמפיין. אם לקמפיין עוד אין קישור לביקורת, הקישור מגוגל נכנס אליו לבד.</p>
       ${
@@ -243,7 +244,8 @@ export function googleConnectView({
       }
     </section>`;
   }
-  return `${head}${gbpPart}${serpPart}${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
+  const arrivalPart = arrival?.connected ? arrivalCard(arrival, { compact: true, reload: true }) : '';
+  return `${head}${arrivalPart}${gbpPart}${serpPart}${setupCheck ? googleSetupCheck(setupCheck) : ''}`;
 }
 
 export function googleReviewsView({ reviews, locations, filters, summary }) {

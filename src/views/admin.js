@@ -536,7 +536,7 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
-    ${arrival?.connected && arrival.fresh && arrival.pending ? arrivalCard(arrival, { compact: true }) : ''}
+    ${arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending)) ? arrivalCard(arrival, { compact: true }) : ''}
     <div class="dash-main reply-first">
       <div class="dash-col">
         ${replyCard({ toReply, unanswered: P.g.unanswered, csrf, ai: replyAi, replied, error: replyError, canManage: manages, demo })}

@@ -27,3 +27,15 @@ test('after connecting Google: what arrives when, ticked as it arrives', () => {
   // Without the paid extras, they aren't listed at all.
   assert.deepEqual(dataArrival(store, business).items.map((i) => i.key), ['reviews', 'metrics', 'searches', 'live']);
 });
+
+test('a place followed by link: reviews only, and a failed load says why', () => {
+  const store = createStore(openDb(':memory:'));
+  const user = store.createUser({ email: 'link@example.com', name: 'L', passwordHash: 'x' });
+  const business = store.businessById(store.createBusiness(user, { name: 'Jako' }));
+  const loc = store.addSerpLocation(business.id, { dataId: '0x1:0x2', placeId: 'p', title: 'Jako', address: 'A', reviewUrl: '' });
+  store.setLocationSyncError(loc.id, 'נגמרה המכסה');
+  const a = dataArrival(store, business);
+  assert.ok(a.byLinkOnly && a.connected && a.failed);
+  assert.equal(a.items.find((i) => i.key === 'reviews').error, 'נגמרה המכסה');
+  assert.ok(a.items.find((i) => i.key === 'metrics').unavailable, 'views and calls need the full connection');
+});
