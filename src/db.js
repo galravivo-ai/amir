@@ -696,6 +696,10 @@ const MIGRATIONS = [
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   `,
+  // v40: insights read Google reviews and the profile too, not only the survey
+  `
+  ALTER TABLE ai_insights ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function migrate(db) {

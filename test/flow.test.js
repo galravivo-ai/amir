@@ -444,6 +444,29 @@ test('AI reply drafts and insights', async () => {
   assert.match(page.text, /<b>שירות<\/b>/);
 });
 
+test('AI insights read the whole business: Google reviews and the profile, not only the survey', async () => {
+  const owner = await registeredOwner('ai-google@example.com');
+  const biz = store.businessesFor(store.userByEmail('ai-google@example.com').id)[0];
+  store.updateBusiness(biz.id, { plan: 'pro' });
+  store.upsertGoogleLocations(biz.id, [{ name: 'locations/ai', title: 'Cafe', address: 'A', placeId: 'p', reviewUrl: '' }]);
+  const loc = store.googleLocations(biz.id)[0];
+  store.googleLocationStats(loc.id, 4.2, 180);
+  const now = new Date().toISOString();
+  for (const [i, [rating, comment]] of [[5, 'קפה מעולה'], [2, 'חיכינו המון'], [4, 'נחמד']].entries()) {
+    store.upsertGoogleReview(loc.id, { name: `ai-r${i}`, reviewer: `R${i}`, photo: '', rating, comment, createTime: now, updateTime: now, reply: i === 0 ? 'תודה' : '', replyTime: '', link: '' });
+  }
+  const yesterday = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10);
+  store.saveProfileMetrics(loc.id, [{ date: yesterday, metric: 'CALL_CLICKS', value: 12 }]);
+  fakeAi.calls.length = 0;
+  const made = await owner.req('/admin/insights', { method: 'POST', form: { _csrf: await csrfOf(owner), days: '30' } });
+  assert.equal(made.location, '/admin/insights', 'no survey needed');
+  const [, input] = fakeAi.calls.find(([k]) => k === 'summary');
+  assert.equal(input.reviews.length, 3);
+  assert.ok(input.facts.some((f) => /דירוג בגוגל: 4\.2 מתוך 180/.test(f)));
+  assert.ok(input.facts.some((f) => /שיחות: 12/.test(f)));
+  assert.match((await owner.req('/admin/insights')).text, /3 ביקורות בגוגל/);
+});
+
 test('jobs: SLA alerts and email reminders are sent once', async () => {
   const owner = await registeredOwner('jobs@example.com');
   const campaign = await createCampaign(owner);

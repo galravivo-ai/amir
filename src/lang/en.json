@@ -2450,5 +2450,13 @@
 "אין ביקורות שמתאימות לסינון.": "No reviews match the filters.",
 "כל הנתונים והגרפים": "All data and charts",
 "ענו לביקורות": "Reviews answered",
-"מהביקורות בתקופה": "of the period's reviews"
+"מהביקורות בתקופה": "of the period's reviews",
+"ה-AI קורא את כל מה שיש על העסק בתקופה: הביקורות בגוגל, הצפיות, השיחות ומה חיפשו בפרופיל, המיקום במפות, המתחרים, הנראות ב-AI והמשובים מהסקרים. הוא מסכם מה עובד, מה צריך לתקן ומה לעשות השבוע.": "The AI reads everything about the business in the period: Google reviews, the profile's views, calls and searches, Maps position, competitors, AI visibility and survey feedback. It sums up what works, what to fix and what to do this week.",
+"סקרים: כל הקמפיינים": "Surveys: all campaigns",
+"סקרים מקמפיין": "Surveys from campaign",
+"עוזר ה-AI עוד לא הופעל במערכת. מנהל המערכת יכול להפעיל אותו, ואז יופיע כאן כפתור להפקת תובנות.": "The AI assistant isn't on yet. The system admin can turn it on, and a button to create insights will appear here.",
+"{n} משובים מסקרים": "{n} survey responses",
+"נתוני הפרופיל": "Profile data",
+"סקרים: {a} ·": "Surveys: {a} ·",
+"צריך לפחות {n} ביקורות או משובים בתקופה שנבחרה, או חיבור מלא לגוגל, כדי להפיק תובנות": "You need at least {n} reviews or responses in the chosen period, or a full Google connection, to create insights"
 }

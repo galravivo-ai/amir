@@ -676,13 +676,13 @@ export function renderInsight(text) {
 export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllows, canGenerate, error }) {
   let form = '';
   if (!aiConfigured) {
-    form = `<p class="muted">עוזר ה-AI עוד לא הופעל במערכת. מנהל המערכת יכול להפעיל אותו, ואז יופיע כאן כפתור לסיכום המשובים.</p>`;
+    form = `<p class="muted">עוזר ה-AI עוד לא הופעל במערכת. מנהל המערכת יכול להפעיל אותו, ואז יופיע כאן כפתור להפקת תובנות.</p>`;
   } else if (!planAllows) {
     form = `<p class="muted">תובנות AI אינן כלולות במסלול הנוכחי. <a href="/admin/plan">פרטים</a></p>`;
   } else if (canGenerate) {
     form = `<form method="post" action="/admin/insights" class="row">
       ${csrfField(csrf)}
-      <select name="campaign" aria-label="קמפיין"><option value="">כל הקמפיינים</option>${campaigns
+      <select name="campaign" aria-label="סקרים מקמפיין"><option value="">סקרים: כל הקמפיינים</option>${campaigns
         .map((c) => `<option value="${c.id}">${h(c.name)}</option>`)
         .join('')}</select>
       <select name="days" aria-label="תקופה"><option value="7">7 ימים</option><option value="30" selected>30 ימים</option><option value="90">90 ימים</option></select>
@@ -690,7 +690,7 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
     </form>`;
   }
   return `<h1>תובנות AI</h1>
-  <p class="muted">ה-AI קורא את המשובים של הלקוחות (עד 300 האחרונים בתקופה) ומסכם מה עובד, מה צריך לתקן ומה לעשות השבוע.</p>
+  <p class="muted">ה-AI קורא את כל מה שיש על העסק בתקופה: הביקורות בגוגל, הצפיות, השיחות ומה חיפשו בפרופיל, המיקום במפות, המתחרים, הנראות ב-AI והמשובים מהסקרים. הוא מסכם מה עובד, מה צריך לתקן ומה לעשות השבוע.</p>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   <section class="card">${form}</section>
   ${
@@ -698,7 +698,7 @@ export function insightsView({ insights, campaigns, csrf, aiConfigured, planAllo
       ? insights
           .map(
             (i) => `<section class="card insight">
-              <div class="muted small">${h(formatDate(i.created_at))} · ${h(i.campaign_name || 'כל הקמפיינים')} · ${i.days} ימים · ${i.response_count} משובים${i.author ? ` · ${h(i.author)}` : ''}</div>
+              <div class="muted small">${h(formatDate(i.created_at))} · ${i.campaign_name ? `סקרים: ${h(i.campaign_name)} · ` : ''}${i.days} ימים · ${[i.review_count ? `${i.review_count} ביקורות בגוגל` : '', i.response_count ? `${i.response_count} משובים מסקרים` : ''].filter(Boolean).join(' · ') || 'נתוני הפרופיל'}${i.author ? ` · ${h(i.author)}` : ''}</div>
               ${renderInsight(i.content)}
             </section>`,
           )

@@ -1,4 +1,5 @@
 import express from 'express';
+import { businessFacts } from '../insights.js';
 import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
@@ -361,7 +362,11 @@ export function settingsRoutes(ctx) {
     const campaign = store.campaign(Number(req.body.campaign), req.business.id);
     const rows = store.responsesForInsights(req.business.id, { campaignId: campaign?.id, days });
     const fail = (msg) => res.redirect(303, `/admin/insights?err=${encodeURIComponent(msg)}`);
-    if (rows.length < 3) return fail('צריך לפחות 3 משובים בתקופה שנבחרה כדי להפיק תובנות');
+    // The whole business, not only the survey: Google reviews, the profile's numbers, Maps, competitors.
+    const { facts, reviews } = businessFacts(store, req.business, { days });
+    if (rows.length + reviews.length < 3 && !store.profileMetricsLastDate(req.business.id)) {
+      return fail('צריך לפחות 3 ביקורות או משובים בתקופה שנבחרה, או חיבור מלא לגוגל, כדי להפיק תובנות');
+    }
     const prepared = rows.map((r) => {
       const labels = Object.fromEntries(normalizeQuestions(parseJson(r.questions, [])).map((q) => [q.id, q.label]));
       return {
@@ -373,12 +378,13 @@ export function settingsRoutes(ctx) {
     const over = ctx.usage.take(req.business, 'insights');
     if (over) return fail(over);
     try {
-      const content = await ctx.ai.summarize({ businessName: req.business.name, days, rows: prepared });
+      const content = await ctx.ai.summarize({ businessName: req.business.name, days, rows: prepared, reviews, facts });
       store.saveInsight({
         business_id: req.business.id,
         campaign_id: campaign?.id,
         days,
         response_count: rows.length,
+        review_count: reviews.length,
         content,
         created_by: req.user.id,
       });

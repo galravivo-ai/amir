@@ -1003,9 +1003,9 @@ export function createStore(db) {
     // ---------- AI insights ----------
     saveInsight(f) {
       const r = q(
-        `INSERT INTO ai_insights (business_id, campaign_id, days, response_count, content, created_by)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(f.business_id, f.campaign_id ?? null, f.days, f.response_count, f.content, f.created_by ?? null);
+        `INSERT INTO ai_insights (business_id, campaign_id, days, response_count, review_count, content, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(f.business_id, f.campaign_id ?? null, f.days, f.response_count, f.review_count ?? 0, f.content, f.created_by ?? null);
       return Number(r.lastInsertRowid);
     },
     insightsFor: (businessId, limit = 10) =>
