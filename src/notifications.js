@@ -481,6 +481,25 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** A paid service the checks run on ran out (SerpApi's monthly searches): the operator hears, with what to do. */
+    async serviceQuota({ admins, service, detail = '' }) {
+      if (!admins.length) return false;
+      return send({
+        kind: 'service_quota',
+        businessId: null,
+        to: admins,
+        subject: `${service}: נגמרו החיפושים החודשיים · הבדיקות עצרו`,
+        html: emailLayout({
+          title: `נגמרו החיפושים ב-${service}`,
+          brand: true,
+          body: `<p>שירות הבדיקות של המערכת הגיע למכסה החודשית שלו, ולכן עצרו עד שהמכסה תתחדש: בריאות הפרופיל, מיקום במפות, מתחרים, נראות ב-AI, ומעקב ביקורות לפי קישור.</p>
+            <p>מה עושים: נכנסים ל-serpapi.com ← Dashboard, ומגדילים את החבילה או מחכים לחידוש החודשי. מיד אחרי זה הבדיקות חוזרות לרוץ לבד.</p>
+            ${detail ? `<p class="muted" dir="ltr" style="text-align:left">${h(detail)}</p>` : ''}
+            ${emailButton(url('/admin/status'), 'למצב המערכת')}`,
+        }),
+      });
+    },
+
     /** The branch was paid for and opened. */
     async branchActivated({ business, location }) {
       const color = safeColor(business.brand_color);

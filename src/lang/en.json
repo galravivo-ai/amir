@@ -2458,5 +2458,7 @@
 "{n} משובים מסקרים": "{n} survey responses",
 "נתוני הפרופיל": "Profile data",
 "סקרים: {a} ·": "Surveys: {a} ·",
-"צריך לפחות {n} ביקורות או משובים בתקופה שנבחרה, או חיבור מלא לגוגל, כדי להפיק תובנות": "You need at least {n} reviews or responses in the chosen period, or a full Google connection, to create insights"
+"צריך לפחות {n} ביקורות או משובים בתקופה שנבחרה, או חיבור מלא לגוגל, כדי להפיק תובנות": "You need at least {n} reviews or responses in the chosen period, or a full Google connection, to create insights",
+"שירות הבדיקות של המערכת הגיע למכסת החיפושים החודשית. הבדיקות יחזרו לפעול לבד כשהמכסה תתחדש או תוגדל.": "The system's checking service reached its monthly search limit. Checks resume on their own once the limit renews or is raised.",
+"הבדיקה האחרונה נכשלה: שירות הבדיקות של המערכת הגיע למכסת החיפושים החודשית. הבדיקות יחזרו לפעול לבד כשהמכסה תתחדש או תוגדל.": "The last check failed: the system's checking service reached its monthly search limit. Checks resume on their own once the limit renews or is raised."
 }

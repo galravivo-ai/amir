@@ -128,7 +128,11 @@ function findReviews(r) {
 }
 
 /** Returns null when no SerpApi key is configured. */
-export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch, onCall = null } = {}) {
+// SerpApi's answer when the account's monthly searches ran out.
+const OUT_OF_SEARCHES = /run out of searches|searches? (limit|quota)|plan.*(limit|exceeded)/i;
+export const QUOTA_MESSAGE = 'שירות הבדיקות של המערכת הגיע למכסת החיפושים החודשית. הבדיקות יחזרו לפעול לבד כשהמכסה תתחדש או תוגדל.';
+
+export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch, onCall = null, onQuota = null } = {}) {
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) return null;
 
@@ -145,6 +149,12 @@ export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globa
     }
     // "No results" comes back as an error; for us it is just an empty answer.
     if (json.error && /hasn't returned any results/i.test(json.error)) return {};
+    if (json.error && OUT_OF_SEARCHES.test(json.error)) {
+      onQuota?.(json.error);
+      const err = new SerpError(QUOTA_MESSAGE, res.status);
+      err.quota = true;
+      throw err;
+    }
     if (!res.ok || json.error) throw new SerpError(String(json.error || `HTTP ${res.status}`), res.status);
     return json;
   }

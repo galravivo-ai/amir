@@ -98,7 +98,15 @@ export function createApp(db, options = {}) {
   const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl, webhook: options.webhook });
   const google = options.google !== undefined ? options.google : createGoogle();
   const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
-  const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp') });
+  // The checks' service ran out of searches: the operator hears, at most twice a day.
+  let quotaAlertAt = 0;
+  const onQuota = (detail) => {
+    if (Date.now() - quotaAlertAt < 12 * 3600e3) return;
+    quotaAlertAt = Date.now();
+    const admins = [...new Set([...store.superadminEmails(), ...String(process.env.SUPERADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)])];
+    notifier.serviceQuota({ admins, service: 'SerpApi', detail }).catch((err) => console.error('[notify] serviceQuota failed:', err));
+  };
+  const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp'), onQuota });
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
   const competitors = serp ? createCompetitors({ store, serp }) : null;
   const health = serp ? createHealth({ store, serp, ai }) : null;

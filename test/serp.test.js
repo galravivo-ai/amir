@@ -303,3 +303,14 @@ test('reviews filter by stars, status, text, period and search, and sort', async
   const low = (await req('/admin/google/reviews?sort=low')).text;
   assert.ok(low.indexOf('>טוב<') < low.indexOf('מקום מעולה'), 'lowest first');
 });
+
+test('out of SerpApi searches: a clear message, and the operator hears once', async () => {
+  const sent = [];
+  const serp = createSerp({
+    apiKey: 'k',
+    fetchImpl: async () => ({ ok: false, status: 429, headers: new Headers(), text: async () => JSON.stringify({ error: 'Your account has run out of searches.' }) }),
+    onQuota: (d) => sent.push(d),
+  });
+  await assert.rejects(serp.reviews({ dataId: 'x' }), (err) => err.quota && /מכסת החיפושים החודשית/.test(err.message));
+  assert.equal(sent.length, 1);
+});

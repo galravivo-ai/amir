@@ -25,7 +25,9 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
   const redirectUri = (req) => `${ctx.baseUrl(req)}/admin/google/callback`;
   const humanError = (err) =>
     err instanceof SerpError
-      ? err.status === 401 || /api key/i.test(err.message)
+      ? err.quota
+        ? err.message
+        : err.status === 401 || /api key/i.test(err.message)
         ? 'שירות שליפת הביקורות לא מוגדר נכון (מפתח SerpApi). פנו למנהל המערכת.'
         : /run out|limit|credits/i.test(err.message)
           ? 'נגמרה מכסת הבדיקות של שירות הביקורות לחודש הזה. פנו למנהל המערכת.'
