@@ -5,7 +5,7 @@ import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { icon } from './icons.js';
 import { profileCard, viewsOf } from './performance.js';
-import { arrivalCard, inlineReply, replyScripts } from './google.js';
+import { arrivalCard } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
 import { PRESETS } from '../period.js';
@@ -481,37 +481,16 @@ function dashboardParts({
   return { lastStat, cover, filter, headline, daily, sources, dist, toHandle, waitingItems, handleLink, surveySection, connectCard, checklist, g, stats, pub, m, hasMetrics, t, pt, pctChange, stat, locked, rating, ratingDiff, total, countHint, countTrend, actions, prevActions };
 }
 
-/** Google reviews to answer right on the dashboard: a reply ready, AI on a click, published from here. */
-function replyCard({ toReply, unanswered, csrf, ai, replied, error, canManage, demo = false }) {
-  const items = toReply
-    .map((r) => {
-      const name = r.reviewer || 'לקוח אנונימי';
-      return `<article class="rq">
-        <div class="rq-head"><span class="w-avatar">${h(name.trim().charAt(0))}</span><span><b>${h(name)}</b> ${stars(r.rating)}<span class="muted small"> · ${h(formatDate(r.create_time))}${r.location_title ? ` · ${h(r.location_title)}` : ''}</span></span></div>
-        <p class="rq-text" ${r.comment ? 'dir="auto"' : ''}>${r.comment ? h(r.comment) : '<span class="muted">בלי טקסט, רק דירוג.</span>'}</p>
-        ${canManage ? inlineReply(r, { csrf, ai, back: 'dashboard' }) : `<a class="btn small-btn" href="/admin/google/reviews/${r.id}">לתשובה</a>`}
-      </article>`;
-    })
-    .join('');
-  return `<section class="card reply-card" id="reply">
-    <div class="card-head"><h3>${icon('chat', 18)} ביקורות שמחכות לתשובה${unanswered ? ` <span class="count-pill">${unanswered}</span>` : ''}</h3>${unanswered > toReply.length ? '<a class="small" href="/admin/google/reviews?filter=unanswered">לכל הביקורות</a>' : ''}</div>
-    ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
-    ${error ? `<div class="error">${h(error)}</div>` : ''}
-    ${items || '<p class="muted">אין ביקורות שמחכות לתשובה. כל הכבוד!</p>'}
-    ${canManage && items ? replyScripts({ ai, demo }) : ''}
-  </section>`;
-}
-
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
-  const { quotaWarning = '', tasks = [], csrf = '', toReply = [], replyAi = false, replied = false, replyError = '', demo = false, manages = false, arrival = null } = args;
+  const { quotaWarning = '', tasks = [], csrf = '', arrival = null } = args;
   const P = dashboardParts(args);
   const { stat, locked } = P;
   const mapsStat = P.lastStat;
   const headline = `<div class="stats stats-5">
     ${stat('star', 'דירוג בגוגל', P.rating != null ? `${P.rating.toFixed(1)}<small>★</small>` : '<span class="st-lock">—</span>', P.ratingDiff ? `${P.ratingDiff > 0 ? '▲' : '▼'} ${Math.abs(P.ratingDiff).toFixed(1)}` : P.pub?.total || P.g.total ? `${(P.pub?.total || P.g.total).toLocaleString('he-IL')} ביקורות` : 'הוסיפו את העסק ←', P.ratingDiff ? (P.ratingDiff > 0 ? 'up' : 'down') : '', P.rating != null ? '/admin/google/reviews' : '/admin/google')}
     ${stat('chat', 'ביקורות חדשות', P.total.toLocaleString('he-IL'), P.countHint ? P.countHint.replace(' מהתקופה הקודמת', '') : P.sources || 'אין בתקופה', P.countTrend, '/admin/google/reviews')}
-    ${stat('alert', 'מחכים לתשובה', P.toHandle.toLocaleString('he-IL'), P.toHandle ? 'לטפל עכשיו ←' : 'הכול טופל ✓', P.toHandle ? 'warn-t' : 'up', P.toHandle ? (P.g.unanswered ? '#reply' : P.handleLink) : '')}
+    ${stat('alert', 'מחכים לתשובה', P.toHandle.toLocaleString('he-IL'), P.toHandle ? 'לטפל עכשיו ←' : 'הכול טופל ✓', P.toHandle ? 'warn-t' : 'up', P.toHandle ? (P.g.unanswered ? '/admin/google/reviews?filter=unanswered' : P.handleLink) : '')}
     ${P.hasMetrics ? stat('phone', 'פניות מגוגל', P.actions.toLocaleString('he-IL'), ...P.pctChange(P.actions, P.prevActions), '#data') : locked('phone', 'פניות מגוגל')}
     ${mapsStat}
   </div>`;
@@ -529,19 +508,18 @@ export function dashboardView(args) {
     }
     ${headline}
     ${arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending)) ? arrivalCard(arrival, { compact: true }) : ''}
-    <div class="dash-main reply-first">
-      <div class="dash-col">
-        ${replyCard({ toReply, unanswered: P.g.unanswered, csrf, ai: replyAi, replied, error: replyError, canManage: manages, demo })}
-      </div>
-      <div class="dash-col">
-        ${tasksCard(tasks, csrf)}
-        ${
-          surveyWaiting.length
-            ? `<section class="card"><div class="card-head"><h3>${icon('alert', 18)} לקוחות לא מרוצים מהסקרים</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>${feed(surveyWaiting, '')}</section>`
-            : ''
-        }
-      </div>
-    </div>
+    ${
+      tasks.length || surveyWaiting.length
+        ? `<div class="dash-main${tasks.length && surveyWaiting.length ? '' : ' single'}">
+      ${tasks.length ? `<div class="dash-col">${tasksCard(tasks, csrf)}</div>` : ''}
+      ${
+        surveyWaiting.length
+          ? `<div class="dash-col"><section class="card"><div class="card-head"><h3>${icon('alert', 18)} לקוחות לא מרוצים מהסקרים</h3><a href="/admin/responses?sentiment=negative&status=new" class="small">הכול</a></div>${feed(surveyWaiting, '')}</section></div>`
+          : ''
+      }
+    </div>`
+        : ''
+    }
     ${dataSection(args, P)}`;
 }
 

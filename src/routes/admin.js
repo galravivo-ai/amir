@@ -15,7 +15,6 @@ import { googleOverview } from './performance.js';
 import { weekKey, weeklyTasks } from '../tasks.js';
 import { mapsTop3 } from '../rankings.js';
 import { dataArrival } from '../arrival.js';
-import { withSuggestions } from '../replies.js';
 import * as V from '../views/admin.js';
 import { BIZ_COOKIE } from './context.js';
 
@@ -105,27 +104,16 @@ export function adminRoutes(ctx) {
 
   admin.get('/', (req, res) => {
     const data = dashboardData(req);
-    // Reviews to answer right here: a reply ready from the business's templates, AI on a click.
     // The demo shows everything a manager sees; saving is blocked there anyway.
     const demo = Boolean(req.business.is_demo);
     const manages = req.can('manager') || demo;
-    const toReply = withSuggestions(store, req.business, store.googleReviews(req.business.id, { locationId: req.branchId || null, filter: 'unanswered', limit: 4 }), {
-      connected: Boolean(ctx.google && store.googleConnection(req.business.id)),
-      demo,
-    });
     render(
       req,
       res,
       'דשבורד ראשי',
       V.dashboardView({
         ...data,
-        toReply,
-        replyAi: demo || (Boolean(ctx.ai) && req.plan.ai),
         arrival: demo ? null : dataArrival(store, req.business, { serpOn: Boolean(ctx.serp), aiPlus: Boolean(req.plan.aiPlus) }),
-        demo,
-        manages,
-        replied: req.query.replied === '1',
-        replyError: String(req.query.replyErr ?? '').slice(0, 300),
         sendError: req.query.send === 'bad',
         tasks: manages ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp) || demo, aiOn: (Boolean(ctx.ai) && req.plan.ai) || demo }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,

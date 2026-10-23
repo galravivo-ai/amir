@@ -203,7 +203,6 @@ test('the dashboard follows the chosen range', async () => {
   const all = (await req('/admin?range=365d')).text;
   assert.match(all, /dash-cover/);
   assert.match(all, /בשנה האחרונה/);
-  assert.match(all, /חיכינו שעה/);
   // A range before any review counts none of them; reviews still waiting for a reply stay on the dashboard.
   const old = (await req('/admin?range=custom&from=2025-01-01&to=2025-01-31')).text;
   assert.match(old, /בין 1\.1\.2025 ל-31\.1\.2025/);

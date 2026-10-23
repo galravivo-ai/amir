@@ -198,7 +198,7 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   // Dashboard and list show the Google rating and the unanswered review.
   const dash = (await req('/admin')).text;
   assert.match(dash, /דירוג בגוגל<\/span><span class="st-value">4\.5<small>★<\/small>/);
-  assert.match(dash, /חיכינו המון/, 'the negative Google review waits for handling on the dashboard');
+  assert.match(dash, /href="\/admin\/google\/reviews\?filter=unanswered"/, 'the waiting count leads to the reviews to answer');
   assert.match(dash, /12 ביקורות/);
   const list = await req('/admin/google/reviews?filter=unanswered');
   assert.match(list.text, /חיכינו המון/);
@@ -216,17 +216,17 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   assert.equal(JSON.parse(put[2]).comment, 'מצטערים, נשמח לדבר');
   assert.equal(store.googleReview(review.id, biz.id).reply, 'מצטערים, נשמח לדבר');
 
-  // Answered right from the dashboard: a form for each review waiting, an AI draft in place, back to the dashboard.
+  // Answered right from the reviews list: a form for each review, an AI draft in place, back to the same filtered list.
   const waitingOne = store.googleReviews(biz.id, { filter: 'unanswered' })[0];
   if (waitingOne) {
-    const board = (await req('/admin')).text;
-    assert.match(board, new RegExp(`action="/admin/google/reviews/${waitingOne.id}/reply"`));
-    assert.match(board, /name="back" value="dashboard"/);
+    const list = (await req('/admin/google/reviews?filter=unanswered&stars=' + waitingOne.rating)).text;
+    assert.match(list, new RegExp(`action="/admin/google/reviews/${waitingOne.id}/reply"`));
+    assert.match(list, /name="back" value="reviews"/);
     const json = await req(`/admin/google/reviews/${waitingOne.id}/draft`, { method: 'POST', form: { _csrf: token, json: '1' } });
     assert.ok(JSON.parse(json.text).draft, 'the draft comes back as data');
-    const back = await req(`/admin/google/reviews/${waitingOne.id}/reply`, { method: 'POST', form: { _csrf: token, reply: 'תודה רבה!', back: 'dashboard' } });
-    assert.equal(back.location, '/admin?replied=1#reply');
-    assert.match((await req('/admin?replied=1')).text, /התשובה פורסמה בגוגל/);
+    const back = await req(`/admin/google/reviews/${waitingOne.id}/reply`, { method: 'POST', form: { _csrf: token, reply: 'תודה רבה!', back: 'reviews', backq: `filter=unanswered&stars=${waitingOne.rating}&evil=1` } });
+    assert.equal(back.location, `/admin/google/reviews?filter=unanswered&stars=${waitingOne.rating}&replied=1`);
+    assert.match((await req(back.location)).text, /התשובה פורסמה בגוגל/);
   }
 
   // Another business cannot see or answer these reviews.

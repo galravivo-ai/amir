@@ -494,10 +494,10 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     if (!review) return;
     if (review.source !== 'gbp' || !google) return notFound(res);
     const text = String(req.body.reply ?? '').trim().slice(0, 4000);
-    // Answered in place (the dashboard or the reviews list): back there, to the next review.
+    // Answered from the reviews list: back there, with the same filters.
     const q = new URLSearchParams(String(req.body.backq ?? ''));
     const keep = new URLSearchParams([...q].filter(([k]) => ['filter', 'stars', 'text', 'days', 'sort', 'q', 'location'].includes(k)));
-    const backTo = { dashboard: (p) => `/admin?${p}#reply`, reviews: (p) => `/admin/google/reviews?${keep.toString() ? `${keep}&` : ''}${p}` }[req.body.back];
+    const backTo = req.body.back === 'reviews' ? (p) => `/admin/google/reviews?${keep.toString() ? `${keep}&` : ''}${p}` : null;
     if (!text) return backTo ? res.redirect(303, backTo(`replyErr=${encodeURIComponent('התשובה ריקה.')}`)) : reviewPage(req, res, review, { error: 'התשובה ריקה.' });
     try {
       await sync.reply(req.business.id, review, text);
