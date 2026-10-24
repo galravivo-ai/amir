@@ -7,6 +7,7 @@
 import crypto from 'node:crypto';
 import { healthChecks } from './health.js';
 import { gridPoints } from './rankings.js';
+import { weekKey } from './tasks.js';
 
 export const DEMO_EMAIL = 'demo@gofive.demo';
 export const DEMO_EMAIL_EN = 'demo-en@gofive.demo';
@@ -374,11 +375,27 @@ function build(store, lang) {
   for (const t of C.templates) store.addReplyTemplate(bizId, t);
   // A sample AI insight on the whole business: reviews, the profile, Maps and competitors.
   store.saveInsight({ business_id: bizId, days: 30, response_count: 38, review_count: 82, content: C.insight });
+  // The promotion plan: a website check, a few actions done, and a text the AI wrote.
+  const en = lang === 'en';
+  store.updateBusiness(bizId, {
+    growth_services: en
+      ? 'Breakfast, brunch and dinner, a kids menu, vegan dishes, a garden seating area. Family run for 15 years, free parking.'
+      : 'ארוחות בוקר, בראנץ\' וערב, תפריט ילדים, מנות טבעוניות, ישיבה בגינה. עסק משפחתי כבר 15 שנה, חניה חינם.',
+    site_check: JSON.stringify({ url: C.site, https: true, title: C.business, description: '', h1: C.business, viewport: true, localSchema: false, faqSchema: false, phoneOnPage: true, mapLink: true, cityInHead: false, keywordInHead: false, words: 420 }),
+    site_checked_at: new Date(now - 2 * 864e5).toISOString(),
+  });
+  for (const [key, period] of [['photos', weekKey(now)], ['booking', ''], ['dir:facebook', ''], ['dir:instagram', ''], ['dir:easy', '']]) store.setGrowthMark(bizId, key, period, true);
+  store.saveGrowthDraft(bizId, 'description', GROWTH_DESCRIPTION[en ? 'en' : 'he']);
   return bizId;
 }
 
 // ---- more branches, so the demo shows a network: a strong one, a new one, and one that needs attention ----
 // Branch numbers; their names and addresses come from CONTENT.
+const GROWTH_DESCRIPTION = {
+  he: 'ביסטרו הגפן הוא ביסטרו משפחתי ברחוב דיזנגוף בתל אביב, שמגיש כבר 15 שנה ארוחות בוקר, בראנץ\' וארוחות ערב מחומרי גלם טריים. אצלנו תמצאו תפריט ילדים, מנות טבעוניות ופינת ישיבה בגינה, ולקוחות מספרים בביקורות על שירות חם ומנות נדיבות. מתאים למפגש משפחתי, לארוחה עסקית או לבראנץ\' של סוף שבוע עם חברים. יש חניה חינם ליד המסעדה, ואפשר להזמין מקום מראש.',
+  en: 'Vine Bistro is a family-run bistro that has served breakfast, brunch and dinner made from fresh ingredients for 15 years. You will find a kids menu, vegan dishes and a garden seating area, and guests mention the warm service and generous plates in their reviews. A good fit for a family get-together, a business lunch or a weekend brunch with friends. Free parking next to the restaurant, and tables can be booked ahead.',
+};
+
 const BRANCHES = [
   { lat: 32.1133, lng: 34.8044, rating: 4.7, total: 268, reviews: 60, good: 0.9, replied: 0.92, health: [70, 88], traffic: 0.85, rank: 3.1 },
   { lat: 32.1624, lng: 34.8076, rating: 4.5, total: 74, reviews: 34, good: 0.82, replied: 0.7, health: [52, 74], traffic: 0.55, rank: 7.4 },

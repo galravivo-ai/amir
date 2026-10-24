@@ -1,4 +1,5 @@
 import express from 'express';
+import { growthPlan } from '../growth.js';
 import { resolvePeriod } from '../period.js';
 import { designToSave, posterDesign } from '../poster.js';
 import QRCode from 'qrcode';
@@ -102,6 +103,11 @@ export function adminRoutes(ctx) {
     };
   };
 
+  const growthSummary = (st, b) => {
+    const plan = growthPlan(st, b);
+    return { score: plan.score, next: plan.next[0] || null };
+  };
+
   admin.get('/', (req, res) => {
     const data = dashboardData(req);
     // The demo shows everything a manager sees; saving is blocked there anyway.
@@ -115,6 +121,7 @@ export function adminRoutes(ctx) {
         ...data,
         arrival: demo ? null : dataArrival(store, req.business, { serpOn: Boolean(ctx.serp), aiPlus: Boolean(req.plan.aiPlus) }),
         sendError: req.query.send === 'bad',
+        growth: manages && store.googleLocations(req.business.id).some((l) => l.enabled) ? growthSummary(store, req.business) : null,
         tasks: manages ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp) || demo, aiOn: (Boolean(ctx.ai) && req.plan.ai) || demo }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
         waResult: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,

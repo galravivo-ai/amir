@@ -1,0 +1,145 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { openDb } from '../src/db.js';
+import { createApp } from '../src/app.js';
+import { growthPlan, markPeriod } from '../src/growth.js';
+import { checkSite, readSite } from '../src/siteCheck.js';
+
+let server;
+let base;
+let store;
+const written = [];
+const ai = { growthDraft: async ({ kind, facts }) => (written.push({ kind, facts }), `טיוטה: ${kind}`) };
+const siteCheck = async (url) => ({ url, https: true, title: 'מספרה בחולון', description: 'תספורות', viewport: true, localSchema: true, faqSchema: false, phoneOnPage: true, mapLink: true, cityInHead: true });
+
+before(async () => {
+  const created = createApp(openDb(':memory:'), { backups: false, ai, cardcom: null, authLimit: { windowMs: 60e3, max: 1000 }, growth: { siteCheck } });
+  store = created.store;
+  server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  base = `http://127.0.0.1:${server.address().port}`;
+});
+
+after(() => server.close());
+
+function client() {
+  const jar = {};
+  return async (path, { form } = {}) => {
+    const res = await fetch(base + path, {
+      method: form ? 'POST' : 'GET',
+      redirect: 'manual',
+      headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '), ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+    });
+    for (const c of res.headers.getSetCookie()) {
+      const [pair] = c.split(';');
+      jar[pair.slice(0, pair.indexOf('='))] = pair.slice(pair.indexOf('=') + 1);
+    }
+    return { status: res.status, location: res.headers.get('location'), text: await res.text(), type: res.headers.get('content-type') || '' };
+  };
+}
+
+async function owner(email) {
+  const req = client();
+  await req('/register', { form: { name: 'Owner', email, password: 'password123', business: 'מספרת דני', terms: '1' } });
+  const page = await req('/admin/growth');
+  const csrf = page.text.match(/name="_csrf" value="([^"]+)"/)[1];
+  const biz = store.db.prepare('SELECT b.* FROM businesses b JOIN users u ON u.id = b.user_id WHERE u.email = ?').get(email);
+  return { req, csrf, biz, page };
+}
+
+test('the website check reads the title, the markup, the phone and the map link', () => {
+  const html = `<html><head><title>מספרה לגברים בחולון | מספרת דני</title><meta name="description" content="תספורות">
+    <meta name="viewport" content="width=device-width"><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"HairSalon","name":"x"},{"@type":"FAQPage"}]}</script></head>
+    <body><h1>מספרת דני</h1><a href="tel:+972-3-555-1234">התקשרו</a><a href="https://maps.app.goo.gl/abc">מפה</a></body></html>`;
+  const r = readSite(html, { url: 'https://dani.co.il/', phone: '03-5551234', city: 'חולון' });
+  assert.equal(r.title, 'מספרה לגברים בחולון | מספרת דני');
+  assert.equal(r.localSchema, true);
+  assert.equal(r.faqSchema, true);
+  assert.equal(r.phoneOnPage, true);
+  assert.equal(r.mapLink, true);
+  assert.equal(r.cityInHead, true);
+  assert.equal(r.viewport, true);
+  const bare = readSite('<title>x</title>', { url: 'http://a.co/', phone: '03-5551234', city: 'חולון' });
+  assert.deepEqual([bare.localSchema, bare.faqSchema, bare.phoneOnPage, bare.mapLink, bare.cityInHead, bare.https], [false, false, false, false, false, false]);
+});
+
+test('the website check opens only public addresses, and checks each redirect', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.startsWith('https://public.example/')) return new Response('', { status: 301, headers: { location: 'http://127.0.0.1/admin' } });
+    return new Response('<title>ok</title>', { status: 200 });
+  };
+  const lookup = async (host) => [{ address: host === 'public.example' ? '93.184.216.34' : '10.0.0.1' }];
+  assert.match((await checkSite('http://localhost/', { fetchImpl, lookup })).error, /לא ציבורית/);
+  assert.match((await checkSite('https://inside.example/', { fetchImpl, lookup })).error, /לא ציבורית/);
+  // a public site that redirects to a private address is stopped at the redirect
+  assert.match((await checkSite('public.example', { fetchImpl, lookup })).error, /לא ציבורית/);
+  assert.deepEqual(calls, ['https://public.example/']);
+});
+
+test('a new business starts low, and marks raise the score: weekly ones for the week only', () => {
+  const user = store.createUser({ email: 'plan@example.com', name: 'P', passwordHash: 'x' });
+  const biz = store.businessById(store.createBusiness(user, { name: 'Plan', plan: 'pro', trialDays: 7 }));
+  const start = growthPlan(store, biz);
+  assert.ok(start.score < 10, `score ${start.score}`);
+  assert.ok(start.next.length > 0);
+  const now = Date.parse('2026-10-20T10:00:00Z');
+  store.setGrowthMark(biz.id, 'photos', markPeriod('photos', now), true);
+  store.setGrowthMark(biz.id, 'booking', markPeriod('booking', now), true);
+  for (const d of ['b144', 'd', 'easy', 'facebook', 'waze']) store.setGrowthMark(biz.id, `dir:${d}`, '', true);
+  const marked = growthPlan(store, biz, { now });
+  const items = Object.values(marked.tracks).flatMap((t) => t.items);
+  assert.equal(items.find((i) => i.key === 'photos').state, 'done');
+  assert.equal(items.find((i) => i.key === 'citations').state, 'done', 'five directories make the directories action done');
+  assert.ok(marked.score > start.score);
+  // a week later the photos are due again
+  const later = growthPlan(store, biz, { now: now + 8 * 864e5 });
+  assert.equal(Object.values(later.tracks).flatMap((t) => t.items).find((i) => i.key === 'photos').state, 'todo');
+  assert.equal(markPeriod('nope'), null);
+  assert.equal(markPeriod('dir:nope'), null);
+});
+
+test('the plan page: marking an action, the website, the business details and the AI writer', async () => {
+  const { req, csrf, biz, page } = await owner('growth@example.com');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /תוכנית קידום/);
+  assert.match(page.text, /אינדקסים ואזכורים/);
+
+  const mark = await req('/admin/growth/mark', { form: { _csrf: csrf, key: 'booking', on: '1' } });
+  assert.equal(mark.status, 303);
+  assert.equal(mark.location, '/admin/growth#a-booking');
+  assert.deepEqual(store.growthMarks(biz.id).map((m) => m.key), ['booking']);
+  assert.equal((await req('/admin/growth/mark', { form: { _csrf: csrf, key: 'whatever', on: '1' } })).status, 400);
+
+  await req('/admin/growth/services', { form: { _csrf: csrf, services: 'תספורות גברים וילדים' } });
+  await req('/admin/growth/site', { form: { _csrf: csrf, url: 'dani.co.il' } });
+  const after = store.businessById(biz.id);
+  assert.equal(after.ai_site, 'https://dani.co.il/');
+  assert.equal(JSON.parse(after.site_check).localSchema, true);
+  const site = await req('/admin/growth');
+  assert.match(site.text, /סימון עסק מקומי/);
+
+  const res = await req('/admin/growth/write', { form: { _csrf: csrf, kind: 'faq' } });
+  assert.match(res.type, /json/);
+  assert.deepEqual(JSON.parse(res.text), { text: 'טיוטה: faq' });
+  assert.equal(written.at(-1).facts.services, 'תספורות גברים וילדים');
+  assert.equal(store.growthDrafts(biz.id).faq.text, 'טיוטה: faq');
+  assert.match(JSON.parse((await req('/admin/growth/write', { form: { _csrf: csrf, kind: 'poem' } })).text).error, /לא מוכר/);
+});
+
+test('the demo shows the plan with a sample website check and an AI text', async () => {
+  const before = process.env.DEMO_OPEN;
+  process.env.DEMO_OPEN = '1';
+  const req = client();
+  await req('/demo');
+  if (before === undefined) delete process.env.DEMO_OPEN;
+  else process.env.DEMO_OPEN = before;
+  const page = await req('/admin/growth');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /אין סימון עסק מקומי/);
+  assert.match(page.text, /ביסטרו משפחתי/);
+  const dash = await req('/admin');
+  assert.match(dash.text, /gr-strip/);
+});

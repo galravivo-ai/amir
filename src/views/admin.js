@@ -493,7 +493,7 @@ const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
-  const { quotaWarning = '', tasks = [], csrf = '', arrival = null } = args;
+  const { quotaWarning = '', tasks = [], csrf = '', arrival = null, growth = null } = args;
   const P = dashboardParts(args);
   const { stat, locked } = P;
   const mapsStat = P.lastStat;
@@ -517,6 +517,15 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
+    ${
+      growth
+        ? `<a class="gr-strip" href="/admin/growth${growth.next ? `#a-${h(growth.next.key)}` : ''}">
+            <span class="gr-strip-score"><b>${growth.score}</b><small>/100</small></span>
+            <span class="gr-strip-text"><b>תוכנית קידום</b>${growth.next ? `<span><span>הצעד הבא:</span> <span>${h(growth.next.title)}</span></span>` : '<span>כל הפעולות בוצעו</span>'}</span>
+            <span class="gr-strip-go">לתוכנית ←</span>
+          </a>`
+        : ''
+    }
     ${
       tasks.length
         ? fold({ id: 'tasks', ic: 'check', title: 'המשימות השבוע', hint: tasks.length === 1 ? 'משימה אחת' : `${tasks.length} משימות`, body: tasksCard(tasks, csrf), open: true })

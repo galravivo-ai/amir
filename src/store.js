@@ -452,6 +452,7 @@ export function createStore(db) {
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at', 'pilot',
+        'site_check', 'site_checked_at', 'growth_services',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -1342,6 +1343,19 @@ export function createStore(db) {
     // ---------- weekly tasks ----------
     tasksDone: (businessId, week) => q('SELECT task FROM weekly_tasks_done WHERE business_id = ? AND week = ?').all(businessId, week).map((r) => r.task),
     markTaskDone: (businessId, week, task) => q('INSERT OR IGNORE INTO weekly_tasks_done (business_id, week, task) VALUES (?, ?, ?)').run(businessId, week, task),
+
+    // ---------- promotion plan ----------
+    /** Every action marked done: [{ key, period }]. */
+    growthMarks: (businessId) => q('SELECT key, period FROM growth_marks WHERE business_id = ?').all(businessId).map((r) => ({ ...r })),
+    setGrowthMark: (businessId, key, period, on) =>
+      on
+        ? q('INSERT OR IGNORE INTO growth_marks (business_id, key, period) VALUES (?, ?, ?)').run(businessId, key, period)
+        : q('DELETE FROM growth_marks WHERE business_id = ? AND key = ? AND period = ?').run(businessId, key, period),
+    /** The AI's latest text per kind: { kind: { text, created_at } }. */
+    growthDrafts: (businessId) =>
+      Object.fromEntries(q('SELECT kind, text, created_at FROM growth_drafts WHERE business_id = ?').all(businessId).map((r) => [r.kind, { text: r.text, created_at: r.created_at }])),
+    saveGrowthDraft: (businessId, kind, text) =>
+      q("INSERT OR REPLACE INTO growth_drafts (business_id, kind, text, created_at) VALUES (?, ?, ?, datetime('now'))").run(businessId, kind, text),
 
     // ---------- monthly report ----------
     monthlyReport: (businessId, month) => q('SELECT * FROM monthly_reports WHERE business_id = ? AND month = ?').get(businessId, month) || null,

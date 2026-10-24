@@ -700,6 +700,26 @@ const MIGRATIONS = [
   `
   ALTER TABLE ai_insights ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0;
   `,
+  // v41: the promotion plan: actions marked done, the AI's latest texts, the website check
+  `
+  CREATE TABLE growth_marks (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    period TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, key, period)
+  );
+  CREATE TABLE growth_drafts (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, kind)
+  );
+  ALTER TABLE businesses ADD COLUMN site_check TEXT;
+  ALTER TABLE businesses ADD COLUMN site_checked_at TEXT;
+  ALTER TABLE businesses ADD COLUMN growth_services TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

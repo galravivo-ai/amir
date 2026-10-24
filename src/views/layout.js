@@ -175,6 +175,7 @@ ${SKIP()}
     {
       items: [
         ['/admin', 'דשבורד ראשי', 'home'],
+        !notConnected && ['/admin/growth', 'תוכנית קידום', 'trophy', 0, { hl: true, tip: 'הפעולות שמקדמות את העסק במפות וב-AI, עם ציון התקדמות ו-AI שכותב את התוכן' }],
         // Until the Google profile is connected, that is the first thing in the menu.
         notConnected && role !== 'viewer' && ['/admin/google', 'חיבור לגוגל', 'plug', '!'],
         (network || role !== 'viewer') && ['/admin/network', 'רשת הסניפים', 'branches'],
