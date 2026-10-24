@@ -2,6 +2,18 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
+// Without a connection, a page opened from the app shows a short note instead
+// of the browser's error page. Nothing is cached: the data is always live.
+const OFFLINE = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>אין חיבור</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#1d1650;color:#fff;text-align:center;padding:24px;box-sizing:border-box}
+h1{font-size:1.3rem;margin:0 0 8px}p{opacity:.8;margin:0 0 20px}button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 22px;background:#7a5cff;color:#fff}</style></head>
+<body><div><h1>אין חיבור לאינטרנט</h1><p>ברגע שהחיבור יחזור, הנתונים יופיעו כאן.</p><button onclick="location.reload()">לנסות שוב</button></div></body></html>`;
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate') return;
+  event.respondWith(fetch(event.request).catch(() => new Response(OFFLINE, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
+});
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {

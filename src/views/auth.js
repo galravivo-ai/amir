@@ -307,6 +307,7 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
     <p class="muted small">באייפון: קודם פותחים את האתר ב-Safari, לוחצים "שיתוף" ואז "הוספה למסך הבית", ומפעילים את ההתראות מתוך האפליקציה שנוספה.</p>
     <p id="push-status" class="small" role="status"></p>
     <div class="actions">
+      <button type="button" class="btn" data-install hidden>התקנה כאפליקציה</button>
       <button type="button" class="btn primary" id="push-on" hidden>הפעלת התראות במכשיר הזה</button>
       <button type="button" class="btn" id="push-test" hidden>שליחת התראת בדיקה</button>
       <button type="button" class="btn danger" id="push-off" hidden>כיבוי במכשיר הזה</button>

@@ -80,7 +80,8 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
       JSON.stringify({
         name: brand,
         short_name: brand,
-        description: 'ניהול ביקורות ושביעות רצון',
+        description: 'ניהול הנוכחות בגוגל וב-AI: ביקורות, פרופיל, מפות',
+        id: '/admin',
         start_url: '/admin',
         scope: '/',
         display: 'standalone',
@@ -88,6 +89,11 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
         lang: 'he',
         background_color: '#1d1650',
         theme_color: '#4b2bd6',
+        orientation: 'portrait',
+        shortcuts: [
+          { name: 'ביקורות בגוגל', url: '/admin/google/reviews', icons: [{ src: '/static/icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'לוח הבקרה', url: '/admin', icons: [{ src: '/static/icons/icon-192.png', sizes: '192x192' }] },
+        ],
         icons: [
           { src: '/static/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
           { src: '/static/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },

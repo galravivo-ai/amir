@@ -6,7 +6,7 @@ import { branchNav } from './network.js';
 import { operatorInfo } from './site.js';
 
 const HEAD = (title) => `<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${h(title)}</title>
 <link rel="stylesheet" href="${asset('style.css')}">
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
@@ -15,10 +15,12 @@ const HEAD = (title) => `<meta charset="utf-8">
 
 const SKIP = (label = 'דלג לתוכן') => `<a class="skip-link" href="#main">${h(label)}</a>`;
 
-const APP_HEAD = `<link rel="manifest" href="/manifest.webmanifest">
+const appHead = (brand) => `<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1d1650">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="${h(brand)}">
 <script>
 // AI buttons: while the AI works, the spark spins and the label says so.
 document.addEventListener('submit',function(e){var b=e.submitter;if(!b||!b.classList.contains('ai-btn'))return;
@@ -26,7 +28,35 @@ var l=b.querySelector('span');if(l){b.dataset.label=l.textContent;l.textContent=
 setTimeout(function(){b.disabled=true},0)});
 window.addEventListener('pageshow',function(){document.querySelectorAll('.ai-busy').forEach(function(b){b.classList.remove('ai-busy');b.disabled=false;b.removeAttribute('aria-busy');var l=b.querySelector('span');if(l&&b.dataset.label)l.textContent=b.dataset.label})});
 </script>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>`;
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});
+if(matchMedia('(display-mode: standalone)').matches||navigator.standalone)document.documentElement.classList.add('standalone');</script>`;
+
+// Installing the system as an app on the phone's home screen. Android and
+// desktop Chrome offer their own install prompt; on iPhone it's done from
+// Safari's share menu, so there the button shows how. Hidden once installed.
+const install = (brand) => `<dialog id="install-dlg" class="help-dlg install-dlg" aria-labelledby="install-title">
+  <h2 id="install-title">התקנה כאפליקציה באייפון</h2>
+  <ol class="install-steps">
+    <li>פותחים את האתר בדפדפן <b>Safari</b></li>
+    <li>לוחצים על כפתור השיתוף <span class="ios-share" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8"/></svg></span> בתחתית המסך.</li>
+    <li>בוחרים <b>הוספה למסך הבית</b> ולוחצים <b>הוסף</b></li>
+  </ol>
+  <p class="muted small">האייקון של ${h(brand)} יופיע במסך הבית, והמערכת תיפתח במסך מלא כמו אפליקציה. משם אפשר גם להפעיל התראות על ביקורות חדשות.</p>
+  <div class="row compact"><button type="button" class="btn primary" onclick="this.closest('dialog').close()">הבנתי</button></div>
+</dialog>
+<script>(function(){var d=document.documentElement;if(d.classList.contains('standalone'))return;
+var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),ev=null;
+var phone=matchMedia('(max-width: 760px)').matches;
+function show(){document.querySelectorAll('[data-install]').forEach(function(b){b.hidden=false});
+var bar=document.getElementById('install-bar'),off=false;try{off=localStorage.getItem('gf-install-off')==='1'}catch(e){}
+if(bar&&phone&&!off)bar.hidden=false}
+function hide(){document.querySelectorAll('[data-install],#install-bar').forEach(function(b){b.hidden=true})}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;show()});
+window.addEventListener('appinstalled',hide);
+document.addEventListener('click',function(e){var t=e.target.closest('[data-install]');
+if(t){if(ev){ev.prompt();ev.userChoice.then(function(c){if(c.outcome==='accepted')hide();ev=null})}else document.getElementById('install-dlg').showModal();return}
+if(e.target.closest('[data-install-off]')){hide();try{localStorage.setItem('gf-install-off','1')}catch(e){}}});
+if(ios)document.addEventListener('DOMContentLoaded',show)})();</script>`;
 
 export function brandMark(size = 34) {
   return logoMark(size);
@@ -124,7 +154,7 @@ export function adminPage({
   if (!user || !business) {
     return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
+<head>${HEAD(`${title} · ${brand}`)}${appHead(brand)}${brandStyle}</head>
 <body class="auth-page">
 ${SKIP()}
 <a class="auth-brand" href="/">${mark(40)}<span>${wordmark(brand)}</span></a>
@@ -235,7 +265,7 @@ ${SKIP()}
 
   return `<!doctype html>
 <html lang="he" dir="rtl">
-<head>${HEAD(`${title} · ${brand}`)}${APP_HEAD}${brandStyle}</head>
+<head>${HEAD(`${title} · ${brand}`)}${appHead(brand)}${brandStyle}</head>
 <body class="app">
 ${SKIP()}
 <header class="m-top">
@@ -262,6 +292,7 @@ b.addEventListener('click',function(){var c=!g.classList.contains('folded');set(
 function t(open){b.classList.toggle('nav-open',open);o.setAttribute('aria-expanded',String(open));sc.hidden=!open;if(open)document.querySelector('.m-close').focus()}
 o.addEventListener('click',function(){t(true)});sc.addEventListener('click',function(){t(false)});document.querySelector('.m-close').addEventListener('click',function(){t(false);o.focus()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList.contains('nav-open')){t(false);o.focus()}})})();</script>
+  <button type="button" class="side-install" data-install hidden>${icon('phone', 18)}<span>התקנה כאפליקציה בטלפון</span></button>
   <button type="button" class="side-help" onclick="document.getElementById('help-dlg').showModal()">${icon('chat', 18)}<span>צריכים עזרה? כתבו לנו</span></button>
   ${usageBlock}
   <form method="post" action="/logout" class="side-user">
@@ -281,7 +312,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList
     <div class="row compact"><button class="btn primary">שליחה</button><button type="button" class="btn" onclick="this.closest('dialog').close()">ביטול</button></div>
   </form>
 </dialog>
+${install(brand)}
 <main class="app-main" id="main">
+  <div class="install-bar" id="install-bar" hidden>${icon('phone', 20)}<span><b>אפליקציה בטלפון</b> במסך הבית, עם התראות על ביקורות חדשות</span><button type="button" class="btn primary btn-sm" data-install>התקנה</button><button type="button" class="icon-btn" data-install-off aria-label="לא עכשיו">${icon('close', 16)}</button></div>
   ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">פתיחת חשבון לעסק שלכם</a></div>` : accessBanner(access, current)}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}

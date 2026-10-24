@@ -2821,3 +2821,19 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 /* The head's decorative circle stays behind its content, so it never catches a tap. */
 .dash-cover::before { pointer-events: none; z-index: 0; }
 .dash-cover > * { position: relative; z-index: 1; }
+
+/* Installing as an app */
+.side-install { display: flex; align-items: center; gap: 10px; width: 100%; margin: 6px 0 0; padding: 9px 12px; border: 1px solid rgba(165, 148, 255, .45); border-radius: 10px; background: rgba(122, 92, 255, .14); color: #e4ddff; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; text-align: start; }
+.side-install:hover { background: rgba(122, 92, 255, .26); }
+.side-install .icon { color: #a594ff; }
+.install-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 12px; border-radius: 14px; background: linear-gradient(135deg, #1d1650, #4b2bd6); color: #fff; font-size: .9rem; }
+.install-bar[hidden], .side-install[hidden] { display: none; }
+.install-bar > span { flex: 1; line-height: 1.35; }
+.install-bar .btn { flex: none; }
+.install-bar .icon-btn { color: #fff; opacity: .75; }
+.install-steps { margin: 14px 0; padding-inline-start: 22px; display: grid; gap: 10px; line-height: 1.5; }
+.ios-share { display: inline-grid; place-items: center; vertical-align: middle; width: 26px; height: 26px; border-radius: 7px; background: #eef0ff; color: #2f6bff; }
+/* Opened from the home screen: room for the phone's notch and home bar */
+.standalone .m-top { padding-top: env(safe-area-inset-top); height: calc(58px + env(safe-area-inset-top)); }
+.standalone .sidebar { padding-bottom: env(safe-area-inset-bottom); }
+.standalone .app-main { padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
