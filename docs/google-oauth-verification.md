@@ -6,7 +6,7 @@
 
 ## לפני ההגשה (רשימת בדיקה)
 
-- [ ] **Branding:** שם האפליקציה `GoFive`, לוגו 120×120 (`public/brand/gofive-mark-512.png` מוקטן), מייל תמיכה.
+- [ ] **Branding:** שם האפליקציה `GoFive`, לוגו 120×120: להוריד מ-`https://gofive.co.il/static/brand/gofive-logo-120.png`, מייל תמיכה.
 - [ ] **App domain:**
   - Homepage `https://gofive.co.il`
   - Privacy `https://gofive.co.il/privacy`
