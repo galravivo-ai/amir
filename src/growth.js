@@ -387,6 +387,38 @@ export function growthPlan(store, business, { now = Date.now() } = {}) {
   };
 }
 
+/**
+ * What can't wait, ahead of the plan: customers who were unhappy, reviews
+ * waiting for a reply, and the first steps without which nothing else works.
+ */
+export function urgentActions(store, business) {
+  const id = business.id;
+  const out = [];
+  const locations = store.googleLocations(id).filter((l) => l.enabled);
+  if (!locations.length) out.push({ key: 'connect', title: 'לחבר את העסק בגוגל', why: 'בלי זה אין ביקורות, נתונים ובדיקות. לוקח דקה.', href: '/admin/google' });
+  const unhappy = store.openIssuesCount(id);
+  if (unhappy) {
+    out.push({ key: 'unhappy', title: unhappy === 1 ? 'לחזור ללקוח לא מרוצה' : `לחזור ל-${unhappy} לקוחות לא מרוצים`, why: 'שיחה מהירה הופכת לקוח כועס לממליץ, ומונעת ביקורת שלילית בגוגל.', href: '/admin/responses?sentiment=negative&status=new' });
+  }
+  if (locations.length) {
+    const g = store.googleStats(id, { days: 30 });
+    if (g.unanswered) {
+      out.push({ key: 'reply', title: g.unanswered === 1 ? 'לענות לביקורת שמחכה' : `לענות ל-${g.unanswered} ביקורות שמחכות`, why: g.waiting.length ? 'יש ביניהן ביקורות של 3 כוכבים ומטה. תשובה עניינית מראה ללקוחות הבאים שאכפת לכם.' : 'עסק שעונה לביקורות נראה פעיל, וגוגל רואה בזה סימן טוב. ה-AI מנסח טיוטה.', href: '/admin/google/reviews?filter=unanswered' });
+    }
+  }
+  if (!store.campaignsFor(id).length) out.push({ key: 'campaign', title: 'ליצור קמפיין ושלט QR', why: 'הכלי הראשי לאסוף ביקורות מלקוחות בעסק.', href: '/admin/campaigns/new' });
+  return out;
+}
+
+/** The dashboard's "what to do now": the urgent first, then the plan's next steps. */
+export function todoNow(store, business, limit = 3) {
+  const urgent = urgentActions(store, business);
+  const connected = store.googleLocations(business.id).some((l) => l.enabled);
+  const plan = connected ? growthPlan(store, business) : null;
+  const next = (plan?.next || []).map((i) => ({ key: i.key, title: i.title, why: i.why, href: `/admin/growth#a-${i.key}`, cadence: i.cadence }));
+  return { score: plan?.score ?? null, items: [...urgent.map((u) => ({ ...u, urgent: true })), ...next].slice(0, limit) };
+}
+
 /** Can this key be marked by hand, and in which period. */
 export function markPeriod(key, now = Date.now()) {
   if (key.startsWith('dir:')) return DIRECTORIES.some(([k]) => `dir:${k}` === key) ? '' : null;

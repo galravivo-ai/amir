@@ -104,7 +104,7 @@ test('a new business starts low, and marks raise the score: weekly ones for the 
 test('the plan page: marking an action, the website, the business details and the AI writer', async () => {
   const { req, csrf, biz, page } = await owner('growth@example.com');
   assert.equal(page.status, 200);
-  assert.match(page.text, /תוכנית קידום/);
+  assert.match(page.text, /<h1>[\s\S]*?מה לעשות<\/h1>/);
   assert.match(page.text, /אינדקסים ואזכורים/);
 
   const mark = await req('/admin/growth/mark', { form: { _csrf: csrf, key: 'booking', on: '1' } });
@@ -141,7 +141,7 @@ test('the demo shows the plan with a sample website check and an AI text', async
   assert.match(page.text, /אין סימון עסק מקומי/);
   assert.match(page.text, /ביסטרו משפחתי/);
   const dash = await req('/admin');
-  assert.match(dash.text, /gr-strip/);
+  assert.match(dash.text, /todo-card/);
 });
 
 test('the pilot checklist: only for pilot businesses, marks what it sees, and sends the answers to the operator', async () => {

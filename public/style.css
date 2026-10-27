@@ -185,7 +185,8 @@ body.app { display: flex; min-height: 100vh; }
 .grid2 > .card { margin-bottom: 0; }
 .danger-zone { margin-top: 2rem; }
 .pager { display: flex; gap: .5rem; justify-content: center; }
-.dl { display: grid; grid-template-columns: max-content 1fr; gap: .45rem 1.2rem; margin: 0 0 1rem; }
+.dl { display: grid; grid-template-columns: fit-content(45%) minmax(0, 1fr); gap: .45rem 1.2rem; margin: 0 0 1rem; }
+.dl dt, .dl dd { overflow-wrap: anywhere; }
 .dl dt { color: var(--muted); }
 .dl dd { margin: 0; }
 .alert-bar { display: flex; align-items: center; gap: 10px; background: #fff0ec; border: 1px solid #ffc9bb; color: var(--bad); padding: .8em 1.1em; border-radius: 14px; margin-bottom: 1rem; text-decoration: none; font-weight: 700; }
@@ -2948,3 +2949,35 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 .pl-strip > span:first-of-type { flex: 1; }
 .pl-strip .gr-strip-go { color: #8a5a00; }
 @media (max-width: 760px) { .pl-step { flex-wrap: wrap; } .pl-actions { width: 100%; padding-inline-start: 36px; } }
+
+/* Tabs between pages that share one menu item */
+.page-tabs { display: flex; gap: 4px; margin: 0 0 16px; padding: 4px; background: #fff; border: 1px solid var(--line); border-radius: 12px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.page-tabs a { padding: 8px 16px; border-radius: 9px; color: var(--muted); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.page-tabs a:hover { color: var(--ink); background: var(--purple-soft); }
+.page-tabs a.active { background: var(--purple); color: #fff; }
+
+/* "What to do now" on the dashboard */
+.todo-card { display: grid; gap: 10px; }
+.todo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.todo-head h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.todo-score { display: flex; align-items: baseline; gap: 2px; text-decoration: none; color: var(--purple); }
+.todo-score b { font-size: 1.5rem; }
+.todo-score small { color: var(--muted); }
+.todo-score span { margin-inline-start: 8px; font-size: .8rem; color: var(--muted); }
+.todo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.todo-list a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; color: inherit; text-decoration: none; background: #fff; }
+.todo-list a:hover { border-color: #cfc5ff; background: #fbfaff; }
+.todo-list li.urgent a { border-color: #f6c9c4; background: #fff8f7; }
+.todo-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.todo-go { flex: none; color: var(--muted); transform: rotate(90deg); display: inline-flex; }
+[dir="rtl"] .todo-go { transform: rotate(90deg); }
+.gr-chip.urgent { background: #fde7e4; color: var(--bad); }
+.todo-all { justify-self: start; font-weight: 600; }
+.gr-urgent { border-color: #f6c9c4; }
+.gr-urgent h2 { display: flex; align-items: center; gap: 8px; color: var(--bad); }
+.mp-todo { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+.mp-todo > span:first-of-type { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.mp-todo:hover { border-color: #cfc5ff; }
+/* The monthly report fits a phone: grid children may shrink below their content. */
+.report-sheet, .report-sheet > * { min-width: 0; }
+@media (max-width: 760px) { .r-head { flex-wrap: wrap; } .r-kpi { min-width: 0; } .r-kpi span { overflow-wrap: anywhere; } }

@@ -80,8 +80,7 @@ test('the profile page: check, score, fixes and AI advice', async () => {
 
   const page = (await req('/admin/maps')).text;
   assert.match(page, /href="\/admin\/maps"/, 'in the menu');
-  assert.match(page, /מה לעשות השבוע/);
-  assert.match(page, /להשלים בפרופיל: /, 'the plan picks up what the check found');
+  assert.match(page, /href="\/admin\/growth#t-profile"/, 'what to do lives in one place');
   assert.equal((await req('/admin/profile')).location, '/admin/maps#health', 'the old address leads here');
   assert.match(page, new RegExp(`<b>${audit.score}</b>`));
   assert.match(page, /הוסיפו טלפון לפרופיל/);
@@ -92,21 +91,20 @@ test('the profile page: check, score, fixes and AI advice', async () => {
   assert.equal(await created.jobs.profileHealth(), 0);
 });
 
-test('this week\'s tasks: picked from the data, gone when done', async () => {
+test('what to do now: the urgent first, then the growth plan', async () => {
   const { weekKey } = await import('../src/tasks.js');
   assert.equal(weekKey(Date.parse('2026-10-03T10:00:00Z')), '2026-09-27', 'Saturday belongs to the week that began on Sunday');
   assert.equal(weekKey(Date.parse('2026-10-03T22:30:00Z')), '2026-10-04', 'Sunday 00:30 in Israel starts a new week');
 
-  const token = (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1];
   let page = (await req('/admin')).text;
-  assert.match(page, /המשימות השבוע/);
+  assert.match(page, /מה לעשות עכשיו/);
+  assert.match(page, /לענות לביקורת שמחכה/);
   assert.match(page, /ליצור קמפיין ושלט QR/);
-  assert.match(page, /לענות לביקורת שמחכה בגוגל/);
-  assert.match(page, /לשפר בפרופיל: מספר טלפון/);
-  assert.equal((page.match(/<li>\s*<div class="task-body">/g) || []).length, 3, 'three at most');
+  assert.equal((page.match(/<li class="[^"]*"><a href=/g) || []).length, 3, 'three at most, the urgent first');
+  assert.match(page, /class="urgent"><a href="\/admin\/google\/reviews\?filter=unanswered"/);
 
-  assert.equal((await req('/admin/tasks/campaign/done', { method: 'POST', form: { _csrf: token } })).location, '/admin#tasks');
-  page = (await req('/admin')).text;
-  assert.doesNotMatch(page, /ליצור קמפיין ושלט QR/);
-  assert.match(page, /להוסיף 2-3 מתחרים|לבקש דירוג/, 'the next one moves up');
+  // the whole list, on its own page: the urgent, then the plan
+  page = (await req('/admin/growth')).text;
+  assert.match(page, /דחוף עכשיו/);
+  assert.match(page, /מילות מפתח בפרופיל/);
 });

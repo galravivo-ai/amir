@@ -68,8 +68,25 @@ function initialMark(name, size) {
 }
 
 /** Whether a nav link points at the current page (query strings must match when the link has one). */
-function navLink([href, label, ic, badge, opts = {}], current) {
-  const active = isActive(href, current);
+/** Pages that share one menu item show tabs between them. */
+function pageTabs(current, { widgetInUse }) {
+  const groups = [
+    [['/admin/campaigns', 'קמפיינים וקישורים'], ['/admin/poster', 'עיצוב שלט QR'], widgetInUse && ['/admin/widget', "ווידג'ט לאתר"]],
+    [['/admin/reports/monthly', 'דוח חודשי'], ['/admin/insights', 'תובנות AI']],
+  ].map((g) => g.filter(Boolean));
+  const tabs = groups.find((g) => g.some(([href]) => isActive(href, current)));
+  if (!tabs) return '';
+  return `<nav class="page-tabs" aria-label="עמודים בקבוצה">${tabs
+    .map(([href, label]) => `<a href="${href}"${isActive(href, current) ? ' class="active" aria-current="page"' : ''}>${h(label)}</a>`)
+    .join('')}</nav>`;
+}
+
+/** Active on its own page, and on the pages it holds as tabs (opts.also). */
+const itemActive = ([href, , , , opts = {}], current) => isActive(href, current) || (opts.also || []).some((p) => isActive(p, current));
+
+function navLink(item, current) {
+  const [href, label, ic, badge, opts = {}] = item;
+  const active = itemActive(item, current);
   const cls = [active ? 'active' : '', opts.hl ? 'hl' : ''].filter(Boolean).join(' ');
   return `<a href="${href}" class="${cls}" ${active ? 'aria-current="page"' : ''}${opts.tip ? ` title="${h(opts.tip)}"` : ''}>
           ${icon(ic)}<span>${label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}
@@ -80,7 +97,7 @@ function navLink([href, label, ic, badge, opts = {}], current) {
 function navGroup(g, current) {
   const links = g.items.map((item) => navLink(item, current)).join('');
   if (!g.label) return `<div class="nav-plain">${links}</div>`;
-  const hasActive = g.items.some(([href]) => isActive(href, current));
+  const hasActive = g.items.some((item) => itemActive(item, current));
   const folded = g.folded && !hasActive;
   const badges = g.items.reduce((n, item) => n + (Number(item[3]) || 0), 0);
   const id = `nav-${g.key}`;
@@ -174,48 +191,33 @@ ${SKIP()}
     : [
     {
       items: [
-        ['/admin', 'דשבורד ראשי', 'home'],
+        ['/admin', 'דשבורד', 'home'],
+        ['/admin/growth', 'מה לעשות', 'check', 0, { hl: true, tip: 'רשימה אחת: מה דחוף, ותוכנית הקידום במפות וב-AI' }],
         business.pilot && ['/admin/pilot', 'הפיילוט שלכם', 'handshake', 0, { tip: 'עשרה צעדים לשבועיים, ושלוש שאלות בסוף' }],
-        !notConnected && ['/admin/growth', 'תוכנית קידום', 'trophy', 0, { hl: true, tip: 'הפעולות שמקדמות את העסק במפות וב-AI, עם ציון התקדמות ו-AI שכותב את התוכן' }],
         // Until the Google profile is connected, that is the first thing in the menu.
         notConnected && role !== 'viewer' && ['/admin/google', 'חיבור לגוגל', 'plug', '!'],
-        (network || role !== 'viewer') && ['/admin/network', 'רשת הסניפים', 'branches'],
+        // A chain sees its branches up top; a single business finds the page under management.
+        network && ['/admin/network', 'רשת הסניפים', 'branches'],
       ],
     },
     {
       key: 'reputation',
-      label: 'מוניטין וביקורות',
+      label: 'לקוחות וביקורות',
       items: [
         ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending, { tip: 'הביקורות הציבוריות של העסק בגוגל, עם תשובה בלחיצה' }],
         ['/admin/responses', 'משוב מהסקר', 'inbox', openCount, { tip: 'מה שלקוחות כתבו בסקר שלכם, דרך שלט ה-QR או קישור ששלחתם. פרטי, לא מתפרסם בגוגל' }],
-        ['/admin/campaigns', 'קמפיינים ו-QR', 'qr'],
-        ['/admin/poster', 'עיצוב שלט QR', 'print'],
-        widgetInUse && role !== 'viewer' && ['/admin/widget', 'ווידג\'ט לאתר', 'web'],
-      ],
-    },
-    {
-      key: 'profile',
-      label: 'פרופיל הגוגל',
-      items: [
-        ['/admin/maps', 'קידום במפות', 'pin', 0, { tip: 'מה חסר בפרופיל, באיזה מקום אתם מופיעים סביב העסק, ומה לעשות השבוע כדי לעלות' }],
+        ['/admin/campaigns', 'איסוף ביקורות', 'qr', 0, { also: ['/admin/poster', '/admin/widget'], tip: 'קמפיינים, שלט QR וקישורים לבקשת ביקורת' }],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],
     },
     {
-      key: 'visibility',
-      label: 'נראות ומתחרים',
+      key: 'measure',
+      label: 'איפה אתם עומדים',
       items: [
+        ['/admin/maps', 'מפות', 'pin', 0, { tip: 'באיזה מקום אתם מופיעים סביב העסק, ובריאות הפרופיל' }],
+        ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם' }],
         ['/admin/competitors', 'מתחרים', 'rivals'],
-        ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { hl: true, tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן' }],
-      ],
-    },
-    {
-      key: 'growth',
-      label: 'צמיחה ודוחות',
-      items: [
-        ['/admin/insights', 'תובנות AI', 'spark'],
-        ['/admin/reports/monthly', 'דוח חודשי', 'report'],
-        ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
+        ['/admin/reports/monthly', 'דוחות ותובנות', 'report', 0, { also: ['/admin/insights'] }],
       ],
     },
     role === 'owner' && {
@@ -225,6 +227,8 @@ ${SKIP()}
       items: [
         ['/admin/business', 'הגדרות', 'gear'],
         ['/admin/team', 'צוות', 'team'],
+        ['/admin/leaderboard', 'דירוג עובדים', 'trophy'],
+        !network && ['/admin/network', 'רשת הסניפים', 'branches'],
         hasApi(business) && ['/admin/integrations', 'חיבורים', 'plug'],
         ['/admin/plan', 'התוכנית שלי', 'report'],
       ],
@@ -318,6 +322,7 @@ ${install(brand)}
 <main class="app-main" id="main">
   <div class="install-bar" id="install-bar" hidden>${icon('phone', 20)}<span><b>אפליקציה בטלפון</b> במסך הבית, עם התראות על ביקורות חדשות</span><button type="button" class="btn primary btn-sm" data-install>התקנה</button><button type="button" class="icon-btn" data-install-off aria-label="לא עכשיו">${icon('close', 16)}</button></div>
   ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">פתיחת חשבון לעסק שלכם</a></div>` : accessBanner(access, current)}
+  ${pageTabs(current, { widgetInUse })}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
   ${body}
 </main>

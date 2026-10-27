@@ -250,25 +250,26 @@ function sendDialog(campaigns, csrf, template, waAuto = null) {
 }
 
 /** This week's three things to do, each with a link and a "done" button. */
-function tasksCard(tasks, csrf) {
-  if (!tasks.length) return '';
-  return `<section class="card tasks-card" id="tasks">
-    <h3>${icon('check', 20)} המשימות השבוע</h3>
-    <ol class="tasks">${tasks
-      .map(
-        (t) => `<li>
-          <div class="task-body"><b>${h(t.title)}</b><span class="muted small">${h(t.why)}</span></div>
-          <div class="task-actions">
-            ${
-              t.action === 'wa'
-                ? `<button type="button" class="btn small-btn" onclick="var d=document.getElementById('wa-send');if(d)d.showModal();else location.href='/admin/campaigns'">לשליחה</button>`
-                : `<a class="btn small-btn" href="${h(t.href)}">לביצוע</a>`
-            }
-            <form method="post" action="/admin/tasks/${encodeURIComponent(t.key)}/done">${csrfField(csrf)}<button class="btn-link" title="יוסתר עד השבוע הבא">בוצע ✓</button></form>
-          </div>
-        </li>`,
-      )
-      .join('')}</ol>
+/** "What to do now": the urgent first, then the growth plan's next steps, with its score. */
+function todoCard(todo) {
+  return `<section class="card todo-card" id="todo">
+    <div class="todo-head">
+      <h3>${icon('check', 20)} מה לעשות עכשיו</h3>
+      ${todo.score != null ? `<a class="todo-score" href="/admin/growth" title="ציון הקידום"><b>${todo.score}</b><small>/100</small><span>ציון קידום</span></a>` : ''}
+    </div>
+    ${
+      todo.items.length
+        ? `<ol class="todo-list">${todo.items
+            .map(
+              (t) => `<li class="${t.urgent ? 'urgent' : ''}"><a href="${h(t.href)}">
+                <span class="todo-text"><b>${h(t.title)}</b><span class="muted small">${h(t.why)}</span></span>
+                ${t.urgent ? '<span class="gr-chip urgent">דחוף</span>' : t.cadence && t.cadence !== 'once' ? `<span class="gr-chip">${t.cadence === 'week' ? 'כל שבוע' : 'כל חודש'}</span>` : ''}
+                <span class="todo-go">${icon('chevron', 16)}</span></a></li>`,
+            )
+            .join('')}</ol>`
+        : '<p class="muted">אין כרגע משהו פתוח. כל הכבוד!</p>'
+    }
+    <a class="todo-all" href="/admin/growth">לכל הפעולות ←</a>
   </section>`;
 }
 
@@ -493,7 +494,7 @@ const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
-  const { quotaWarning = '', tasks = [], csrf = '', arrival = null, growth = null, pilot = null } = args;
+  const { quotaWarning = '', arrival = null, todo = null, pilot = null } = args;
   const P = dashboardParts(args);
   const { stat, locked } = P;
   const mapsStat = P.lastStat;
@@ -504,7 +505,6 @@ export function dashboardView(args) {
     ${P.hasMetrics ? stat('phone', 'פניות מגוגל', P.actions.toLocaleString('he-IL'), ...P.pctChange(P.actions, P.prevActions), '#data') : locked('phone', 'פניות מגוגל')}
     ${mapsStat}
   </div>`;
-  const surveyWaiting = P.waitingItems.filter((x) => !x.google);
   return `${P.cover}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${P.connectCard}
@@ -522,30 +522,7 @@ export function dashboardView(args) {
         ? `<a class="pl-strip" href="/admin/pilot">${icon('handshake', 20)}<span><b>הפיילוט שלכם</b> <span>${pilot.done}/${pilot.total}</span> <span>צעדים</span></span><span class="gr-strip-go">להמשך ←</span></a>`
         : ''
     }
-    ${
-      growth
-        ? `<a class="gr-strip" href="/admin/growth${growth.next ? `#a-${h(growth.next.key)}` : ''}">
-            <span class="gr-strip-score"><b>${growth.score}</b><small>/100</small></span>
-            <span class="gr-strip-text"><b>תוכנית קידום</b>${growth.next ? `<span><span>הצעד הבא:</span> <span>${h(growth.next.title)}</span></span>` : '<span>כל הפעולות בוצעו</span>'}</span>
-            <span class="gr-strip-go">לתוכנית ←</span>
-          </a>`
-        : ''
-    }
-    ${
-      tasks.length
-        ? fold({ id: 'tasks', ic: 'check', title: 'המשימות השבוע', hint: tasks.length === 1 ? 'משימה אחת' : `${tasks.length} משימות`, body: tasksCard(tasks, csrf), open: true })
-        : ''
-    }
-    ${
-      surveyWaiting.length
-        ? fold({ id: 'unhappy', ic: 'alert', title: 'לקוחות לא מרוצים מהסקרים', hint: `${surveyWaiting.length} מחכים לטיפול`, tone: 'warn', open: true, body: `${feed(surveyWaiting, '')}<p class="small"><a href="/admin/responses?sentiment=negative&status=new">לכל המשובים ←</a></p>` })
-        : ''
-    }
-    ${
-      args.overview?.metrics?.daily?.size
-        ? fold({ id: 'google-sum', ic: 'search', title: 'מהפרופיל בגוגל', hint: profileHint(args.overview.metrics), body: profileSummaryCard({ metrics: args.overview.metrics }), open: true })
-        : ''
-    }
+    ${todo?.items.length || todo?.score != null ? todoCard(todo) : ''}
     ${
       arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending))
         ? fold({ id: 'arrival', ic: 'clock', title: arrival.failed ? 'חלק מהנתונים לא הגיעו' : 'הנתונים בדרך', hint: arrival.failed ? 'לפרטים ואיך לתקן' : `${arrival.pending} עוד בדרך`, tone: arrival.failed ? 'warn' : '', open: true, body: arrivalCard(arrival, { compact: true }) })
@@ -559,6 +536,7 @@ export function dashboardView(args) {
 function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
   return fold({ id: 'data', ic: 'chart', title: 'כל הנתונים והגרפים', hint: 'ביקורות לפי יום, פעולות בפרופיל, התפלגות כוכבים, נושאים חוזרים וסקרים', body: `
+    ${args.overview?.metrics?.daily?.size ? `<section class="card"><h3>${icon('search', 18)} מהפרופיל בגוגל</h3>${profileSummaryCard({ metrics: args.overview.metrics })}</section>` : ''}
     <div class="stats stats-1">
       ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
     </div>

@@ -1,5 +1,4 @@
 import express from 'express';
-import { mapsPlan } from '../maps.js';
 import { RADII } from '../rankings.js';
 import * as V from '../views/maps.js';
 
@@ -21,9 +20,8 @@ export function mapsRoutes(ctx, { health, rankings, serp }) {
     render(
       req,
       res,
-      'קידום בגוגל מפות',
+      'מפות',
       V.mapsView({
-        plan: mapsPlan(store, req.business, { serpOn: Boolean(serp) }),
         health: {
           audits: store.latestAudits(id),
           locations,

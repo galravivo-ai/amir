@@ -175,12 +175,23 @@ function fit(t){t.style.height='';t.style.height=Math.min(t.scrollHeight+4,520)+
 document.querySelectorAll('.gr-item').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)d.querySelectorAll('.gr-out:not([hidden]) textarea').forEach(fit)})});
 var id=location.hash.slice(1),d=id&&document.getElementById(id);if(d&&d.tagName==='DETAILS')d.open=true;document.querySelectorAll('details[open] .gr-out:not([hidden]) textarea').forEach(fit)})();</script>`;
 
-export function growthView({ plan, drafts, csrf, can, aiOn, running = false, notice = '', error = '' }) {
-  return `<div class="page-head"><h1>${icon('trophy', 26)} תוכנית קידום</h1></div>
-    <p class="page-intro">כל מה שמקדם עסק בגוגל מפות ובתשובות של ChatGPT ו-Gemini, כרשימת פעולות. מה שהמערכת יכולה לבדוק, היא מסמנת לבד. את השאר מסמנים כשמסיימים, וה-AI כותב בשבילכם את התוכן.</p>
+function urgentCard(urgent) {
+  if (!urgent.length) return '';
+  return `<section class="card gr-urgent"><h2>${icon('alert', 20)} דחוף עכשיו</h2>
+    <ol class="todo-list">${urgent
+      .map(
+        (t) => `<li class="urgent"><a href="${h(t.href)}"><span class="todo-text"><b>${h(t.title)}</b><span class="muted small">${h(t.why)}</span></span><span class="todo-go">${icon('chevron', 16)}</span></a></li>`,
+      )
+      .join('')}</ol></section>`;
+}
+
+export function growthView({ plan, urgent = [], drafts, csrf, can, aiOn, running = false, notice = '', error = '' }) {
+  return `<div class="page-head"><h1>${icon('check', 26)} מה לעשות</h1></div>
+    <p class="page-intro">כל מה שמקדם את העסק בגוגל מפות ובתשובות של ChatGPT ו-Gemini, ברשימה אחת: קודם מה שדחוף, ואחריו תוכנית הקידום. מה שהמערכת יכולה לבדוק, היא מסמנת לבד, וה-AI כותב בשבילכם את התוכן.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     <input type="hidden" id="gr-csrf" value="${h(csrf)}">
+    ${urgentCard(urgent)}
     ${hero(plan)}
     ${servicesCard(plan.facts, csrf, can)}
     ${Object.entries(TRACKS)

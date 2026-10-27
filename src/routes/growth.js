@@ -1,5 +1,5 @@
 import express from 'express';
-import { growthFacts, growthPlan, markPeriod, WRITERS } from '../growth.js';
+import { growthFacts, growthPlan, markPeriod, urgentActions, WRITERS } from '../growth.js';
 import { checkSite } from '../siteCheck.js';
 import { safeUrl } from '../util.js';
 import * as V from '../views/growth.js';
@@ -33,9 +33,10 @@ export function growthRoutes(ctx, { siteCheck = checkSite } = {}) {
     render(
       req,
       res,
-      'תוכנית קידום',
+      'מה לעשות',
       V.growthView({
         plan: growthPlan(store, b),
+        urgent: urgentActions(store, b),
         drafts: store.growthDrafts(b.id),
         csrf: req.user.csrf,
         can: req.can('manager'),

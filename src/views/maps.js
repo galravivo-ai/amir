@@ -1,11 +1,10 @@
 import { h } from '../util.js';
-import { FACTORS } from '../maps.js';
 import { parseJson } from '../db.js';
 import { healthSection } from './health.js';
 import { rankSection } from './rankings.js';
 import { icon } from './icons.js';
 
-const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
+
 
 /** Where the business stands, in two numbers: profile score, and how often it's in the Maps top 3 around it. */
 function summary(audits, keywords, checks) {
@@ -26,26 +25,6 @@ function summary(audits, keywords, checks) {
   </div>`;
 }
 
-function planCard(plan, csrf) {
-  if (!plan.length) {
-    return `<section class="card mp-plan" id="plan"><h2>${icon('check', 22)} מה לעשות השבוע</h2>
-      <p class="muted">אין כרגע משהו דחוף. ממשיכים לבקש דירוגים מלקוחות ולענות לביקורות, ובודקים שוב בשבוע הבא.</p></section>`;
-  }
-  return `<section class="card mp-plan" id="plan"><h2>${icon('check', 22)} מה לעשות השבוע</h2>
-    <ol class="tasks">${plan
-      .map(
-        (t) => `<li>
-          <div class="task-body"><span class="mp-factor ${t.factor}">${h(FACTORS[t.factor])}</span><b>${h(t.title)}</b><span class="muted small">${h(t.why)}</span></div>
-          <div class="task-actions">
-            <a class="btn small-btn" href="${t.action === 'wa' ? '/admin#send' : h(t.href)}">${t.action === 'wa' ? 'לשליחה' : 'לביצוע'}</a>
-            <form method="post" action="/admin/tasks/${encodeURIComponent(t.key)}/done">${csrfField(csrf)}<input type="hidden" name="back" value="maps"><button class="btn-link" title="יוסתר עד השבוע הבא">בוצע ✓</button></form>
-          </div>
-        </li>`,
-      )
-      .join('')}</ol>
-  </section>`;
-}
-
 const TIPS = `<details class="card mp-tips"><summary>${icon('spark', 18)} איך גוגל מחליטה מי מופיע ראשון במפות</summary>
   <p>גוגל מסבירה שהסדר בתוצאות המקומיות נקבע לפי שלושה דברים:</p>
   <ul>
@@ -57,17 +36,17 @@ const TIPS = `<details class="card mp-tips"><summary>${icon('spark', 18)} איך
   <p class="muted small">שינויים במיקום לוקחים בדרך כלל כמה שבועות. לכן כדאי לעבוד בהתמדה, מעט כל שבוע, ולעקוב כאן אחרי המגמה.</p>
 </details>`;
 
-export function mapsView({ plan, health, rank, running, csrf, notice = '', error = '' }) {
+export function mapsView({ health, rank, running, csrf, notice = '', error = '' }) {
   const hasPlace = health.locations.length > 0;
-  return `<div class="page-head"><h1>${icon('pin', 26)} קידום בגוגל מפות</h1></div>
-    <p class="page-intro">כאן רואים איפה העסק עומד בגוגל מפות ומה לעשות כדי לעלות: מה חסר בפרופיל, באיזה מקום אתם מופיעים סביב העסק, ותוכנית קצרה לשבוע.</p>
+  return `<div class="page-head"><h1>${icon('pin', 26)} מפות: מיקום ובריאות הפרופיל</h1></div>
+    <p class="page-intro">כאן רואים איפה העסק עומד בגוגל מפות: באיזה מקום אתם מופיעים סביב העסק, ומה חסר בפרופיל.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     ${running ? '<div class="warn">הבדיקה רצה עכשיו, זה לוקח עד דקה. הדף יתרענן לבד.</div><script>setTimeout(function(){location.replace(location.pathname+location.hash)},12000)</script>' : ''}
     ${
       hasPlace
         ? `${summary(health.audits, rank.keywords, rank.checks)}
-           ${planCard(plan, csrf)}
+           <a class="card mp-todo" href="/admin/growth#t-profile">${icon('check', 20)}<span><b>מה לעשות כדי לעלות במפות?</b><span class="muted small">כל הפעולות, עם מה שכבר בוצע ומה הבא בתור, נמצאות בעמוד "מה לעשות".</span></span><span class="todo-go">${icon('chevron', 16)}</span></a>
            ${rankSection({ ...rank, csrf })}
            ${healthSection({ ...health, csrf })}
            ${TIPS}`
