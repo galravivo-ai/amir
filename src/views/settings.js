@@ -1,4 +1,4 @@
-import { accessOf, AI_PLUS, ANNUAL_MONTHS, branchPrice, CYCLES, INTEGRATIONS, limitLabel, payProvider, PLANS, priceFor, TRIAL_DAYS } from '../plans.js';
+import { accessOf, AI_PLUS, ANNUAL_MONTHS, branchPrice, CYCLES, hasApi, INTEGRATIONS, limitLabel, payProvider, PLANS, priceFor, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
 import { DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
 import { isEn } from '../lang.js';
@@ -73,6 +73,7 @@ function inviteMessageCard(business, csrf) {
 export function businessView({ business, csrf, plan, error = '' }) {
   return `<h1>הגדרות עסק</h1>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
+  <nav class="settings-more"><a href="/admin/leaderboard">${icon('trophy', 16)} דירוג עובדים</a>${hasApi(business) ? `<a href="/admin/integrations">${icon('plug', 16)} חיבורים לקופה ולמערכת תורים</a>` : ''}</nav>
   <div class="grid2">
     <form method="post" action="/admin/business" class="stack card">
       ${csrfField(csrf)}

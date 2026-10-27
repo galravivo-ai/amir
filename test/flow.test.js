@@ -764,9 +764,9 @@ test('public API: automatic survey requests', async () => {
 
   store.updateBusiness(campaign.business_id, { plan: 'pro' });
   assert.equal((await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } })).status, 403, 'an add-on, off by default');
-  assert.doesNotMatch((await owner.req('/admin')).text, /href="\/admin\/integrations"/, 'not in the menu while off');
+  assert.doesNotMatch((await owner.req('/admin/business')).text, /href="\/admin\/integrations"/, 'not offered while off');
   store.updateBusiness(campaign.business_id, { api_on: true });
-  assert.match((await owner.req('/admin')).text, /href="\/admin\/integrations"/);
+  assert.match((await owner.req('/admin/business')).text, /href="\/admin\/integrations"/, 'from the settings page');
   const created = await owner.req('/admin/integrations/keys', { method: 'POST', form: { _csrf: await csrfOf(owner), name: 'POS' } });
   const key = decodeURIComponent(created.location.match(/key=([^&]+)/)[1]);
   assert.match(key, /^rk_/);

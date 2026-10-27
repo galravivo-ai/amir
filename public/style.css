@@ -2981,3 +2981,6 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 /* The monthly report fits a phone: grid children may shrink below their content. */
 .report-sheet, .report-sheet > * { min-width: 0; }
 @media (max-width: 760px) { .r-head { flex-wrap: wrap; } .r-kpi { min-width: 0; } .r-kpi span { overflow-wrap: anywhere; } }
+.settings-more { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.settings-more a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 600; text-decoration: none; }
+.settings-more a:hover { border-color: #cfc5ff; }
