@@ -165,3 +165,52 @@ test('the pilot checklist: only for pilot businesses, marks what it sees, and se
   assert.match(lead.message, /משלמים ₪99 בחודש: אולי/);
   assert.match(lead.message, /צעדים שבוצעו: 2\/10/);
 });
+
+test('stage 2: goals against the area with last month for comparison, and the weekly routine streak', async () => {
+  const { leadGoals, routine } = await import('../src/goals.js');
+  const { weekKey } = await import('../src/tasks.js');
+  const user = store.createUser({ email: 'lead@example.com', name: 'L', passwordHash: 'x' });
+  const biz = store.businessById(store.createBusiness(user, { name: 'Lead', plan: 'pro', trialDays: 7 }));
+  const loc = store.addSerpLocation(biz.id, { dataId: '0x9:0x9', placeId: 'ChIJlead', title: 'Lead' });
+  store.db.prepare('UPDATE google_locations SET total_reviews = 100 WHERE id = ?').run(loc.id);
+  const kwId = store.addRankKeyword(biz.id, loc.id, 'מספרה', 1000);
+  const points = (top) => JSON.stringify(Array.from({ length: 10 }, (_, i) => ({ rank: i < top ? 2 : 8 })));
+  const sql = (ms) => new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+  store.db.prepare('INSERT INTO rank_checks (keyword_id, run_at, points) VALUES (?, ?, ?)').run(kwId, sql(Date.now() - 40 * 864e5), points(3));
+  store.db.prepare('INSERT INTO rank_checks (keyword_id, run_at, points) VALUES (?, ?, ?)').run(kwId, sql(Date.now() - 864e5), points(6));
+  const rival = store.addCompetitor(biz.id, { dataId: '0x8:0x8', title: 'המתחרה' });
+  store.db.prepare('UPDATE competitors SET total = 300, recent30 = 9 WHERE id = ?').run(rival.id);
+
+  const goals = leadGoals(store, biz);
+  const maps = goals.find((g) => g.key === 'maps');
+  assert.deepEqual([maps.before, maps.now, maps.target], [30, 60, 70]);
+  const reviews = goals.find((g) => g.key === 'reviews');
+  assert.equal(reviews.target, 300);
+  assert.equal(reviews.sub, 'המתחרה');
+
+  // two weeks of post + photos in a row, this week not yet
+  const now = Date.parse('2026-10-21T10:00:00Z');
+  const w0 = weekKey(now);
+  const w1 = weekKey(now - 7 * 864e5);
+  const w2 = weekKey(now - 14 * 864e5);
+  for (const w of [w1, w2]) {
+    store.setGrowthMark(biz.id, 'posts', w, true);
+    store.setGrowthMark(biz.id, 'photos', w, true);
+  }
+  assert.equal(routine(store, biz, { now }).streak, 2);
+  store.setGrowthMark(biz.id, 'posts', w0, true);
+  store.setGrowthMark(biz.id, 'photos', w0, true);
+  assert.equal(routine(store, biz, { now }).streak, 3, 'this week counts once it is done');
+});
+
+test('stage 2 opens on the plan page once the score reaches 85', async () => {
+  const { req, biz } = await owner('stage2@example.com');
+  store.addSerpLocation(biz.id, { dataId: '0x7:0x7', placeId: 'ChIJs2', title: 'S2' });
+  assert.match((await req('/admin/growth')).text, /gr-stage2 locked/);
+  const { growthPlan, markPeriod } = await import('../src/growth.js');
+  for (const t of Object.values(growthPlan(store, store.businessById(biz.id)).tracks)) for (const i of t.items) store.setGrowthMark(biz.id, i.key, markPeriod(i.key), true);
+  const page = (await req('/admin/growth')).text;
+  assert.match(page, /id="stage2"/);
+  assert.match(page, /השגרה השבועית/);
+  assert.match(page, /לגדול לעוד חיפושים/);
+});

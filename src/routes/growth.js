@@ -1,5 +1,6 @@
 import express from 'express';
 import { growthFacts, growthPlan, markPeriod, urgentActions, WRITERS } from '../growth.js';
+import { expansions, leadGoals, routine, STAGE2_AT } from '../goals.js';
 import { checkSite } from '../siteCheck.js';
 import { safeUrl } from '../util.js';
 import * as V from '../views/growth.js';
@@ -30,12 +31,24 @@ export function growthRoutes(ctx, { siteCheck = checkSite } = {}) {
     const b = req.business;
     const stale = !b.site_checked_at || Date.now() - Date.parse(b.site_checked_at) > WEEK;
     if (stale && !b.is_demo) runCheck(b);
+    const plan = growthPlan(store, b);
+    const open = plan.score >= STAGE2_AT;
+    const stage2 = {
+      at: STAGE2_AT,
+      open,
+      ...(open && {
+        goals: leadGoals(store, b),
+        more: expansions(store, b, { rankLimit: req.plan.rankKeywords || 0, aiMax: ctx.visibility?.maxQueries(b) || 0 }),
+        routine: routine(store, b),
+      }),
+    };
     render(
       req,
       res,
       'מה לעשות',
       V.growthView({
-        plan: growthPlan(store, b),
+        plan,
+        stage2,
         urgent: urgentActions(store, b),
         drafts: store.growthDrafts(b.id),
         csrf: req.user.csrf,

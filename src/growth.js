@@ -1,4 +1,5 @@
 import { parseJson } from './db.js';
+import { leadGoals, STAGE2_AT } from './goals.js';
 import { cityOf } from './routes/visibility.js';
 import { weekKey } from './tasks.js';
 import { monthKey } from './usage.js';
@@ -416,7 +417,8 @@ export function todoNow(store, business, limit = 3) {
   const connected = store.googleLocations(business.id).some((l) => l.enabled);
   const plan = connected ? growthPlan(store, business) : null;
   const next = (plan?.next || []).map((i) => ({ key: i.key, title: i.title, why: i.why, href: `/admin/growth#a-${i.key}`, cadence: i.cadence }));
-  return { score: plan?.score ?? null, items: [...urgent.map((u) => ({ ...u, urgent: true })), ...next].slice(0, limit) };
+  const goals = plan && plan.score >= STAGE2_AT ? leadGoals(store, business) : [];
+  return { score: plan?.score ?? null, goals, items: [...urgent.map((u) => ({ ...u, urgent: true })), ...next].slice(0, goals.length ? Math.min(limit, 2) : limit) };
 }
 
 /** Can this key be marked by hand, and in which period. */

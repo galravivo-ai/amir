@@ -40,7 +40,7 @@ const quote = (q) =>
   `<blockquote class="r-quote"><p>${h(String(q.text).slice(0, 320))}${String(q.text).length > 320 ? '…' : ''}</p>
     <footer>${'★'.repeat(q.rating)} · ${h(q.name || 'לקוח/ה')} · ${q.source === 'google' ? 'גוגל' : 'סקר'}</footer></blockquote>`;
 
-export function monthlyReportView({ business, range, months, report: r, summary = '', aiNote = '' }) {
+export function monthlyReportView({ business, range, months, report: r, goals = [], summary = '', aiNote = '' }) {
   const g = r.google;
   const s = r.surveys;
   const logo = logoSrc(business);
@@ -125,6 +125,18 @@ export function monthlyReportView({ business, range, months, report: r, summary 
     ${
       r.visibility
         ? `<section class="r-box r-vis"><h3>נראות ב-AI</h3><p>העסק הוזכר ב-<b>${r.visibility.mentioned}%</b> מתשובות עוזרי ה-AI שנבדקו, וצוטט כמקור ב-<b>${r.visibility.cited}%</b>.</p></section>`
+        : ''
+    }
+
+    ${
+      goals.length
+        ? `<section class="r-box r-goals"><h3>מול האזור: איפה אתם ולאן</h3><table class="table"><thead><tr><th>יעד</th><th>לפני חודש</th><th>עכשיו</th><th>היעד</th></tr></thead><tbody>${goals
+            .map((g) => {
+              const f = (v) => (v == null ? '—' : `${Number(v).toLocaleString('he-IL')}${g.unit === '%' ? '%' : ''}`);
+              const up = g.before != null && g.now !== g.before ? (g.now > g.before ? ' ▲' : ' ▼') : '';
+              return `<tr><td>${h(g.title)}${g.sub ? `<div class="small" dir="auto">${h(g.sub)}</div>` : ''}</td><td>${f(g.before)}</td><td><b>${f(g.now)}</b>${up ? `<span class="${g.now > g.before ? 'r-up' : 'r-down'}">${up}</span>` : ''}</td><td>${f(g.target)}</td></tr>`;
+            })
+            .join('')}</tbody></table></section>`
         : ''
     }
 

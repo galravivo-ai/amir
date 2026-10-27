@@ -175,6 +175,46 @@ function fit(t){t.style.height='';t.style.height=Math.min(t.scrollHeight+4,520)+
 document.querySelectorAll('.gr-item').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)d.querySelectorAll('.gr-out:not([hidden]) textarea').forEach(fit)})});
 var id=location.hash.slice(1),d=id&&document.getElementById(id);if(d&&d.tagName==='DETAILS')d.open=true;document.querySelectorAll('details[open] .gr-out:not([hidden]) textarea').forEach(fit)})();</script>`;
 
+const fmtGoal = (v, unit) => (v == null ? '—' : `${Number(v).toLocaleString('he-IL')}${unit === '%' ? '%' : ''}`);
+
+/** Stage 2: goals against the area, ways to grow, and the weekly routine. */
+function stage2Card(stage2) {
+  if (!stage2) return '';
+  if (!stage2.open) {
+    return `<section class="card gr-stage2 locked"><h2>${icon('trophy', 20)} שלב 2: להוביל באזור</h2>
+      <p class="muted">נפתח כשציון הקידום מגיע ל-${stage2.at}. שם מקבלים יעדים מול המתחרים: כמה פעמים אתם בטופ 3 במפות, כמה ביקורות חסרות למוביל, וכמה ה-AI ממליץ עליכם.</p></section>`;
+  }
+  const { goals, more, routine } = stage2;
+  return `<section class="card gr-stage2" id="stage2">
+    <h2>${icon('trophy', 20)} שלב 2: להוביל באזור</h2>
+    <p class="muted">הבסיס במקום. מעכשיו מודדים מול האזור: יעדים שמתעדכנים מהבדיקות השבועיות.</p>
+    ${
+      goals.length
+        ? `<div class="gl-goals">${goals
+            .map((g) => {
+              const delta = g.before != null ? g.now - g.before : null;
+              return `<a class="gl-goal" href="${h(g.href)}">
+                <span class="gl-title"><b>${h(g.title)}</b>${g.sub ? `<span class="muted small" dir="auto">${h(g.sub)}</span>` : ''}${delta ? `<span class="gl-delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '▲' : '▼'} ${fmtGoal(Math.abs(delta), g.unit)} <span>מלפני חודש</span></span>` : ''}</span>
+                <span class="gl-nums"><b>${fmtGoal(g.now, g.unit)}</b><span class="muted">מתוך יעד של</span> <span>${fmtGoal(g.target, g.unit)}</span>${g.unit && g.unit !== '%' ? ` <span class="muted">${h(g.unit)}</span>` : ''}</span>
+                <span class="gr-bar gl-bar"><span style="width:${Math.round(g.progress * 100)}%"></span></span>
+                <span class="muted small">${h(g.how)}</span>
+              </a>`;
+            })
+            .join('')}</div>`
+        : '<p class="muted small">היעדים מופיעים אחרי בדיקת מיקום במפות, הוספת מתחרים ובדיקת נראות ב-AI.</p>'
+    }
+    <div class="gl-row">
+      <div class="gl-routine"><h3>${icon('clock', 18)} השגרה השבועית</h3>
+        <ul>${routine.items.map((i) => `<li class="${i.done ? 'done' : ''}"><a href="${h(i.href)}"><span class="gr-state">${i.done ? icon('check', 14) : ''}</span><span>${h(i.title)}</span></a></li>`).join('')}</ul>
+        <p class="gl-streak">${routine.streak ? `<b>${routine.streak}</b> <span>${routine.streak === 1 ? 'שבוע ברצף' : 'שבועות ברצף'}</span>` : '<span class="muted small">פוסט ותמונות השבוע מתחילים רצף.</span>'}</p>
+      </div>
+      <div class="gl-more"><h3>${icon('plus', 18)} לגדול לעוד חיפושים</h3>
+        <ul>${more.map((m) => `<li><a href="${h(m.href)}"><b>${h(m.title)}</b>${m.detail ? ` <span class="gr-chip">${h(m.detail)}</span>` : ''}<span class="muted small">${h(m.why)}</span></a></li>`).join('')}</ul>
+      </div>
+    </div>
+  </section>`;
+}
+
 function urgentCard(urgent) {
   if (!urgent.length) return '';
   return `<section class="card gr-urgent"><h2>${icon('alert', 20)} דחוף עכשיו</h2>
@@ -185,7 +225,7 @@ function urgentCard(urgent) {
       .join('')}</ol></section>`;
 }
 
-export function growthView({ plan, urgent = [], drafts, csrf, can, aiOn, running = false, notice = '', error = '' }) {
+export function growthView({ plan, urgent = [], stage2 = null, drafts, csrf, can, aiOn, running = false, notice = '', error = '' }) {
   return `<div class="page-head"><h1>${icon('check', 26)} מה לעשות</h1></div>
     <p class="page-intro">כל מה שמקדם את העסק בגוגל מפות ובתשובות של ChatGPT ו-Gemini, ברשימה אחת: קודם מה שדחוף, ואחריו תוכנית הקידום. מה שהמערכת יכולה לבדוק, היא מסמנת לבד, וה-AI כותב בשבילכם את התוכן.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
@@ -193,6 +233,7 @@ export function growthView({ plan, urgent = [], drafts, csrf, can, aiOn, running
     <input type="hidden" id="gr-csrf" value="${h(csrf)}">
     ${urgentCard(urgent)}
     ${hero(plan)}
+    ${stage2?.open ? stage2Card(stage2) : ''}
     ${servicesCard(plan.facts, csrf, can)}
     ${Object.entries(TRACKS)
       .map(
@@ -203,5 +244,6 @@ export function growthView({ plan, urgent = [], drafts, csrf, can, aiOn, running
         </section>`,
       )
       .join('')}
+    ${stage2 && !stage2.open ? stage2Card(stage2) : ''}
     ${SCRIPT}`;
 }

@@ -269,6 +269,15 @@ function todoCard(todo) {
             .join('')}</ol>`
         : '<p class="muted">אין כרגע משהו פתוח. כל הכבוד!</p>'
     }
+    ${
+      todo.goals?.length
+        ? `<div class="todo-goals"><span class="muted small">שלב 2: להוביל באזור</span>${todo.goals
+            .map(
+              (g) => `<a href="/admin/growth#stage2" class="todo-goal"><span>${h(g.title)}</span><span class="gr-bar gl-bar"><span style="width:${Math.round(g.progress * 100)}%"></span></span><b>${g.now.toLocaleString('he-IL')}${g.unit === '%' ? '%' : ''}</b></a>`,
+            )
+            .join('')}</div>`
+        : ''
+    }
     <a class="todo-all" href="/admin/growth">לכל הפעולות ←</a>
   </section>`;
 }

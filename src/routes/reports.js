@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import { buildReport, lastMonth, monthRange, recentMonths, reportFacts } from '../report.js';
+import { leadGoals } from '../goals.js';
 import * as V from '../views/report.js';
 
 /** The monthly report: a printable page (saved as PDF from the browser). */
@@ -21,6 +22,7 @@ export function reportRoutes(ctx) {
         range,
         months: recentMonths(),
         report,
+        goals: leadGoals(store, req.business, { now: Math.min(Date.now(), typeof range.to === 'number' ? range.to : Date.parse(range.to)) }),
         summary: summary.text,
         aiNote: summary.note,
       }),

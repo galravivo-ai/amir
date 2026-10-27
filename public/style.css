@@ -2984,3 +2984,37 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 .settings-more { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .settings-more a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 600; text-decoration: none; }
 .settings-more a:hover { border-color: #cfc5ff; }
+
+/* Stage 2: lead your area */
+.gr-stage2 { border: 2px solid #ffcf3a; background: linear-gradient(180deg, #fffaf0, #fff 140px); }
+.gr-stage2.locked { border: 1px dashed #e6d9a8; background: #fffdf6; }
+.gr-stage2 h2 { display: flex; align-items: center; gap: 8px; }
+.gl-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.gl-goal { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: inherit; text-decoration: none; }
+.gl-goal:hover { border-color: #cfc5ff; }
+.gl-title { display: flex; flex-direction: column; gap: 2px; }
+.gl-delta { font-size: .8rem; font-weight: 700; }
+.gl-delta.up { color: var(--good); }
+.gl-delta.down { color: var(--bad); }
+.gl-delta span { font-weight: 500; color: var(--muted); }
+.gl-nums { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.gl-nums b { font-size: 1.7rem; color: var(--purple); }
+.gl-bar { background: var(--purple-soft); height: 9px; }
+.gl-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.gl-routine, .gl-more { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.gl-routine h3, .gl-more h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
+.gl-routine ul, .gl-more ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.gl-routine a { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; padding: 4px 0; }
+.gl-routine li.done .gr-state { background: var(--good); border-color: var(--good); }
+.gl-routine .gr-state { width: 20px; height: 20px; }
+.gl-streak { margin: 10px 0 0; }
+.gl-streak b { font-size: 1.4rem; color: #c27c00; }
+.gl-more a { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; padding: 6px 8px; border-radius: 10px; }
+.gl-more a:hover { background: var(--purple-soft); }
+.gl-more .gr-chip { align-self: flex-start; }
+.todo-goals { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #fffaf0; border: 1px solid #f3e2b3; }
+.todo-goal { display: grid; grid-template-columns: minmax(0, 1fr) 120px 56px; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-size: .92rem; }
+.todo-goal b { text-align: end; color: var(--purple); }
+@media (max-width: 760px) { .todo-goal { grid-template-columns: minmax(0, 1fr) 70px 48px; } }
+.r-up { color: var(--good); font-weight: 700; }
+.r-down { color: var(--bad); font-weight: 700; }
