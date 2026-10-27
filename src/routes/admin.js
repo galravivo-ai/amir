@@ -1,5 +1,6 @@
 import express from 'express';
 import { growthPlan } from '../growth.js';
+import { pilotSteps } from '../pilot.js';
 import { resolvePeriod } from '../period.js';
 import { designToSave, posterDesign } from '../poster.js';
 import QRCode from 'qrcode';
@@ -121,6 +122,7 @@ export function adminRoutes(ctx) {
         ...data,
         arrival: demo ? null : dataArrival(store, req.business, { serpOn: Boolean(ctx.serp), aiPlus: Boolean(req.plan.aiPlus) }),
         sendError: req.query.send === 'bad',
+        pilot: req.business.pilot && !demo ? pilotSteps(store, req.business, req.user) : null,
         growth: manages && store.googleLocations(req.business.id).some((l) => l.enabled) ? growthSummary(store, req.business) : null,
         tasks: manages ? weeklyTasks(store, req.business, { serpOn: Boolean(ctx.serp) || demo, aiOn: (Boolean(ctx.ai) && req.plan.ai) || demo }) : [],
         waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,

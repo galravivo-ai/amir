@@ -19,6 +19,7 @@ import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { mapsRoutes } from './routes/maps.js';
 import { growthRoutes } from './routes/growth.js';
+import { pilotRoutes } from './routes/pilot.js';
 import { languageMiddleware } from './routes/lang.js';
 import { reportRoutes } from './routes/reports.js';
 import { createHealth } from './healthRun.js';
@@ -157,7 +158,7 @@ export function createApp(db, options = {}) {
   app.use(pushRoutes(ctx, pusher));
   // Work done for a page of the business's admin is counted against that business.
   const businessScope = (req, _res, next) => (req.business ? withBusiness(req.business.id, next) : next());
-  app.use('/admin', ctx.requireAuth, ctx.requirePaid, businessScope, branchGate, networkRoutes(ctx), adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), mapsRoutes(ctx, { health, rankings, serp }), growthRoutes(ctx, options.growth), performanceRoutes(ctx, { sync: googleSync }));
+  app.use('/admin', ctx.requireAuth, ctx.requirePaid, businessScope, branchGate, networkRoutes(ctx), adminRoutes(ctx), settingsRoutes(ctx), leaderboardRoutes(ctx), googleRoutes(ctx, { google, sync: googleSync, serp, serpSync }), visibilityRoutes(ctx, { visibility }), competitorRoutes(ctx, { serp, competitors }), reportRoutes(ctx), mapsRoutes(ctx, { health, rankings, serp }), growthRoutes(ctx, options.growth), pilotRoutes(ctx), performanceRoutes(ctx, { sync: googleSync }));
   app.use('/superadmin', ctx.requireAuth, superadminRoutes(ctx));
   app.use('/agency', ctx.requireAuth, agencyRoutes(ctx));
 

@@ -2928,3 +2928,23 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 .gr-write-btn .gr-wl + span { margin-inline-start: 4px; }
 .gr-check i, .gr-dir i { font-style: normal; }
 .gr-hero h3, .gr-hero b { color: #fff; }
+
+/* Pilot checklist */
+.pl-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.pl-head > div, .pl-score { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
+.pl-count, .pl-score b { font-size: 1.6rem; color: var(--purple); }
+.pl-count small, .pl-score small { font-size: .9rem; color: var(--muted); }
+.pl-bar { flex: 1; min-width: 140px; background: var(--purple-soft); height: 10px; }
+.pl-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pl-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.pl-step.done { background: #f6fbf7; border-color: #cfe9d6; }
+.pl-step.done .gr-state { background: var(--good); border-color: var(--good); }
+.pl-body { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.pl-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.pl-actions form { display: inline; }
+.pl-pay { border: 0; padding: 0; margin: 0; display: flex; gap: 16px; flex-wrap: wrap; }
+.pl-pay legend { font-weight: 600; margin-bottom: 6px; padding: 0; }
+.pl-strip { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; padding: 10px 16px; border-radius: 14px; background: #fff4d6; color: #5a3d00; text-decoration: none; border: 1px solid #f3dc9c; }
+.pl-strip > span:first-of-type { flex: 1; }
+.pl-strip .gr-strip-go { color: #8a5a00; }
+@media (max-width: 760px) { .pl-step { flex-wrap: wrap; } .pl-actions { width: 100%; padding-inline-start: 36px; } }

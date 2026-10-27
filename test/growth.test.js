@@ -143,3 +143,25 @@ test('the demo shows the plan with a sample website check and an AI text', async
   const dash = await req('/admin');
   assert.match(dash.text, /gr-strip/);
 });
+
+test('the pilot checklist: only for pilot businesses, marks what it sees, and sends the answers to the operator', async () => {
+  const { req, csrf, biz } = await owner('pilot@example.com');
+  assert.equal((await req('/admin/pilot')).location, '/admin');
+  store.updateBusiness(biz.id, { pilot: 1 });
+  const page = await req('/admin/pilot');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /שבוע 1: הקמה/);
+  assert.match(page.text, /<b class="pl-count">0<small>\/10/);
+  assert.match((await req('/admin')).text, /pl-strip/);
+
+  await req('/admin/growth/services', { form: { _csrf: csrf, services: 'תספורות' } });
+  await req('/admin/pilot/mark', { form: { _csrf: csrf, on: '1' } });
+  assert.match((await req('/admin/pilot')).text, /<b class="pl-count">2<small>\/10/);
+
+  const sent = await req('/admin/pilot/feedback', { form: { _csrf: csrf, helped: 'התשובות לביקורות', confusing: '', pay: 'maybe', more: '' } });
+  assert.equal(sent.location, '/admin/pilot?sent=1#feedback');
+  const lead = store.db.prepare("SELECT * FROM leads WHERE kind = 'pilot' ORDER BY id DESC").get();
+  assert.match(lead.message, /מה הכי עזר: התשובות לביקורות/);
+  assert.match(lead.message, /משלמים ₪99 בחודש: אולי/);
+  assert.match(lead.message, /צעדים שבוצעו: 2\/10/);
+});

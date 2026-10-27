@@ -493,7 +493,7 @@ const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
-  const { quotaWarning = '', tasks = [], csrf = '', arrival = null, growth = null } = args;
+  const { quotaWarning = '', tasks = [], csrf = '', arrival = null, growth = null, pilot = null } = args;
   const P = dashboardParts(args);
   const { stat, locked } = P;
   const mapsStat = P.lastStat;
@@ -517,6 +517,11 @@ export function dashboardView(args) {
         : ''
     }
     ${headline}
+    ${
+      pilot
+        ? `<a class="pl-strip" href="/admin/pilot">${icon('handshake', 20)}<span><b>הפיילוט שלכם</b> <span>${pilot.done}/${pilot.total}</span> <span>צעדים</span></span><span class="gr-strip-go">להמשך ←</span></a>`
+        : ''
+    }
     ${
       growth
         ? `<a class="gr-strip" href="/admin/growth${growth.next ? `#a-${h(growth.next.key)}` : ''}">
