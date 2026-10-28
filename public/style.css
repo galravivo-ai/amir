@@ -2969,8 +2969,8 @@ details.fold.warn > summary > .icon { color: #dc2626; }
 .todo-list a:hover { border-color: #cfc5ff; background: #fbfaff; }
 .todo-list li.urgent a { border-color: #f6c9c4; background: #fff8f7; }
 .todo-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.todo-go { flex: none; color: var(--muted); transform: rotate(90deg); display: inline-flex; }
-[dir="rtl"] .todo-go { transform: rotate(90deg); }
+.todo-go { flex: none; color: var(--muted); transform: rotate(-90deg); display: inline-flex; }
+html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .gr-chip.urgent { background: #fde7e4; color: var(--bad); }
 .todo-all { justify-self: start; font-weight: 600; }
 .gr-urgent { border-color: #f6c9c4; }
