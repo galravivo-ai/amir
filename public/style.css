@@ -3028,3 +3028,4 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .g-tones { display: flex; flex-wrap: wrap; gap: 6px 16px; border: 0; padding: 0; margin: 0; }
 .g-tones legend { font-weight: 700; margin-bottom: 6px; }
 .auth-inapp { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #fff6e0; color: #6b4a00; font-size: .92rem; line-height: 1.55; }
+.install-why { margin: 0 0 8px; }

@@ -2523,7 +2523,7 @@
 "הלקוח דירג בלי לכתוב טקסט.": "The customer rated without writing text.",
 "התקנה כאפליקציה באייפון": "Install as an app on iPhone",
 "פותחים את האתר ב-<b>Safari</b>.": "Open the site in <b>Safari</b>.",
-"לוחצים על כפתור השיתוף": "Tap the Share button",
+"לוחצים על כפתור השיתוף": "Tap the share button",
 "בתחתית המסך.": "at the bottom of the screen.",
 "בוחרים <b>\"הוספה למסך הבית\"</b> ולוחצים \"הוסף\".": "Choose <b>&quot;Add to Home Screen&quot;</b> and tap &quot;Add&quot;.",
 "האייקון של GoFive יופיע במסך הבית, והמערכת תיפתח במסך מלא כמו אפליקציה. משם אפשר גם להפעיל התראות על ביקורות חדשות.": "The GoFive icon appears on your home screen, and the system opens full screen like an app. From there you can also turn on alerts for new reviews.",
@@ -2959,5 +2959,12 @@
 "הפרטים חלים על החשבונית הבאה. חשבונית שכבר הופקה לא משתנה.": "The details apply to the next invoice. An invoice already issued doesn't change.",
 "חשבונית": "Invoice",
 "בדף של iCount ממלאים את הפרטים לחשבונית:": "On the iCount page, fill in the invoice details:",
-"עריכת הפרטים": "Edit the details"
+"עריכת הפרטים": "Edit the details",
+"באייפון אפל לא מאפשרת להתקין בלחיצה אחת, אבל זה לוקח 10 שניות:": "On iPhone, Apple doesn't allow one-tap install, but it takes 10 seconds:",
+"בתחתית המסך (אם לא רואים אותו, הוא בתוך": "at the bottom of the screen (if you don't see it, it's inside",
+"למעלה, ליד הכתובת": "at the top, next to the address",
+"הדף נפתח בתוך אפליקציה. פותחים אותו בדפדפן: בתפריט (": "The page opened inside an app. Open it in the browser: in the menu (",
+") בוחרים": ") choose",
+"פתיחה בדפדפן": "Open in browser",
+"שם לוחצים שוב על \"התקנה כאפליקציה\"": "There, tap &quot;Install as an app&quot; again"
 }

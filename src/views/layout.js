@@ -36,10 +36,18 @@ if(matchMedia('(display-mode: standalone)').matches||navigator.standalone)docume
 // Safari's share menu, so there the button shows how. Hidden once installed.
 const install = (brand) => `<dialog id="install-dlg" class="help-dlg install-dlg" aria-labelledby="install-title">
   <h2 id="install-title">התקנה כאפליקציה באייפון</h2>
-  <ol class="install-steps">
-    <li>פותחים את האתר בדפדפן <b>Safari</b></li>
-    <li>לוחצים על כפתור השיתוף <span class="ios-share" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8"/></svg></span> בתחתית המסך.</li>
+  <p class="install-why">באייפון אפל לא מאפשרת להתקין בלחיצה אחת, אבל זה לוקח 10 שניות:</p>
+  <ol class="install-steps" data-for="safari">
+    <li>לוחצים על כפתור השיתוף <span class="ios-share" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8"/></svg></span> בתחתית המסך (אם לא רואים אותו, הוא בתוך <b>⋯</b>)</li>
     <li>בוחרים <b>הוספה למסך הבית</b> ולוחצים <b>הוסף</b></li>
+  </ol>
+  <ol class="install-steps" data-for="chrome" hidden>
+    <li>לוחצים על כפתור השיתוף <span class="ios-share" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8"/></svg></span> למעלה, ליד הכתובת</li>
+    <li>בוחרים <b>הוספה למסך הבית</b> ולוחצים <b>הוסף</b></li>
+  </ol>
+  <ol class="install-steps" data-for="app" hidden>
+    <li>הדף נפתח בתוך אפליקציה. פותחים אותו בדפדפן: בתפריט (<b>⋯</b>) בוחרים <b>פתיחה בדפדפן</b></li>
+    <li>שם לוחצים שוב על "התקנה כאפליקציה"</li>
   </ol>
   <p class="muted small">האייקון של ${h(brand)} יופיע במסך הבית, והמערכת תיפתח במסך מלא כמו אפליקציה. משם אפשר גם להפעיל התראות על ביקורות חדשות.</p>
   <div class="row compact"><button type="button" class="btn primary" onclick="this.closest('dialog').close()">הבנתי</button></div>
@@ -54,7 +62,7 @@ function hide(){document.querySelectorAll('[data-install],#install-bar').forEach
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;show()});
 window.addEventListener('appinstalled',hide);
 document.addEventListener('click',function(e){var t=e.target.closest('[data-install]');
-if(t){if(ev){ev.prompt();ev.userChoice.then(function(c){if(c.outcome==='accepted')hide();ev=null})}else document.getElementById('install-dlg').showModal();return}
+if(t){if(ev){ev.prompt();ev.userChoice.then(function(c){if(c.outcome==='accepted')hide();ev=null})}else{var dl=document.getElementById('install-dlg'),ua=navigator.userAgent,k=/CriOS|FxiOS|EdgiOS/.test(ua)?'chrome':ua.indexOf('Safari/')>-1||!ios?'safari':'app';dl.querySelectorAll('[data-for]').forEach(function(o){o.hidden=o.dataset.for!==k});dl.showModal()}return}
 if(e.target.closest('[data-install-off]')){hide();try{localStorage.setItem('gf-install-off','1')}catch(e){}}});
 if(ios)document.addEventListener('DOMContentLoaded',show)})();</script>`;
 
