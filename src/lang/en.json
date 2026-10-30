@@ -2895,5 +2895,11 @@
 "לחבר שוב את גוגל": "Reconnect Google",
 "החיבור נותק: ביקורות חדשות ונתונים לא מגיעים, ואי אפשר לענות מכאן. הנתונים הקודמים נשמרו.": "The connection was cut: new reviews and data don't arrive, and you can't reply from here. Earlier data is kept.",
 "החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב.": "The Google connection was cut. The branches' reviews and data are kept, but they don't update and you can't reply from here until you reconnect.",
-"את התשובות שולח מנהל העסק.": "The business manager sends the answers."
+"את התשובות שולח מנהל העסק.": "The business manager sends the answers.",
+"החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב. עד אז הסניפים האלה לא נספרים בחיוב.": "Google was disconnected. The branches' reviews and data are kept, but they don't update and you can't reply from here until you connect again. Until then these branches aren't billed.",
+"הסניף הזה לא נמצא": "This branch wasn't found",
+"הסניפים האלה לא נמצאו": "branches weren't found",
+"בחשבון שחיברתם. הנתונים שלהם נשמרו, אבל לא מתעדכנים ולא נספרים בחיוב. אם הם שייכים לחשבון גוגל אחר, מתחברים איתו. אם לא צריך אותם, אפשר להסיר.": "in the account you connected. Their data is kept, but it doesn't update and isn't billed. If they belong to another Google account, connect with it. If you don't need them, you can remove them.",
+"לנתק את החיבור לגוגל? הביקורות והנתונים שנשמרו יישארו, אבל לא יתעדכנו עד שתתחברו שוב. בגוגל לא ישתנה כלום.": "Disconnect Google? The saved reviews and data stay, but won't update until you connect again. Nothing changes on Google.",
+"כדי להמשיך אחרי התאריך, בוחרים מסלול ומשלמים מחדש.": "To continue after that date, choose a plan and pay again."
 }

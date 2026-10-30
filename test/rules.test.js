@@ -7,6 +7,7 @@ let server;
 let base;
 let created;
 let store;
+let admin;
 
 before(async () => {
   process.env.ICOUNT_URL_PRO_MONTHLY = 'https://example.com/pro';
@@ -16,7 +17,7 @@ before(async () => {
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}`;
   // the first user is the system admin, whose own accounts are always open
-  await owner('admin@example.com');
+  admin = await owner('admin@example.com');
 });
 
 after(() => {
@@ -64,7 +65,7 @@ test('a plan paid on iCount and cancelled stays open until the paid period ends,
   assert.ok(Math.abs(until - (Date.now() + 20 * 864e5)) < 2 * 864e5, 'a month after the payment that opened the plan');
   assert.match((await req('/admin/plan')).text, /פעיל עד/);
   const mail = store.db.prepare("SELECT body FROM outbox WHERE kind = 'subscription_cancelled' ORDER BY id DESC").get();
-  assert.match(mail?.body ?? '', /לבטל את הוראת הקבע ב-iCount/);
+  assert.match(mail?.body ?? '', /לבטל ידנית את הוראת הקבע ב-iCount/);
 
   // nothing happens before the end; after it, the account closes
   assert.equal(await created.jobs.cancelledEnds(), 0);
@@ -81,9 +82,41 @@ test('changing one\'s mind before the end undoes an iCount cancellation', async 
   await req('/admin/billing/auto-renew', { form: { _csrf: csrf, on: '1' } });
   const b = store.businessById(biz.id);
   assert.equal(b.canceled_at, null);
-  assert.equal(b.paid_until, null);
   store.updateBusiness(biz.id, { paid_until: sql(Date.now() - 1000) });
   assert.equal(await created.jobs.cancelledEnds(), 0);
+});
+
+test('the admin is reminded to stop the standing order in iCount, and marks it', async () => {
+  const { req, csrf, biz } = await owner('stop@example.com');
+  store.updateBusiness(biz.id, { billing: 'active', plan: 'pro' });
+  await req('/admin/plan/cancel', { form: { _csrf: csrf } });
+  const stops = (await admin.req('/superadmin')).text.split('id="icount-stops"')[1]?.split('</section>')[0] ?? '';
+  assert.match(stops, /stop@example\.com/);
+
+  // three days before the end, one reminder
+  store.updateBusiness(biz.id, { paid_until: sql(Date.now() + 2 * 864e5) });
+  await created.jobs.cancelledEnds();
+  await created.jobs.cancelledEnds();
+  assert.equal(store.db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE kind = 'icount_stop_reminder' AND business_id = ?").get(biz.id).n, 1);
+
+  // marked: off the list, and undoing the cancellation now needs a new payment
+  await admin.req(`/superadmin/businesses/${biz.id}/icount-stopped`, { form: { _csrf: admin.csrf } });
+  assert.ok(store.businessById(biz.id).icount_stopped_at);
+  assert.doesNotMatch((await admin.req('/superadmin')).text.split('id="icount-stops"')[1]?.split('</section>')[0] ?? '', /stop@example\.com/);
+  const plan = (await req('/admin/plan')).text;
+  assert.match(plan, /בוחרים מסלול ומשלמים מחדש/);
+  await req('/admin/billing/auto-renew', { form: { _csrf: csrf, on: '1' } });
+  assert.ok(store.businessById(biz.id).canceled_at, 'still cancelled');
+});
+
+test('"paid until" set by the admin is where a cancellation ends (a year paid at once)', async () => {
+  const { req, csrf, biz } = await owner('annual@example.com');
+  const until = new Date(Date.now() + 200 * 864e5).toISOString().slice(0, 10);
+  await admin.req(`/superadmin/businesses/${biz.id}/plan`, { form: { _csrf: admin.csrf, plan: 'pro', cycle: 'annual', until, do: 'activate' } });
+  assert.equal(store.businessById(biz.id).billing, 'active');
+  assert.match((await admin.req('/superadmin')).text, new RegExp(`שולם עד ${until.split('-').reverse().join('\\.')}`));
+  await req('/admin/plan/cancel', { form: { _csrf: csrf } });
+  assert.equal(store.businessById(biz.id).paid_until.slice(0, 10), until);
 });
 
 test('one trial per owner: a second business starts by choosing a plan', async () => {

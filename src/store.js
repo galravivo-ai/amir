@@ -159,6 +159,12 @@ export function createStore(db) {
         );
       }
     },
+    /** Google branches the connected account doesn't list (it's a different account): kept, not followed or billed. */
+    markMissingLocations: (businessId, names) => {
+      const list = JSON.stringify(names);
+      q(`UPDATE google_locations SET missing = CASE WHEN name IN (SELECT value FROM json_each(?)) THEN 0 ELSE 1 END
+         WHERE business_id = ? AND source = 'gbp'`).run(list, businessId);
+    },
     googleLocations: (businessId) =>
       q(`SELECT l.*, c.name AS campaign_name,
            (SELECT COUNT(*) FROM google_reviews r WHERE r.location_id = l.id AND r.reply = '') AS unanswered
@@ -452,7 +458,7 @@ export function createStore(db) {
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at', 'pilot',
-        'site_check', 'site_checked_at', 'growth_services',
+        'site_check', 'site_checked_at', 'growth_services', 'icount_stopped_at', 'icount_reminded_at',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;

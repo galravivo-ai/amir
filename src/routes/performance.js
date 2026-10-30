@@ -64,7 +64,7 @@ const ilDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusal
 export function googleOverview(ctx, req, period, { refreshing = false } = {}) {
   const { store } = ctx;
   const b = req.business;
-  const locations = store.googleLocations(b.id).filter((l) => l.source === 'gbp' && l.enabled);
+  const locations = store.googleLocations(b.id).filter((l) => l.source === 'gbp' && l.enabled && !l.missing);
   const last = store.profileMetricsLastDate(b.id);
   const from = ilDay(period.from);
   const wanted = ilDay(period.to ? period.to - 1 : Date.now());

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { openDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { createGoogle } from '../src/google.js';
+import { profilesOf } from '../src/plans.js';
 
 // A stand-in for Google's OAuth and Business Profile APIs.
 const fakeGoogle = {
@@ -257,6 +258,24 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   assert.ok(store.googleConnection(biz.id));
   assert.equal(store.googleReviews(biz.id).length, kept);
   assert.equal(store.googleLocations(biz.id).filter((l) => l.source === 'gbp').length, 1, 'the same branch, not a copy');
+
+  // A branch the connected account doesn't have (it came from another Google account):
+  // kept and shown apart, not followed, not billed, and removable.
+  store.db.prepare("INSERT INTO google_locations (business_id, name, title, address, enabled) VALUES (?, 'accounts/2/locations/77', 'סניף מחשבון אחר', '', 1)").run(biz.id);
+  assert.equal(profilesOf(store, biz.id), 2);
+  await googleSync.refreshLocations(biz.id);
+  const stray = store.googleLocations(biz.id).find((l) => l.name === 'accounts/2/locations/77');
+  assert.equal(stray.missing, 1);
+  assert.equal(store.googleLocations(biz.id).find((l) => l.name === 'accounts/1/locations/9').missing, 0);
+  assert.equal(profilesOf(store, biz.id), 1);
+  assert.match((await req('/admin/google')).text, /הסניף הזה לא נמצא בחשבון שחיברתם/);
+  await req(`/admin/google/locations/${stray.id}/delete`, { method: 'POST', form: { _csrf: token } });
+  assert.equal(store.googleLocations(biz.id).length, 1);
+  // a disconnected account's Google branches aren't billed either
+  store.db.prepare("INSERT INTO google_locations (business_id, name, title, address, enabled) VALUES (?, 'accounts/1/locations/10', 'סניף שני', '', 1)").run(biz.id);
+  assert.equal(profilesOf(store, biz.id), 2);
+  store.deleteGoogleConnection(biz.id);
+  assert.equal(profilesOf(store, biz.id), 1);
 });
 
 test('without Google credentials the page explains the setup to the system admin', async () => {

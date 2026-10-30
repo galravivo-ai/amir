@@ -279,16 +279,16 @@ export function settingsRoutes(ctx) {
 
   // Cancelling: what happens, an optional reason, then a confirm button.
   router.get('/plan/cancel', owner, (req, res) => {
-    const quote = ctx.billing ? ctx.billing.cancelQuote(req.business) : { refund: 0, until: req.business.paid_until };
+    const quote = ctx.billing ? ctx.billing.cancelQuote(req.business) : { refund: 0, until: req.business.billing === 'active' ? paidPeriodEnd(req.business) : req.business.paid_until };
     render(req, res, 'ביטול המנוי', V.cancelView({ business: req.business, plan: req.plan, access: req.access, csrf: req.user.csrf, quote }));
   });
 
   router.post('/plan/cancel', owner, async (req, res) => {
     const reason = [V.CANCEL_REASONS[req.body.reason], String(req.body.details ?? '').trim()].filter(Boolean).join(' · ').slice(0, 500);
     const b = req.business;
-    const q = ctx.billing ? ctx.billing.cancel(b, reason) : { refund: 0, until: b.billing === 'active' ? b.paid_until || paidPeriodEnd(b) : b.paid_until };
+    const q = ctx.billing ? ctx.billing.cancel(b, reason) : { refund: 0, until: b.billing === 'active' ? paidPeriodEnd(b) : b.paid_until };
     if (!ctx.billing) {
-      store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' '), paid_until: q.until || null });
+      store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' '), paid_until: q.until || null, icount_stopped_at: null, icount_reminded_at: null });
     }
     await ctx.notifier
       ?.subscriptionCancelled({ business: b, user: req.user, reason, until: q.until ? q.until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, refund: q.refund, admins: ctx.adminEmails(), icount: !ctx.billing && b.billing === 'active' })
@@ -297,17 +297,18 @@ export function settingsRoutes(ctx) {
   });
 
   /**
-   * Paid by an iCount page: the period runs from the last payment that opened
-   * the plan, a month or a year at a time; without one, a month from now.
-   * The account stays open until then, and closes on its own after (jobs).
+   * Paid by an iCount page: the period runs from the date the admin entered
+   * ("paid until"), or from the last payment that opened the plan, a month or a
+   * year at a time; without either, a month from now. The account stays open
+   * until then, and closes on its own after (jobs).
    */
   function paidPeriodEnd(b) {
     const cycle = b.billing_cycle === 'annual' ? 'annual' : 'monthly';
+    const toMs = (s) => Date.parse(`${String(s).replace(' ', 'T')}Z`);
+    if (b.paid_until && toMs(b.paid_until) > Date.now()) return b.paid_until;
     const last = store.db.prepare("SELECT created_at FROM icount_payments WHERE business_id = ? AND result LIKE 'activated%' ORDER BY id DESC LIMIT 1").get(b.id);
-    let t = last ? Date.parse(`${String(last.created_at).replace(' ', 'T')}Z`) : Date.now();
-    const step = last ? cycle : 'monthly';
-    do t = addPeriod(t, step);
-    while (t <= Date.now());
+    let t = b.paid_until ? toMs(b.paid_until) : last ? addPeriod(toMs(last.created_at), cycle) : addPeriod(Date.now(), 'monthly');
+    while (t <= Date.now()) t = addPeriod(t, cycle);
     return new Date(t).toISOString().slice(0, 19).replace('T', ' ');
   }
 
@@ -319,8 +320,11 @@ export function settingsRoutes(ctx) {
 
   router.post('/billing/auto-renew', owner, (req, res) => {
     if (ctx.billing) ctx.billing.setAutoRenew(req.business, req.body.on === '1');
-    // Paid on iCount: changing one's mind before the end of the period undoes the cancellation.
-    else if (req.body.on === '1' && req.business.billing === 'active') store.updateBusiness(req.business.id, { auto_renew: true, canceled_at: null, cancel_reason: null, paid_until: null });
+    // Paid on iCount: changing one's mind before the end of the period undoes the cancellation,
+    // unless the standing order was already stopped in iCount (then a new payment opens it).
+    else if (req.body.on === '1' && req.business.billing === 'active' && !req.business.icount_stopped_at) {
+      store.updateBusiness(req.business.id, { auto_renew: true, canceled_at: null, cancel_reason: null, icount_reminded_at: null });
+    }
     res.redirect(303, '/admin/plan?renew=' + (req.body.on === '1' ? 'on' : 'off'));
   });
 

@@ -720,6 +720,13 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN site_checked_at TEXT;
   ALTER TABLE businesses ADD COLUMN growth_services TEXT NOT NULL DEFAULT '';
   `,
+  // v42: an iCount cancellation the admin still has to stop in iCount (and its reminder);
+  // a Google branch that the reconnected account doesn't have
+  `
+  ALTER TABLE businesses ADD COLUMN icount_stopped_at TEXT;
+  ALTER TABLE businesses ADD COLUMN icount_reminded_at TEXT;
+  ALTER TABLE google_locations ADD COLUMN missing INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function migrate(db) {

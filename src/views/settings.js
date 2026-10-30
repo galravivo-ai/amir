@@ -456,8 +456,8 @@ export function planView({
     }
     head = `<div class="sub-head ${canceled ? 'canceled' : 'active'}">
         <div><b>${canceled ? 'המנוי בוטל' : 'המנוי פעיל'}</b>
-          <span>${canceled ? `המסלול נשאר פעיל עד ${h(until)}, ולא תחויבו יותר. אפשר לחדש בכל רגע.` : paying ? `מתחדש אוטומטית ב-${h(until)}.` : 'החשבון פעיל.'}</span></div>
-        ${canceled && owner ? `<form method="post" action="/admin/billing/auto-renew">${csrfField(csrf)}<button class="btn primary" name="on" value="1">חידוש המנוי</button></form>` : ''}
+          <span>${canceled ? `המסלול נשאר פעיל עד ${h(until)}, ולא תחויבו יותר. ${business.icount_stopped_at ? 'כדי להמשיך אחרי התאריך, בוחרים מסלול ומשלמים מחדש.' : 'אפשר לחדש בכל רגע.'}` : paying ? `מתחדש אוטומטית ב-${h(until)}.` : 'החשבון פעיל.'}</span></div>
+        ${canceled && owner && !business.icount_stopped_at ? `<form method="post" action="/admin/billing/auto-renew">${csrfField(csrf)}<button class="btn primary" name="on" value="1">חידוש המנוי</button></form>` : ''}
       </div>
       ${factsHtml}
       ${
@@ -800,6 +800,23 @@ function icountBlock({ payments = [], ipnUrl = '' } = {}) {
   </section>`;
 }
 
+// Cancelled on GoFive, paid by a standing order: the admin stops it in iCount by hand.
+function icountStopsBlock(businesses, csrf) {
+  const todo = businesses.filter((b) => b.billing === 'active' && b.canceled_at && !b.card_token && !b.icount_stopped_at && !b.is_demo);
+  if (!todo.length) return '';
+  return `<section class="card stack attention" id="icount-stops">
+    <h3>לבטל הוראת קבע ב-iCount (${todo.length})</h3>
+    <p class="muted small">העסקים האלה ביטלו את המנוי. GoFive לא יכולה לעצור את החיוב ב-iCount: מבטלים שם את הוראת הקבע ומסמנים כאן. בלי סימון תגיע תזכורת במייל 3 ימים לפני הסוף.</p>
+    <table class="table responsive"><thead><tr><th>עסק</th><th>בעלים</th><th>פעיל עד</th><th>סיבה</th><th></th></tr></thead><tbody>${todo
+      .map(
+        (b) => `<tr><td data-l="עסק"><b>${h(b.name)}</b></td><td data-l="בעלים" dir="ltr">${h(b.owner_email || '')}</td>
+          <td data-l="פעיל עד">${h(b.paid_until ? b.paid_until.slice(0, 10).split('-').reverse().join('.') : '—')}</td><td data-l="סיבה" class="small">${h(b.cancel_reason || '—')}</td>
+          <td><form method="post" action="/superadmin/businesses/${b.id}/icount-stopped" class="inline">${csrfField(csrf)}<button class="btn">בוטל ב-iCount ✓</button></form></td></tr>`,
+      )
+      .join('')}</tbody></table>
+  </section>`;
+}
+
 function stuckBlock(businesses) {
   const fresh = businesses.filter((b) => !b.has_google && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5 && Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) > 864e5);
   const recent = businesses.filter((b) => Date.now() - Date.parse(`${b.created_at.replace(' ', 'T')}Z`) < 14 * 864e5);
@@ -832,6 +849,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     return `<div class="billing-cell">
       ${statusBadge(b)} <b>${h(PLANS[b.plan]?.label || b.plan)}</b>
       ${b.card_token && b.paid_until ? `<div class="small muted">כרטיס ··${h(b.card_last4 || '')} · עד ${h(b.paid_until.slice(0, 10))}${b.auto_renew ? '' : ' · בלי חידוש'}${b.pay_failures ? ` · <b class="danger-text">${b.pay_failures} חיובים נכשלו</b>` : ''}</div>` : ''}
+      ${!b.card_token && b.paid_until ? `<div class="small muted">שולם עד ${h(b.paid_until.slice(0, 10).split('-').reverse().join('.'))}${b.canceled_at ? ` · <b>בוטל</b>${b.icount_stopped_at ? ' · הוראת הקבע בוטלה' : ''}` : ''}</div>` : ''}
       ${wanted ? `<div class="small"><b class="req-flag">ביקש: ${h(PLANS[wanted.plan].label)} ${h(CYCLES[wanted.cycle] || '')}</b></div>` : ''}
       <form method="post" action="/superadmin/businesses/${b.id}/plan" class="row compact">
         ${csrfField(csrf)}
@@ -841,6 +859,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
         <select name="cycle" aria-label="תדירות">${Object.entries(CYCLES)
           .map(([k, l]) => `<option value="${k}" ${(wanted?.cycle || b.billing_cycle) === k ? 'selected' : ''}>${h(l)}</option>`)
           .join('')}</select>
+        ${b.card_token ? '' : `<label class="small">שולם עד <span class="muted">(לא חובה)</span><input type="date" name="until" value="${h(b.paid_until ? b.paid_until.slice(0, 10) : '')}"></label>`}
         <button class="btn" name="do" value="activate">הפעלה</button>
         <button class="btn-link" name="do" value="extend">+7 ימי ניסיון</button>
         <button class="btn-link" formaction="/superadmin/businesses/${b.id}/reset-usage" title="מאפס את מגבלות הפעולות הידניות לחודש הזה">איפוס מגבלות</button>
@@ -895,6 +914,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
           .join(', ')}. אחרי שהתשלום הוסדר, לוחצים "הפעלה" בשורה של העסק.</div>`
       : ''
   }
+  ${icountStopsBlock(businesses, csrf)}
   ${branchesBlock(branches, csrf)}
   ${icountBlock(icount)}
   ${stuckBlock(businesses)}

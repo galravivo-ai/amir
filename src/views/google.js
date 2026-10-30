@@ -224,11 +224,14 @@ export function googleConnectView({
     </section>
     ${
       gbpLocations.length
-        ? `<section class="card stack"><div class="warn">החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב.</div>
+        ? `<section class="card stack"><div class="warn">החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב. עד אז הסניפים האלה לא נספרים בחיוב.</div>
             ${locationsTable(gbpLocations, { campaigns, csrf, can, deletable: true, branchCost })}</section>`
         : ''
     }`;
   } else if (gbpAvailable && conn) {
+    // Branches the reconnected account doesn't have (a different Google account).
+    const found = gbpLocations.filter((l) => !l.missing);
+    const missing = gbpLocations.filter((l) => l.missing);
     gbpPart = `${conn.last_error ? `<div class="warn">הסנכרון האחרון מול החשבון נכשל: ${h(conn.last_error)}</div>` : ''}
     <section class="card stack">
       <div class="g-conn-status"><span class="g-conn-dot" aria-hidden="true"></span>
@@ -238,13 +241,19 @@ export function googleConnectView({
       <h3>הסניפים</h3>
       <p class="muted small">מסמנים אילו סניפים לעקוב אחריהם, ומשייכים כל אחד לקמפיין. אם לקמפיין עוד אין קישור לביקורת, הקישור מגוגל נכנס אליו לבד.</p>
       ${
-        gbpLocations.length
-          ? locationsTable(gbpLocations, { campaigns, csrf, can, deletable: false, branchCost })
+        found.length
+          ? locationsTable(found, { campaigns, csrf, can, deletable: false, branchCost })
           : '<p class="muted">לא נמצאו סניפים בחשבון הזה. ודאו שהתחברתם עם החשבון שמנהל את פרופיל העסק בגוגל.</p>'
       }
       ${
+        missing.length
+          ? `<div class="warn">${missing.length === 1 ? 'הסניף הזה לא נמצא' : `${missing.length} הסניפים האלה לא נמצאו`} בחשבון שחיברתם. הנתונים שלהם נשמרו, אבל לא מתעדכנים ולא נספרים בחיוב. אם הם שייכים לחשבון גוגל אחר, מתחברים איתו. אם לא צריך אותם, אפשר להסיר.</div>
+            ${locationsTable(missing, { campaigns, csrf, can, deletable: true, branchCost })}`
+          : ''
+      }
+      ${
         can('owner')
-          ? `<form method="post" action="/admin/google/disconnect" onsubmit="return confirm('לנתק את החיבור לגוגל? הביקורות שנשמרו מהחשבון יימחקו מכאן, בגוגל לא ישתנה כלום.')">
+          ? `<form method="post" action="/admin/google/disconnect" onsubmit="return confirm('לנתק את החיבור לגוגל? הביקורות והנתונים שנשמרו יישארו, אבל לא יתעדכנו עד שתתחברו שוב. בגוגל לא ישתנה כלום.')">
               <input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn-link danger-text">ניתוק החשבון</button></form>`
           : ''
       }

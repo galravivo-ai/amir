@@ -380,9 +380,27 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `<p><b>${h(business.name)}</b> ביטל את המנוי. הוא נשאר פעיל עד <b>${h(until || '—')}</b>, ולא יחויב יותר.</p>
             <p>מבטל: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
             ${reason ? `<p>הסיבה: ${h(reason)}</p>` : ''}
-            ${icount ? '<p><b>שולם בדף iCount: יש לבטל את הוראת הקבע ב-iCount.</b> החשבון ייסגר לבד בתאריך הזה.</p>' : ''}
+            ${icount ? '<p><b>שולם בדף iCount: יש לבטל ידנית את הוראת הקבע ב-iCount</b>, ואז ללחוץ "בוטל ב-iCount" בניהול המערכת. החשבון ייסגר לבד בתאריך הזה. אם לא תסמנו, תגיע תזכורת 3 ימים לפני.</p>' : ''}
             ${annual && refund ? `<p><b>מסלול שנתי: יש להחזיר ₪${refund.toLocaleString('he-IL')}</b> בקארדקום, בתוך 14 יום. החודשים שנוצלו חושבו לפי המחיר החודשי הרגיל, והגישה מסתיימת בסוף החודש הנוכחי.</p>` : ''}
             ${emailButton(url('/superadmin#businesses'), 'לניהול המערכת')}`,
+        }),
+      });
+    },
+
+    /** A cancelled iCount plan ends in 3 days, and its standing order wasn't marked as stopped. */
+    async icountStopReminder({ business, admins }) {
+      const until = String(business.paid_until || '').slice(0, 10).split('-').reverse().join('.');
+      return send({
+        kind: 'icount_stop_reminder',
+        businessId: business.id,
+        to: admins,
+        subject: `תזכורת: לבטל הוראת קבע ב-iCount · ${business.name}`,
+        html: emailLayout({
+          title: 'לבטל הוראת קבע ב-iCount',
+          brand: true,
+          body: `<p><b>${h(business.name)}</b> ביטל את המנוי, והוא נסגר ב-<b>${h(until)}</b>. עוד לא סימנתם שהוראת הקבע בוטלה ב-iCount: אם היא עדיין פעילה, הוא יחויב שוב.</p>
+            <p>מבטלים ב-iCount, ואז לוחצים "בוטל ב-iCount" בניהול המערכת.</p>
+            ${emailButton(url('/superadmin#icount-stops'), 'לניהול המערכת')}`,
         }),
       });
     },

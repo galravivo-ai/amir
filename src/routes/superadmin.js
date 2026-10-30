@@ -137,10 +137,22 @@ export function superadminRoutes(ctx) {
     } else if (req.body.do === 'pause') {
       store.updateBusiness(business.id, { billing: 'paused' });
     } else {
-      // Opening a plan by hand also undoes a cancellation of a page-paid account (its end date).
-      store.updateBusiness(business.id, { plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null, ...(business.card_token ? {} : { auto_renew: true, canceled_at: null, paid_until: null }) });
+      // Opening a plan by hand also undoes a cancellation of a page-paid account. "Paid until"
+      // (optional) is where its period ends, for a cancellation later (e.g. a year paid at once).
+      const until = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body.until ?? '')) ? `${req.body.until} 23:59:59` : null;
+      store.updateBusiness(business.id, {
+        plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null,
+        ...(business.card_token ? {} : { auto_renew: true, canceled_at: null, cancel_reason: null, paid_until: until, icount_stopped_at: null, icount_reminded_at: null }),
+      });
     }
     res.redirect(303, '/superadmin?ok=1#businesses');
+  });
+
+  // The admin stopped the standing order of a cancelled account in iCount.
+  router.post('/businesses/:id/icount-stopped', (req, res) => {
+    const business = store.businessById(Number(req.params.id));
+    if (business?.canceled_at) store.updateBusiness(business.id, { icount_stopped_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    res.redirect(303, '/superadmin?ok=1');
   });
 
   // The getting-started guide, by email to a business's owner, or to every owner at once.

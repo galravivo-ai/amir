@@ -18,6 +18,7 @@ export function createGoogleSync({ store, google, notifier }) {
     const token = await tokenFor(businessId);
     const locations = await google.listLocations(token);
     store.upsertGoogleLocations(businessId, locations);
+    store.markMissingLocations(businessId, locations.map((l) => l.name));
     return locations.length;
   }
 
@@ -26,7 +27,7 @@ export function createGoogleSync({ store, google, notifier }) {
     let added = 0;
     try {
       const token = await tokenFor(business.id);
-      for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled)) {
+      for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled && !l.missing)) {
         const firstSync = !loc.synced_at;
         const page = await google.listReviews(token, loc.name);
         store.googleLocationStats(loc.id, page.averageRating, page.totalReviewCount);
@@ -96,7 +97,7 @@ export function createGoogleSync({ store, google, notifier }) {
     const day = (d) => d.toISOString().slice(0, 10);
     const back = (n) => new Date(today.getTime() - n * 864e5);
     let ok = 0;
-    for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled)) {
+    for (const loc of store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled && !l.missing)) {
       try {
         const rows = await google.dailyMetrics(token, loc.name, { from: day(back(loc.metrics_at ? 21 : 540)), to: day(back(1)) });
         store.saveProfileMetrics(loc.id, rows);
@@ -127,7 +128,7 @@ export function createGoogleSync({ store, google, notifier }) {
     for (const conn of store.googleConnections()) {
       const business = store.businessById(conn.business_id);
       if (!business || business.billing === 'paused') continue;
-      const locs = store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled);
+      const locs = store.googleLocations(business.id).filter((l) => l.source === 'gbp' && l.enabled && !l.missing);
       const fresh = locs.length && locs.every((l) => l.metrics_at && Date.parse(`${l.metrics_at.replace(' ', 'T')}Z`) > Date.now() - 20 * 3600e3);
       if (!locs.length || fresh || (lastTry.get(business.id) || 0) > Date.now() - 4 * 3600e3) continue;
       lastTry.set(business.id, Date.now());

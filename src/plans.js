@@ -70,7 +70,15 @@ export const PLANS = {
 
 /** How many Google profiles a business pays for: its followed places, at least one. */
 export const profilesOf = (store, businessId) =>
-  Math.max(1, store.db.prepare('SELECT COUNT(*) AS n FROM google_locations WHERE business_id = ? AND enabled = 1').get(businessId).n);
+  Math.max(
+    1,
+    // A Google branch counts while it can be followed: connected, and in the connected account.
+    store.db
+      .prepare(`SELECT COUNT(*) AS n FROM google_locations l WHERE l.business_id = ? AND l.enabled = 1 AND l.missing = 0
+                AND (l.source <> 'gbp' OR EXISTS (SELECT 1 FROM google_connections c WHERE c.business_id = l.business_id)
+                     OR EXISTS (SELECT 1 FROM businesses b WHERE b.id = l.business_id AND b.is_demo = 1))`)
+      .get(businessId).n,
+  );
 
 /**
  * AI visibility beyond Google's answers: Claude, ChatGPT, Gemini and Perplexity,

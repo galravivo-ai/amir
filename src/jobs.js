@@ -215,6 +215,17 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
       await notifier.billingNotice?.({ business: b, kind: 'ended' }).catch((err) => console.error('[notify] billing ended failed:', err));
       ended++;
     }
+    // Three days before the end, the admins hear once if the standing order wasn't marked as stopped.
+    const soon = new Date(now().getTime() + 3 * 864e5).toISOString().slice(0, 19).replace('T', ' ');
+    const remind = store.db
+      .prepare(`SELECT * FROM businesses WHERE billing = 'active' AND canceled_at IS NOT NULL AND (card_token IS NULL OR card_token = '')
+                AND icount_stopped_at IS NULL AND icount_reminded_at IS NULL AND is_demo = 0 AND paid_until IS NOT NULL AND paid_until <= ?`)
+      .all(soon);
+    const admins = ctx?.adminEmails?.() || [];
+    for (const b of remind) {
+      store.updateBusiness(b.id, { icount_reminded_at: t });
+      if (admins.length) await notifier.icountStopReminder?.({ business: b, admins }).catch((err) => console.error('[notify] iCount reminder failed:', err));
+    }
     return ended;
   }
 
