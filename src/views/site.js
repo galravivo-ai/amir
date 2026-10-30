@@ -681,8 +681,10 @@ export function guideFeatureView({ signupOpen, guide: g }) {
 }
 
 function guideHelp() {
+  const email = operatorInfo().email;
   return `<footer class="guide-foot"><h2>צריכים עזרה?</h2>
-    <p>${operatorInfo().email ? `כתבו לנו ל-<a href="mailto:${h(operatorInfo().email)}">${h(operatorInfo().email)}</a>, או ` : ''}השאירו פרטים <a href="/#talk">בדף הבית</a> ונחזור אליכם.</p></footer>`;
+    <p>משאירים פרטים ונחזור אליכם, או כותבים לנו במייל.</p>
+    <div class="guide-foot-actions"><a class="btn primary" href="/#talk">השארת פרטים</a>${email ? `<a class="btn" href="mailto:${h(email)}">כתיבה במייל <span dir="ltr">${h(email)}</span></a>` : ''}<a class="btn" href="/guide">כל המדריכים</a></div></footer>`;
 }
 
 // ---------------------------------------------------------------- legal

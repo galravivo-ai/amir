@@ -47,12 +47,13 @@ const fake = {
 };
 
 let server;
+let lastDraft = null;
 let base;
 let created;
 before(async () => {
   created = createApp(openDb(':memory:'), {
     authLimit: { windowMs: 60e3, max: 1000 },
-    ai: { draftGoogleReply: async ({ reviewer }) => `תודה ${reviewer}!` },
+    ai: { draftGoogleReply: async (input) => { lastDraft = input; return `תודה ${input.reviewer}!`; } },
     backups: false,
     google: null,
     serp: createSerp({ apiKey: 'serp-key', fetchImpl: fake.fetch }),
@@ -274,9 +275,27 @@ test('reviews of a place followed by link are answered from the list: copy, then
   const req = client();
   await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
   const list = (await req('/admin/google/reviews')).text;
-  assert.match(list, /העתקה ומענה בגוגל/);
+  assert.match(list, /העתקה ופתיחה בגוגל/);
   assert.match(list, /onclick="gfCopy\(this,'https:\/\/maps\.google\.com\/r1'\)"/, 'Google opens at the review');
   assert.match(list, /<p class="" dir="auto">מקום מעולה/, 'review text keeps its own direction');
+  assert.match(list, /התשובה הועתקה, אבל עוד לא פורסמה/, 'after copying, it says the reply is not published yet');
+});
+
+test('the AI writes replies in the style the business chose', async () => {
+  const req = client();
+  await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const list = (await req('/admin/google/reviews')).text;
+  const csrf = list.match(/name="_csrf" value="([^"]+)"/)[1];
+  const saved = await req('/admin/google/reply-style', { method: 'POST', form: { _csrf: csrf, tone: 'fun', emoji: '1', sign: 'דנה והצוות', notes: 'לא מזכירים מחירים' } });
+  assert.equal(saved.location, '/admin/google/reviews?style=saved');
+  assert.match((await req(saved.location)).text, /קליל ומחויך · חתימה: דנה והצוות/);
+  const review = created.store.db.prepare('SELECT id FROM google_reviews LIMIT 1').get();
+  await req(`/admin/google/reviews/${review.id}/draft`, { method: 'POST', form: { _csrf: csrf, json: '1' } });
+  assert.deepEqual(lastDraft.style, { tone: 'fun', emoji: true, sign: 'דנה והצוות', notes: 'לא מזכירים מחירים' });
+  // an unknown tone is dropped
+  await req('/admin/google/reply-style', { method: 'POST', form: { _csrf: csrf, tone: 'evil' } });
+  await req(`/admin/google/reviews/${review.id}/draft`, { method: 'POST', form: { _csrf: csrf, json: '1' } });
+  assert.equal(lastDraft.style.tone, '');
 });
 
 test('a review that already has a reply can be answered again from the list', async () => {

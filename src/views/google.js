@@ -83,13 +83,16 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
     .join('')}</tbody></table>`;
 }
 
-function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial = false }) {
+function serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial = false, connected = false, connectedIds = new Set() }) {
   const full = places.length >= branchLimit;
   // Second to the full connection: folded away until asked for (or already in use).
-  const open = !partial || places.length || matches || query;
+  const open = (!partial && !connected) || places.length || matches || query;
+  const twice = places.filter((p) => p.place_id && connectedIds.has(p.place_id));
   return `<details class="card stack g-partial-box" id="partial" ${open ? 'open' : ''}>
-    <summary><h2>${partial ? 'אין גישה לחשבון הגוגל? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2></summary>
-    ${partial ? '<p class="g-partial">זה חיבור חלקי: ביקורות ודירוג בלבד. בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת.</p>' : ''}
+    <summary><h2>${connected ? 'מקום שלא נמצא בחשבון המחובר? מעקב לפי קישור' : partial ? 'אין גישה לחשבון הגוגל? מעקב לפי קישור' : 'מעקב אחרי הביקורות בגוגל'}</h2></summary>
+    ${connected ? '<p class="g-partial">החשבון המחובר כבר מביא לבד את כל הסניפים שלו, עם כל הנתונים. כאן מוסיפים רק מקום שלא נמצא בו, למשל סניף שמנוהל מחשבון גוגל אחר. זה מעקב חלקי: ביקורות ודירוג בלבד.</p>' : ''}
+    ${partial ? '<p class="g-partial">שתי דרכים לחבר את העסק: <b>החיבור המלא למעלה</b> (מומלץ) עובד דרך חשבון הגוגל שמנהל את העסק, ומביא הכול. <b>המעקב כאן</b> מוצא את העסק לפי שם או קישור, בלי גישה לחשבון, ולכן מביא רק ביקורות ודירוג: בלי צפיות ושיחות, בלי מה שחיפשו, ובלי תשובות ופוסטים מתוך המערכת. אין צורך בשניהם לאותו עסק.</p>' : ''}
+    ${twice.length ? `<div class="warn">${twice.map((p) => h(p.title)).join(', ')}: כבר מחובר דרך חשבון הגוגל, אז הביקורות שלו מגיעות פעמיים. אפשר להסיר אותו מהרשימה כאן.</div>` : ''}
     <p class="muted">מדביקים את הקישור לעסק בגוגל מפות, או כותבים את שם העסק והעיר. כל הביקורות נטענות, וכל ביקורת חדשה מגיעה לכאן עם התראה. הבדיקה מתבצעת לבד כל ${serpHours || 6} שעות.</p>
     ${places.length ? '<p class="muted small">אפשר להוסיף סניפים בלי הגבלה, וכל סניף נוסף ב-20% הנחה ממחיר המסלול. בחשבון בתשלום, סניף נוסף נפתח אחרי התשלום עליו.</p>' : ''}
     ${
@@ -193,7 +196,7 @@ export function googleConnectView({
 `;
 
   const serpPart = serpAvailable
-    ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial: gbpAvailable && !conn })
+    ? serpSection({ places, matches, query, csrf, can, campaigns, serpHours, branchLimit, debug, branchCost, partial: gbpAvailable && !conn, connected: Boolean(gbpAvailable && conn), connectedIds: new Set(gbpLocations.filter((l) => !l.missing && l.place_id).map((l) => l.place_id)) })
     : '';
 
   let gbpPart = '';
@@ -281,7 +284,8 @@ export function inlineReply(r, { csrf, ai = false, back = '', backq = '' }) {
   }
   return `<form class="rq-form" onsubmit="return false"><input type="hidden" name="_csrf" value="${h(csrf)}">
     ${box}
-    <div class="rq-actions"><button type="button" class="btn primary small-btn" onclick="gfCopy(this,'${h(r.googleLink)}')">${r.googleLink ? 'העתקה ומענה בגוגל ↗' : 'העתקה'}</button>${aiBtn}${more}</div>
+    <div class="rq-actions"><button type="button" class="btn primary small-btn" onclick="gfCopy(this,'${h(r.googleLink)}')">${r.googleLink ? 'העתקה ופתיחה בגוגל ↗' : 'העתקה'}</button>${aiBtn}${more}</div>
+    <p class="rq-hint small" hidden>${icon('check', 14)} <b>התשובה הועתקה, אבל עוד לא פורסמה.</b> בגוגל לוחצים "תשובה" מתחת לביקורת ומדביקים. הכפתור מופיע רק למי שמחובר לחשבון הגוגל שמנהל את העסק. אחרי הפרסום, התשובה תופיע גם כאן בבדיקה הבאה. רוצים לפרסם ישר מכאן? <a href="/admin/google">חיבור מלא לגוגל</a></p>
   </form>`;
 }
 
@@ -292,11 +296,29 @@ export function replyScripts({ ai = false, demo = false } = {}) {
     : demo
       ? "function gfDraft(b){b.form.reply.value='תודה רבה על הביקורת! שמחנו לארח אתכם, ונשמח לראות אתכם שוב בקרוב.';b.form.reply.focus()}"
       : "function gfDraft(b,id){var f=b.form,l=b.innerHTML;b.disabled=true;b.textContent='מנסח…';fetch('/admin/google/reviews/'+id+'/draft',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'json=1&_csrf='+encodeURIComponent(f._csrf.value)}).then(function(r){return r.json()}).then(function(d){if(d.draft){f.reply.value=d.draft;f.reply.focus()}else alert(d.error||'לא הצלחנו לנסח טיוטה')}).catch(function(){alert('לא הצלחנו לנסח טיוטה, נסו שוב')}).then(function(){b.disabled=false;b.innerHTML=l})}";
-  const copy = "function gfCopy(b,u){var t=b.form.reply;if(!t.value.trim()){t.focus();return}var ok=function(){b.textContent='הועתק ✓ הדביקו בגוגל'};t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(ok,ok);else{document.execCommand('copy');ok()}if(u)window.open(u,'_blank','noopener')}";
+  const copy = "function gfCopy(b,u){var t=b.form.reply;if(!t.value.trim()){t.focus();return}var ok=function(){b.textContent='הועתק ✓';var p=b.form.querySelector('.rq-hint');if(p)p.hidden=false};t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(ok,ok);else{document.execCommand('copy');ok()}if(u)window.open(u,'_blank','noopener')}";
   return `<script>${draft}${copy}</script>`;
 }
 
-export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '' }) {
+/** How the AI writes replies: tone, emoji, a sign-off and free notes (folded until opened). */
+function replyStyleForm(style, tones, csrf, saved) {
+  return `<details class="card g-style" ${saved ? 'open' : ''}><summary>${icon('spark', 16)} <b>הסגנון של טיוטות ה-AI</b> <span class="muted small">${style.tone ? h(tones[style.tone][0]) : 'ברירת מחדל: חם ומקצועי'}${style.sign ? ` · חתימה: ${h(style.sign)}` : ''}</span></summary>
+    ${saved ? '<div class="flash">נשמר. הטיוטה הבאה תיכתב בסגנון הזה.</div>' : ''}
+    <form method="post" action="/admin/google/reply-style" class="stack">
+      <input type="hidden" name="_csrf" value="${h(csrf)}">
+      <fieldset class="g-tones"><legend>טון</legend>
+        <label class="check"><input type="radio" name="tone" value="" ${style.tone ? '' : 'checked'}> <span>ברירת מחדל</span></label>
+        ${Object.entries(tones).map(([k, [label]]) => `<label class="check"><input type="radio" name="tone" value="${k}" ${style.tone === k ? 'checked' : ''}> <span>${h(label)}</span></label>`).join('')}
+      </fieldset>
+      <label class="check"><input type="checkbox" name="emoji" value="1" ${style.emoji ? 'checked' : ''}> <span>מותר אימוג'י אחד, כשמתאים</span></label>
+      <label>חתימה בסוף <span class="muted small">(לא חובה)</span><input name="sign" maxlength="60" value="${h(style.sign)}" placeholder="למשל: דנה וכל הצוות"></label>
+      <label>עוד משהו שה-AI צריך לדעת? <span class="muted small">(לא חובה)</span><textarea name="notes" rows="2" maxlength="300" placeholder="למשל: פונים בלשון רבים, מזמינים לחזור לארוחת שישי, לא מזכירים מחירים">${h(style.notes)}</textarea></label>
+      <button class="btn primary">שמירה</button>
+    </form>
+  </details>`;
+}
+
+export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '', style = null, tones = {}, styleSaved = false }) {
   const opt = (v, l, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(l)}</option>`;
   return `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1>
       <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
@@ -312,6 +334,7 @@ export function googleReviewsView({ reviews, locations, filters, summary, csrf =
       ${Object.values(filters).some(Boolean) ? '<a class="small" href="/admin/google/reviews">ניקוי הסינון</a>' : ''}
     </form></div>
   ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
+  ${ai && manages && style && !demo ? replyStyleForm(style, tones, csrf, styleSaved) : ''}
   ${replyError ? `<div class="error">${h(replyError)}</div>` : ''}
   ${Object.values(filters).some(Boolean) ? `<p class="muted small g-count">${reviews.length > 100 ? 'מוצגות 100 הביקורות הראשונות שמתאימות לסינון' : reviews.length === 1 ? 'נמצאה ביקורת אחת' : `נמצאו ${reviews.length} ביקורות`}</p>` : ''}
   ${

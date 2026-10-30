@@ -1289,3 +1289,29 @@ export function posterView({ campaign, business, qrSvg, t, staff = null, design,
     </script>
   </body></html>`;
 }
+
+/** Everyone a review request went to, across the campaigns, with where each one stands. */
+export function requestsView({ invites, status, q, labels }) {
+  const badge = { waiting: 'st-new', opened: 'st-in_progress', rated: 'st-resolved' };
+  const qs = new URLSearchParams(Object.entries({ status, q }).filter(([, v]) => v)).toString();
+  return `<div class="page-head"><h1>${icon('team', 26)} לקוחות שקיבלו בקשה</h1></div>
+    <p class="page-intro">כל מי ששלחתם לו בקשה לדרג, מכל הקמפיינים: האם פתח את הקישור והאם דירג. שולחים בקשה חדשה מעמוד הקמפיין.</p>
+    <form method="get" class="filters">
+      <select name="status" onchange="this.form.submit()" aria-label="מצב"><option value="">כולם</option>${Object.entries(labels).map(([k, l]) => `<option value="${k}" ${status === k ? 'selected' : ''}>${h(l)}</option>`).join('')}</select>
+      <input type="search" name="q" value="${h(q)}" placeholder="שם, טלפון או מייל" aria-label="חיפוש">
+      <button class="btn">חיפוש</button>
+      ${invites.length ? `<a class="btn" href="/admin/requests?${qs ? `${qs}&` : ''}csv=1">הורדה לאקסל</a>` : ''}
+    </form>
+    ${
+      invites.length
+        ? `<div class="card"><table class="table responsive"><thead><tr><th>לקוח</th><th>קמפיין</th><th>נשלח</th><th>מצב</th></tr></thead><tbody>${invites
+            .map(
+              (i) => `<tr><td data-l="לקוח"><b>${h(i.customer_name || '—')}</b><div class="small" dir="ltr">${h(i.phone)} ${h(i.email)}</div></td>
+                <td data-l="קמפיין"><a href="/admin/campaigns/${i.campaign_id}">${h(i.campaign_name)}</a></td>
+                <td data-l="נשלח" class="small">${h(formatDate(i.created_at))}</td>
+                <td data-l="מצב"><span class="badge ${badge[i.state]}">${h(labels[i.state])}</span></td></tr>`,
+            )
+            .join('')}</tbody></table>${invites.length >= 500 ? '<p class="muted small">מוצגים 500 האחרונים. ההורדה לאקסל כוללת את כולם.</p>' : ''}</div>`
+        : `<div class="card empty"><p>${status || q ? 'אין תוצאות לסינון הזה.' : 'עוד לא נשלחו בקשות. שולחים מעמוד הקמפיין: שם וטלפון, והקישור יוצא בוואטסאפ, ב-SMS או במייל.'}</p><a class="btn primary" href="/admin/campaigns">לקמפיינים</a></div>`
+    }`;
+}

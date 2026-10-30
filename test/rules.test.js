@@ -158,3 +158,25 @@ test('the weekly tasks\' old "done" action is gone', async () => {
   const { req, csrf } = await owner('tasks@example.com');
   assert.equal((await req('/admin/tasks/campaign/done', { form: { _csrf: csrf } })).status, 404);
 });
+
+test('the customers asked for a review, from every campaign, with a download', async () => {
+  const { req, biz } = await owner('requests@example.com');
+  const c = store.db.prepare('SELECT id FROM campaigns WHERE business_id = ?').get(biz.id)
+    ?? { id: Number(store.db.prepare("INSERT INTO campaigns (business_id, name, slug) VALUES (?, 'ראשי', 'req-main')").run(biz.id).lastInsertRowid) };
+  store.db.prepare("INSERT INTO invites (campaign_id, token, customer_name, phone, opened_at, responded_at) VALUES (?, 't1', 'רונית', '0501234567', datetime('now'), datetime('now')), (?, 't2', 'משה', '0527654321', NULL, NULL)").run(c.id, c.id);
+  const page = (await req('/admin/requests')).text;
+  assert.match(page, /רונית/);
+  assert.match(page, /משה/);
+  assert.match(page, /דירג/);
+  assert.doesNotMatch((await req('/admin/requests?status=rated')).text, /משה/);
+  assert.match((await req('/admin/requests?q=0527')).text, /משה/);
+  const csv = await req('/admin/requests?csv=1');
+  assert.match(csv.text, /רונית,0501234567/);
+});
+
+test('every password field can be shown, also when logging in and changing it', async () => {
+  const req = client();
+  assert.match((await req('/login')).text, /class="pw-toggle"/);
+  const { req: me } = await owner('pw@example.com');
+  assert.equal(((await me('/account')).text.match(/class="pw-toggle"/g) || []).length, 2, 'current and new password');
+});

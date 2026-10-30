@@ -14,3 +14,27 @@ export function withSuggestions(store, business, reviews, { connected = false, d
     googleLink: r.link || (r.place_id ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(r.place_id)}` : ''),
   }));
 }
+
+/** The tones a business can pick for its AI replies. */
+export const REPLY_TONES = {
+  warm: ['חם ואישי', 'חם, אישי ולבבי, כמו בעל עסק שמכיר את הלקוחות שלו'],
+  pro: ['מקצועי ומנומס', 'מקצועי, מנומס ומכובד, בלי סלנג'],
+  short: ['קצר ועניני', 'קצר מאוד ועניני: משפט או שניים'],
+  fun: ['קליל ומחויך', 'קליל, מחויך ובגובה העיניים, עם קורטוב הומור כשזה מתאים (לא בביקורת שלילית)'],
+};
+
+/** A business's style for AI replies: tone, emoji, a sign-off and free notes. */
+export function replyStyleOf(business) {
+  let s = {};
+  try {
+    s = JSON.parse(business?.reply_style || '{}') || {};
+  } catch {
+    s = {};
+  }
+  return {
+    tone: Object.hasOwn(REPLY_TONES, s.tone) ? s.tone : '',
+    emoji: Boolean(s.emoji),
+    sign: String(s.sign ?? '').slice(0, 60),
+    notes: String(s.notes ?? '').slice(0, 300),
+  };
+}

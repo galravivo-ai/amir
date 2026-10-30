@@ -458,7 +458,7 @@ export function createStore(db) {
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at', 'pilot',
-        'site_check', 'site_checked_at', 'growth_services', 'icount_stopped_at', 'icount_reminded_at',
+        'site_check', 'site_checked_at', 'growth_services', 'icount_stopped_at', 'icount_reminded_at', 'reply_style',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;
@@ -727,6 +727,13 @@ export function createStore(db) {
            AND i.email_sent_at >= datetime('now', '-14 days')`).all(),
     invitesFor: (campaignId, limit = 50) =>
       q('SELECT * FROM invites WHERE campaign_id = ? ORDER BY id DESC LIMIT ?').all(campaignId, limit),
+    /** Everyone a business asked for a review, across its campaigns (newest first). */
+    invitesOfBusiness: (businessId, { status = '', search = '', limit = 500 } = {}) =>
+      q(`SELECT i.*, c.name AS campaign_name, c.id AS campaign_id FROM invites i JOIN campaigns c ON c.id = i.campaign_id
+         WHERE c.business_id = ?
+           ${status === 'rated' ? 'AND i.responded_at IS NOT NULL' : status === 'opened' ? 'AND i.opened_at IS NOT NULL AND i.responded_at IS NULL' : status === 'waiting' ? 'AND i.opened_at IS NULL' : ''}
+           AND (? = '' OR i.customer_name LIKE '%' || ? || '%' OR i.phone LIKE '%' || ? || '%' OR i.email LIKE '%' || ? || '%')
+         ORDER BY i.id DESC LIMIT ?`).all(businessId, search, search, search, search, limit),
     inviteByToken: (campaignId, t) =>
       q('SELECT * FROM invites WHERE campaign_id = ? AND token = ?').get(campaignId, t) || null,
     markInviteOpened: (id) =>

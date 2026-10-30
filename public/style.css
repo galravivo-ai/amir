@@ -2469,6 +2469,8 @@ body.public .survey-shell:has(.star-form) .survey-head { padding-bottom: 66px; }
 .guide-step.small img { max-width: 420px; }
 .guide-foot { border-top: 1px solid var(--line-2); padding-top: 32px; }
 .guide-foot h2 { margin: 0 0 8px; }
+.guide-foot-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.guide-foot-actions .btn { max-width: 100%; overflow-wrap: anywhere; }
 @media (max-width: 860px) {
   .guide-step, .guide-step.small { grid-template-columns: minmax(0, 1fr); gap: 18px; }
 }
@@ -3018,3 +3020,10 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 @media (max-width: 760px) { .todo-goal { grid-template-columns: minmax(0, 1fr) 70px 48px; } }
 .r-up { color: var(--good); font-weight: 700; }
 .r-down { color: var(--bad); font-weight: 700; }
+
+.rq-hint { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--purple-soft, #efeafe); line-height: 1.55; }
+.g-style { margin-bottom: 16px; }
+.g-style summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.g-style form { margin-top: 12px; }
+.g-tones { display: flex; flex-wrap: wrap; gap: 6px 16px; border: 0; padding: 0; margin: 0; }
+.g-tones legend { font-weight: 700; margin-bottom: 6px; }

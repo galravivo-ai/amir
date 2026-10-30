@@ -71,7 +71,7 @@ function initialMark(name, size) {
 /** Pages that share one menu item show tabs between them. */
 function pageTabs(current, { widgetInUse }) {
   const groups = [
-    [['/admin/campaigns', 'קמפיינים וקישורים'], ['/admin/poster', 'עיצוב שלט QR'], widgetInUse && ['/admin/widget', "ווידג'ט לאתר"]],
+    [['/admin/campaigns', 'קמפיינים וקישורים'], ['/admin/requests', 'לקוחות שקיבלו בקשה'], ['/admin/poster', 'עיצוב שלט QR'], widgetInUse && ['/admin/widget', "ווידג'ט לאתר"]],
     [['/admin/reports/monthly', 'דוח חודשי'], ['/admin/insights', 'תובנות AI']],
   ].map((g) => g.filter(Boolean));
   const tabs = groups.find((g) => g.some(([href]) => isActive(href, current)));
@@ -206,7 +206,7 @@ ${SKIP()}
       items: [
         ['/admin/google/reviews', 'ביקורות בגוגל', 'star', googlePending, { tip: 'הביקורות הציבוריות של העסק בגוגל, עם תשובה בלחיצה' }],
         ['/admin/responses', 'משוב מהסקר', 'inbox', openCount, { tip: 'מה שלקוחות כתבו בסקר שלכם, דרך שלט ה-QR או קישור ששלחתם. פרטי, לא מתפרסם בגוגל' }],
-        ['/admin/campaigns', 'איסוף ביקורות', 'qr', 0, { also: ['/admin/poster', '/admin/widget'], tip: 'קמפיינים, שלט QR וקישורים לבקשת ביקורת' }],
+        ['/admin/campaigns', 'איסוף ביקורות', 'qr', 0, { also: ['/admin/requests', '/admin/poster', '/admin/widget'], tip: 'קמפיינים, שלט QR וקישורים לבקשת ביקורת' }],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
       ],
     },

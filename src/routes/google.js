@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import { dataArrival } from '../arrival.js';
-import { withSuggestions } from '../replies.js';
+import { REPLY_TONES, replyStyleOf, withSuggestions } from '../replies.js';
 import multer from 'multer';
 import { fillTemplate, templatesFor } from '../network.js';
 import { CTA_TYPES, googlePostBody, POST_TOPICS, readPost } from '../posts.js';
@@ -432,6 +432,9 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         demo: Boolean(req.business.is_demo),
         replied: req.query.replied === '1',
         replyError: String(req.query.replyErr ?? '').slice(0, 300),
+        style: replyStyleOf(req.business),
+        tones: REPLY_TONES,
+        styleSaved: req.query.style === 'saved',
         locations,
         filters,
         summary: req.branchId ? branchSummary(req.business.id, req.branchId, locations) : store.googleSummary(req.business.id),
@@ -470,6 +473,13 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
   });
 
   // From the review's page, or from the dashboard (json=1), which puts the draft in place without reloading.
+  // How the AI writes replies (Google reviews and private feedback alike).
+  router.post('/google/reply-style', manager, (req, res) => {
+    const style = replyStyleOf({ reply_style: JSON.stringify({ tone: req.body.tone, emoji: req.body.emoji === '1', sign: String(req.body.sign ?? '').trim(), notes: String(req.body.notes ?? '').trim() }) });
+    store.updateBusiness(req.business.id, { reply_style: JSON.stringify(style) });
+    res.redirect(303, '/admin/google/reviews?style=saved');
+  });
+
   router.post('/google/reviews/:id/draft', manager, async (req, res) => {
     const review = loadReview(req, res);
     if (!review) return;
@@ -484,6 +494,7 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         rating: review.rating,
         comment: review.comment,
         reviewer: review.reviewer,
+        style: replyStyleOf(req.business),
       });
       answer({ draft });
     } catch (err) {

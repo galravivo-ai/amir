@@ -727,6 +727,10 @@ const MIGRATIONS = [
   ALTER TABLE businesses ADD COLUMN icount_reminded_at TEXT;
   ALTER TABLE google_locations ADD COLUMN missing INTEGER NOT NULL DEFAULT 0;
   `,
+  // v43: the business's style for AI replies (tone, emoji, sign-off, notes), as JSON
+  `
+  ALTER TABLE businesses ADD COLUMN reply_style TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

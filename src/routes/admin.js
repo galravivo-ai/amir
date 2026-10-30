@@ -1,4 +1,5 @@
 import express from 'express';
+import { replyStyleOf } from '../replies.js';
 import { todoNow } from '../growth.js';
 import { pilotSteps } from '../pilot.js';
 import { resolvePeriod } from '../period.js';
@@ -278,6 +279,7 @@ export function adminRoutes(ctx) {
         answers,
         comment: r.comment,
         customerName: r.customer_name,
+        style: replyStyleOf(req.business),
       });
       store.setAiDraft(r.id, text.slice(0, 4000));
       res.redirect(303, `/admin/responses/${r.id}#draft`);
@@ -342,6 +344,22 @@ export function adminRoutes(ctx) {
   const campaignLimitReached = (req) => store.campaignsFor(req.business.id).length >= req.plan.campaigns;
   const limitMessage = (req) =>
     `במסלול ${req.plan.label} אפשר עד ${limitLabel(req.plan.campaigns)} ${req.plan.campaigns === 1 ? 'סניף (קמפיין)' : 'סניפים (קמפיינים)'}. לפרטים: "התוכנית שלי" בתפריט.`;
+
+  // Everyone who was sent a review request, across the campaigns; ?csv=1 downloads the list.
+  const INVITE_STATUS = { waiting: 'לא נפתח', opened: 'נפתח, לא דירג', rated: 'דירג' };
+  admin.get('/requests', (req, res) => {
+    const status = Object.hasOwn(INVITE_STATUS, req.query.status) ? req.query.status : '';
+    const q = String(req.query.q ?? '').trim().slice(0, 60);
+    const invites = store.invitesOfBusiness(req.business.id, { status, search: q, limit: req.query.csv ? 5000 : 500 });
+    const stateOf = (i) => (i.responded_at ? 'rated' : i.opened_at ? 'opened' : 'waiting');
+    if (req.query.csv) {
+      const lines = [['name', 'phone', 'email', 'campaign', 'sent', 'status'].join(',')];
+      for (const i of invites) lines.push([i.customer_name, i.phone, i.email, i.campaign_name, i.created_at, INVITE_STATUS[stateOf(i)]].map(csvEscape).join(','));
+      res.set('content-type', 'text/csv; charset=utf-8').set('content-disposition', 'attachment; filename="review-requests.csv"');
+      return res.send('\uFEFF' + lines.join('\n'));
+    }
+    render(req, res, 'לקוחות שקיבלו בקשה', V.requestsView({ invites: invites.map((i) => ({ ...i, state: stateOf(i) })), status, q, labels: INVITE_STATUS }));
+  });
 
   admin.get('/campaigns', (req, res) => {
     render(

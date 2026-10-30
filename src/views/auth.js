@@ -22,15 +22,17 @@ const startTerms = (trialOpen) =>
 import { GOOGLE_G } from './google.js';
 import { isEn } from '../lang.js';
 
-/** A new password: the rule shown before typing, and a show/hide button. */
+/** A password field with a show/hide button. */
 let pwCount = 0;
-const newPassword = (label) => {
+const pwField = (label, { name = 'password', autocomplete = 'current-password', min = 0, hint = '' } = {}) => {
   const id = `pw-${++pwCount}`;
   return `<div class="pw-field"><label for="${id}">${label}</label>
-    <div class="pw-wrap"><input id="${id}" name="password" type="password" required minlength="8" dir="ltr" autocomplete="new-password" aria-describedby="${id}-hint">
+    <div class="pw-wrap"><input id="${id}" name="${name}" type="password" required ${min ? `minlength="${min}"` : ''} dir="ltr" autocomplete="${autocomplete}"${hint ? ` aria-describedby="${id}-hint"` : ''}>
       <button type="button" class="pw-toggle" aria-pressed="false" aria-controls="${id}" onclick="var i=document.getElementById(this.getAttribute('aria-controls')),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',String(s));this.textContent=s?'הסתרה':'הצגה'">הצגה</button></div>
-    <small id="${id}-hint" class="muted">לפחות 8 תווים</small></div>`;
+    ${hint ? `<small id="${id}-hint" class="muted">${hint}</small>` : ''}</div>`;
 };
+/** A new password: the rule shown before typing, and a show/hide button. */
+const newPassword = (label) => pwField(label, { autocomplete: 'new-password', min: 8, hint: 'לפחות 8 תווים' });
 
 /** "Continue with Google", then a divider before the email form. */
 const googleButton = (href, label) => `<a class="btn big g-btn auth-google" href="${h(href)}">${GOOGLE_G}<span>${label}</span></a>
@@ -53,7 +55,7 @@ export function loginView({ error = '', values = {}, allowSignup, notice = '', n
     ${google ? googleButton(`/auth/google${join ? `?next=${encodeURIComponent(next)}` : ''}`, 'כניסה עם Google') : ''}
     <form method="post" action="${h(action)}" class="stack">
       <label>אימייל<input name="email" type="email" required value="${h(values.email)}" dir="ltr" autocomplete="email"></label>
-      <label>סיסמה<input name="password" type="password" required dir="ltr" autocomplete="current-password"></label>
+      ${pwField('סיסמה')}
       <button class="btn primary">כניסה</button>
     </form>
     <p class="muted"><a href="/forgot">שכחתי סיסמה</a>${allowSignup ? ' · אין חשבון? <a href="/register">להרשמה</a>' : ''}</p>
@@ -140,7 +142,7 @@ export function resetView({ token, error = '' }) {
     ${errorBox(error)}
     <form method="post" action="/reset/${h(token)}" class="stack">
       ${newPassword('סיסמה חדשה')}
-      <label>שוב, לאימות<input name="password2" type="password" required minlength="8" dir="ltr" autocomplete="new-password"></label>
+      ${pwField('שוב, לאימות', { name: 'password2', autocomplete: 'new-password', min: 8 })}
       <button class="btn primary">שמירה</button>
     </form>
   </div>`;
@@ -260,7 +262,7 @@ export function accountView({ user, csrf, error = '', totpEnabled = false, backu
     <form method="post" action="/account/password" class="card stack">
       ${csrfField(csrf)}
       <h3>שינוי סיסמה</h3>
-      <label>סיסמה נוכחית<input name="current" type="password" required dir="ltr" autocomplete="current-password"></label>
+      ${pwField('סיסמה נוכחית', { name: 'current' })}
       ${newPassword('סיסמה חדשה')}
       <button class="btn primary">עדכון סיסמה</button>
       <p class="muted small">שינוי הסיסמה ינתק את כל שאר המכשירים.</p>
