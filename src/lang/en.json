@@ -2946,5 +2946,18 @@
 "כל המדריכים": "All guides",
 "לקוחות שקיבלו בקשה · GoFive": "Customers asked for a review · GoFive",
 "הדף נפתח בתוך אפליקציה, וגוגל לא מאפשרת להתחבר מכאן. כדי להיכנס עם Google, פותחים את הדף בדפדפן: בתפריט (⋯ או ⋮) בוחרים \"פתיחה בדפדפן\". אפשר גם להיכנס כאן עם מייל וסיסמה.": "This page opened inside an app, and Google doesn't allow signing in here. To continue with Google, open the page in your browser: in the menu (⋯ or ⋮) choose &quot;Open in browser&quot;. You can also log in here with email and password.",
-"קידום בגוגל מפות: מיקום ובריאות הפרופיל": "Google Maps promotion: ranking and profile health"
+"קידום בגוגל מפות: מיקום ובריאות הפרופיל": "Google Maps promotion: ranking and profile health",
+"פרטים לחשבונית": "Invoice details",
+"כך תופק החשבונית על התשלום ל-GoFive. שדה ריק: החשבונית על שם העסק, ונשלחת למייל של בעל החשבון.": "This is how the invoice for your GoFive payment is issued. Empty field: the invoice is in the business's name and goes to the account owner's email.",
+"על שם": "Made out to",
+"(שם העסק הרשום או שם מלא)": "(registered business name or full name)",
+"ח.פ / ע.מ / ת.ז": "Company / VAT / ID number",
+"כתובת": "Address",
+"עיר": "City",
+"מייל לקבלת החשבונית": "Email for the invoice",
+"למשל: הנהלת החשבונות": "e.g. your bookkeeper",
+"הפרטים חלים על החשבונית הבאה. חשבונית שכבר הופקה לא משתנה.": "The details apply to the next invoice. An invoice already issued doesn't change.",
+"חשבונית": "Invoice",
+"בדף של iCount ממלאים את הפרטים לחשבונית:": "On the iCount page, fill in the invoice details:",
+"עריכת הפרטים": "Edit the details"
 }

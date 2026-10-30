@@ -458,7 +458,7 @@ export function createStore(db) {
         'ai_queries', 'ai_aliases', 'ai_site', 'ai_city', 'ai_checked_at', 'ai_plus', 'ai_plus_request', 'api_on',
         'paid_until', 'card_token', 'card_expiry', 'card_last4', 'auto_renew', 'pay_failures', 'next_plan', 'next_cycle',
         'monthly_report', 'last_monthly_report', 'alert_drops', 'cancel_reason', 'canceled_at', 'pilot',
-        'site_check', 'site_checked_at', 'growth_services', 'icount_stopped_at', 'icount_reminded_at', 'reply_style',
+        'site_check', 'site_checked_at', 'growth_services', 'icount_stopped_at', 'icount_reminded_at', 'reply_style', 'invoice',
       ];
       const keys = allowed.filter((k) => f[k] !== undefined);
       if (!keys.length) return;

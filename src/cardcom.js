@@ -36,10 +36,14 @@ export function createCardcom({ env = process.env, fetchImpl = globalThis.fetch 
     return json;
   }
 
-  const document = ({ name, email, description, amount }) => ({
+  const document = ({ name, email, taxId = '', address = '', city = '', phone = '', description, amount }) => ({
     DocumentTypeToCreate: documentType,
     Name: name || email,
     Email: email,
+    ...(taxId ? { TaxId: taxId } : {}),
+    ...(address ? { AddressLine1: address } : {}),
+    ...(city ? { City: city } : {}),
+    ...(phone ? { Mobile: phone } : {}),
     IsSendByEmail: true,
     Language: 'he',
     Products: [{ Description: description, Quantity: 1, UnitCost: amount }],

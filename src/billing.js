@@ -1,4 +1,5 @@
 import { PLANS, priceFor, profilesOf, TRIAL_DAYS } from './plans.js';
+import { invoiceOf } from './util.js';
 
 // Subscriptions paid by card through Cardcom: the first payment on Cardcom's
 // page saves a token, and the token pays every renewal. Upgrades are charged
@@ -47,7 +48,11 @@ const monthsAfter = (ms, n) => {
 };
 
 export function createBilling({ store, cardcom, notifier = null, now = () => Date.now() }) {
-  const customer = (business) => ({ name: business.name, email: business.owner_email || '' });
+  // The invoice: the name, tax id and address the business entered, else its name and the payer's email.
+  const customer = (business, email = business.owner_email || '') => {
+    const inv = invoiceOf(business);
+    return { name: inv.name || business.name, email: inv.email || email, taxId: inv.taxId, address: inv.address, city: inv.city, phone: inv.phone };
+  };
 
   /** True when the business pays by card and the paid period hasn't ended. */
   const hasCardPlan = (b) => Boolean(b.card_token && b.billing === 'active' && fromSql(b.paid_until) > now());
@@ -64,7 +69,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
       successUrl: `${baseUrl}/admin/billing/done?p=${id}`,
       failedUrl: `${baseUrl}/admin/billing/done?p=${id}&failed=1`,
       webhookUrl: `${baseUrl}/billing/cardcom/webhook?p=${id}`,
-      customer: { name: business.name, email },
+      customer: customer(business, email),
     });
     store.setPaymentPage(id, page.id);
     return page.url;
@@ -183,7 +188,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         expiry: business.card_expiry,
         description: `${describe(plan, cycle, profiles)} · שדרוג עד סוף התקופה`,
         uniqueId: `upgrade-${id}`,
-        customer: { name: business.name, email },
+        customer: customer(business, email),
       });
       store.settlePayment(id, r.ok ? { status: 'paid', transactionId: r.transactionId } : { status: 'failed', error: r.error });
       if (!r.ok) return { status: 'failed', error: r.error };

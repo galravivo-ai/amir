@@ -220,3 +220,18 @@ export function inAppBrowser(ua) {
   if (/FBAN|FBAV|Instagram|Line\/|LinkedInApp|; wv\)/.test(s)) return true;
   return /iPhone|iPad|iPod/.test(s) && !/Safari\//.test(s);
 }
+
+/**
+ * Who a business's invoices are made out to. Empty fields fall back to the
+ * business name and the owner's email.
+ */
+export function invoiceOf(business) {
+  let v = {};
+  try {
+    v = JSON.parse(business?.invoice || '{}') || {};
+  } catch {
+    v = {};
+  }
+  const s = (k, n) => String(v[k] ?? '').trim().slice(0, n);
+  return { name: s('name', 100), taxId: s('taxId', 12), address: s('address', 120), city: s('city', 60), email: s('email', 120), phone: s('phone', 20) };
+}

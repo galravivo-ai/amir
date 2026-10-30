@@ -54,6 +54,17 @@ export function settingsRoutes(ctx) {
     res.redirect(303, '/admin/business?ok=1');
   });
 
+  router.post('/business/invoice', owner, (req, res) => {
+    const v = (k, n) => String(req.body[k] ?? '').trim().slice(0, n);
+    const taxId = v('taxId', 12).replace(/[\s-]/g, '');
+    const email = v('email', 120);
+    if (taxId && !/^\d{5,9}$/.test(taxId)) return res.redirect(303, `/admin/business?err=${encodeURIComponent('מספר ח.פ / ע.מ / ת.ז צריך להכיל ספרות בלבד (עד 9).')}#invoice`);
+    if (email && !isEmail(email)) return res.redirect(303, `/admin/business?err=${encodeURIComponent('המייל לחשבונית לא תקין.')}#invoice`);
+    const invoice = { name: v('name', 100), taxId, address: v('address', 120), city: v('city', 60), email, phone: v('phone', 20) };
+    store.updateBusiness(req.business.id, { invoice: Object.values(invoice).some(Boolean) ? JSON.stringify(invoice) : '' });
+    res.redirect(303, '/admin/business?ok=1#invoice');
+  });
+
   router.post('/business/invite-message', owner, (req, res) => {
     const reset = req.body.reset === '1';
     store.updateBusiness(req.business.id, { invite_template: reset ? '' : normalizeInviteTemplate(req.body.invite_template) });

@@ -203,3 +203,17 @@ test('inside an app, the Google sign-in says to open the browser', async () => {
   assert.ok(!inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'));
   assert.ok(!inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1'));
 });
+
+test('invoice details: saved in settings, shown on the plan, sent to the card payment', async () => {
+  const { req, csrf, biz } = await owner('invoice@example.com');
+  assert.match((await req('/admin/business')).text, /פרטים לחשבונית/);
+  const bad = await req('/admin/business/invoice', { form: { _csrf: csrf, taxId: 'abc' } });
+  assert.match(decodeURIComponent(bad.location), /ספרות בלבד/);
+  await req('/admin/business/invoice', { form: { _csrf: csrf, name: 'עסק בע"מ', taxId: '51-234567-8', address: 'הרצל 1', city: 'חולון', email: 'books@example.com', phone: '0501234567' } });
+  const { invoiceOf } = await import('../src/util.js');
+  assert.deepEqual(invoiceOf(store.businessById(biz.id)), { name: 'עסק בע"מ', taxId: '512345678', address: 'הרצל 1', city: 'חולון', email: 'books@example.com', phone: '0501234567' });
+  assert.match((await req('/admin/plan')).text, /512345678/);
+  // cleared: back to the business name
+  await req('/admin/business/invoice', { form: { _csrf: csrf } });
+  assert.equal(store.businessById(biz.id).invoice, '');
+});

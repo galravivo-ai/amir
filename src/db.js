@@ -731,6 +731,10 @@ const MIGRATIONS = [
   `
   ALTER TABLE businesses ADD COLUMN reply_style TEXT NOT NULL DEFAULT '';
   `,
+  // v44: who the invoice is made out to (name, tax id, address, email, phone), as JSON
+  `
+  ALTER TABLE businesses ADD COLUMN invoice TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 function migrate(db) {

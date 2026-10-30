@@ -1,6 +1,6 @@
 import { accessOf, AI_PLUS, ANNUAL_MONTHS, branchPrice, CYCLES, hasApi, INTEGRATIONS, limitLabel, payProvider, PLANS, priceFor, TRIAL_DAYS } from '../plans.js';
 import { ROLES } from '../store.js';
-import { DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, INVITE_TEMPLATE_MAX, formatDate, h, inviteMessage, logoSrc } from '../util.js';
+import { DEFAULT_INVITE_TEMPLATE, DEFAULT_INVITE_TEMPLATE_EN, englishTokens, INVITE_TEMPLATE_MAX, formatDate, h, invoiceOf, inviteMessage, logoSrc } from '../util.js';
 import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { agenciesAdminBlock } from './agency.js';
@@ -70,6 +70,27 @@ function inviteMessageCard(business, csrf) {
   </section>`;
 }
 
+/** Who the invoices are made out to: name, tax id, address, and where they're sent. */
+function invoiceCard(business, csrf) {
+  const inv = invoiceOf(business);
+  const field = (name, label, value, attrs = '', hint = '') => `<label>${label}${hint ? ` <span class="muted small">${hint}</span>` : ''}<input name="${name}" value="${h(value)}" ${attrs}></label>`;
+  return `<form method="post" action="/admin/business/invoice" class="card stack" id="invoice">
+    ${csrfField(csrf)}
+    <h3>${icon('report', 18)} פרטים לחשבונית</h3>
+    <p class="muted small">כך תופק החשבונית על התשלום ל-GoFive. שדה ריק: החשבונית על שם העסק, ונשלחת למייל של בעל החשבון.</p>
+    <div class="grid2">
+      ${field('name', 'על שם', inv.name, `maxlength="100" placeholder="${h(business.name)}"`, '(שם העסק הרשום או שם מלא)')}
+      ${field('taxId', 'ח.פ / ע.מ / ת.ז', inv.taxId, 'inputmode="numeric" maxlength="12" dir="ltr" pattern="[0-9\\- ]*"')}
+      ${field('address', 'כתובת', inv.address, 'maxlength="120" autocomplete="street-address"')}
+      ${field('city', 'עיר', inv.city, 'maxlength="60" autocomplete="address-level2"')}
+      ${field('email', 'מייל לקבלת החשבונית', inv.email, 'type="email" maxlength="120" dir="ltr" placeholder="למשל: הנהלת החשבונות"')}
+      ${field('phone', 'טלפון', inv.phone, 'type="tel" maxlength="20" dir="ltr"')}
+    </div>
+    <p class="muted small">הפרטים חלים על החשבונית הבאה. חשבונית שכבר הופקה לא משתנה.</p>
+    <button class="btn primary">שמירה</button>
+  </form>`;
+}
+
 export function businessView({ business, csrf, plan, error = '' }) {
   return `<h1>הגדרות עסק</h1>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
@@ -122,6 +143,8 @@ export function businessView({ business, csrf, plan, error = '' }) {
   </div>
 
   ${inviteMessageCard(business, csrf)}
+
+  ${invoiceCard(business, csrf)}
 
   <section class="card stack" id="logo">
     <h3>לוגו</h3>
@@ -416,6 +439,8 @@ export function planView({
     paying ? [!business.auto_renew ? 'פעיל עד' : 'החידוש הבא', h(until)] : canceled ? ['פעיל עד', h(until)] : null,
     paying ? ['כרטיס', `<span dir="ltr">•••• ${h(business.card_last4 || '····')}</span>`] : null,
   ].filter(Boolean);
+  const inv = invoiceOf(business);
+  if (owner) facts.push(['חשבונית', `${h(inv.name || business.name)}${inv.taxId ? ` · <span dir="ltr">${h(inv.taxId)}</span>` : ''} <a class="small" href="/admin/business#invoice">עריכה</a>`]);
   const factsHtml = `<dl class="sub-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
   let head;
   if (access?.reason === 'new') {
@@ -574,6 +599,10 @@ export function planChangeView({ business, current, access, plan, cycle, quote, 
     icount: [
       `תועברו לדף התשלום המאובטח של iCount, לתשלום של <b>${money(quote.amount)}</b> ${per} (${quote.profiles > 1 ? `${quote.profiles} פרופילים, ` : ''}כולל מע״מ). החשבונית נשלחת במייל.`,
       'אחרי התשלום נפעיל את המסלול ונעדכן אתכם במייל, בדרך כלל תוך כמה שעות בימי עסקים. עד אז הכול ממשיך לעבוד.',
+      (() => {
+        const inv = invoiceOf(business);
+        return `בדף של iCount ממלאים את הפרטים לחשבונית: <b>${h(inv.name || business.name)}</b>${inv.taxId ? `, <span dir="ltr">${h(inv.taxId)}</span>` : ''}${inv.email ? `, <span dir="ltr">${h(inv.email)}</span>` : ''}. <a href="/admin/business#invoice">עריכת הפרטים</a>`;
+      })(),
     ],
   }[quote.kind];
   const lose = current.aiPlus && !p.aiPlus ? '<div class="warn">במסלול גוגל אין בדיקה ב-ChatGPT, Gemini, Perplexity ו-Claude, ואין תוכנית פעולה אחרי כל בדיקה. הנתונים שכבר נאספו נשמרים.</div>' : '';
@@ -849,6 +878,7 @@ export function superadminView({ businesses, users, outbox, csrf, mailEnabled, a
     return `<div class="billing-cell">
       ${statusBadge(b)} <b>${h(PLANS[b.plan]?.label || b.plan)}</b>
       ${b.card_token && b.paid_until ? `<div class="small muted">כרטיס ··${h(b.card_last4 || '')} · עד ${h(b.paid_until.slice(0, 10))}${b.auto_renew ? '' : ' · בלי חידוש'}${b.pay_failures ? ` · <b class="danger-text">${b.pay_failures} חיובים נכשלו</b>` : ''}</div>` : ''}
+      ${(() => { const inv = invoiceOf(b); return inv.name || inv.taxId ? `<div class="small muted">חשבונית: ${h(inv.name || b.name)}${inv.taxId ? ` · <span dir="ltr">${h(inv.taxId)}</span>` : ''}${inv.email ? ` · <span dir="ltr">${h(inv.email)}</span>` : ''}</div>` : ''; })()}
       ${!b.card_token && b.paid_until ? `<div class="small muted">שולם עד ${h(b.paid_until.slice(0, 10).split('-').reverse().join('.'))}${b.canceled_at ? ` · <b>בוטל</b>${b.icount_stopped_at ? ' · הוראת הקבע בוטלה' : ''}` : ''}</div>` : ''}
       ${wanted ? `<div class="small"><b class="req-flag">ביקש: ${h(PLANS[wanted.plan].label)} ${h(CYCLES[wanted.cycle] || '')}</b></div>` : ''}
       <form method="post" action="/superadmin/businesses/${b.id}/plan" class="row compact">
