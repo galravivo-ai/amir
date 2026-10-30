@@ -143,8 +143,8 @@ export function createStore(db) {
       q('UPDATE google_connections SET access_token = ?, expires_at = ? WHERE business_id = ?').run(accessToken, expiresAt, businessId),
     googleSyncResult: (businessId, error) =>
       q(`UPDATE google_connections SET last_sync_at = datetime('now'), last_error = ? WHERE business_id = ?`).run(error || null, businessId),
+    /** The branches and their reviews stay; reconnecting picks them up again (matched by Google's location name). */
     deleteGoogleConnection(businessId) {
-      q("DELETE FROM google_locations WHERE business_id = ? AND source = 'gbp'").run(businessId);
       q('DELETE FROM google_connections WHERE business_id = ?').run(businessId);
     },
     googleConnections: () => q('SELECT * FROM google_connections').all(),
@@ -321,7 +321,7 @@ export function createStore(db) {
       q('INSERT OR REPLACE INTO ai_plans (business_id, run_at, plan) VALUES (?, ?, ?)').run(businessId, runAt, plan),
     latestAiPlan: (businessId) => q('SELECT * FROM ai_plans WHERE business_id = ? ORDER BY run_at DESC LIMIT 1').get(businessId) || null,
     aiVisibilityDue: (days) =>
-      q(`SELECT * FROM businesses WHERE ai_queries != '[]' AND is_demo = 0
+      q(`SELECT * FROM businesses WHERE ai_queries != '[]' AND is_demo = 0 AND billing NOT IN ('paused', 'unpaid')
            AND (ai_checked_at IS NULL OR ai_checked_at < datetime('now', ?))`).all(`-${Number(days) || 7} days`),
 
     // ---------- leads (quote requests) ----------

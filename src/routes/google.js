@@ -367,7 +367,8 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
 
   router.post('/google/locations/:id/delete', manager, (req, res) => {
     const loc = store.googleLocation(Number(req.params.id), req.business.id);
-    if (!loc || loc.source !== 'serp') return notFound(res);
+    // A place followed by link, or a branch of a Google account that is no longer connected.
+    if (!loc || (loc.source !== 'serp' && store.googleConnection(req.business.id))) return notFound(res);
     store.deleteGoogleLocation(loc.id, req.business.id);
     res.redirect(303, '/admin/google?ok=1');
   });

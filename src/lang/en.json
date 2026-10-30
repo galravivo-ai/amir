@@ -2891,5 +2891,9 @@
 "&quot;מה לעשות עכשיו&quot;: שלוש פעולות, הדחופות קודם (לענות לביקורות, לחזור ללקוח לא מרוצה), עם ציון הקידום. בשלב {n} גם היעדים מול האזור.": "&quot;What to do now&quot;: three actions, the urgent first (reply to reviews, get back to an unhappy customer), with the growth score. In stage {n}, the goals against your area too.",
 "\"מה לעשות עכשיו\": שלוש פעולות, הדחופות קודם (לענות לביקורות, לחזור ללקוח לא מרוצה), עם ציון הקידום. בשלב {n} גם היעדים מול האזור.": "&quot;What to do now&quot;: three actions, the urgent first (reply to reviews, get back to an unhappy customer), with the growth score. In stage {n}, the goals against your area too.",
 "בתחתית, &quot;כל הנתונים והגרפים&quot; נפתח למי שרוצה לחפור: צפיות, שיחות, בקשות הגעה, החיפושים שבהם מצאו אתכם, וגרפים.": "At the bottom, &quot;All data and charts&quot; opens for anyone who wants to dig in: views, calls, direction requests, the searches you were found in, and charts.",
-"בתחתית, \"כל הנתונים והגרפים\" נפתח למי שרוצה לחפור: צפיות, שיחות, בקשות הגעה, החיפושים שבהם מצאו אתכם, וגרפים.": "At the bottom, &quot;All data and charts&quot; opens for anyone who wants to dig in: views, calls, direction requests, the searches you were found in, and charts."
+"בתחתית, \"כל הנתונים והגרפים\" נפתח למי שרוצה לחפור: צפיות, שיחות, בקשות הגעה, החיפושים שבהם מצאו אתכם, וגרפים.": "At the bottom, &quot;All data and charts&quot; opens for anyone who wants to dig in: views, calls, direction requests, the searches you were found in, and charts.",
+"לחבר שוב את גוגל": "Reconnect Google",
+"החיבור נותק: ביקורות חדשות ונתונים לא מגיעים, ואי אפשר לענות מכאן. הנתונים הקודמים נשמרו.": "The connection was cut: new reviews and data don't arrive, and you can't reply from here. Earlier data is kept.",
+"החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב.": "The Google connection was cut. The branches' reviews and data are kept, but they don't update and you can't reply from here until you reconnect.",
+"את התשובות שולח מנהל העסק.": "The business manager sends the answers."
 }

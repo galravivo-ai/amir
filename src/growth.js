@@ -397,6 +397,9 @@ export function urgentActions(store, business) {
   const out = [];
   const locations = store.googleLocations(id).filter((l) => l.enabled);
   if (!locations.length) out.push({ key: 'connect', title: 'לחבר את העסק בגוגל', why: 'בלי זה אין ביקורות, נתונים ובדיקות. לוקח דקה.', href: '/admin/google' });
+  else if (!business.is_demo && locations.some((l) => l.source !== 'serp') && !store.googleConnection(id)) {
+    out.push({ key: 'reconnect', title: 'לחבר שוב את גוגל', why: 'החיבור נותק: ביקורות חדשות ונתונים לא מגיעים, ואי אפשר לענות מכאן. הנתונים הקודמים נשמרו.', href: '/admin/google' });
+  }
   const unhappy = store.openIssuesCount(id);
   if (unhappy) {
     out.push({ key: 'unhappy', title: unhappy === 1 ? 'לחזור ללקוח לא מרוצה' : `לחזור ל-${unhappy} לקוחות לא מרוצים`, why: 'שיחה מהירה הופכת לקוח כועס לממליץ, ומונעת ביקורת שלילית בגוגל.', href: '/admin/responses?sentiment=negative&status=new' });

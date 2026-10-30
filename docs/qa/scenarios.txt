@@ -254,10 +254,10 @@ T: לכתוב ביקורת חדשה בגוגל (חשבון בדיקה); "סנכ�
 E: "הסנכרון הסתיים"; הביקורת מופיעה
 
 TS-043 | FLOW-011 | Google | OWNER, GOOGLE | Status | High
-S: ניתוק מגוגל מוחק סניפים מחוברים ומבטל הרשאה
+S: ניתוק מגוגל שומר את הנתונים ומבטל הרשאה
 P: עסק בדיקה מחובר, עם סניף לפי קישור נוסף
-T: "ניתוק"; לבדוק סניפים, ביקורות; לבדוק ב-myaccount.google.com/permissions
-E: סניפי גוגל והביקורות שלהם נמחקו; הסניף לפי קישור נשאר; GoFive הוסרה מההרשאות (אם זה העסק האחרון עם החשבון)
+T: "ניתוק"; לבדוק סניפים, ביקורות, "מה לעשות"; לבדוק ב-myaccount.google.com/permissions; לחבר שוב לאותו חשבון
+E: הסניפים והביקורות נשמרו; הודעה "החיבור לגוגל נותק"; פעולה דחופה "לחבר שוב את גוגל"; GoFive הוסרה מההרשאות (אם זה העסק האחרון עם החשבון); אחרי חיבור מחדש: אותם סניפים, בלי כפולים
 
 TS-044 | FLOW-011 | Google | MANAGER | Permissions | High
 S: מנהל לא יכול לנתק
@@ -833,7 +833,7 @@ TS-139 | FLOW-039 | Billing | OWNER, EMAIL | Positive | High
 S: ביטול מנוי (iCount)
 P: עסק active ב-iCount
 T: ביטול ← סיבה ← אישור
-E: "המנוי בוטל..."; מייל למנהלי המערכת עם הסיבה; העסק עדיין active (L-01)
+E: "המנוי בוטל..."; מייל למנהלי המערכת עם הסיבה; מייל לבעלים עם תזכורת לבטל ב-iCount; "פעיל עד" חודש מהתשלום; העסק עדיין active עד התאריך, ואז paused
 
 TS-140 | FLOW-038 | Billing | OWNER, Cardcom | Positive | Medium
 S: Cardcom: ניסיון עם כרטיס וחיוב בסוף
@@ -882,6 +882,12 @@ S: עמוד פיילוט לעסק רגיל
 P: עסק לא פיילוט
 T: /admin/pilot
 E: מפנה לדשבורד
+
+TS-168 | FLOW-041 | Pilot | VIEWER | Permissions | Medium
+S: צפייה בעסק פיילוט לא מסמנת ולא שולחת משוב
+P: עסק פיילוט, משתמש בתפקיד צפייה
+T: לפתוח "הפיילוט שלכם"; לנסות לסמן צעד; POST ישיר לשליחת משוב
+E: הצ'קליסט מוצג; סימון ומשוב: 403
 
 TS-148 | FLOW-041 | Pilot | GOFIVE ADMIN, VISITOR | Negative | Medium
 S: קישור התנסות שבוטל / נוצל
@@ -1098,10 +1104,10 @@ T: לנסות: תשובה לביקורת, טיוטת AI, פוסט, בדיקת מ
 E: TBD – to be established during testing
 
 DS-007 | FLOW-007 | Account | USER | Discovery / Exploratory | Medium
-S: ניסיון חדש לכל עסק נוסף
-P: ניסיון ראשון הסתיים
-T: להוסיף עסק חדש
-E: TBD – to be established during testing (OQ-015)
+S: עסק נוסף לאותו בעלים לא מקבל ניסיון
+P: לבעלים כבר יש עסק
+T: להוסיף עסק חדש; להיכנס לדשבורד שלו
+E: העסק נוצר ב-unpaid; מעבר ל"התוכנית שלי" לבחירת מסלול
 
 DS-008 | FLOW-004 | Account | USER | Discovery / Exploratory | Medium
 S: איפוס סיסמה וסשנים פתוחים
@@ -1119,7 +1125,7 @@ DS-010 | FLOW-030 | AI Visibility | SYSTEM | Discovery / Exploratory | Medium
 S: בדיקות AI לעסק מושהה
 P: עסק מושהה עם שאלות
 T: להמתין שבוע; לבדוק עמוד מצב המערכת
-E: TBD – to be established during testing (OQ-041)
+E: אין בדיקה חדשה לעסק המושהה
 
 DS-011 | FLOW-028 | Posts | MANAGER, GOOGLE | Discovery / Exploratory | Medium
 S: פוסט שנכשל בחלק מהסניפים
@@ -1166,8 +1172,8 @@ E: TBD – to be established during testing
 DS-018 | FLOW-039 | Billing | OWNER, GOFIVE ADMIN | Discovery / Exploratory | High
 S: ביטול ב-iCount: מה קורה בפועל
 P: עסק משלם
-T: ביטול; לעקוב אחרי הוראת הקבע וסטטוס העסק
-E: TBD – to be established during testing (OQ-045)
+T: ביטול; לעקוב אחרי הוראת הקבע וסטטוס העסק; "חידוש המנוי" לפני התאריך בעסק שני
+E: העסק נשאר פעיל עד "פעיל עד" ואז מושהה; אם לא בוטל ב-iCount, החיוב ממשיך (L-01); "חידוש המנוי" מבטל את הביטול
 
 DS-019 | FLOW-036 | Agency | AGENCY USER | Discovery / Exploratory | Low
 S: מיילים בעסק של סוכנות

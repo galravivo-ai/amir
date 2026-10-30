@@ -241,11 +241,22 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   await googleSync.syncBusiness(store.businessById(biz.id));
   assert.ok(fakeGoogle.calls.some(([, u, b]) => u.includes('oauth2') && String(b).includes('refresh_token')));
 
-  // Disconnect removes the connection and the stored reviews, and withdraws the permission at Google.
+  // Disconnect removes the connection and withdraws the permission at Google; the reviews stay.
+  const kept = store.googleReviews(biz.id).length;
+  assert.ok(kept > 0);
   await req('/admin/google/disconnect', { method: 'POST', form: { _csrf: token } });
   assert.equal(store.googleConnection(biz.id), null);
-  assert.equal(store.googleReviews(biz.id).length, 0);
+  assert.equal(store.googleReviews(biz.id).length, kept);
   assert.ok(fakeGoogle.calls.some(([m, u]) => m === 'POST' && u === 'https://oauth2.googleapis.com/revoke'));
+  const gpage = (await req('/admin/google')).text;
+  assert.match(gpage, /החיבור לגוגל נותק/);
+  assert.match((await req('/admin/growth')).text, /לחבר שוב את גוגל/);
+  // reconnecting finds the same branches, with their reviews
+  const re = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  await req(`/admin/google/callback?code=abc&state=${new URL(re.location).searchParams.get('state')}`);
+  assert.ok(store.googleConnection(biz.id));
+  assert.equal(store.googleReviews(biz.id).length, kept);
+  assert.equal(store.googleLocations(biz.id).filter((l) => l.source === 'gbp').length, 1, 'the same branch, not a copy');
 });
 
 test('without Google credentials the page explains the setup to the system admin', async () => {

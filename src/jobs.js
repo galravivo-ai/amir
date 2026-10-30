@@ -203,6 +203,21 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return googleSync ? googleSync.syncAllMetrics() : 0;
   }
 
+  /** Paid on an iCount page and cancelled: the account closes when the paid period is over. */
+  async function cancelledEnds() {
+    let ended = 0;
+    const t = now().toISOString().slice(0, 19).replace('T', ' ');
+    const due = store.db
+      .prepare("SELECT * FROM businesses WHERE billing = 'active' AND canceled_at IS NOT NULL AND (card_token IS NULL OR card_token = '') AND paid_until IS NOT NULL AND paid_until <= ?")
+      .all(t);
+    for (const b of due) {
+      store.updateBusiness(b.id, { billing: 'paused' });
+      await notifier.billingNotice?.({ business: b, kind: 'ended' }).catch((err) => console.error('[notify] billing ended failed:', err));
+      ended++;
+    }
+    return ended;
+  }
+
   /** Card subscriptions whose period ended: charge, or pause after repeated failures. */
   async function renewals() {
     return billing ? billing.renewDue() : 0;
@@ -233,7 +248,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   async function runAll() {
     const result = {};
-    for (const [name, job] of Object.entries({ renewals, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, trialNudges, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, dropAlerts, weeklyReports, monthlyReports, dailyBackup })) {
+    for (const [name, job] of Object.entries({ renewals, cancelledEnds, scheduledInvites, scheduledWhatsApp, inviteReminders, slaAlerts, aiTagging, trialNotices, trialNudges, googleReviews, profileMetrics, competitorChecks, profileHealth, mapRankings, aiVisibility, dropAlerts, weeklyReports, monthlyReports, dailyBackup })) {
       try {
         result[name] = await job();
       } catch (err) {
@@ -246,6 +261,7 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
 
   return {
     renewals,
+    cancelledEnds,
     competitorChecks,
     profileHealth,
     profileMetrics,

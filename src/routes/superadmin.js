@@ -137,7 +137,8 @@ export function superadminRoutes(ctx) {
     } else if (req.body.do === 'pause') {
       store.updateBusiness(business.id, { billing: 'paused' });
     } else {
-      store.updateBusiness(business.id, { plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null });
+      // Opening a plan by hand also undoes a cancellation of a page-paid account (its end date).
+      store.updateBusiness(business.id, { plan, billing_cycle: cycle, billing: 'active', plan_request: null, trial_notice: null, ...(business.card_token ? {} : { auto_renew: true, canceled_at: null, paid_until: null }) });
     }
     res.redirect(303, '/superadmin?ok=1#businesses');
   });

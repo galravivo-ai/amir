@@ -366,7 +366,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
     },
 
     /** A business cancelled its subscription: the operator hears, with what to do (a refund on a yearly plan). */
-    async subscriptionCancelled({ business, user, reason, until, cycle, refund = 0, admins }) {
+    async subscriptionCancelled({ business, user, reason, until, cycle, refund = 0, admins, icount = false }) {
       if (!admins.length) return false;
       const annual = cycle === 'annual';
       return send({
@@ -380,6 +380,7 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
           body: `<p><b>${h(business.name)}</b> ביטל את המנוי. הוא נשאר פעיל עד <b>${h(until || '—')}</b>, ולא יחויב יותר.</p>
             <p>מבטל: ${h(user.name)} · <span dir="ltr">${h(user.email)}</span></p>
             ${reason ? `<p>הסיבה: ${h(reason)}</p>` : ''}
+            ${icount ? '<p><b>שולם בדף iCount: יש לבטל את הוראת הקבע ב-iCount.</b> החשבון ייסגר לבד בתאריך הזה.</p>' : ''}
             ${annual && refund ? `<p><b>מסלול שנתי: יש להחזיר ₪${refund.toLocaleString('he-IL')}</b> בקארדקום, בתוך 14 יום. החודשים שנוצלו חושבו לפי המחיר החודשי הרגיל, והגישה מסתיימת בסוף החודש הנוכחי.</p>` : ''}
             ${emailButton(url('/superadmin#businesses'), 'לניהול המערכת')}`,
         }),

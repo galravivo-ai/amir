@@ -55,7 +55,7 @@ export function webhookRoutes(store, { billing = null, notifier = null, adminEma
     const match = matchPayment(store, { emails, amounts });
     let what = '';
     if (match?.kind === 'plan') {
-      store.updateBusiness(match.business.id, { plan: match.plan, billing_cycle: match.cycle, billing: 'active', plan_request: null, trial_notice: null });
+      store.updateBusiness(match.business.id, { plan: match.plan, billing_cycle: match.cycle, billing: 'active', plan_request: null, trial_notice: null, auto_renew: true, canceled_at: null, paid_until: null });
       what = `מסלול ${PLANS[match.plan].label}, ${CYCLES[match.cycle]}`;
     } else if (match?.kind === 'branch' && store.activateBranch(match.branch.id)) {
       what = `סניף ${match.branch.title || match.branch.address || ''}`.trim();

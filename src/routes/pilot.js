@@ -6,20 +6,21 @@ const PAY = { yes: 'כן', maybe: 'אולי', no: 'לא' };
 
 /** The pilot checklist, for businesses that came in through a pilot link. */
 export function pilotRoutes(ctx) {
-  const { store, render } = ctx;
+  const { store, render, requireRole } = ctx;
+  const manager = requireRole('manager');
   const router = express.Router();
   const pilotOnly = (req, res, next) => (req.business.pilot ? next() : res.redirect(303, '/admin'));
 
   router.get('/pilot', pilotOnly, (req, res) => {
-    render(req, res, 'הפיילוט שלכם', V.pilotView({ pilot: pilotSteps(store, req.business, req.user), csrf: req.user.csrf, sent: Boolean(req.query.sent) }));
+    render(req, res, 'הפיילוט שלכם', V.pilotView({ pilot: pilotSteps(store, req.business, req.user), csrf: req.user.csrf, sent: Boolean(req.query.sent), edit: req.role !== 'viewer' }));
   });
 
-  router.post('/pilot/mark', pilotOnly, (req, res) => {
+  router.post('/pilot/mark', pilotOnly, manager, (req, res) => {
     store.setGrowthMark(req.business.id, 'pilot:ask', '', req.body.on !== '0');
     res.redirect(303, '/admin/pilot');
   });
 
-  router.post('/pilot/feedback', pilotOnly, async (req, res) => {
+  router.post('/pilot/feedback', pilotOnly, manager, async (req, res) => {
     const text = (k) => String(req.body[k] ?? '').trim().slice(0, 1000);
     const helped = text('helped');
     if (!helped) return res.redirect(303, '/admin/pilot#feedback');

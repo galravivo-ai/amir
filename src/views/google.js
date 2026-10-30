@@ -221,7 +221,13 @@ export function googleConnectView({
         }
       </div>
       <ul class="g-connect-perks">${perks.map(([ic, t, d]) => `<li><span class="g-perk-ic">${icon(ic, 20)}</span><div><b>${t}</b><small>${d}</small></div></li>`).join('')}</ul>
-    </section>`;
+    </section>
+    ${
+      gbpLocations.length
+        ? `<section class="card stack"><div class="warn">החיבור לגוגל נותק. הביקורות והנתונים של הסניפים נשמרו, אבל לא מתעדכנים ואי אפשר לענות מכאן עד שמתחברים שוב.</div>
+            ${locationsTable(gbpLocations, { campaigns, csrf, can, deletable: true, branchCost })}</section>`
+        : ''
+    }`;
   } else if (gbpAvailable && conn) {
     gbpPart = `${conn.last_error ? `<div class="warn">הסנכרון האחרון מול החשבון נכשל: ${h(conn.last_error)}</div>` : ''}
     <section class="card stack">

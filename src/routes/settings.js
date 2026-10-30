@@ -4,8 +4,8 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
-import { CYCLES, hasApi, icountUrl, limitLabel, newBusiness, PLANS, profilesOf } from '../plans.js';
-import { amountFor } from '../billing.js';
+import { CYCLES, hasApi, icountUrl, limitLabel, newBusiness, PLANS, profilesOf, TRIAL_PLAN } from '../plans.js';
+import { addPeriod, amountFor } from '../billing.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
 import { clampInt, emailList, errorPage, imageMime, isEmail, normalizeInviteTemplate, safeColor, safeUrl } from '../util.js';
 import { parseJson } from '../db.js';
@@ -77,7 +77,9 @@ export function settingsRoutes(ctx) {
   router.post('/businesses', (req, res) => {
     const name = String(req.body.name ?? '').trim().slice(0, 100);
     if (!name) return res.redirect(303, '/admin/business');
-    const id = store.createBusiness(req.user.id, newBusiness(name));
+    // One trial per owner: a business added by someone who already owns one starts by choosing a plan.
+    const ownsOne = req.businesses.some((b) => b.user_id === req.user.id);
+    const id = store.createBusiness(req.user.id, ownsOne ? { name, plan: TRIAL_PLAN, billing: 'unpaid' } : newBusiness(name));
     res.cookie(BIZ_COOKIE, String(id), { ...ctx.cookieOpts, maxAge: 365 * 864e5 });
     res.redirect(303, '/admin/campaigns/new');
   });
@@ -284,13 +286,30 @@ export function settingsRoutes(ctx) {
   router.post('/plan/cancel', owner, async (req, res) => {
     const reason = [V.CANCEL_REASONS[req.body.reason], String(req.body.details ?? '').trim()].filter(Boolean).join(' · ').slice(0, 500);
     const b = req.business;
-    const q = ctx.billing ? ctx.billing.cancel(b, reason) : { refund: 0, until: b.paid_until };
-    if (!ctx.billing) store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    const q = ctx.billing ? ctx.billing.cancel(b, reason) : { refund: 0, until: b.billing === 'active' ? b.paid_until || paidPeriodEnd(b) : b.paid_until };
+    if (!ctx.billing) {
+      store.updateBusiness(b.id, { auto_renew: false, next_plan: null, next_cycle: null, cancel_reason: reason || null, canceled_at: new Date().toISOString().slice(0, 19).replace('T', ' '), paid_until: q.until || null });
+    }
     await ctx.notifier
-      ?.subscriptionCancelled({ business: b, user: req.user, reason, until: q.until ? q.until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, refund: q.refund, admins: ctx.adminEmails() })
+      ?.subscriptionCancelled({ business: b, user: req.user, reason, until: q.until ? q.until.slice(0, 10).split('-').reverse().join('.') : '', cycle: b.billing_cycle, refund: q.refund, admins: ctx.adminEmails(), icount: !ctx.billing && b.billing === 'active' })
       .catch((err) => console.error('[notify] cancellation failed:', err.message));
     res.redirect(303, `/admin/plan?canceled=${req.access?.card ? 'trial' : '1'}`);
   });
+
+  /**
+   * Paid by an iCount page: the period runs from the last payment that opened
+   * the plan, a month or a year at a time; without one, a month from now.
+   * The account stays open until then, and closes on its own after (jobs).
+   */
+  function paidPeriodEnd(b) {
+    const cycle = b.billing_cycle === 'annual' ? 'annual' : 'monthly';
+    const last = store.db.prepare("SELECT created_at FROM icount_payments WHERE business_id = ? AND result LIKE 'activated%' ORDER BY id DESC LIMIT 1").get(b.id);
+    let t = last ? Date.parse(`${String(last.created_at).replace(' ', 'T')}Z`) : Date.now();
+    const step = last ? cycle : 'monthly';
+    do t = addPeriod(t, step);
+    while (t <= Date.now());
+    return new Date(t).toISOString().slice(0, 19).replace('T', ' ');
+  }
 
   // Undo a change scheduled for the renewal.
   router.post('/plan/keep', owner, (req, res) => {
@@ -300,6 +319,8 @@ export function settingsRoutes(ctx) {
 
   router.post('/billing/auto-renew', owner, (req, res) => {
     if (ctx.billing) ctx.billing.setAutoRenew(req.business, req.body.on === '1');
+    // Paid on iCount: changing one's mind before the end of the period undoes the cancellation.
+    else if (req.body.on === '1' && req.business.billing === 'active') store.updateBusiness(req.business.id, { auto_renew: true, canceled_at: null, cancel_reason: null, paid_until: null });
     res.redirect(303, '/admin/plan?renew=' + (req.body.on === '1' ? 'on' : 'off'));
   });
 

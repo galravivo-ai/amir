@@ -398,7 +398,8 @@ export function planView({
   const cycle = CYCLES[cycleKey];
   const paying = Boolean(business.card_token && business.paid_until && access?.state === 'active');
   const active = access?.state === 'active';
-  const canceled = active && paying && !business.auto_renew;
+  // Cancelled: a card plan that won't renew, or a page-paid plan with its end date set.
+  const canceled = active && ((paying && !business.auto_renew) || Boolean(!business.card_token && business.canceled_at && business.paid_until));
   const next = PLANS[business.next_plan];
   const until = day(business.paid_until);
   const perPeriod = priceFor(plan, cycleKey, profiles);
@@ -412,7 +413,7 @@ export function planView({
     ['תשלום', h(cycle)],
     ['פרופילים בגוגל', `${profiles}`],
     plan.price != null ? [cycleKey === 'annual' ? 'לשנה' : 'לחודש', `<b>${money(perPeriod)}</b> <small>${profiles > 1 ? `₪${plan.price * months} + ${profiles === 2 ? 'סניף נוסף' : `${profiles - 1} סניפים ×`} ₪${branchPrice(plan) * months}, ` : ''}כולל מע״מ</small>`] : null,
-    paying ? [!business.auto_renew ? 'פעיל עד' : 'החידוש הבא', h(until)] : null,
+    paying ? [!business.auto_renew ? 'פעיל עד' : 'החידוש הבא', h(until)] : canceled ? ['פעיל עד', h(until)] : null,
     paying ? ['כרטיס', `<span dir="ltr">•••• ${h(business.card_last4 || '····')}</span>`] : null,
   ].filter(Boolean);
   const factsHtml = `<dl class="sub-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;

@@ -14,7 +14,6 @@ import { isEn } from '../lang.js';
 import { parseJson } from '../db.js';
 import { sendWhatsAppInvite, whatsAppLeft } from '../whatsapp.js';
 import { googleOverview } from './performance.js';
-import { weekKey } from '../tasks.js';
 import { mapsTop3 } from '../rankings.js';
 import { dataArrival } from '../arrival.js';
 import * as V from '../views/admin.js';
@@ -60,11 +59,6 @@ export function adminRoutes(ctx) {
   admin.post('/onboarding/dismiss', manager, (req, res) => {
     store.setOnboardingFlag(req.business.id, 'dismissed');
     res.redirect(303, '/admin');
-  });
-
-  admin.post('/tasks/:key/done', (req, res) => {
-    store.markTaskDone(req.business.id, weekKey(), String(req.params.key).slice(0, 60));
-    res.redirect(303, req.body.back === 'maps' ? '/admin/maps#plan' : '/admin#tasks');
   });
 
   // What the dashboard and the full-data page both show.
