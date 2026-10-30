@@ -186,6 +186,9 @@ export function createStore(db) {
       return r.changes ? Number(r.lastInsertRowid) : null;
     },
     setIcountResult: (id, result, businessId = null) => q('UPDATE icount_payments SET result = ?, business_id = ? WHERE id = ?').run(result, businessId, id),
+    /** A business's payments on iCount pages that opened its plan or a branch. */
+    icountPaymentsOf: (businessId, limit = 24) =>
+      q("SELECT * FROM icount_payments WHERE business_id = ? AND result LIKE 'activated%' ORDER BY id DESC LIMIT ?").all(businessId, limit),
     recentIcountPayments: (limit = 20) =>
       q(`SELECT p.*, b.name AS business_name FROM icount_payments p LEFT JOIN businesses b ON b.id = p.business_id ORDER BY p.id DESC LIMIT ?`).all(limit),
     /** For the system admin: branches waiting for a payment, the ones whose owner went to pay first. */
@@ -1109,9 +1112,9 @@ export function createStore(db) {
     paymentById: (id) => q('SELECT * FROM payments WHERE id = ?').get(id) || null,
     setPaymentPage: (id, pageId) => q('UPDATE payments SET page_id = ? WHERE id = ?').run(pageId, id),
     /** Marks a pending payment paid or failed; false if it was already settled (a repeat). */
-    settlePayment(id, { status, transactionId = null, error = null }) {
-      const r = q(`UPDATE payments SET status = ?, transaction_id = ?, error = ?, paid_at = CASE WHEN ? = 'paid' THEN datetime('now') END
-                   WHERE id = ? AND status = 'pending'`).run(status, transactionId, error, status, id);
+    settlePayment(id, { status, transactionId = null, error = null, document = null }) {
+      const r = q(`UPDATE payments SET status = ?, transaction_id = ?, error = ?, document = ?, paid_at = CASE WHEN ? = 'paid' THEN datetime('now') END
+                   WHERE id = ? AND status = 'pending'`).run(status, transactionId, error, document || null, status, id);
       return r.changes > 0;
     },
     paymentsFor: (businessId, limit = 24) => q('SELECT * FROM payments WHERE business_id = ? ORDER BY id DESC LIMIT ?').all(businessId, limit),

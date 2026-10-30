@@ -85,3 +85,20 @@ export function matchPayment(store, { emails, amounts }, now = Date.now()) {
   const recent = priced.filter((w) => now - w.at < RECENT);
   return recent.length === 1 ? { ...recent[0], by: 'amount' } : null;
 }
+
+/**
+ * The invoice in an iCount payment notice: its number, and its link when iCount
+ * sent one. Field names vary between iCount's forms, so both are looked for.
+ */
+export function documentOf(payload) {
+  let data = payload;
+  try {
+    if (typeof data === 'string') data = JSON.parse(data);
+  } catch {
+    return { number: '', url: '' };
+  }
+  const all = entries(data);
+  const number = (all.find(([k, v]) => /^doc_?num(ber)?$/i.test(k) && /^\d{1,12}$/.test(v)) || [])[1] || '';
+  const url = (all.find(([k, v]) => /doc|pdf|url|link/i.test(k) && /^https:\/\/[^\s"'<>]*icount[^\s"'<>]*$/i.test(v)) || [])[1] || '';
+  return { number, url };
+}

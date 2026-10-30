@@ -217,3 +217,17 @@ test('invoice details: saved in settings, shown on the plan, sent to the card pa
   await req('/admin/business/invoice', { form: { _csrf: csrf } });
   assert.equal(store.businessById(biz.id).invoice, '');
 });
+
+test('the invoices list: card payments and iCount payments, with number and link', async () => {
+  const { req, biz } = await owner('invoices@example.com');
+  assert.match((await req('/admin/business')).text, /עוד לא היו תשלומים/);
+  const pid = store.createPayment(biz.id, { kind: 'checkout', plan: 'pro', cycle: 'monthly', amount: 169, createdBy: 'x' });
+  store.settlePayment(pid, { status: 'paid', transactionId: 't1', document: '30017' });
+  store.db.prepare("INSERT INTO icount_payments (digest, payload, email, amount, result, business_id) VALUES ('inv-d', ?, 'invoices@example.com', 99, 'activated: מסלול גוגל, חודשי (זוהה לפי הסכום, לא לפי המייל)', ?)")
+    .run(JSON.stringify({ docnum: '5021', doc_url: 'https://app.icount.co.il/doc/abc123' }), biz.id);
+  const page = (await req('/admin/business')).text;
+  assert.match(page, /מס׳ 30017/);
+  assert.match(page, /href="https:\/\/app\.icount\.co\.il\/doc\/abc123"/);
+  assert.match(page, /מס׳ 5021/);
+  assert.match(page, /מסלול גוגל, חודשי</);
+});

@@ -7,6 +7,8 @@ const API = 'https://secure.cardcom.solutions/api/v11';
 
 export class CardcomError extends Error {}
 
+/** The number of the invoice Cardcom issued, when its answer has one. */
+const docNumber = (r) => String(r?.DocumentInfo?.DocumentNumber || r?.DocumentNumber || '');
 const clean = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '');
 
 /** Returns null when no terminal is configured. */
@@ -107,6 +109,7 @@ export function createCardcom({ env = process.env, fetchImpl = globalThis.fetch 
         token: token.Token || tx.Token || '',
         expiry: month && year ? `${String(month).padStart(2, '0')}${String(year).slice(-2)}` : '',
         last4: String(tx.Last4CardDigitsString || tx.Last4CardDigits || ''),
+        document: docNumber(r),
       };
     },
 
@@ -123,7 +126,7 @@ export function createCardcom({ env = process.env, fetchImpl = globalThis.fetch 
         Document: document({ ...customer, description, amount }),
       });
       const ok = r.ResponseCode === 0;
-      return { ok, transactionId: String(r.TranzactionId || ''), error: ok ? '' : String(r.Description || 'החיוב נכשל') };
+      return { ok, transactionId: String(r.TranzactionId || ''), error: ok ? '' : String(r.Description || 'החיוב נכשל'), document: docNumber(r) };
     },
   };
 }

@@ -2966,5 +2966,12 @@
 "הדף נפתח בתוך אפליקציה. פותחים אותו בדפדפן: בתפריט (": "The page opened inside an app. Open it in the browser: in the menu (",
 ") בוחרים": ") choose",
 "פתיחה בדפדפן": "Open in browser",
-"שם לוחצים שוב על \"התקנה כאפליקציה\"": "There, tap &quot;Install as an app&quot; again"
+"שם לוחצים שוב על \"התקנה כאפליקציה\"": "There, tap &quot;Install as an app&quot; again",
+"החשבוניות שלכם": "Your invoices",
+"על מה": "For",
+"מס׳": "No.",
+"לצפייה ↗": "View ↗",
+"נשלחה במייל": "Sent by email",
+"כל חשבונית נשלחת גם במייל ברגע התשלום. לא מוצאים? כתבו לנו ונשלח שוב.": "Every invoice is also emailed the moment you pay. Can't find one? Write to us and we'll send it again.",
+"עוד לא היו תשלומים. אחרי כל תשלום החשבונית תופיע כאן, ותישלח גם במייל.": "No payments yet. After each payment the invoice shows here, and is emailed too."
 }

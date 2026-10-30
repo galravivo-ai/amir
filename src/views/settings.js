@@ -91,7 +91,26 @@ function invoiceCard(business, csrf) {
   </form>`;
 }
 
-export function businessView({ business, csrf, plan, error = '' }) {
+/** What was paid to GoFive, with each invoice's number and link when there is one. */
+function invoicesList(invoices) {
+  return `<section class="card stack" id="invoices">
+    <h3>${icon('report', 18)} החשבוניות שלכם</h3>
+    ${
+      invoices.length
+        ? `<table class="table responsive"><thead><tr><th>תאריך</th><th>על מה</th><th>סכום</th><th>חשבונית</th></tr></thead><tbody>${invoices
+            .map(
+              (i) => `<tr><td data-l="תאריך" class="small">${h(formatDate(i.at).split(',')[0])}</td><td data-l="על מה">${h(i.what)}</td>
+                <td data-l="סכום">${i.amount != null ? `₪${Number(i.amount).toLocaleString('he-IL')}` : '—'}</td>
+                <td data-l="חשבונית">${i.url ? `<a href="${h(i.url)}" target="_blank" rel="noopener">${i.number ? `מס׳ ${h(i.number)} ` : ''}לצפייה ↗</a>` : i.number ? `מס׳ ${h(i.number)}` : '<span class="muted small">נשלחה במייל</span>'}</td></tr>`,
+            )
+            .join('')}</tbody></table>
+          <p class="muted small">כל חשבונית נשלחת גם במייל ברגע התשלום. לא מוצאים? כתבו לנו ונשלח שוב.</p>`
+        : '<p class="muted">עוד לא היו תשלומים. אחרי כל תשלום החשבונית תופיע כאן, ותישלח גם במייל.</p>'
+    }
+  </section>`;
+}
+
+export function businessView({ business, csrf, plan, error = '', invoices = [] }) {
   return `<h1>הגדרות עסק</h1>
   ${error ? `<div class="error">${h(error)}</div>` : ''}
   <nav class="settings-more"><a href="/admin/leaderboard">${icon('trophy', 16)} דירוג עובדים</a>${hasApi(business) ? `<a href="/admin/integrations">${icon('plug', 16)} חיבורים לקופה ולמערכת תורים</a>` : ''}</nav>
@@ -145,6 +164,7 @@ export function businessView({ business, csrf, plan, error = '' }) {
   ${inviteMessageCard(business, csrf)}
 
   ${invoiceCard(business, csrf)}
+  ${invoicesList(invoices)}
 
   <section class="card stack" id="logo">
     <h3>לוגו</h3>

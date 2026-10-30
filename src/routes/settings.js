@@ -4,6 +4,7 @@ import { branchesOf } from '../network.js';
 import { usageOf } from '../usage.js';
 import multer from 'multer';
 import { AiError } from '../ai.js';
+import { documentOf } from '../icount.js';
 import { CYCLES, hasApi, icountUrl, limitLabel, newBusiness, PLANS, profilesOf, TRIAL_PLAN } from '../plans.js';
 import { addPeriod, amountFor } from '../billing.js';
 import { normalizeQuestions, roleAtLeast, ROLES } from '../store.js';
@@ -20,9 +21,20 @@ export function settingsRoutes(ctx) {
   const manager = requireRole('manager');
 
   // ---------- business ----------
+  /** The payments to GoFive and their invoices, card and iCount together, newest first. */
+  function invoicesOf(business) {
+    const card = store.paymentsFor(business.id, 50).filter((p) => p.status === 'paid' && p.amount > 0)
+      .map((p) => ({ at: p.paid_at || p.created_at, what: `${PLANS[p.plan]?.label || p.plan} · ${p.cycle === 'annual' ? 'שנתי' : 'חודשי'}`, amount: p.amount, number: p.document || '', url: '' }));
+    const icount = store.icountPaymentsOf(business.id, 50).map((p) => {
+      const doc = documentOf(p.payload);
+      return { at: p.created_at, what: String(p.result).replace(/^activated:\s*/, '').replace(/\s*\(זוהה[^)]*\)$/, '') || 'תשלום', amount: p.amount, number: doc.number, url: doc.url };
+    });
+    return [...card, ...icount].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  }
+
   router.get('/business', owner, (req, res) => {
     const error = req.query.err ? String(req.query.err).slice(0, 200) : '';
-    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf, plan: req.plan, error }));
+    render(req, res, 'הגדרות עסק', V.businessView({ business: req.business, csrf: req.user.csrf, plan: req.plan, error, invoices: invoicesOf(req.business) }));
   });
 
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024, files: 1, fields: 5 } });

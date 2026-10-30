@@ -735,6 +735,10 @@ const MIGRATIONS = [
   `
   ALTER TABLE businesses ADD COLUMN invoice TEXT NOT NULL DEFAULT '';
   `,
+  // v45: the invoice number Cardcom issued for a card payment
+  `
+  ALTER TABLE payments ADD COLUMN document TEXT;
+  `,
 ];
 
 function migrate(db) {

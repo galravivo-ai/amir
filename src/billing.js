@@ -139,7 +139,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
       if (failed || (r.transactionId && !matches)) store.settlePayment(payment.id, { status: 'failed', error: matches ? r.error : 'הסכום ששולם לא תואם' });
       return store.paymentById(payment.id);
     }
-    if (store.settlePayment(payment.id, { status: 'paid', transactionId: r.transactionId })) {
+    if (store.settlePayment(payment.id, { status: 'paid', transactionId: r.transactionId, document: r.document })) {
       store.updateBusiness(payment.business_id, {
         plan: payment.plan,
         billing_cycle: payment.cycle,
@@ -190,7 +190,7 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         uniqueId: `upgrade-${id}`,
         customer: customer(business, email),
       });
-      store.settlePayment(id, r.ok ? { status: 'paid', transactionId: r.transactionId } : { status: 'failed', error: r.error });
+      store.settlePayment(id, r.ok ? { status: 'paid', transactionId: r.transactionId, document: r.document } : { status: 'failed', error: r.error });
       if (!r.ok) return { status: 'failed', error: r.error };
     }
     store.updateBusiness(business.id, { plan, next_plan: null, next_cycle: null, auto_renew: true });
@@ -285,11 +285,11 @@ export function createBilling({ store, cardcom, notifier = null, now = () => Dat
         customer: customer(b),
       });
       if (r.ok && trial) {
-        store.settlePayment(id, { status: 'paid', transactionId: r.transactionId });
+        store.settlePayment(id, { status: 'paid', transactionId: r.transactionId, document: r.document });
         store.updateBusiness(b.id, { billing: 'active', trial_ends_at: null, trial_notice: null, plan, billing_cycle: cycle, paid_until: toSql(addPeriod(t, cycle)), pay_failures: 0, next_plan: null, next_cycle: null });
         renewed++;
       } else if (r.ok) {
-        store.settlePayment(id, { status: 'paid', transactionId: r.transactionId });
+        store.settlePayment(id, { status: 'paid', transactionId: r.transactionId, document: r.document });
         // Keep the billing day, unless the renewal is days late after failures.
         const from = fromSql(b.paid_until) > t - 7 * DAY ? fromSql(b.paid_until) : t;
         store.updateBusiness(b.id, { plan, billing_cycle: cycle, paid_until: toSql(addPeriod(from, cycle)), pay_failures: 0, next_plan: null, next_cycle: null });
