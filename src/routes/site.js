@@ -112,7 +112,7 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
   router.get('/guide/connect', (req, res) => res.send(guideConnectView({ signupOpen: signupOpen() })));
   router.get('/guide/:slug', (req, res) => {
     const guide = featureGuide(req.params.slug);
-    if (!guide) return res.status(404).send(errorPage('המדריך לא נמצא'));
+    if (!guide) return req.params.slug === 'leaderboard' ? res.redirect(301, '/guide') : res.status(404).send(errorPage('המדריך לא נמצא'));
     res.send(guideFeatureView({ signupOpen: signupOpen(), guide }));
   });
   router.get('/privacy', (req, res) => res.send(privacyView({ signupOpen: signupOpen() })));

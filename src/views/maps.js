@@ -38,7 +38,7 @@ const TIPS = `<details class="card mp-tips"><summary>${icon('spark', 18)} איך
 
 export function mapsView({ health, rank, running, csrf, notice = '', error = '' }) {
   const hasPlace = health.locations.length > 0;
-  return `<div class="page-head"><h1>${icon('pin', 26)} מפות: מיקום ובריאות הפרופיל</h1></div>
+  return `<div class="page-head"><h1>${icon('pin', 26)} קידום בגוגל מפות: מיקום ובריאות הפרופיל</h1></div>
     <p class="page-intro">כאן רואים איפה העסק עומד בגוגל מפות: באיזה מקום אתם מופיעים סביב העסק, ומה חסר בפרופיל.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}

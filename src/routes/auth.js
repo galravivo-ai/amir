@@ -4,7 +4,7 @@ import { newBusiness, PLANS, signupTrialDays } from '../plans.js';
 import QRCode from 'qrcode';
 import { generateBackupCodes, generateSecret, otpauthUri, verifyCode } from '../totp.js';
 import { operatorInfo } from '../views/site.js';
-import { errorPage, hashPassword, isEmail, sha256, verifyPassword } from '../util.js';
+import { errorPage, hashPassword, inAppBrowser, isEmail, safeNext, sha256, verifyPassword } from '../util.js';
 import * as V from '../views/auth.js';
 import { rateLimiter } from './public.js';
 import { BIZ_COOKIE, SESSION_COOKIE } from './context.js';
@@ -76,7 +76,7 @@ export function authRoutes(ctx) {
   router.get('/login', (req, res) => {
     if (req.user) return res.redirect('/admin');
     const notice = req.query.reset ? 'הסיסמה עודכנה, אפשר להיכנס' : '';
-    render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), allowSignup: ctx.signupOpen(), notice, next: req.query.next }));
+    render(req, res, 'כניסה', V.loginView({ inApp: inAppBrowser(req.get('user-agent')), google: Boolean(ctx.google), allowSignup: ctx.signupOpen(), notice, next: req.query.next }));
   });
 
   const loginAttempts = new Map();
@@ -86,7 +86,7 @@ export function authRoutes(ctx) {
     const attempts = loginAttempts.get(key) || { n: 0, until: 0 };
     if (attempts.until > Date.now()) {
       res.status(429);
-      return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות', values: { email } }));
+      return render(req, res, 'כניסה', V.loginView({ inApp: inAppBrowser(req.get('user-agent')), google: Boolean(ctx.google), error: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות', values: { email } }));
     }
     const user = store.userByEmail(email);
     if (!user || !verifyPassword(String(req.body.password ?? ''), user.password_hash)) {
@@ -94,7 +94,7 @@ export function authRoutes(ctx) {
       if (attempts.n >= 5) Object.assign(attempts, { n: 0, until: Date.now() + 5 * 60e3 });
       loginAttempts.set(key, attempts);
       res.status(401);
-      return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: ctx.signupOpen(), next: req.query.next }));
+      return render(req, res, 'כניסה', V.loginView({ inApp: inAppBrowser(req.get('user-agent')), google: Boolean(ctx.google), error: 'אימייל או סיסמה שגויים', values: { email }, allowSignup: ctx.signupOpen(), next: req.query.next }));
     }
     loginAttempts.delete(key);
     logIn(res, user, req.query.next);
@@ -104,7 +104,7 @@ export function authRoutes(ctx) {
   function logIn(res, user, nextRaw) {
     const next = String(nextRaw ?? '');
     // The system admin lands on the system panel, everyone else on their business.
-    const target = /^\/join\/[\w-]+$/.test(next) ? next : ctx.isSuperadmin(user) ? '/superadmin' : '/admin';
+    const target = safeNext(next) || (ctx.isSuperadmin(user) ? '/superadmin' : '/admin');
     if (user.totp_enabled) {
       const challenge = store.createLoginChallenge(user.id, target);
       res.cookie(CHALLENGE_COOKIE, challenge, { ...ctx.cookieOpts, maxAge: 5 * 60e3 });
@@ -125,14 +125,14 @@ export function authRoutes(ctx) {
   };
   const googleFail = (req, res, error) => {
     res.status(400);
-    return render(req, res, 'כניסה', V.loginView({ google: Boolean(ctx.google), error, allowSignup: ctx.signupOpen() }));
+    return render(req, res, 'כניסה', V.loginView({ inApp: inAppBrowser(req.get('user-agent')), google: Boolean(ctx.google), error, allowSignup: ctx.signupOpen() }));
   };
 
   router.get('/auth/google', (req, res) => {
     if (!ctx.google) return res.redirect('/login');
     const nonce = crypto.randomBytes(16).toString('base64url');
     const next = String(req.query.next ?? '');
-    const state = { nonce, at: Date.now(), pass: passFor(req.query.pass)?.code || '', next: /^\/join\/[\w-]+$/.test(next) ? next : '' };
+    const state = { nonce, at: Date.now(), pass: passFor(req.query.pass)?.code || '', next: safeNext(next) };
     res.cookie(GOOGLE_STATE_COOKIE, ctx.google.seal(JSON.stringify(state)), { ...ctx.cookieOpts, maxAge: 10 * 60e3 });
     res.redirect(303, ctx.google.signInUrl({ redirectUri: googleRedirect(req), state: nonce }));
   });
@@ -225,7 +225,7 @@ export function authRoutes(ctx) {
   router.get('/register', (req, res) => {
     if (!ctx.signupOpen()) return res.redirect('/login');
     const pass = passFor(req.query.pass);
-    render(req, res, 'הרשמה', V.registerView({ trialOpen: trialMode(), pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass), google: Boolean(ctx.google) }));
+    render(req, res, 'הרשמה', V.registerView({ inApp: inAppBrowser(req.get('user-agent')), trialOpen: trialMode(), pass, values: { pass: pass?.code }, passGone: Boolean(req.query.pass && !pass), google: Boolean(ctx.google) }));
   });
 
   router.post('/register', limit, (req, res) => {
@@ -235,7 +235,7 @@ export function authRoutes(ctx) {
     const error = validateNewUser(v, { needBusiness: true });
     if (error) {
       res.status(422);
-      return render(req, res, 'הרשמה', V.registerView({ trialOpen: trialMode(), error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
+      return render(req, res, 'הרשמה', V.registerView({ inApp: inAppBrowser(req.get('user-agent')), trialOpen: trialMode(), error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
     }
     startAccount(res, v, pass);
   });

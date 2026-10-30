@@ -1,4 +1,4 @@
-import { h } from '../util.js';
+import { h, safeNext } from '../util.js';
 import { PLANS, TRIAL_DAYS } from '../plans.js';
 
 /** Before signing up: how the start works and what is charged when. */
@@ -35,7 +35,7 @@ const pwField = (label, { name = 'password', autocomplete = 'current-password', 
 const newPassword = (label) => pwField(label, { autocomplete: 'new-password', min: 8, hint: 'לפחות 8 תווים' });
 
 /** "Continue with Google", then a divider before the email form. */
-const googleButton = (href, label) => `<a class="btn big g-btn auth-google" href="${h(href)}">${GOOGLE_G}<span>${label}</span></a>
+const googleButton = (href, label, inApp = false) => `${inApp ? `<p class="auth-inapp">${'הדף נפתח בתוך אפליקציה, וגוגל לא מאפשרת להתחבר מכאן. כדי להיכנס עם Google, פותחים את הדף בדפדפן: בתפריט (⋯ או ⋮) בוחרים "פתיחה בדפדפן". אפשר גם להיכנס כאן עם מייל וסיסמה.'}</p>` : ''}<a class="btn big g-btn auth-google" href="${h(href)}">${GOOGLE_G}<span>${label}</span></a>
   <div class="auth-or"><span>או עם מייל וסיסמה</span></div>`;
 const termsBoxes = (values) => `<label class="check"><input type="checkbox" name="terms" value="1" required ${values.terms ? 'checked' : ''}>
         <span>קראתי ואני מסכים/ה ל<a href="/terms" target="_blank">תנאי השימוש והתקנון</a> ול<a href="/privacy" target="_blank">מדיניות הפרטיות</a></span></label>
@@ -45,14 +45,14 @@ const termsBoxes = (values) => `<label class="check"><input type="checkbox" name
 const csrfField = (csrf) => (csrf ? `<input type="hidden" name="_csrf" value="${h(csrf)}">` : '');
 const errorBox = (error) => (error ? `<div class="error">${h(error)}</div>` : '');
 
-export function loginView({ error = '', values = {}, allowSignup, notice = '', next = '', google = false }) {
-  const join = /^\/join\/[\w-]+$/.test(String(next));
-  const action = join ? `/login?next=${encodeURIComponent(next)}` : '/login';
+export function loginView({ error = '', values = {}, allowSignup, notice = '', next = '', google = false, inApp = false }) {
+  const back = safeNext(next);
+  const action = back ? `/login?next=${encodeURIComponent(back)}` : '/login';
   return `<div class="auth card">
     <h1>כניסה</h1>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${errorBox(error)}
-    ${google ? googleButton(`/auth/google${join ? `?next=${encodeURIComponent(next)}` : ''}`, 'כניסה עם Google') : ''}
+    ${google ? googleButton(`/auth/google${back ? `?next=${encodeURIComponent(back)}` : ''}`, 'כניסה עם Google', inApp) : ''}
     <form method="post" action="${h(action)}" class="stack">
       <label>אימייל<input name="email" type="email" required value="${h(values.email)}" dir="ltr" autocomplete="email"></label>
       ${pwField('סיסמה')}
@@ -62,14 +62,14 @@ export function loginView({ error = '', values = {}, allowSignup, notice = '', n
   </div>`;
 }
 
-export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false, google = false, trialOpen = false }) {
+export function registerView({ error = '', values = {}, invite = null, pass = null, passGone = false, google = false, trialOpen = false, inApp = false }) {
   return `<div class="auth card">
     <h1>${invite ? `הצטרפות ל${h(invite.business_name)}` : 'הרשמה'}</h1>
     ${pass ? `<div class="flash">הוזמנתם ל-<b>${pass.days} ימים חינם</b> במסלול <b>${h(PLANS[pass.plan].label)}</b>, עם כל האפשרויות ובלי כרטיס אשראי.</div>` : ''}
     ${passGone ? '<div class="warn">הקישור להתנסות חינם כבר נוצל או בוטל. אפשר להירשם כרגיל.</div>' : ''}
     ${invite || pass ? '' : startTerms(trialOpen)}
     ${errorBox(error)}
-    ${google && !invite ? googleButton(`/auth/google${values.pass ? `?pass=${encodeURIComponent(values.pass)}` : ''}`, 'הרשמה מהירה עם Google') : ''}
+    ${google && !invite ? googleButton(`/auth/google${values.pass ? `?pass=${encodeURIComponent(values.pass)}` : ''}`, 'הרשמה מהירה עם Google', inApp) : ''}
     <form method="post" action="${invite ? `/join/${h(values.token)}` : '/register'}" class="stack">
       ${
         invite

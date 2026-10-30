@@ -180,3 +180,26 @@ test('every password field can be shown, also when logging in and changing it', 
   const { req: me } = await owner('pw@example.com');
   assert.equal(((await me('/account')).text.match(/class="pw-toggle"/g) || []).length, 2, 'current and new password');
 });
+
+test('a link to a page of the system comes back to that page after logging in', async () => {
+  const { req } = await owner('back@example.com');
+  await req('/logout', { form: {} }).catch(() => {});
+  const anon = client();
+  const first = await anon('/admin/google/reviews');
+  assert.equal(first.location, '/login?next=%2Fadmin%2Fgoogle%2Freviews');
+  const page = (await anon(first.location)).text;
+  assert.match(page, /action="\/login\?next=%2Fadmin%2Fgoogle%2Freviews"/);
+  const done = await anon('/login?next=%2Fadmin%2Fgoogle%2Freviews', { form: { email: 'back@example.com', password: 'password123' } });
+  assert.equal(done.location, '/admin/google/reviews');
+  // never to another site
+  const evil = await client()('/login?next=%2F%2Fevil.com', { form: { email: 'back@example.com', password: 'password123' } });
+  assert.equal(evil.location, '/admin');
+});
+
+test('inside an app, the Google sign-in says to open the browser', async () => {
+  const { inAppBrowser } = await import('../src/util.js');
+  assert.ok(inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'));
+  assert.ok(inAppBrowser('Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36'.replace('Android 14; wv', 'Android 14; Pixel; wv')));
+  assert.ok(!inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'));
+  assert.ok(!inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1'));
+});

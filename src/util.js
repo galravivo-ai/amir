@@ -201,3 +201,22 @@ export function formatDate(iso) {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' });
 }
+
+/**
+ * Where to go after logging in: a page of the system (/admin…, /account…) or a
+ * team invite, never another site. Anything else is dropped.
+ */
+export function safeNext(next) {
+  const s = String(next ?? '');
+  return /^\/(join\/[\w-]+|admin(\/[\w\-/]*)?(\?[\w=&%.\-]*)?|account(\/[\w-]*)?)$/.test(s) && !s.includes('//') ? s : '';
+}
+
+/**
+ * A browser inside an app (Gmail, WhatsApp, Facebook, Instagram…), where Google
+ * refuses sign-in: iPhone without Safari's mark, or Android's web view.
+ */
+export function inAppBrowser(ua) {
+  const s = String(ua ?? '');
+  if (/FBAN|FBAV|Instagram|Line\/|LinkedInApp|; wv\)/.test(s)) return true;
+  return /iPhone|iPad|iPod/.test(s) && !/Safari\//.test(s);
+}

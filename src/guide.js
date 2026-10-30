@@ -257,19 +257,6 @@ export const FEATURE_GUIDES = [
     ],
   },
   {
-    slug: 'leaderboard',
-    group: 'reports',
-    title: 'דירוג עובדים',
-    summary: 'מי מקבל את הדירוגים הכי טובים.',
-    image: 'leaderboard.jpg',
-    link: '/admin/leaderboard',
-    points: [
-      'מוסיפים את העובדים בעמוד העובדים, שמקושר מדירוג העובדים. לכל עובד יש קישור ו-QR אישי.',
-      'הלקוח יכול גם לבחור בסקר מי נתן לו שירות.',
-      'כאן רואים את הדירוג של כל עובד ואת הסניפים זה מול זה.',
-    ],
-  },
-  {
     slug: 'network',
     group: 'reports',
     title: 'רשת הסניפים',

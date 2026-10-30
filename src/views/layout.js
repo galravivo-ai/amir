@@ -214,7 +214,7 @@ ${SKIP()}
       key: 'measure',
       label: 'איפה אתם עומדים',
       items: [
-        ['/admin/maps', 'מפות', 'pin', 0, { tip: 'באיזה מקום אתם מופיעים סביב העסק, ובריאות הפרופיל' }],
+        ['/admin/maps', 'קידום בגוגל מפות', 'pin', 0, { tip: 'באיזה מקום אתם מופיעים סביב העסק, ובריאות הפרופיל' }],
         ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם' }],
         ['/admin/competitors', 'מתחרים', 'rivals'],
         ['/admin/reports/monthly', 'דוחות ותובנות', 'report', 0, { also: ['/admin/insights'] }],

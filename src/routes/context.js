@@ -1,7 +1,7 @@
 import { isDemoUser } from '../demo.js';
 import { accessOf, newBusiness, planOf } from '../plans.js';
 import { roleAtLeast } from '../store.js';
-import { errorPage, isEmail, safeColor, safeUrl } from '../util.js';
+import { errorPage, isEmail, safeColor, safeNext, safeUrl } from '../util.js';
 import { operatorInfo } from '../views/site.js';
 import { adminPage } from '../views/layout.js';
 
@@ -105,7 +105,11 @@ export function createContext(
 
     /** Requires login and resolves the active business (and the user's role in it). */
     requireAuth(req, res, next) {
-      if (!req.user) return res.redirect(303, '/login');
+      if (!req.user) {
+        // Back to the page asked for after logging in (a link from a guide or an email).
+        const back = req.method === 'GET' ? safeNext(req.originalUrl) : '';
+        return res.redirect(303, back && back !== '/admin' ? `/login?next=${encodeURIComponent(back)}` : '/login');
+      }
       req.businesses = store.businessesFor(req.user.id);
       const wanted = Number(req.cookies[BIZ_COOKIE]);
       req.business = req.businesses.find((b) => b.id === wanted) || req.businesses[0];
