@@ -147,7 +147,7 @@ img { max-width: 100%; height: auto; display: block; }
 .v2-rail::-webkit-scrollbar { display: none; }
 .v2-rail > * { scroll-snap-align: start; flex: none; }
 .v2-rail-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
-.v2-arrow { width: 38px; height: 38px; border-radius: 50%; border: 0; background: #e8e8ed; color: var(--ink); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.v2-arrow { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 1.4rem; line-height: 1; cursor: pointer; }
 .v2-arrow:hover { background: #dcdce1; }
 .v2-arrow:disabled { opacity: .35; cursor: default; }
 .v2-sec.dark .v2-arrow { background: #2a2740; color: #fff; }
@@ -184,18 +184,31 @@ img { max-width: 100%; height: auto; display: block; }
 .v2-video { border-radius: 22px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .8); }
 .v2-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* steps */
-.v2-step { width: min(78vw, 340px); border-radius: 24px; padding: 30px 26px; background: var(--soft); }
-.v2-step b { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 1.2rem; }
-.v2-step h3 { margin: 16px 0 0; font-size: 1.3rem; }
+/* steps: three columns on a computer, a timeline on a phone */
+.v2-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 44px; counter-reset: s; }
+.v2-step { position: relative; border-radius: 24px; padding: 30px 26px; background: linear-gradient(180deg, #faf9ff, #f3f1fb); border: 1px solid #ebe8f7; }
+.v2-step b { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #6d4bff, #4b2bd6); color: #fff; font-size: 1.15rem; box-shadow: 0 10px 20px -10px rgba(75, 43, 214, .8); }
+.v2-step h3 { margin: 18px 0 0; font-size: 1.25rem; }
 .v2-step p { margin: 8px 0 0; color: var(--muted); }
-@media (min-width: 1100px) { .steps-rail .v2-rail { justify-content: center; } .steps-rail .v2-rail-nav { display: none; } }
+@media (max-width: 860px) {
+  .v2-steps { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 30px; }
+  .v2-step { background: none; border: 0; border-radius: 0; padding: 0 64px 30px 0; }
+  .v2-step b { position: absolute; top: 0; right: 0; width: 42px; height: 42px; font-size: 1.05rem; }
+  .v2-step:not(:last-child)::after { content: ''; position: absolute; top: 48px; bottom: 6px; right: 20px; width: 2px; background: linear-gradient(180deg, #c9bdff, #ebe8f7); }
+  .v2-step h3 { margin: 6px 0 0; font-size: 1.15rem; }
+}
 
-/* plans */
+/* plans: the recommended one is a dark, premium card */
 .v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; gap: 22px; margin-top: 44px; }
 .v2-plan { position: relative; background: #fff; border-radius: 28px; padding: 34px 30px; border: 1px solid var(--line); display: flex; flex-direction: column; }
-.v2-plan.best { border: 2px solid var(--brand); box-shadow: 0 24px 50px -30px rgba(75, 43, 214, .6); }
-.v2-badge { position: absolute; top: -13px; inset-inline-start: 50%; transform: translateX(50%); background: var(--yellow); color: #1c1650; font-size: .8rem; font-weight: 700; padding: 4px 12px; border-radius: 980px; }
+.v2-plan.best { border: 0; color: #fff; background: radial-gradient(420px 260px at 85% 0%, rgba(124, 92, 255, .55), transparent 70%), linear-gradient(165deg, #1b1546 0%, #0e0b26 100%); box-shadow: 0 34px 60px -32px rgba(30, 15, 110, .8); }
+.v2-plan.best .v2-branch, .v2-plan.best .v2-price small { color: #b9b3e0; }
+.v2-plan.best li svg { color: var(--yellow); }
+.v2-plan.best .v2-btn { background: var(--yellow); border-color: var(--yellow); color: #1c1650; }
+.v2-plan.best .v2-btn:hover { background: #ffdb5c; }
+.v2-plan li { border-top: 1px solid rgba(127, 127, 160, .16); padding-top: 10px; }
+.v2-plan li:first-child { border-top: 0; padding-top: 0; }
+.v2-badge { position: absolute; top: 22px; inset-inline-end: 24px; background: var(--yellow); color: #1c1650; font-size: .8rem; font-weight: 700; padding: 4px 12px; border-radius: 980px; }
 .v2-plan h3 { margin: 0; font-size: 1.45rem; }
 .v2-price { margin: 10px 0 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -.02em; }
 .v2-price small { font-size: 1rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
@@ -231,7 +244,15 @@ img { max-width: 100%; height: auto; display: block; }
   .v2-plans, .v2-video-row { grid-template-columns: minmax(0, 1fr); }
   .v2-device { padding: 6px; border-radius: 13px; }
   .v2-tools { justify-content: flex-start; }
-  .v2-card { border-radius: 24px; }
+  .v2-card { width: 84vw; border-radius: 24px; }
+  .v2-card-text { padding: 22px 20px 16px; }
+  .v2-card h3 { font-size: 1.22rem; margin-top: 12px; }
+  .v2-card p { font-size: .95rem; min-height: 0; }
+  .v2-card-img { padding: 0 0 0 20px; }
+  .v2-plans { gap: 26px; }
+  .v2-plan { padding: 28px 22px; border-radius: 24px; }
+  .v2-plan.best { order: -1; }
+  .v2-price { font-size: 2.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .v2-rail { scroll-behavior: auto; } }
 </style>
@@ -291,7 +312,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 <section class="v2-sec" id="how">
   <div class="v2-wrap v2-head"><h2>איך זה עובד</h2><p>מתחילים בכמה דקות, והמערכת ממשיכה לבד.</p></div>
-  ${rail('steps-rail', steps, 'steps-rail')}
+  <div class="v2-wrap"><div class="v2-steps">${steps.join('')}</div></div>
 </section>
 
 <section class="v2-sec soft" id="pricing">

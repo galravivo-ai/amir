@@ -330,17 +330,19 @@ function replyStyleForm(style, tones, csrf, saved) {
 export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '', style = null, tones = {}, styleSaved = false, wa = null }) {
   const opt = (v, l, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(l)}</option>`;
   return `<div class="dash-head"><div class="titles"><div class="g-title-row"><h1>${GOOGLE_G} ביקורות גוגל</h1>${wa?.button || ''}</div>
-      <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
+      <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, עם תשובה בלחיצה. משוב פרטי נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
       <p class="muted">${summary.total ? `דירוג ${summary.avg.toFixed(1)} ★ מתוך ${summary.total} ביקורות` : 'עוד אין נתונים מגוגל'}${summary.unanswered ? ` · <b>${summary.unanswered} ממתינות לתשובה</b>` : ''}</p></div>
     <form method="get" class="filters g-filters">
-      <select name="filter" onchange="this.form.submit()" aria-label="מצב">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('answered', 'עם תשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}${opt('positive', '4-5 כוכבים', filters.filter)}</select>
-      <select name="stars" onchange="this.form.submit()" aria-label="כוכבים">${opt('', 'כל הדירוגים', filters.stars)}${[5, 4, 3, 2, 1].map((n) => opt(n, `${'★'.repeat(n)} (${n})`, filters.stars)).join('')}</select>
-      <select name="days" onchange="this.form.submit()" aria-label="תקופה">${opt('', 'מכל הזמנים', filters.days)}${opt('7', 'השבוע האחרון', filters.days)}${opt('30', '30 הימים האחרונים', filters.days)}${opt('90', '3 החודשים האחרונים', filters.days)}${opt('365', 'השנה האחרונה', filters.days)}</select>
-      <select name="text" onchange="this.form.submit()" aria-label="טקסט">${opt('', 'עם ובלי טקסט', filters.text)}${opt('with', 'רק עם טקסט', filters.text)}${opt('without', 'רק דירוג בלי טקסט', filters.text)}</select>
-      ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
-      <select name="sort" onchange="this.form.submit()" aria-label="מיון">${opt('', 'החדשות קודם', filters.sort)}${opt('old', 'הישנות קודם', filters.sort)}${opt('low', 'הנמוכות קודם', filters.sort)}${opt('high', 'הגבוהות קודם', filters.sort)}</select>
       <span class="g-search"><input type="search" name="q" value="${h(filters.q || '')}" placeholder="חיפוש בטקסט או בשם" aria-label="חיפוש בביקורות"><button class="btn">חיפוש</button></span>
-      ${Object.values(filters).some(Boolean) ? '<a class="small" href="/admin/google/reviews">ניקוי הסינון</a>' : ''}
+      <div class="g-chips">
+        <select name="filter" onchange="this.form.submit()" aria-label="מצב">${opt('', 'כל הביקורות', filters.filter)}${opt('unanswered', 'ממתינות לתשובה', filters.filter)}${opt('answered', 'עם תשובה', filters.filter)}${opt('negative', '3 כוכבים ומטה', filters.filter)}${opt('positive', '4-5 כוכבים', filters.filter)}</select>
+        <select name="stars" onchange="this.form.submit()" aria-label="כוכבים">${opt('', 'כל הדירוגים', filters.stars)}${[5, 4, 3, 2, 1].map((n) => opt(n, `${'★'.repeat(n)} (${n})`, filters.stars)).join('')}</select>
+        <select name="days" onchange="this.form.submit()" aria-label="תקופה">${opt('', 'מכל הזמנים', filters.days)}${opt('7', 'השבוע האחרון', filters.days)}${opt('30', '30 הימים האחרונים', filters.days)}${opt('90', '3 החודשים האחרונים', filters.days)}${opt('365', 'השנה האחרונה', filters.days)}</select>
+        <select name="text" onchange="this.form.submit()" aria-label="טקסט">${opt('', 'עם ובלי טקסט', filters.text)}${opt('with', 'רק עם טקסט', filters.text)}${opt('without', 'רק דירוג בלי טקסט', filters.text)}</select>
+        ${locations.length > 1 ? `<select name="location" onchange="this.form.submit()" aria-label="סניף">${opt('', 'כל הסניפים', filters.location)}${locations.map((l) => opt(l.id, l.title, filters.location)).join('')}</select>` : ''}
+        <select name="sort" onchange="this.form.submit()" aria-label="מיון">${opt('', 'החדשות קודם', filters.sort)}${opt('old', 'הישנות קודם', filters.sort)}${opt('low', 'הנמוכות קודם', filters.sort)}${opt('high', 'הגבוהות קודם', filters.sort)}</select>
+        ${Object.values(filters).some(Boolean) ? '<a class="small" href="/admin/google/reviews">ניקוי הסינון</a>' : ''}
+      </div>
     </form></div>
   ${wa?.body || ''}
   ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
