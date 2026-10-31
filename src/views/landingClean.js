@@ -406,6 +406,10 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-hero { padding-top: 46px; }
   .v2-sec { padding: 70px 0; }
   .v2-plans, .v2-video-row { grid-template-columns: minmax(0, 1fr); }
+  /* the video section: centered on a phone */
+  .v2-video-row { text-align: center; gap: 30px; }
+  .v2-video-row ul { justify-items: center; }
+  .v2-video-row li { justify-content: center; }
   .v2-device { padding: 6px; border-radius: 13px; }
   .v2-tools { justify-content: flex-start; }
   .v2-card { width: 84vw; border-radius: 24px; }
