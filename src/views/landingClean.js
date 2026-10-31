@@ -2,6 +2,7 @@ import { asset, h } from '../util.js';
 import { branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { icon, logoMark } from './icons.js';
 import { operatorInfo } from './site.js';
+import { featureGuide } from '../guide.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,11 +55,21 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const card = payProvider() === 'cardcom';
 
   const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 20)}</span><span class="v2-tool-t"><b>${h(name)}</b><small>${h(SUBS[key] || '')}</small></span></a>`);
-  // Product cards: a colored stage with the real screen, then a label, the name and one line.
-  const showcase = TOOLS.map(([key, ic, c, name, line, guide, img]) => `<article class="v2-card" id="t-${key}" style="--c:${c}">
-      <button type="button" class="v2-card-img" data-zoom aria-label="הגדלת המסך: ${h(name)}"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"><span class="v2-zoom">⤢</span></button>
-      <div class="v2-card-text"><span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span><h3>${h(name)}</h3><p>${h(line)}</p><a href="/guide/${guide}">למדריך ›</a></div>
-    </article>`);
+  // The close-ups: one tab per tool; the chosen tool shows its screen, a line and its guide's points.
+  const tabs = TOOLS.map(([key, ic, c, name], i) => `<button type="button" role="tab" class="v2-tab" id="tab-${key}" aria-controls="t-${key}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" style="--c:${c}">${icon(ic, 16)}<span>${h(name)}</span></button>`);
+  const panels = TOOLS.map(([key, ic, c, name, line, guide, img], i) => {
+    const points = (featureGuide(guide)?.points || []).slice(0, 3);
+    return `<div class="v2-panel" role="tabpanel" id="t-${key}" aria-labelledby="tab-${key}" style="--c:${c}"${i ? ' hidden' : ''}>
+      <div class="v2-panel-stage"><button type="button" class="v2-frame" data-zoom aria-label="הגדלת המסך: ${h(name)}"><span class="v2-frame-bar"><i></i><i></i><i></i><em>gofive.co.il</em></span><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="${i ? 'lazy' : 'eager'}"><span class="v2-zoom">⤢</span></button></div>
+      <div class="v2-panel-text">
+        <span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span>
+        <h3>${h(name)}</h3>
+        <p>${h(line)}</p>
+        ${points.length ? `<ul>${points.map((x) => `<li>${icon('check', 16)}<span>${h(x)}</span></li>`).join('')}</ul>` : ''}
+        <a class="v2-more" href="/guide/${guide}">המדריך המלא ›</a>
+      </div>
+    </div>`;
+  });
   // Why: each point shows a small piece of the real thing, not just an icon.
   const why = [
     ['חיפוש ומפות', 'שם לקוחות מוצאים אתכם', 'בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.', `<div class="w-search">${icon('search', 14)} מסעדה איטלקית לידי</div>
@@ -210,23 +221,41 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-sec.dark .v2-dots i.on { background: #fff; }
 @media (min-width: 1240px) { .v2-rail { padding-inline: max(22px, calc((100vw - 1180px) / 2)); scroll-padding: 0 max(22px, calc((100vw - 1180px) / 2)); } }
 
-/* product cards: a colored stage with the screen, then plain text */
-.v2-card { width: min(86vw, 420px); border-radius: 20px; background: #fff; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; }
-.v2-card:hover { transform: translateY(-3px); box-shadow: 0 24px 40px -28px rgba(23, 18, 58, .45); }
-.v2-card-img { display: block; width: 100%; border: 0; cursor: zoom-in; font: inherit; position: relative; overflow: hidden; padding: 26px 26px 0; background: color-mix(in srgb, var(--c) 9%, #fff); border-bottom: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); }
-.v2-card-img img { width: 100%; border-radius: 10px 10px 0 0; box-shadow: 0 -1px 0 rgba(0, 0, 0, .04), 0 12px 28px -14px rgba(23, 18, 58, .35); aspect-ratio: 16 / 10; object-fit: cover; object-position: top right; transition: transform .35s; }
-.v2-card-img:hover img { transform: scale(1.02); }
-.v2-zoom { position: absolute; bottom: 12px; left: 12px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(23, 18, 58, .72); color: #fff; font-size: .95rem; backdrop-filter: blur(6px); }
-.v2-count { display: none; direction: ltr; unicode-bidi: isolate; min-width: 52px; text-align: center; font-weight: 700; font-size: .9rem; color: var(--ink); font-variant-numeric: tabular-nums; }
-.v2-box { padding: 0; border: 0; background: transparent; max-width: min(96vw, 1200px); }
-.v2-box::backdrop { background: rgba(10, 8, 30, .82); }
-.v2-box img { width: 100%; border-radius: 12px; }
-.v2-box button { position: fixed; top: 14px; left: 14px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; font-size: 1.1rem; cursor: pointer; }
-.v2-card-text { padding: 20px 24px 24px; }
+/* close-ups: tabs, then the chosen tool's screen on a colored stage, with its points */
 .v2-card-tag { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; letter-spacing: .02em; color: var(--c); }
-.v2-card h3 { margin: 6px 0 0; font-size: 1.3rem; line-height: 1.2; font-weight: 700; }
-.v2-card p { margin: 8px 0 0; color: var(--muted); font-size: .96rem; }
-.v2-card-text a { display: inline-block; margin-top: 12px; font-weight: 600; font-size: .95rem; }
+.v2-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 36px; }
+.v2-tab { display: inline-flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.v2-tab svg { color: var(--c); }
+.v2-tab:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+.v2-tab[aria-selected="true"] { background: var(--night); border-color: var(--night); color: #fff; }
+.v2-tab[aria-selected="true"] svg { color: var(--yellow); }
+.v2-panels { margin-top: 28px; }
+.v2-panel { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 44px; align-items: center; animation: v2-in .35s ease; }
+.v2-panel[hidden] { display: none; }
+@keyframes v2-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.v2-panel-stage { border-radius: 26px; padding: 34px 34px 0; overflow: hidden; background: radial-gradient(420px 260px at 85% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 70%), linear-gradient(160deg, color-mix(in srgb, var(--c) 14%, #fff), color-mix(in srgb, var(--c) 6%, #fff)); border: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); }
+.v2-frame { position: relative; display: block; width: 100%; padding: 0; border: 0; background: #fff; border-radius: 12px 12px 0 0; overflow: hidden; cursor: zoom-in; box-shadow: 0 30px 60px -30px rgba(23, 18, 58, .55); font: inherit; }
+.v2-frame-bar { display: flex; align-items: center; gap: 5px; padding: 8px 12px; background: #f3f1fa; border-bottom: 1px solid var(--line); direction: ltr; }
+.v2-frame-bar i { width: 8px; height: 8px; border-radius: 50%; background: #d6d1e8; }
+.v2-frame-bar em { margin-inline-start: 8px; font-style: normal; font-size: .72rem; color: var(--muted); }
+.v2-frame img { width: 100%; aspect-ratio: 1120 / 690; object-fit: cover; object-position: top right; }
+.v2-panel-text h3 { margin: 8px 0 0; font-size: clamp(1.5rem, 3vw, 2.1rem); line-height: 1.15; }
+.v2-panel-text > p { margin: 12px 0 0; color: var(--muted); font-size: 1.05rem; }
+.v2-panel-text ul { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 12px; }
+.v2-panel-text li { display: flex; gap: 10px; align-items: flex-start; font-size: .95rem; line-height: 1.5; }
+.v2-panel-text li svg { flex: none; margin-top: 3px; padding: 3px; box-sizing: content-box; border-radius: 50%; color: #fff; background: var(--c); }
+.v2-more { display: inline-block; margin-top: 22px; font-weight: 700; }
+@media (max-width: 860px) {
+  .v2-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 26px -22px 0; padding: 2px 22px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .v2-tabs::-webkit-scrollbar { display: none; }
+  .v2-tab { flex: none; scroll-snap-align: start; }
+  .v2-panels { margin-top: 18px; }
+  .v2-panel { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .v2-panel-stage { padding: 20px 0 0 20px; border-radius: 22px; }
+  .v2-frame { border-radius: 12px 0 0 0; }
+  .v2-frame img { width: 170%; max-width: none; aspect-ratio: auto; height: 250px; }
+  .v2-panel-text li { font-size: .92rem; }
+}
 
 /* why: a small piece of the real thing above each point */
 .v2-why { width: min(82vw, 360px); border-radius: 20px; background: #fff; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; }
@@ -422,7 +451,10 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 
 <section class="v2-sec" id="tools">
   <div class="v2-wrap v2-head"><h2>הכלים, מקרוב</h2><p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p></div>
-  ${rail('tools-rail', showcase)}
+  <div class="v2-wrap">
+    <div class="v2-tabs" role="tablist" aria-label="הכלים">${tabs.join('')}</div>
+    <div class="v2-panels">${panels.join('')}</div>
+  </div>
 </section>
 
 <section class="v2-sec dark" id="video">
@@ -478,6 +510,23 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   </div>
 </footer>
 <script>
+// Close-ups: tabs (and the shelf's links) choose the tool shown.
+(function () {
+  var tabs = [].slice.call(document.querySelectorAll('.v2-tab'));
+  if (!tabs.length) return;
+  function pick(t, focus) {
+    tabs.forEach(function (x) { var on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+    if (focus) t.focus();
+    t.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { pick(t); });
+    t.addEventListener('keydown', function (e) { var n = tabs.length, j = null; if (e.key === 'ArrowLeft') j = (i + 1) % n; else if (e.key === 'ArrowRight') j = (i - 1 + n) % n; if (j !== null) { e.preventDefault(); pick(tabs[j], true); } });
+  });
+  document.querySelectorAll('.v2-tool').forEach(function (a) {
+    a.addEventListener('click', function (e) { var t = document.getElementById('tab-' + a.getAttribute('href').slice(3)); if (!t) return; e.preventDefault(); pick(t); document.getElementById('tools').scrollIntoView({ behavior: 'smooth' }); });
+  });
+})();
 // A screenshot opens whole, in a light box.
 (function () {
   var box = document.createElement('dialog'); box.className = 'v2-box';
