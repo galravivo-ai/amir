@@ -174,6 +174,24 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-device { border-radius: 20px; padding: 10px; background: linear-gradient(180deg, #2b2b2e, #18181a); box-shadow: 0 50px 90px -45px rgba(40, 20, 120, .55); }
 .v2-device img { border-radius: 11px; }
 .v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
+.v2-hero-shot { position: relative; }
+.v2-laptop { width: 86%; margin-inline-start: auto; }
+/* the phone in front of the laptop, and two notes floating beside them */
+.v2-hphone { position: absolute; left: 22px; bottom: -34px; width: 22%; padding: 7px; border-radius: 34px; background: linear-gradient(180deg, #2b2b2e, #111113); box-shadow: 0 40px 70px -30px rgba(20, 10, 70, .6), inset 0 0 0 1px rgba(255, 255, 255, .08); animation: v2-float 7s ease-in-out infinite; }
+.v2-hphone::before { content: ''; position: absolute; z-index: 2; top: 13px; left: 50%; width: 30%; height: 14px; transform: translateX(-50%); border-radius: 10px; background: #0b0920; }
+.v2-hphone img { display: block; width: 100%; padding-top: 24px; border-radius: 27px; background: #f6f4ff; aspect-ratio: 390 / 700; object-fit: cover; object-position: top; }
+.v2-chip { position: absolute; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: rgba(255, 255, 255, .97); color: var(--ink, #14112e); text-align: start; box-shadow: 0 24px 46px -22px rgba(20, 10, 70, .55); font-size: .84rem; line-height: 1.25; animation: v2-float 6s ease-in-out infinite; }
+.v2-chip b { display: block; font-weight: 700; }
+.v2-chip small { display: block; color: #6b6787; font-size: .78rem; }
+.v2-chip small.up { color: #12955c; font-weight: 600; }
+.v2-chip-ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+.v2-chip-ico.star { background: #fff4cc; color: #e0a100; font-size: 1.05rem; }
+.v2-chip-ring { --p: 50; width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: conic-gradient(#6d4bff calc(var(--p) * 1%), #e8e4ff 0); }
+.v2-chip-ring b { width: 30px; height: 30px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: .8rem; color: #4b2fd6; }
+.v2-chip-review { top: 14%; right: 0; animation-delay: -2s; }
+.v2-chip-ai { top: 42%; left: 26%; animation-delay: -4s; }
+@keyframes v2-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .v2-hphone, .v2-chip { animation: none; } }
 
 /* the shelf: a night panel with every tool as a small card */
 .v2-shelf { padding: 28px 0 26px; background: var(--soft); }
@@ -426,6 +444,18 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-video-row ul { justify-items: center; }
   .v2-video-row li { justify-content: center; }
   .v2-device { padding: 6px; border-radius: 13px; }
+  /* on a phone: the phone screen, big enough to read, with the notes around it */
+  .v2-hero-shot { margin-top: 36px; padding: 0 16px 8px; display: flex; justify-content: center; }
+  .v2-laptop { display: none; }
+  .v2-hphone { position: relative; left: auto; bottom: auto; width: min(66vw, 290px); padding-bottom: 0; border-radius: 34px 34px 0 0; animation: none; -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
+  .v2-hphone img { aspect-ratio: 390 / 610; border-radius: 27px 27px 0 0; }
+  .v2-chip { padding: 8px 11px; font-size: .74rem; gap: 8px; border-radius: 13px; }
+  .v2-chip small { font-size: .68rem; }
+  .v2-chip-ico { width: 28px; height: 28px; border-radius: 9px; }
+  .v2-chip-ring { width: 32px; height: 32px; }
+  .v2-chip-ring b { width: 25px; height: 25px; font-size: .7rem; }
+  .v2-chip-review { top: 20%; right: 8px; }
+  .v2-chip-ai { top: 56%; left: 8px; }
   .v2-tools { justify-content: flex-start; }
   .v2-card { width: 84vw; border-radius: 24px; }
   .v2-card-img { padding: 16px 0 0 16px; }
@@ -461,8 +491,13 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
     <a class="v2-watch" href="#video"><i>▶</i>צפו בסרטון (36 שניות)</a>
   </div>
   <div class="v2-hero-shot">
-    <div class="v2-device"><img src="${shot('dashboard.jpg')}" alt="הדשבורד של ${h(op.brand)}" width="1120" height="730" fetchpriority="high"></div>
-    <div class="v2-device-base" aria-hidden="true"></div>
+    <div class="v2-laptop">
+      <div class="v2-device"><img src="${shot('dashboard.jpg')}" alt="הדשבורד של ${h(op.brand)}" width="1120" height="730" fetchpriority="high"></div>
+      <div class="v2-device-base" aria-hidden="true"></div>
+    </div>
+    <div class="v2-hphone"><img src="${phoneShot('dashboard')}" alt="הדשבורד של ${h(op.brand)} בטלפון" width="780" height="1400" fetchpriority="high"></div>
+    <div class="v2-chip v2-chip-review" aria-hidden="true"><span class="v2-chip-ico star">★</span><span><b>ביקורת חדשה 5★ בגוגל</b><small>"הפסטה הכי טובה בעיר"</small></span></div>
+    <div class="v2-chip v2-chip-ai" aria-hidden="true"><span class="v2-chip-ring" style="--p:62"><b>62</b></span><span><b>נראות ב-AI</b><small class="up">▲ 21 נק׳ החודש</small></span></div>
   </div>
 </header>
 
