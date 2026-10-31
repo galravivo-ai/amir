@@ -3054,3 +3054,10 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .dash-glance { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1rem; margin-bottom: 1rem; }
 .dash-glance .card { margin: 0; }
 @media (max-width: 900px) { .dash-glance { grid-template-columns: minmax(0, 1fr); } }
+
+/* on a phone, each to-do is its title and one line of why */
+@media (max-width: 760px) {
+  .todo-list .todo-text .muted { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .todo-list li a { padding-block: 10px; }
+  .gr-urgent h2 { font-size: 1.1rem; margin-bottom: .5rem; }
+}

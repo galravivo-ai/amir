@@ -227,7 +227,7 @@ function urgentCard(urgent) {
 
 export function growthView({ plan, urgent = [], stage2 = null, drafts, csrf, can, aiOn, running = false, notice = '', error = '' }) {
   return `<div class="page-head"><h1>${icon('check', 26)} קידום בגוגל מפות</h1></div>
-    <p class="page-intro">כל מה שמקדם את העסק בגוגל מפות ובתשובות של ChatGPT ו-Gemini, ברשימה אחת: קודם מה שדחוף, ואחריו תוכנית הקידום. מה שהמערכת יכולה לבדוק, היא מסמנת לבד, וה-AI כותב בשבילכם את התוכן.</p>
+    <p class="page-intro">מה לעשות כדי לעלות בגוגל מפות וב-AI: קודם הדחוף, ואחריו התוכנית.</p>
     ${notice ? `<div class="flash">${h(notice)}</div>` : ''}
     ${error ? `<div class="error">${h(error)}</div>` : ''}
     <input type="hidden" id="gr-csrf" value="${h(csrf)}">
