@@ -570,13 +570,15 @@ export function adminRoutes(ctx) {
     const campaigns = store.campaignsFor(req.business.id);
     const c = campaigns.find((x) => x.id === Number(req.body.campaign)) || campaigns[0];
     const phone = String(req.body.phone ?? '').trim().slice(0, 30);
-    if (!c || waNumber(phone).length < 9) return res.redirect(303, '/admin?send=bad');
+    // Back to the page the window was opened from.
+    const back = req.body.back === '/admin/google/reviews' ? '/admin/google/reviews' : '/admin';
+    if (!c || waNumber(phone).length < 9) return res.redirect(303, `${back}?send=bad`);
     const name = String(req.body.customer_name ?? '').trim().slice(0, 80);
     const t = store.createInvite(c.id, { customer_name: name, phone });
     // Sent for them from the platform's WhatsApp number, without opening WhatsApp.
     if (req.body.via === 'auto' && ctx.whatsapp) {
       const r = await sendWhatsAppInvite({ store, whatsapp: ctx.whatsapp, business: req.business, campaign: c, invite: store.inviteByToken(c.id, t), baseUrl: ctx.baseUrl(req) });
-      return res.redirect(303, r.ok ? '/admin?wa=sent' : `/admin?wa=err&msg=${encodeURIComponent(r.error)}`);
+      return res.redirect(303, r.ok ? `${back}?wa=sent` : `${back}?wa=err&msg=${encodeURIComponent(r.error)}`);
     }
     const link = `${ctx.baseUrl(req)}/r/${c.slug}?i=${t}`;
     // The text edited in the send window for this customer, else the business's wording.

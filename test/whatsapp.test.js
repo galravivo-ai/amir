@@ -70,13 +70,9 @@ test('rating requests go out by WhatsApp: from the dashboard, a campaign and the
   const campaignId = created.store.createCampaign(biz.id, { name: 'סניף ראשי', google_review_url: 'https://g.page/r/x/review' });
   const campaign = created.store.campaignById(campaignId);
 
-  const dash = await req('/admin');
-  assert.match(dash.text, /שליחה אוטומטית/);
-  assert.match(dash.text, /נשארו 1000 מתוך 1000/);
-
-  // From the dashboard's send window.
-  const r = await req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '050-1234567', customer_name: 'דנה', campaign: String(campaignId), via: 'auto' } });
-  assert.equal(r.location, '/admin?wa=sent');
+  // The send window (on the reviews page) comes back there.
+  const r = await req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '050-1234567', customer_name: 'דנה', campaign: String(campaignId), via: 'auto', back: '/admin/google/reviews' } });
+  assert.equal(r.location, '/admin/google/reviews?wa=sent');
   const msg = sent.at(-1);
   assert.equal(msg.url, 'https://graph.facebook.com/v23.0/123/messages');
   assert.equal(msg.auth, 'Bearer wa-token');
@@ -138,5 +134,9 @@ test('rating requests go out by WhatsApp: from the dashboard, a campaign and the
   for (let i = 0; i < 100; i++) created.store.db.prepare("INSERT INTO invites (campaign_id, token, phone, wa_sent_at) VALUES (?, ?, '050', datetime('now'))").run(campaignId, `q${i}`);
   const over = await req('/admin/send', { method: 'POST', form: { _csrf: token, phone: '0501234567', campaign: String(campaignId), via: 'auto' } });
   assert.match(decodeURIComponent(over.location), /נגמרה מכסת ההודעות/);
-  assert.match((await req('/admin')).text, /המכסה החודשית נוצלה/);
+  const { waSendBlock } = await import('../src/views/admin.js');
+  const { whatsAppLeft } = await import('../src/whatsapp.js');
+  const left = whatsAppLeft(created.store, created.store.businessById(biz.id));
+  assert.equal(left, 0);
+  assert.match(waSendBlock({ business: biz, campaigns: [campaign], csrf: 'x', waAuto: { left, quota: 100 } }).body, /המכסה החודשית נוצלה/);
 });

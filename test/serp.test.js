@@ -274,11 +274,17 @@ test('a paying account pays for a new branch before it opens; the system admin a
 test('reviews of a place followed by link are answered from the list: copy, then reply on Google', async () => {
   const req = client();
   await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
+  const owner = created.store.userByEmail('serp-owner@example.com');
+  const biz = created.store.db.prepare('SELECT id FROM businesses WHERE user_id = ?').get(owner.id);
+  if (!created.store.campaignsFor(biz.id).length) created.store.createCampaign(biz.id, { name: 'ראשי' });
   const list = (await req('/admin/google/reviews')).text;
   assert.match(list, /העתקה ופתיחה בגוגל/);
   assert.match(list, /onclick="gfCopy\(this,'https:\/\/maps\.google\.com\/r1'\)"/, 'Google opens at the review');
   assert.match(list, /<p class="" dir="auto">מקום מעולה/, 'review text keeps its own direction');
   assert.match(list, /התשובה הועתקה, אבל עוד לא פורסמה/, 'after copying, it says the reply is not published yet');
+  assert.match(list, /בקשת ביקורת בוואטסאפ/, 'asking for a review on WhatsApp starts from the reviews page');
+  assert.match(list, /<dialog id="wa-send"/);
+  assert.match(list, /name="back" value="\/admin\/google\/reviews"/);
 });
 
 test('the AI writes replies in the style the business chose', async () => {

@@ -3087,3 +3087,7 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
   .dash-cover .cover-filters select { flex: 1 1 0; min-width: 0; }
   .dash-cover .cover-wa { flex: 1 1 100%; justify-content: center; }
 }
+.g-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+.wa-pill { min-height: 38px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #128a43; border: 1px solid #9ad8b3; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.wa-pill:hover { background: #effaf3; }
+@media (max-width: 640px) { .g-title-row .wa-pill { width: 100%; justify-content: center; } }

@@ -327,9 +327,9 @@ function replyStyleForm(style, tones, csrf, saved) {
   </details>`;
 }
 
-export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '', style = null, tones = {}, styleSaved = false }) {
+export function googleReviewsView({ reviews, locations, filters, summary, csrf = '', manages = false, ai = false, demo = false, replied = false, replyError = '', style = null, tones = {}, styleSaved = false, wa = null }) {
   const opt = (v, l, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(l)}</option>`;
-  return `<div class="dash-head"><div class="titles"><h1>${GOOGLE_G} ביקורות גוגל</h1>
+  return `<div class="dash-head"><div class="titles"><div class="g-title-row"><h1>${GOOGLE_G} ביקורות גוגל</h1>${wa?.button || ''}</div>
       <p class="page-sub">הביקורות הציבוריות של העסק בגוגל, כפי שכל אחד רואה אותן. כאן עונים להן, עם טיוטה מוכנה בלחיצה. משוב פרטי מהסקר נמצא ב<a href="/admin/responses">משוב מהסקר</a>.</p>
       <p class="muted">${summary.total ? `דירוג ${summary.avg.toFixed(1)} ★ מתוך ${summary.total} ביקורות` : 'עוד אין נתונים מגוגל'}${summary.unanswered ? ` · <b>${summary.unanswered} ממתינות לתשובה</b>` : ''}</p></div>
     <form method="get" class="filters g-filters">
@@ -342,6 +342,7 @@ export function googleReviewsView({ reviews, locations, filters, summary, csrf =
       <span class="g-search"><input type="search" name="q" value="${h(filters.q || '')}" placeholder="חיפוש בטקסט או בשם" aria-label="חיפוש בביקורות"><button class="btn">חיפוש</button></span>
       ${Object.values(filters).some(Boolean) ? '<a class="small" href="/admin/google/reviews">ניקוי הסינון</a>' : ''}
     </form></div>
+  ${wa?.body || ''}
   ${replied ? '<div class="flash">התשובה פורסמה בגוגל ✓</div>' : ''}
   ${ai && manages && style && !demo ? replyStyleForm(style, tones, csrf, styleSaved) : ''}
   ${replyError ? `<div class="error">${h(replyError)}</div>` : ''}

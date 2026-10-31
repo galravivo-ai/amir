@@ -211,7 +211,20 @@ const G_MARK = `<svg class="src-g" width="14" height="14" viewBox="0 0 48 48" ar
 const WA_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>';
 
 /** Send a customer a personal survey link on WhatsApp, from the dashboard. */
-function sendDialog(campaigns, csrf, template, waAuto = null) {
+/** The "ask for a review on WhatsApp" button and its window (on the reviews page). */
+export function waSendBlock({ business, campaigns, csrf, waAuto = null, back = '/admin/google/reviews', result = null, bad = false }) {
+  if (!campaigns.length) return { button: '', body: '' };
+  const template = isEn() ? englishTokens(business?.invite_template || DEFAULT_INVITE_TEMPLATE_EN) : business?.invite_template || DEFAULT_INVITE_TEMPLATE;
+  return {
+    button: `<button type="button" class="btn wa-pill" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} בקשת ביקורת בוואטסאפ</button>`,
+    body: `${sendDialog(campaigns, csrf, template, waAuto, back)}
+      ${bad ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}
+      ${result?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
+      ${result && !result.ok ? `<div class="error">לא נשלח בוואטסאפ: ${h(result.error)}</div>` : ''}`,
+  };
+}
+
+function sendDialog(campaigns, csrf, template, waAuto = null, back = '/admin') {
   return `<dialog id="wa-send" class="wa-dialog" aria-labelledby="wa-send-title">
     <form method="post" action="/admin/send" target="_blank" class="stack"
       onsubmit="var f=this;setTimeout(function(){f.reset();f.closest('dialog').close();var t=document.getElementById('wa-sent');t.hidden=false;setTimeout(function(){t.hidden=true},5000)},300)">
@@ -223,6 +236,7 @@ function sendDialog(campaigns, csrf, template, waAuto = null) {
           : 'כותבים את הטלפון של הלקוח, ונפתח וואטסאפ עם הודעה מוכנה וקישור אישי לסקר. נשאר רק ללחוץ "שליחה".'
       }</p>
       ${csrfField(csrf)}
+      <input type="hidden" name="back" value="${h(back)}">
       <label>טלפון של הלקוח<input name="phone" type="tel" inputmode="tel" required minlength="9" maxlength="20" placeholder="050-1234567" dir="ltr" autocomplete="off"></label>
       <label>שם הלקוח (לא חובה)<input name="customer_name" maxlength="80" autocomplete="off"></label>
       ${
@@ -388,11 +402,9 @@ function dashboardParts({
       </div>
       <div class="cover-bar">
         ${filter}
-        ${can('manager') && campaigns.length ? `<button type="button" class="btn cover-wa" onclick="document.getElementById('wa-send').showModal()">${WA_ICON} שליחה בוואטסאפ</button>` : ''}
         ${can('manager') && connect?.connected ? '<a class="cover-link" href="/admin/google">⚙ חיבור לגוגל וסניפים</a>' : ''}
       </div>
     </header>
-    ${can('manager') && campaigns.length ? sendDialog(campaigns, csrf, isEn() ? englishTokens(business?.invite_template || DEFAULT_INVITE_TEMPLATE_EN) : business?.invite_template || DEFAULT_INVITE_TEMPLATE, waAuto) : ''}
     ${sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}
     ${waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
     ${waResult && !waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(waResult.error || 'שגיאה')}</div>` : ''}`;

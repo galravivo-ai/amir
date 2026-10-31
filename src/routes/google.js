@@ -10,6 +10,8 @@ import { GoogleError } from '../google.js';
 import { SerpError, writeReviewUrl } from '../serp.js';
 import { h, imageMime, safeUrl } from '../util.js';
 import * as V from '../views/google.js';
+import { waSendBlock } from '../views/admin.js';
+import { whatsAppLeft } from '../whatsapp.js';
 import { amountFor } from '../billing.js';
 import { ANNUAL_MONTHS, branchPayUrl, branchPrice, payProvider, PLANS, profilesOf } from '../plans.js';
 
@@ -434,6 +436,17 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
         replyError: String(req.query.replyErr ?? '').slice(0, 300),
         style: replyStyleOf(req.business),
         tones: REPLY_TONES,
+        wa:
+          req.can('manager') && !req.business.is_demo
+            ? waSendBlock({
+                business: req.business,
+                campaigns: store.campaignsFor(req.business.id),
+                csrf: req.user.csrf,
+                waAuto: ctx.whatsapp ? { left: whatsAppLeft(store, req.business), quota: req.plan.waMonthly } : null,
+                result: req.query.wa === 'sent' ? { ok: true } : req.query.wa === 'err' ? { ok: false, error: String(req.query.msg ?? '').slice(0, 300) } : null,
+                bad: req.query.send === 'bad',
+              })
+            : null,
         styleSaved: req.query.style === 'saved',
         locations,
         filters,
