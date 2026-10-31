@@ -20,7 +20,7 @@ export function mapsRoutes(ctx, { health, rankings, serp }) {
     render(
       req,
       res,
-      'קידום בגוגל מפות',
+      'מיקום ובריאות במפות',
       V.mapsView({
         health: {
           audits: store.latestAudits(id),

@@ -45,7 +45,7 @@ export function growthRoutes(ctx, { siteCheck = checkSite } = {}) {
     render(
       req,
       res,
-      'מה לעשות',
+      'קידום העסק',
       V.growthView({
         plan,
         stage2,

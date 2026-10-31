@@ -80,6 +80,7 @@ function initialMark(name, size) {
 function pageTabs(current, { widgetInUse }) {
   const groups = [
     [['/admin/campaigns', 'קמפיינים וקישורים'], ['/admin/requests', 'לקוחות שקיבלו בקשה'], ['/admin/poster', 'עיצוב שלט QR'], widgetInUse && ['/admin/widget', "ווידג'ט לאתר"]],
+    [['/admin/growth', 'תוכנית פעולה'], ['/admin/maps', 'מיקום ובריאות במפות']],
     [['/admin/reports/monthly', 'דוח חודשי'], ['/admin/insights', 'תובנות AI']],
   ].map((g) => g.filter(Boolean));
   const tabs = groups.find((g) => g.some(([href]) => isActive(href, current)));
@@ -200,7 +201,7 @@ ${SKIP()}
     {
       items: [
         ['/admin', 'דשבורד', 'home'],
-        ['/admin/growth', 'מה לעשות', 'check', 0, { hl: true, tip: 'רשימה אחת: מה דחוף, ותוכנית הקידום במפות וב-AI' }],
+        ['/admin/growth', 'קידום העסק', 'check', 0, { hl: true, also: ['/admin/maps'], tip: 'מה לעשות כדי לעלות במפות וב-AI, ואיפה אתם עומדים' }],
         business.pilot && ['/admin/pilot', 'הפיילוט שלכם', 'handshake', 0, { tip: 'עשרה צעדים לשבועיים, ושלוש שאלות בסוף' }],
         // Until the Google profile is connected, that is the first thing in the menu.
         notConnected && role !== 'viewer' && ['/admin/google', 'חיבור לגוגל', 'plug', '!'],
@@ -222,7 +223,6 @@ ${SKIP()}
       key: 'measure',
       label: 'איפה אתם עומדים',
       items: [
-        ['/admin/maps', 'קידום בגוגל מפות', 'pin', 0, { tip: 'באיזה מקום אתם מופיעים סביב העסק, ובריאות הפרופיל' }],
         ['/admin/ai-visibility', 'נראות ב-AI', 'search', 0, { tip: 'האם ChatGPT, Gemini וגוגל ממליצים עליכם' }],
         ['/admin/competitors', 'מתחרים', 'rivals'],
         ['/admin/reports/monthly', 'דוחות ותובנות', 'report', 0, { also: ['/admin/insights'] }],

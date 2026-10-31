@@ -104,7 +104,7 @@ test('a new business starts low, and marks raise the score: weekly ones for the 
 test('the plan page: marking an action, the website, the business details and the AI writer', async () => {
   const { req, csrf, biz, page } = await owner('growth@example.com');
   assert.equal(page.status, 200);
-  assert.match(page.text, /<h1>[\s\S]*?מה לעשות<\/h1>/);
+  assert.match(page.text, /<h1>[\s\S]*?קידום העסק<\/h1>/);
   assert.match(page.text, /אינדקסים ואזכורים/);
 
   const mark = await req('/admin/growth/mark', { form: { _csrf: csrf, key: 'booking', on: '1' } });

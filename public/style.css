@@ -3041,3 +3041,16 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .g-lost form { margin: 0; }
 .g-conn-status.off { background: #fff4e5; border-color: #f3c98b; }
 .g-conn-status.off .g-conn-dot { background: #e08a00; box-shadow: 0 0 0 4px rgba(224, 138, 0, .18); }
+
+/* dashboard: a slim header, flat, with the filters on the same row */
+.dash-cover { background: var(--cover, #4b2bd6) !important; box-shadow: none; padding: 14px 18px !important; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dash-cover::before { display: none; }
+.dash-cover .cover-top { flex: 1 1 260px; flex-direction: row-reverse; justify-content: flex-end; gap: 12px; }
+.dash-cover .cover-sub { display: none; }
+.dash-cover .cover-text h1 { font-size: 1.3rem; }
+.dash-cover .cover-logo { height: 42px; min-width: 42px; padding: 4px 8px; border-radius: 10px; }
+.dash-cover .cover-logo img { height: 32px; }
+.dash-cover .cover-bar { margin: 0; padding: 0; border: 0; flex: 0 1 auto; }
+.dash-glance { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.dash-glance .card { margin: 0; }
+@media (max-width: 900px) { .dash-glance { grid-template-columns: minmax(0, 1fr); } }

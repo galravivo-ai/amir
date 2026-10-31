@@ -532,6 +532,7 @@ export function dashboardView(args) {
         : ''
     }
     ${todo?.items.length || todo?.score != null ? todoCard(todo) : ''}
+    ${glance(args, P)}
     ${
       arrival?.connected && (arrival.failed || (arrival.fresh && arrival.pending))
         ? fold({ id: 'arrival', ic: 'clock', title: arrival.failed ? 'חלק מהנתונים לא הגיעו' : 'הנתונים בדרך', hint: arrival.failed ? 'לפרטים ואיך לתקן' : `${arrival.pending} עוד בדרך`, tone: arrival.failed ? 'warn' : '', open: true, body: arrivalCard(arrival, { compact: true }) })
@@ -541,27 +542,34 @@ export function dashboardView(args) {
     ${FOLD_SCRIPT}`;
 }
 
+/** Reviews by day and the stars, open on the dashboard (the rest is folded below). */
+function glance(args, P) {
+  if (!P.total && !P.dist?.some?.((n) => n)) return '';
+  return `<div class="dash-glance">
+    <section class="card">
+      <div class="card-head"><h3>${icon('chat', 18)} ביקורות ודירוגים לפי יום</h3>
+        <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
+      </div>
+      ${dailyChart(P.daily)}
+      <p class="muted small chart-note">${P.sources ? `${P.sources} ${h(args.period.label)}` : 'גוגל וסקרים יחד'}. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
+    </section>
+    <section class="card"><h3>${icon('star', 18)} התפלגות כוכבים</h3>${distribution(P.dist)}</section>
+  </div>`;
+}
+
 /** All the numbers, folded at the bottom of the dashboard for whoever wants to dig in. */
 function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
-  return fold({ id: 'data', ic: 'chart', title: 'כל הנתונים והגרפים', hint: 'ביקורות לפי יום, פעולות בפרופיל, התפלגות כוכבים, נושאים חוזרים וסקרים', body: `
+  return fold({ id: 'data', ic: 'chart', title: 'עוד נתונים', hint: 'פעולות בפרופיל, נושאים חוזרים וסקרים', body: `
     ${args.overview?.metrics?.daily?.size ? `<section class="card"><h3>${icon('search', 18)} מהפרופיל בגוגל</h3>${profileSummaryCard({ metrics: args.overview.metrics })}</section>` : ''}
     <div class="stats stats-1">
       ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
     </div>
     <div class="dash-main">
       <div class="dash-col">
-        <section class="card">
-          <div class="card-head"><h3>${icon('chat', 18)} ביקורות ודירוגים לפי יום</h3>
-            <div class="legend"><span><i class="sw pos"></i>מרוצים (4-5★)</span><span><i class="sw neg"></i>לא מרוצים</span></div>
-          </div>
-          ${dailyChart(P.daily)}
-          <p class="muted small chart-note">${P.sources ? `${P.sources} ${h(period.label)}` : 'גוגל וסקרים יחד'}. מעבר עם העכבר על עמודה מראה את הפירוט.</p>
-        </section>
         ${overview ? `<div id="profile">${profileCard({ ...overview, refreshed })}</div>` : ''}
       </div>
       <div class="dash-col">
-        <section class="card"><h3>${icon('star', 18)} התפלגות כוכבים</h3>${distribution(P.dist)}</section>
         ${topicsCard(topics)}
       </div>
     </div>
