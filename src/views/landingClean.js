@@ -34,6 +34,11 @@ const TOOLS = [
   ['network', 'branches', '#1d7fe0', 'רשתות וסניפים', 'כל הסניפים במסך אחד: השוואה, מנהל לכל סניף, תבניות תשובה משותפות ודוח מאוחד.', 'network', 'network.jpg'],
 ];
 
+const G_MARK = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+
+// The small label above each tool's name.
+const TAGS = { dashboard: 'נתונים', reviews: 'ביקורות', growth: 'קידום', rank: 'מפות', ai: 'AI', qr: 'איסוף ביקורות', competitors: 'מתחרים', posts: 'תוכן', report: 'דוחות', network: 'רשתות' };
+
 const rail = (id, cards, cls = '') => `<div class="v2-rail-wrap ${cls}" data-rail>
     <div class="v2-rail" id="${id}" tabindex="0">${cards.join('')}</div>
     <div class="v2-rail-nav"><button type="button" class="v2-arrow" data-dir="prev" aria-label="הקודם" aria-controls="${id}">‹</button><span class="v2-dots" aria-hidden="true"></span><button type="button" class="v2-arrow" data-dir="next" aria-label="הבא" aria-controls="${id}">›</button></div>
@@ -46,20 +51,31 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const card = payProvider() === 'cardcom';
 
   const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 26)}</span><span>${h(name)}</span></a>`);
+  // Product cards: a colored stage with the real screen, then a label, the name and one line.
   const showcase = TOOLS.map(([key, ic, c, name, line, guide, img]) => `<article class="v2-card" id="t-${key}" style="--c:${c}">
-      <div class="v2-card-text"><span class="v2-card-ic">${icon(ic, 20)}</span><h3>${h(name)}</h3><p>${h(line)}</p><a href="/guide/${guide}">למדריך ›</a></div>
       <div class="v2-card-img"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"></div>
+      <div class="v2-card-text"><span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span><h3>${h(name)}</h3><p>${h(line)}</p><a href="/guide/${guide}">למדריך ›</a></div>
     </article>`);
+  // Why: each point shows a small piece of the real thing, not just an icon.
   const why = [
-    ['pin', '#1d7fe0', 'חיפוש ומפות', 'שם לקוחות מוצאים אתכם', 'בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.'],
-    ['star', '#e8a100', 'ביקורות', 'ביקורות מכריעות', 'דירוג, כמות ומענה לביקורות: זה מה שלקוחות בודקים, וגם מה שגוגל שוקלת.'],
-    ['spark', '#c0398f', 'עוזרי AI', 'גם ה-AI קורא אותו', 'ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.'],
-  ].map(([ic, c, tag, title, text]) => `<article class="v2-why" style="--c:${c}"><span class="v2-why-ic">${icon(ic, 24)}</span><small>${h(tag)}</small><h3>${h(title)}</h3><p>${h(text)}</p></article>`);
+    ['חיפוש ומפות', 'שם לקוחות מוצאים אתכם', 'בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.', `<div class="w-search">${icon('search', 14)} מסעדה איטלקית לידי</div>
+      <ul class="w-pack"><li class="me"><i>1</i><b>ביסטרו הגפן</b><em>4.7 ★ (412)</em></li><li><i>2</i><b>פסטה דה לוקה</b><em>4.5 ★ (1.2K)</em></li><li><i>3</i><b>מסעדת הנמל</b><em>4.3 ★ (2.1K)</em></li></ul>`],
+    ['ביקורות', 'ביקורות מכריעות', 'דירוג, כמות ומענה לביקורות: זה מה שלקוחות בודקים, וגם מה שגוגל שוקלת.', `<div class="w-score"><b>4.7</b><span>★★★★★</span><small>412 ביקורות</small></div>
+      <div class="w-dist">${[[5, 78], [4, 14], [3, 4], [2, 2], [1, 2]].map(([n, v]) => `<span><small>${n}</small><i><u style="width:${v}%"></u></i></span>`).join('')}</div>`],
+    ['עוזרי AI', 'גם ה-AI קורא אותו', 'ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.', `<div class="w-q">איפה כדאי לאכול ליד דיזנגוף?</div>
+      <div class="w-a">${icon('spark', 13)} אני ממליץ על <b>ביסטרו הגפן</b>: פסטה טרייה, דירוג 4.7 בגוגל ושירות מוערך.</div>`],
+  ].map(([tag, title, text, art]) => `<article class="v2-why"><div class="v2-why-art" aria-hidden="true">${art}</div><div class="v2-why-text"><small>${h(tag)}</small><h3>${h(title)}</h3><p>${h(text)}</p></div></article>`);
+  // How it works: three steps, each with a small screen that plays when it scrolls into view.
+  const stepArt = [
+    `<div class="s-connect"><span class="s-gbtn s-off">${G_MARK} התחברות עם Google</span><span class="s-gbtn s-on">${icon('check', 16)} מחובר לגוגל מיי ביזנס</span></div><div class="s-sub"><span class="s-off">או הדבקת קישור לגוגל מפות</span><span class="s-on">905 ביקורות · 18 חודשי נתונים נטענו</span></div>`,
+    `<ul class="s-checks">${[['בריאות הפרופיל', '84'], ['מיקום במפות', '2.5'], ['5 מתחרים', '✓'], ['נראות ב-AI', '62']].map(([l, v], i) => `<li style="--d:${0.5 + i * 0.55}s"><i class="s-spin"></i><b class="s-done">${icon('check', 12)}</b><span>${l}</span><em>${v}</em></li>`).join('')}</ul>`,
+    `<ul class="s-todo">${['לענות ל-4 ביקורות', 'להשלים את תיאור העסק', 'לבקש דירוג מ-5 לקוחות'].map((l, i) => `<li style="--d:${0.6 + i * 0.6}s"><i>${icon('check', 12)}</i><span>${l}</span></li>`).join('')}</ul><div class="s-score"><span>ציון קידום</span><b><span class="s-off">48</span><span class="s-on">61 ▲</span></b></div>`,
+  ];
   const steps = [
-    ['1', 'מחברים את גוגל מיי ביזנס', 'עם חשבון הגוגל של העסק, או בהדבקת קישור לגוגל מפות.'],
-    ['2', 'המערכת בודקת', 'פרופיל, מפות, מתחרים ו-AI. הכול רץ לבד, כל שבוע.'],
-    ['3', 'עושים את מה שחשוב', 'תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.'],
-  ].map(([n, title, text]) => `<article class="v2-step"><b>${n}</b><h3>${h(title)}</h3><p>${h(text)}</p></article>`);
+    ['plug', 'דקה אחת', 'מחברים את גוגל מיי ביזנס', 'עם חשבון הגוגל של העסק, או בהדבקת קישור לגוגל מפות.'],
+    ['search', 'אוטומטי, כל שבוע', 'המערכת בודקת', 'פרופיל, מפות, מתחרים ו-AI. הכול רץ לבד, כל שבוע.'],
+    ['check', '10 דקות בשבוע', 'עושים את מה שחשוב', 'תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.'],
+  ].map(([ic, when, title, text], i) => `<article class="v2-step"><div class="v2-step-top"><span class="v2-step-ic">${icon(ic, 20)}</span><span class="v2-step-n">שלב ${i + 1} · ${h(when)}</span></div><h3>${h(title)}</h3><p>${h(text)}</p><div class="v2-step-art" aria-hidden="true">${stepArt[i]}</div></article>`);
 
   const plan = (p, items, best = false) => `<article class="v2-plan${best ? ' best' : ''}">
       ${best ? '<span class="v2-badge">הכי משתלם</span>' : ''}
@@ -174,22 +190,42 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-sec.dark .v2-dots i.on { background: #fff; }
 @media (min-width: 1240px) { .v2-rail { padding-inline: max(22px, calc((100vw - 1180px) / 2)); scroll-padding: 0 max(22px, calc((100vw - 1180px) / 2)); } }
 
-/* product cards */
-.v2-card { width: min(86vw, 440px); border-radius: 22px; border: 1px solid var(--line); border-top: 4px solid var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, #fff) 0%, #fff 45%); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0, 0, 0, .04), 0 20px 40px -24px rgba(0, 0, 0, .25); }
-.v2-card-text { padding: 30px 28px 20px; }
-.v2-card-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, #fff); }
-.v2-card h3 { margin: 16px 0 0; font-size: 1.5rem; line-height: 1.15; font-weight: 700; }
-.v2-card p { margin: 10px 0 0; color: var(--muted); min-height: 4.4em; }
-.v2-card-text a { display: inline-block; margin-top: 10px; font-weight: 600; }
-.v2-card-img { margin-top: auto; padding: 0 0 0 28px; background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--c) 10%, #fff) 100%); }
-.v2-card-img img { border-radius: 14px 0 0 0; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .3); aspect-ratio: 1120 / 730; object-fit: cover; object-position: top right; }
+/* product cards: a colored stage with the screen, then plain text */
+.v2-card { width: min(86vw, 420px); border-radius: 20px; background: #fff; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; }
+.v2-card:hover { transform: translateY(-3px); box-shadow: 0 24px 40px -28px rgba(23, 18, 58, .45); }
+.v2-card-img { padding: 26px 26px 0; background: color-mix(in srgb, var(--c) 9%, #fff); border-bottom: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); }
+.v2-card-img img { border-radius: 10px 10px 0 0; box-shadow: 0 -1px 0 rgba(0, 0, 0, .04), 0 12px 28px -14px rgba(23, 18, 58, .35); aspect-ratio: 1120 / 640; object-fit: cover; object-position: top right; }
+.v2-card-text { padding: 20px 24px 24px; }
+.v2-card-tag { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; letter-spacing: .02em; color: var(--c); }
+.v2-card h3 { margin: 6px 0 0; font-size: 1.3rem; line-height: 1.2; font-weight: 700; }
+.v2-card p { margin: 8px 0 0; color: var(--muted); font-size: .96rem; }
+.v2-card-text a { display: inline-block; margin-top: 12px; font-weight: 600; font-size: .95rem; }
 
-/* why cards */
-.v2-why { width: min(80vw, 360px); border-radius: 22px; padding: 30px 26px; border: 1px solid var(--line); border-top: 4px solid var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, #fff) 0%, #fff 60%); }
-.v2-why-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); }
-.v2-why small { display: block; margin-top: 16px; color: var(--c); font-weight: 700; }
-.v2-why h3 { margin: 4px 0 0; font-size: 1.35rem; }
-.v2-why p { margin: 8px 0 0; color: var(--muted); }
+/* why: a small piece of the real thing above each point */
+.v2-why { width: min(82vw, 360px); border-radius: 20px; background: #fff; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; }
+.v2-why-art { height: 176px; padding: 18px; background: #faf9ff; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 8px; font-size: .84rem; }
+.v2-why-text { padding: 20px 22px 24px; }
+.v2-why small { display: block; color: var(--brand); font-weight: 700; font-size: .78rem; letter-spacing: .02em; }
+.v2-why h3 { margin: 4px 0 0; font-size: 1.25rem; }
+.v2-why p { margin: 8px 0 0; color: var(--muted); font-size: .96rem; }
+.w-search { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.w-pack { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.w-pack li { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 8px; padding: 6px 10px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.w-pack li.me { border-color: #b9a8ff; box-shadow: 0 0 0 3px #efeaff; }
+.w-pack i { width: 20px; height: 20px; border-radius: 50%; background: #ea4335; color: #fff; font-style: normal; font-size: .7rem; display: grid; place-items: center; }
+.w-pack em { font-style: normal; color: var(--muted); font-size: .76rem; }
+.w-score { display: flex; align-items: baseline; gap: 8px; }
+.w-score b { font-family: var(--font-head); font-size: 2rem; line-height: 1; }
+.w-score span { color: #e8a100; letter-spacing: 1px; }
+.w-score small { color: var(--muted); }
+.w-dist { display: grid; gap: 4px; }
+.w-dist span { display: grid; grid-template-columns: 12px 1fr; gap: 8px; align-items: center; }
+.w-dist small { color: var(--muted); font-size: .72rem; }
+.w-dist i { height: 6px; border-radius: 4px; background: #ece9f6; overflow: hidden; }
+.w-dist u { display: block; height: 100%; background: #e8a100; border-radius: 4px; }
+.w-q { align-self: flex-start; max-width: 85%; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--brand); color: #fff; }
+.w-a { align-self: flex-end; max-width: 92%; padding: 9px 12px; border-radius: 14px 14px 4px 14px; background: #fff; border: 1px solid var(--line); line-height: 1.45; }
+.w-a svg { color: #c0398f; vertical-align: -2px; }
 @media (min-width: 1100px) { .why-rail .v2-rail { justify-content: center; } .why-rail .v2-rail-nav { display: none; } }
 
 /* video */
@@ -201,19 +237,64 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-video { border-radius: 22px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .8); }
 .v2-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* steps: three columns on a computer, a timeline on a phone */
-.v2-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 44px; counter-reset: s; }
-.v2-step { position: relative; border-radius: 24px; padding: 30px 26px; background: linear-gradient(180deg, #faf9ff, #f3f1fb); border: 1px solid #ebe8f7; }
-.v2-step b { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #6d4bff, #4b2bd6); color: #fff; font-size: 1.15rem; box-shadow: 0 10px 20px -10px rgba(75, 43, 214, .8); }
-.v2-step h3 { margin: 18px 0 0; font-size: 1.25rem; }
-.v2-step p { margin: 8px 0 0; color: var(--muted); }
+/* how it works: three steps; each small screen plays once it scrolls into view */
+.v2-steps { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 44px; }
+.v2-steps::before { content: ''; position: absolute; top: 31px; right: 8%; left: 8%; height: 2px; background: var(--line); }
+.v2-steps::after { content: ''; position: absolute; top: 31px; right: 8%; width: 0; height: 2px; background: var(--brand); transition: width 2.4s ease .2s; }
+.v2-steps.in::after { width: 84%; }
+.v2-step { position: relative; display: flex; flex-direction: column; }
+.v2-step-top { display: flex; align-items: center; gap: 12px; }
+.v2-step-ic { position: relative; z-index: 1; width: 62px; height: 62px; border-radius: 18px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); color: var(--brand); box-shadow: 0 8px 18px -12px rgba(23, 18, 58, .4); transition: background .4s, color .4s, border-color .4s; }
+.v2-steps.in .v2-step:nth-child(1) .v2-step-ic { transition-delay: .2s; }
+.v2-steps.in .v2-step:nth-child(2) .v2-step-ic { transition-delay: 1.2s; }
+.v2-steps.in .v2-step:nth-child(3) .v2-step-ic { transition-delay: 2.4s; }
+.v2-steps.in .v2-step-ic { background: var(--brand); border-color: var(--brand); color: #fff; }
+.v2-step-n { position: relative; z-index: 1; padding: 3px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .78rem; font-weight: 700; color: var(--muted); }
+.v2-step h3 { margin: 18px 0 0; font-size: 1.22rem; }
+.v2-step p { margin: 6px 0 0; color: var(--muted); font-size: .96rem; }
+.v2-step-art { margin-top: 18px; padding: 16px; min-height: 150px; border-radius: 16px; background: #faf9ff; border: 1px solid var(--line); font-size: .86rem; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+/* swaps: s-off shows first, s-on after the step's delay */
+.v2-step .s-on { display: none; }
+.s-connect { position: relative; }
+.s-gbtn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-weight: 700; }
+.s-gbtn.s-on { background: #ecfdf3; border-color: #abefc6; color: #067647; }
+.s-sub { text-align: center; color: var(--muted); font-size: .8rem; }
+.s-checks, .s-todo { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.s-checks li { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.s-checks em { font-style: normal; font-weight: 700; color: var(--ink); opacity: 0; }
+.s-spin { grid-row: 1; grid-column: 1; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d9d3ff; border-top-color: var(--brand); animation: s-rot .8s linear infinite; }
+.s-done { grid-row: 1; grid-column: 1; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #12a150; color: #fff; opacity: 0; transform: scale(.4); }
+.s-checks li span { grid-column: 2; }
+.s-todo li { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.s-todo i { width: 18px; height: 18px; border-radius: 6px; border: 2px solid #cfc8ee; display: grid; place-items: center; color: transparent; flex: none; }
+.s-score { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .8rem; }
+.s-score b { font-family: var(--font-head); color: var(--brand); font-size: 1.1rem; }
+@keyframes s-rot { to { transform: rotate(360deg); } }
+@keyframes s-pop { to { opacity: 1; transform: none; } }
+@keyframes s-hide { to { opacity: 0; visibility: hidden; } }
+@keyframes s-show { to { opacity: 1; } }
+@keyframes s-tick { to { background: var(--brand); border-color: var(--brand); color: #fff; } }
+@keyframes s-strike { to { color: var(--muted); text-decoration: line-through; } }
+.v2-steps.in .s-checks li .s-spin { animation: s-rot .8s linear infinite, s-hide .01s forwards var(--d); }
+.v2-steps.in .s-checks li .s-done { animation: s-pop .3s forwards var(--d); }
+.v2-steps.in .s-checks li em { animation: s-show .3s forwards var(--d); }
+.v2-steps.in .s-todo li i { animation: s-tick .25s forwards var(--d); }
+.v2-steps.in .s-todo li span { animation: s-strike .25s forwards var(--d); }
+.v2-steps.done .s-off { display: none; }
+.v2-steps.done .s-on { display: inline-flex; }
+.v2-steps.done .s-sub .s-on, .v2-steps.done .s-score .s-on { display: inline; }
 @media (max-width: 860px) {
-  .v2-steps { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 30px; }
-  .v2-step { background: none; border: 0; border-radius: 0; padding: 0 64px 30px 0; }
-  .v2-step b { position: absolute; top: 0; right: 0; width: 42px; height: 42px; font-size: 1.05rem; }
-  .v2-step:not(:last-child)::after { content: ''; position: absolute; top: 48px; bottom: 6px; right: 20px; width: 2px; background: linear-gradient(180deg, #c9bdff, #ebe8f7); }
-  .v2-step h3 { margin: 6px 0 0; font-size: 1.15rem; }
+  .v2-steps { grid-template-columns: minmax(0, 1fr); gap: 34px; margin-top: 30px; }
+  .v2-steps::before { top: 30px; bottom: 30px; right: 30px; left: auto; width: 2px; height: auto; }
+  .v2-steps::after { top: 30px; right: 30px; width: 2px; height: 0; transition: height 2.4s ease .2s; }
+  .v2-steps.in::after { width: 2px; height: calc(100% - 60px); }
+  .v2-step { padding-right: 78px; }
+  .v2-step-top { position: absolute; top: 0; right: 0; }
+  .v2-step-n { display: none; }
+  .v2-step h3 { margin-top: 2px; }
+  .v2-step-ic { width: 60px; height: 60px; }
 }
+@media (prefers-reduced-motion: reduce) { .v2-steps::after { transition: none; } .s-spin { display: none; } .s-done, .s-checks em { opacity: 1; transform: none; } }
 
 /* plans: the recommended one is a dark, premium card */
 .v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; gap: 22px; margin-top: 44px; }
@@ -262,10 +343,9 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-device { padding: 6px; border-radius: 13px; }
   .v2-tools { justify-content: flex-start; }
   .v2-card { width: 84vw; border-radius: 24px; }
-  .v2-card-text { padding: 22px 20px 16px; }
-  .v2-card h3 { font-size: 1.22rem; margin-top: 12px; }
-  .v2-card p { font-size: .95rem; min-height: 0; }
-  .v2-card-img { padding: 0 0 0 20px; }
+  .v2-card-img { padding: 18px 18px 0; }
+  .v2-card-text { padding: 16px 18px 20px; }
+  .v2-card h3 { font-size: 1.18rem; }
   .v2-plans { gap: 26px; }
   .v2-plan { padding: 28px 22px; border-radius: 24px; }
   .v2-plan.best { order: -1; }
@@ -365,6 +445,15 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   </div>
 </footer>
 <script>
+// How it works: plays once when it scrolls into view.
+(function () {
+  var st = document.querySelector('.v2-steps');
+  if (!st) return;
+  var play = function () { st.classList.add('in'); setTimeout(function () { st.classList.add('done'); }, 1600); };
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { st.classList.add('in', 'done'); return; }
+  var io = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { play(); io.disconnect(); } }, { threshold: 0.3 });
+  io.observe(st);
+})();
 // Sliders: arrows move a screen's worth, dots follow the scroll (right to left).
 document.querySelectorAll('[data-rail]').forEach(function (w) {
   var r = w.querySelector('.v2-rail'), dots = w.querySelector('.v2-dots'), cards = r.children, prev = w.querySelector('[data-dir=prev]'), next = w.querySelector('[data-dir=next]');
