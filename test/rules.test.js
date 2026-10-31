@@ -352,12 +352,12 @@ test('every plan has a monthly limit on Maps business searches', async () => {
   for (const p of [...Object.values(PLANS).map((x) => x.limits), TRIAL_LIMITS]) assert.ok(p.place_search > 0);
 });
 
-test('the new dashboard can be tried at /admin?v=2, with the classic one a click away', async () => {
+test('the dashboard is the bento one, with the classic one a click away', async () => {
   const { req } = await owner('dash2@example.com');
-  const page = await req('/admin?v=2');
+  const page = await req('/admin');
   assert.equal(page.status, 200);
   assert.match(page.text, /class="d2"/);
   assert.match(page.text, /ציון קידום/);
   assert.match(page.text, /href="\/admin\?classic=1"/);
-  assert.doesNotMatch((await req('/admin')).text, /class="d2"/, 'the classic one stays the default for now');
+  assert.doesNotMatch((await req('/admin?classic=1')).text, /class="d2"/, 'the classic one on request');
 });

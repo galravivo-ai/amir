@@ -3304,3 +3304,61 @@ a.d2-kpi:hover { text-decoration: none; transform: translateY(-2px); }
   .d2-score-num b { font-size: 2.8rem; }
   .d2-bars { height: 160px; gap: 5px; }
 }
+
+/* ---------------------------------------------------------------- the bento look, across the app */
+/* One layer over everything above: the dashboard's cards, numbers, tabs and buttons on every page. */
+body.app { background: radial-gradient(1200px 600px at 100% 0%, #efeaff 0%, transparent 60%), radial-gradient(900px 500px at 0% 100%, #fdf3ff 0%, transparent 60%), #f5f3fb; background-attachment: fixed; }
+body.app .app-main h1 { font-family: 'Rubik', 'Assistant', sans-serif; font-size: clamp(1.6rem, 2.6vw, 2.15rem); font-weight: 600; letter-spacing: -.015em; color: #17123a; }
+body.app .app-main h2, body.app .app-main h3 { font-family: 'Rubik', 'Assistant', sans-serif; font-weight: 600; color: #17123a; }
+body.app .page-head { margin-bottom: 1.1rem; }
+
+/* cards */
+/* only the shape and the shadow: a card with its own color or border keeps it */
+body.app .card, body.app details.fold, body.app .stat, body.app .kpi {
+  border-color: transparent; border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(23, 18, 58, .05), 0 16px 40px -30px rgba(40, 20, 120, .4);
+}
+body.app .card { padding: 20px 22px; }
+body.app a.card { transition: transform .2s, box-shadow .2s; }
+body.app a.card:hover { transform: translateY(-2px); text-decoration: none; }
+body.app details.fold > summary { padding: 18px 22px; }
+
+/* numbers */
+body.app .stat, body.app .kpi { padding: 18px 20px; transition: transform .2s; }
+body.app a.stat:hover { transform: translateY(-2px); border: 0; }
+body.app .st-value, body.app .kpi-value { font-family: 'Rubik', 'Assistant', sans-serif; font-weight: 600 !important; color: #17123a !important; letter-spacing: -.02em; font-size: clamp(1.6rem, 2.4vw, 2.15rem) !important; line-height: 1.1; }
+body.app .st-label, body.app .kpi-label { color: #6b6787; font-weight: 600; }
+body.app .st-hint, body.app .kpi-hint { font-size: .78rem; }
+body.app .st-hint.up, body.app .kpi-hint.up { color: #0f8a52; }
+body.app .st-hint.down, body.app .kpi-hint.down { color: #c0392b; }
+
+/* tabs between the pages of one menu item: one soft bar */
+/* full width on purpose, so nobody misses them */
+body.app .page-tabs { display: flex; gap: 4px; padding: 6px; margin: 0 0 18px; border-radius: 999px; background: #fff; border: 0; box-shadow: 0 0 0 1px #ebe8f5, 0 12px 26px -22px rgba(40, 20, 120, .5); }
+body.app .page-tabs a { flex: 1 1 0; justify-content: center; border-radius: 999px; padding: 10px 18px; font-weight: 600; color: #3d3866; background: transparent; box-shadow: none; }
+body.app .page-tabs a:hover { background: #f3f0ff; text-decoration: none; }
+body.app .page-tabs a.active { background: #17123a; color: #fff; box-shadow: 0 8px 18px -10px rgba(23, 18, 58, .7); }
+body.app .page-tabs a.active svg { color: #ffd23f; }
+
+/* buttons and fields */
+body.app .btn { border-radius: 999px; padding-inline: 1.15em; }
+body.app .btn.primary { background: #5b3df5; border-color: #5b3df5; box-shadow: 0 10px 20px -12px rgba(91, 61, 245, .8); }
+body.app .btn.primary:hover { background: #4527e0; border-color: #4527e0; }
+body.app .demo-bar .btn.primary, body.app .demo-bar .btn.primary:hover { background: #ffd23f; border-color: #ffd23f; color: #1c1650; box-shadow: none; }
+body.app input:not([type=checkbox]):not([type=radio]):not([type=range]), body.app select, body.app textarea { border-radius: 14px; border-color: #e4e0f2; box-shadow: none; background: #fff; }
+body.app input:focus, body.app select:focus, body.app textarea:focus { border-color: #8b6dff; box-shadow: 0 0 0 4px rgba(139, 109, 255, .18); outline: 0; }
+body.app .filters select, body.app .cover-filters select { border-radius: 999px; }
+
+/* tables, chips, bars */
+body.app .table th { background: #f7f5fd; color: #6b6787; font-weight: 600; border: 0; }
+body.app .table th:first-child { border-start-start-radius: 12px; border-end-start-radius: 12px; }
+body.app .table th:last-child { border-start-end-radius: 12px; border-end-end-radius: 12px; }
+body.app .table td { border-color: #f0edf8; }
+body.app .badge { border-radius: 999px; }
+body.app .alert-bar { border: 0; border-radius: 18px; box-shadow: 0 12px 26px -20px rgba(192, 57, 43, .6); }
+body.app .flash, body.app .warn, body.app .error { border-radius: 16px; }
+@media (max-width: 760px) {
+  body.app .card { padding: 18px; border-radius: 22px; }
+  body.app .page-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  body.app .page-tabs a { flex: none; }
+}

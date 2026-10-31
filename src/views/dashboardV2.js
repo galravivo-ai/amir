@@ -101,7 +101,8 @@ export function dashboardV2View(args) {
     const body = `<small>${h(label)}</small><b>${value}</b>${extra}`;
     return href ? `<a class="d2-kpi" href="${href}">${body}</a>` : `<div class="d2-kpi">${body}</div>`;
   };
-  const ratingChip = P.ratingDiff ? chip(`${P.ratingDiff > 0 ? '+' : '−'}${Math.abs(P.ratingDiff).toFixed(1)}`, P.ratingDiff > 0 ? 'up' : 'down') : '';
+  const reviewsTotal = P.pub?.total || P.g.total;
+  const ratingChip = P.ratingDiff ? chip(`${P.ratingDiff > 0 ? '+' : '−'}${Math.abs(P.ratingDiff).toFixed(1)}`, P.ratingDiff > 0 ? 'up' : 'down') : reviewsTotal ? chip(`${n(reviewsTotal)} ביקורות`) : '';
   const kpis = `<div class="d2-kpis">
     ${kpi('דירוג בגוגל', P.rating != null ? `${P.rating.toFixed(1)}<span>★</span>` : '—', ratingChip, '/admin/google/reviews')}
     ${kpi('ביקורות חדשות', n(P.total), chip(P.countHint, P.countTrend), '/admin/google/reviews')}
@@ -121,6 +122,9 @@ export function dashboardV2View(args) {
 
   return `<div class="d2">
     ${head}
+    ${args.sendError ? '<div class="error">מספר הטלפון לא נראה תקין. נסו שוב עם מספר מלא, למשל 050-1234567.</div>' : ''}
+    ${args.waResult?.ok ? '<div class="flash">ההודעה נשלחה ללקוח בוואטסאפ.</div>' : ''}
+    ${args.waResult && !args.waResult.ok ? `<div class="error">ההודעה לא נשלחה: ${h(args.waResult.error || 'שגיאה')}</div>` : ''}
     ${quotaWarning ? `<div class="warn">${h(quotaWarning)}</div>` : ''}
     ${P.connectCard}
     ${P.checklist}
@@ -154,8 +158,8 @@ export function dashboardV2View(args) {
         ${P.total ? bars(P.daily) : '<p class="d2-empty">אין עדיין ביקורות בתקופה הזו.</p>'}
       </section>
 
-      <section class="d2-card d2-week">
-        <div class="d2-card-h"><h3>התוכנית השבוע</h3><a class="d2-round" href="/admin/growth" aria-label="לכל הפעולות">${icon('chevron', 16)}</a></div>
+      <section class="d2-card d2-week" id="todo">
+        <div class="d2-card-h"><h3>מה לעשות עכשיו</h3><a class="d2-round" href="/admin/growth" aria-label="לכל הפעולות">${icon('chevron', 16)}</a></div>
         ${week(items)}
       </section>
 

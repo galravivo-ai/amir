@@ -115,8 +115,8 @@ export function adminRoutes(ctx) {
     // The demo shows everything a manager sees; saving is blocked there anyway.
     const demo = Boolean(req.business.is_demo);
     const manages = req.can('manager') || demo;
-    // The new dashboard, tried at /admin?v=2 before it replaces the classic one.
-    const v2 = req.query.v === '2';
+    // The bento dashboard; the classic one stays a click away (?classic=1).
+    const v2 = req.query.classic !== '1';
     const extra = v2 ? { grid: firstGrid(req.business.id), competitors: store.competitorsFor(req.business.id) } : {};
     render(
       req,

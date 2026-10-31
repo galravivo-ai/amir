@@ -141,7 +141,7 @@ test('the demo shows the plan with a sample website check and an AI text', async
   assert.match(page.text, /אין סימון עסק מקומי/);
   assert.match(page.text, /ביסטרו משפחתי/);
   const dash = await req('/admin');
-  assert.match(dash.text, /todo-card/);
+  assert.match(dash.text, /id="todo"/);
 });
 
 test('the pilot checklist: only for pilot businesses, marks what it sees, and sends the answers to the operator', async () => {

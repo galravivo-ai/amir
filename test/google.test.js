@@ -199,7 +199,7 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
 
   // Dashboard and list show the Google rating and the unanswered review.
   const dash = (await req('/admin')).text;
-  assert.match(dash, /דירוג בגוגל<\/span><span class="st-value">4\.5<small>★<\/small>/);
+  assert.match(dash, /דירוג בגוגל<\/small><b>4\.5<span>★<\/span>/);
   assert.match(dash, /href="\/admin\/google\/reviews\?filter=unanswered"/, 'the waiting count leads to the reviews to answer');
   assert.match(dash, /12 ביקורות/);
   const list = await req('/admin/google/reviews?filter=unanswered');
@@ -417,7 +417,7 @@ test('profile performance: views, calls, directions and searches from Google', a
   const page = (await req(`/admin?range=custom&from=${ago(40)}&to=${ago(11)}`)).text;
   assert.match(page, /צפיות בפרופיל<\/span><b>1,200</);
   assert.match(page, /איך מצאו אתכם בגוגל/);
-  assert.match(page, /פניות מגוגל<\/span><span class="st-value">180</, 'calls, directions and website clicks');
+  assert.match(page, /פניות מגוגל<\/small><b>180</, 'calls, directions and website clicks');
   assert.match(page, /שיחות: 2/, 'per-day detail in the chart');
   assert.match(page, /בית קפה תל אביב/);
   assert.match(page, /&lt;15/);

@@ -202,12 +202,12 @@ test('the dashboard follows the chosen range', async () => {
   const req = client();
   await req('/login', { method: 'POST', form: { email: 'serp-owner@example.com', password: 'password123' } });
   const all = (await req('/admin?range=365d')).text;
-  assert.match(all, /dash-cover/);
+  assert.match(all, /class="d2"/);
   assert.match(all, /בשנה האחרונה/);
   // A range before any review counts none of them; reviews still waiting for a reply stay on the dashboard.
   const old = (await req('/admin?range=custom&from=2025-01-01&to=2025-01-31')).text;
   assert.match(old, /בין 1\.1\.2025 ל-31\.1\.2025/);
-  assert.match(old, /ביקורות חדשות<\/span><span class="st-value">0</);
+  assert.match(old, /ביקורות חדשות<\/small><b>0</);
 });
 
 test('a share.google link leads to a search by the place name', async () => {
