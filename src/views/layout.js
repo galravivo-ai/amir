@@ -201,7 +201,7 @@ ${SKIP()}
     {
       items: [
         ['/admin', 'דשבורד', 'home'],
-        ['/admin/growth', 'קידום העסק', 'check', 0, { hl: true, also: ['/admin/maps'], tip: 'מה לעשות כדי לעלות במפות וב-AI, ואיפה אתם עומדים' }],
+        ['/admin/growth', 'קידום בגוגל מפות', 'check', 0, { hl: true, also: ['/admin/maps'], tip: 'מה לעשות כדי לעלות במפות וב-AI, ואיפה אתם עומדים' }],
         business.pilot && ['/admin/pilot', 'הפיילוט שלכם', 'handshake', 0, { tip: 'עשרה צעדים לשבועיים, ושלוש שאלות בסוף' }],
         // Until the Google profile is connected, that is the first thing in the menu.
         notConnected && role !== 'viewer' && ['/admin/google', 'חיבור לגוגל', 'plug', '!'],
