@@ -254,17 +254,32 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-tab { flex: none; scroll-snap-align: start; }
   .v2-panels { margin-top: 18px; }
   .v2-panel { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-  /* a phone: the tool's phone screen, whole, in a phone frame on its colored stage */
-  .v2-panel-stage { padding: 26px 0 0; border-radius: 22px; display: flex; justify-content: center; }
-  .v2-panel-stage.wide { padding: 20px 0 0 20px; display: block; }
-  .v2-frame { width: min(72vw, 290px); border-radius: 34px 34px 0 0; border: 9px solid #17123a; border-bottom: 0; background: #17123a; }
+  /* a phone: a whole phone, tilted a touch, beside the tool's name; the points stay for computers */
+  .v2-panel { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .v2-panel-stage { position: relative; padding: 22px 0; border-radius: 22px; display: flex; justify-content: center; overflow: hidden; }
+  .v2-panel-stage::after { content: ''; position: absolute; bottom: 14px; left: 50%; width: 160px; height: 18px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(23, 18, 58, .28), transparent); }
+  .v2-panel-stage.wide { padding: 18px 0 0 18px; display: block; }
+  .v2-panel-stage.wide::after { display: none; }
+  .v2-frame { position: relative; z-index: 1; width: min(48vw, 196px); padding: 7px; border: 0; border-radius: 34px; background: linear-gradient(145deg, #2d2752, #120e2c); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .14), 0 24px 40px -18px rgba(23, 18, 58, .7); transform: rotate(-2deg); }
+  .v2-frame::before { content: ''; position: absolute; z-index: 2; top: 13px; left: 50%; width: 58px; height: 16px; transform: translateX(-50%); border-radius: 10px; background: #0b0920; }
+  .v2-frame::after { content: ''; position: absolute; top: 74px; right: -3px; width: 3px; height: 40px; border-radius: 0 3px 3px 0; background: #2d2752; }
   .v2-frame .v2-frame-bar { display: none; }
-  .v2-frame img { border-radius: 25px 25px 0 0; aspect-ratio: 390 / 560; height: auto; object-fit: cover; object-position: top center; }
-  .v2-panel-stage.wide .v2-frame { width: 100%; border: 0; border-radius: 12px 0 0 0; background: #fff; }
+  .v2-frame picture { display: block; padding-top: 26px; border-radius: 27px; overflow: hidden; background: #f6f4ff; }
+  .v2-frame img { display: block; aspect-ratio: 390 / 640; height: auto; object-fit: cover; object-position: top center; }
+  .v2-panel-stage.wide .v2-frame picture { padding: 0; border-radius: 0; background: none; }
+  .v2-panel-stage.wide .v2-frame { width: 100%; padding: 0; border-radius: 12px 0 0 0; background: #fff; box-shadow: 0 20px 40px -24px rgba(23, 18, 58, .5); transform: none; }
+  .v2-panel-stage.wide .v2-frame::before, .v2-panel-stage.wide .v2-frame::after { display: none; }
   .v2-panel-stage.wide .v2-frame .v2-frame-bar { display: flex; }
-  .v2-panel-stage.wide .v2-frame img { width: 170%; max-width: none; aspect-ratio: auto; height: 250px; object-position: top right; border-radius: 0; }
-  .v2-zoom { bottom: 14px; left: 14px; }
-  .v2-panel-text li { font-size: .92rem; }
+  .v2-panel-stage.wide .v2-frame img { width: 170%; max-width: none; aspect-ratio: auto; height: 220px; object-position: top right; border-radius: 0; }
+  .v2-zoom { display: none; }
+  .v2-panel-text { text-align: center; }
+  .v2-panel-text h3 { font-size: 1.35rem; margin-top: 4px; }
+  .v2-panel-text > p { font-size: .98rem; margin-top: 6px; }
+  .v2-panel-text ul { display: none; }
+  #tools { padding-top: 54px; padding-bottom: 46px; }
+  #tools .v2-head p { display: none; }
+  #tools .v2-tabs { margin-top: 18px; }
+  .v2-more { margin-top: 10px; }
 }
 
 /* why: a small piece of the real thing above each point */
