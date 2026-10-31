@@ -20,6 +20,9 @@ const FONTS = fs
 // The words are the current page's. Shown at /v2 only (not indexed), to compare.
 
 const shot = (file) => asset(`media/guide/${file}`);
+// The phone-sized screens (390×700 at 2x), one per tool that has one.
+const PHONE = new Set(['dashboard', 'reviews', 'growth', 'rank', 'ai', 'qr', 'competitors', 'report', 'network']);
+const phoneShot = (key) => asset(`media/guide-m/${key}.jpg`);
 
 // The tools, as the shop's shelf: [key, icon, color, name, line, guide, screenshot].
 const TOOLS = [
@@ -60,7 +63,7 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const panels = TOOLS.map(([key, ic, c, name, line, guide, img], i) => {
     const points = (featureGuide(guide)?.points || []).slice(0, 3);
     return `<div class="v2-panel" role="tabpanel" id="t-${key}" aria-labelledby="tab-${key}" style="--c:${c}"${i ? ' hidden' : ''}>
-      <div class="v2-panel-stage"><button type="button" class="v2-frame" data-zoom aria-label="הגדלת המסך: ${h(name)}"><span class="v2-frame-bar"><i></i><i></i><i></i><em>gofive.co.il</em></span><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="${i ? 'lazy' : 'eager'}"><span class="v2-zoom">⤢</span></button></div>
+      <div class="v2-panel-stage${PHONE.has(key) ? '' : ' wide'}"><button type="button" class="v2-frame" data-zoom aria-label="הגדלת המסך: ${h(name)}"><span class="v2-frame-bar"><i></i><i></i><i></i><em>gofive.co.il</em></span><picture>${PHONE.has(key) ? `<source media="(max-width: 860px)" srcset="${phoneShot(key)}" width="780" height="1400">` : ''}<img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="${i ? 'lazy' : 'eager'}"></picture><span class="v2-zoom">⤢</span></button></div>
       <div class="v2-panel-text">
         <span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span>
         <h3>${h(name)}</h3>
@@ -251,9 +254,16 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-tab { flex: none; scroll-snap-align: start; }
   .v2-panels { margin-top: 18px; }
   .v2-panel { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-  .v2-panel-stage { padding: 20px 0 0 20px; border-radius: 22px; }
-  .v2-frame { border-radius: 12px 0 0 0; }
-  .v2-frame img { width: 170%; max-width: none; aspect-ratio: auto; height: 250px; }
+  /* a phone: the tool's phone screen, whole, in a phone frame on its colored stage */
+  .v2-panel-stage { padding: 26px 0 0; border-radius: 22px; display: flex; justify-content: center; }
+  .v2-panel-stage.wide { padding: 20px 0 0 20px; display: block; }
+  .v2-frame { width: min(72vw, 290px); border-radius: 34px 34px 0 0; border: 9px solid #17123a; border-bottom: 0; background: #17123a; }
+  .v2-frame .v2-frame-bar { display: none; }
+  .v2-frame img { border-radius: 25px 25px 0 0; aspect-ratio: 390 / 560; height: auto; object-fit: cover; object-position: top center; }
+  .v2-panel-stage.wide .v2-frame { width: 100%; border: 0; border-radius: 12px 0 0 0; background: #fff; }
+  .v2-panel-stage.wide .v2-frame .v2-frame-bar { display: flex; }
+  .v2-panel-stage.wide .v2-frame img { width: 170%; max-width: none; aspect-ratio: auto; height: 250px; object-position: top right; border-radius: 0; }
+  .v2-zoom { bottom: 14px; left: 14px; }
   .v2-panel-text li { font-size: .92rem; }
 }
 
