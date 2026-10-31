@@ -500,6 +500,24 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** Something only the operator can fix (an expired token, a bad key): what broke and what to do. */
+    async serviceAlert({ admins, subject, what, todo, detail = '', link = '/superadmin/status' }) {
+      if (!admins.length) return false;
+      return send({
+        kind: 'service_alert',
+        businessId: null,
+        to: admins,
+        subject,
+        html: emailLayout({
+          title: subject,
+          brand: true,
+          body: `<p>${what}</p><p><b>מה עושים:</b> ${todo}</p>
+            ${detail ? `<p class="muted" dir="ltr" style="text-align:left">${h(detail)}</p>` : ''}
+            ${emailButton(url(link), 'לטיפול')}`,
+        }),
+      });
+    },
+
     /** A paid service the checks run on ran out (SerpApi's monthly searches): the operator hears, with what to do. */
     async serviceQuota({ admins, service, detail = '' }) {
       if (!admins.length) return false;

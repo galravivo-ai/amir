@@ -16,6 +16,7 @@ const fakeGoogle = {
     const json = (status, body) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) });
     if (url === 'https://oauth2.googleapis.com/token') {
       const p = new URLSearchParams(init.body);
+      if (p.get('grant_type') === 'refresh_token' && fakeGoogle.refreshRevoked) return json(400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' });
       if (p.get('grant_type') === 'authorization_code') {
         const idToken = `x.${Buffer.from(JSON.stringify({ email: 'owner@biz.test' })).toString('base64url')}.y`;
         return json(200, { access_token: 'AT1', refresh_token: 'RT1', expires_in: 3600, id_token: idToken });
@@ -241,6 +242,22 @@ test('connect Google, follow a location, get alerts and answer reviews', async (
   store.updateGoogleToken(biz.id, conn.access_token, Date.now() - 1000);
   await googleSync.syncBusiness(store.businessById(biz.id));
   assert.ok(fakeGoogle.calls.some(([, u, b]) => u.includes('oauth2') && String(b).includes('refresh_token')));
+
+  // Google cancelled the permission: the page says to reconnect, and the system admins hear once.
+  fakeGoogle.refreshRevoked = true;
+  for (let i = 0; i < 2; i++) {
+    store.updateGoogleToken(biz.id, conn.access_token, Date.now() - 1000);
+    await assert.rejects(googleSync.syncBusiness(store.businessById(biz.id)));
+  }
+  const lostPage = (await req('/admin/google')).text;
+  assert.match(lostPage, /החיבור לגוגל פג/);
+  assert.match(lostPage, /חיבור מחדש/);
+  assert.doesNotMatch(lostPage, /Token has been expired/);
+  assert.match((await req('/admin/growth')).text, /לחבר שוב את גוגל/);
+  const alerts = store.db.prepare("SELECT to_addr, subject FROM outbox WHERE kind = 'service_alert'").all();
+  assert.equal(alerts.length, 1, 'one email, not one per sync');
+  assert.match(alerts[0].subject, /החיבור לגוגל פג/);
+  fakeGoogle.refreshRevoked = false;
 
   // Disconnect removes the connection and withdraws the permission at Google; the reviews stay.
   const kept = store.googleReviews(biz.id).length;

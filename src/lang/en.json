@@ -2973,5 +2973,10 @@
 "לצפייה ↗": "View ↗",
 "נשלחה במייל": "Sent by email",
 "כל חשבונית נשלחת גם במייל ברגע התשלום. לא מוצאים? כתבו לנו ונשלח שוב.": "Every invoice is also emailed the moment you pay. Can't find one? Write to us and we'll send it again.",
-"עוד לא היו תשלומים. אחרי כל תשלום החשבונית תופיע כאן, ותישלח גם במייל.": "No payments yet. After each payment the invoice shows here, and is emailed too."
+"עוד לא היו תשלומים. אחרי כל תשלום החשבונית תופיע כאן, ותישלח גם במייל.": "No payments yet. After each payment the invoice shows here, and is emailed too.",
+"החיבור לגוגל פג.": "The Google connection expired.",
+"גוגל ביטלה את ההרשאה, ולכן ביקורות ונתונים חדשים לא מגיעים ואי אפשר לענות מכאן. הנתונים שכבר נשמרו נשארים. מחברים מחדש עם אותו חשבון, וזה חוזר לעבוד.": "Google cancelled the permission, so new reviews and data don't arrive and you can't reply from here. What was saved stays. Connect again with the same account and it works again.",
+"חיבור מחדש": "Connect again",
+"החיבור פג": "Connection expired",
+"ההרשאה מגוגל פגה או בוטלה. צריך לחבר את החשבון מחדש.": "Google's permission expired or was revoked. Connect the account again."
 }

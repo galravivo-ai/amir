@@ -11,7 +11,7 @@ export class WhatsAppError extends Error {}
 const clean = (v) => String(v ?? '').trim().replace(/^["']|["']$/g, '');
 
 /** Returns null when WhatsApp isn't configured. */
-export function createWhatsApp({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+export function createWhatsApp({ env = process.env, fetchImpl = globalThis.fetch, onAuthError = null } = {}) {
   const accessToken = clean(env.WHATSAPP_TOKEN);
   const phoneId = clean(env.WHATSAPP_PHONE_NUMBER_ID);
   if (!accessToken || !phoneId) return null;
@@ -57,6 +57,8 @@ export function createWhatsApp({ env = process.env, fetchImpl = globalThis.fetch
         /* not JSON */
       }
       const id = json.messages?.[0]?.id;
+      // Meta's access token expired or was revoked (code 190), or isn't allowed to send.
+      if (res.status === 401 || json.error?.code === 190 || json.error?.type === 'OAuthException') onAuthError?.(String(json.error?.message || `HTTP ${res.status}`).slice(0, 300));
       if (!res.ok || !id) throw new WhatsAppError(String(json.error?.error_data?.details || json.error?.message || `HTTP ${res.status}`).slice(0, 200));
       return id;
     },

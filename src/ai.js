@@ -186,7 +186,7 @@ function textOf(message) {
  * Returns an AI helper, or null when no Anthropic credentials are configured.
  * `client` can be injected for tests.
  */
-export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL, onUsage = null } = {}) {
+export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL, onUsage = null, onAuthError = null } = {}) {
   // A key pasted with spaces, a line break or quotes around it still works.
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!client && !apiKey) return null;
@@ -213,6 +213,8 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
       if (err instanceof AiError) throw err;
       // The full error goes to the server log; the user gets a short Hebrew one.
       console.warn('[ai] request failed:', err.status ?? '', err.message);
+      // A key that stopped working, or an account out of credit: only the operator can fix it.
+      if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError || /credit balance/i.test(String(err.message))) onAuthError?.(String(err.message).slice(0, 300));
       if (err instanceof Anthropic.APIError) err = Object.assign(toAiError(err), { cause: err });
       throw err;
     }

@@ -90,6 +90,13 @@ export function createApp(db, options = {}) {
     options.ai !== undefined
       ? options.ai
       : createAi({
+          onAuthError: (detail) =>
+            alertAdmins({
+              subject: 'ה-AI הפסיק לעבוד: מפתח Anthropic',
+              what: 'הבקשות ל-Anthropic נדחות: המפתח לא תקין, בוטל, או שנגמר הקרדיט בחשבון. טיוטות, תיוג, תובנות ובדיקות AI לא עובדים עד שזה מתוקן.',
+              todo: 'נכנסים ל-console.anthropic.com: בודקים את היתרה (Billing) ואת המפתח (API Keys). אם צריך מפתח חדש, מעדכנים את ANTHROPIC_API_KEY ב-Railway.',
+              detail,
+            }),
           onUsage: (u) =>
             meter.record('ai', {
               tokensIn: (u?.input_tokens || 0) + (u?.cache_read_input_tokens || 0) + (u?.cache_creation_input_tokens || 0),
@@ -97,9 +104,30 @@ export function createApp(db, options = {}) {
             }),
         });
   const pusher = createPusher(store, { webpush: options.webpush });
+  // Something only the operator can fix: the system admins hear once a day per problem.
+  const admins = () => [...new Set([...store.superadminEmails(), ...String(process.env.SUPERADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)])];
+  const alertAdmins = (alert) => {
+    const recent = store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'service_alert' AND subject = ? AND created_at > datetime('now', '-1 day') LIMIT 1").get(alert.subject);
+    if (recent) return;
+    notifier.serviceAlert({ admins: admins(), ...alert }).catch((err) => console.error('[notify] serviceAlert failed:', err));
+  };
   const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl, webhook: options.webhook });
   const google = options.google !== undefined ? options.google : createGoogle();
-  const googleSync = google ? createGoogleSync({ store, google, notifier }) : null;
+  const googleSync = google
+    ? createGoogleSync({
+        store,
+        google,
+        notifier,
+        onAuthLost: (business, detail) =>
+          alertAdmins({
+            subject: `החיבור לגוגל פג: ${business?.name || 'עסק'}`,
+            what: `גוגל ביטלה את ההרשאה של <b>${String(business?.name || '').replace(/[<>&"]/g, '')}</b>. ביקורות, צפיות ושיחות לא מתעדכנים, ואי אפשר לענות לביקורות עד שמחברים מחדש.`,
+            todo: 'בעל העסק (או אתה, מחשבון העסק) נכנס ל"חיבור לגוגל" ולוחץ "חיבור מחדש". אם זה קורה לכמה עסקים כל שבוע: האפליקציה ב-Google Cloud כנראה במצב Testing, שבו ההרשאה פגה אחרי 7 ימים. מעבירים ל-In production בעמוד OAuth consent screen.',
+            detail,
+            link: '/superadmin#businesses',
+          }),
+      })
+    : null;
   // The checks' service ran out of searches: the operator hears, at most twice a day.
   let quotaAlertAt = 0;
   const onQuota = (detail) => {
@@ -126,7 +154,17 @@ export function createApp(db, options = {}) {
   ctx.answerEngines = answerEngines;
   ctx.metricsRunning = new Set();
   ctx.visibility = visibility;
-  const whatsapp = options.whatsapp !== undefined ? options.whatsapp : createWhatsApp();
+  const whatsapp = options.whatsapp !== undefined
+      ? options.whatsapp
+      : createWhatsApp({
+          onAuthError: (detail) =>
+            alertAdmins({
+              subject: 'וואטסאפ הפסיק לשלוח: הטוקן של Meta',
+              what: 'Meta דוחה את השליחה: הטוקן של WhatsApp Cloud API פג או בוטל. בקשות דירוג בוואטסאפ לא נשלחות עד שזה מתוקן.',
+              todo: 'ב-business.facebook.com ← משתמשי מערכת, יוצרים טוקן קבוע (System User) עם הרשאת whatsapp_business_messaging, ומעדכנים את WHATSAPP_TOKEN ב-Railway.',
+              detail,
+            }),
+        });
   ctx.whatsapp = whatsapp;
   const app = express();
   app.disable('x-powered-by');

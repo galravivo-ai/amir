@@ -1,3 +1,4 @@
+import { googleAuthLost } from '../googleSync.js';
 import { formatDate, h } from '../util.js';
 import { icon } from './icons.js';
 
@@ -235,10 +236,18 @@ export function googleConnectView({
     // Branches the reconnected account doesn't have (a different Google account).
     const found = gbpLocations.filter((l) => !l.missing);
     const missing = gbpLocations.filter((l) => l.missing);
-    gbpPart = `${conn.last_error ? `<div class="warn">הסנכרון האחרון מול החשבון נכשל: ${h(conn.last_error)}</div>` : ''}
+    const lost = googleAuthLost(conn.last_error);
+    gbpPart = `${
+      lost
+        ? `<div class="warn g-lost"><b>החיבור לגוגל פג.</b> גוגל ביטלה את ההרשאה, ולכן ביקורות ונתונים חדשים לא מגיעים ואי אפשר לענות מכאן. הנתונים שכבר נשמרו נשארים. מחברים מחדש עם אותו חשבון, וזה חוזר לעבוד.
+            ${can('manager') ? `<form method="post" action="/admin/google/connect"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn primary g-btn">${GOOGLE_G}<span>חיבור מחדש</span></button></form>` : ''}</div>`
+        : conn.last_error
+          ? `<div class="warn">הסנכרון האחרון מול החשבון נכשל: ${h(conn.last_error)}</div>`
+          : ''
+    }
     <section class="card stack">
-      <div class="g-conn-status"><span class="g-conn-dot" aria-hidden="true"></span>
-        <div><b>מחובר לגוגל</b>${conn.email ? ` <span class="muted" dir="ltr">${h(conn.email)}</span>` : ''}
+      <div class="g-conn-status${lost ? ' off' : ''}"><span class="g-conn-dot" aria-hidden="true"></span>
+        <div><b>${lost ? 'החיבור פג' : 'מחובר לגוגל'}</b>${conn.email ? ` <span class="muted" dir="ltr">${h(conn.email)}</span>` : ''}
         <div class="muted small">סנכרון אחרון: ${conn.last_sync_at ? h(formatDate(conn.last_sync_at)) : 'עוד לא'} · מתעדכן כל חצי שעה</div></div></div>
 
       <h3>הסניפים</h3>

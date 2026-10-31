@@ -3037,3 +3037,7 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .lp-hero-shot .lp-browser-bar span { margin-inline-start: 8px; }
 .lp-hero-shot img { display: block; width: 100%; height: auto; }
 .lp-watch span { font-weight: 600; }
+.g-lost { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.g-lost form { margin: 0; }
+.g-conn-status.off { background: #fff4e5; border-color: #f3c98b; }
+.g-conn-status.off .g-conn-dot { background: #e08a00; box-shadow: 0 0 0 4px rgba(224, 138, 0, .18); }

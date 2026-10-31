@@ -1,3 +1,4 @@
+import { googleAuthLost } from './googleSync.js';
 import { parseJson } from './db.js';
 import { leadGoals, STAGE2_AT } from './goals.js';
 import { cityOf } from './routes/visibility.js';
@@ -397,7 +398,7 @@ export function urgentActions(store, business) {
   const out = [];
   const locations = store.googleLocations(id).filter((l) => l.enabled);
   if (!locations.length) out.push({ key: 'connect', title: 'לחבר את העסק בגוגל', why: 'בלי זה אין ביקורות, נתונים ובדיקות. לוקח דקה.', href: '/admin/google' });
-  else if (!business.is_demo && locations.some((l) => l.source !== 'serp') && !store.googleConnection(id)) {
+  else if (!business.is_demo && locations.some((l) => l.source !== 'serp') && (!store.googleConnection(id) || googleAuthLost(store.googleConnection(id).last_error))) {
     out.push({ key: 'reconnect', title: 'לחבר שוב את גוגל', why: 'החיבור נותק: ביקורות חדשות ונתונים לא מגיעים, ואי אפשר לענות מכאן. הנתונים הקודמים נשמרו.', href: '/admin/google' });
   }
   const unhappy = store.openIssuesCount(id);

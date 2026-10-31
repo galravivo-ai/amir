@@ -4,12 +4,26 @@ import { GoogleError } from './google.js';
  * Keeps each connected business in step with Google: refreshes access
  * tokens, pulls new reviews of the chosen locations and raises alerts.
  */
-export function createGoogleSync({ store, google, notifier }) {
+/** What a business sees when Google cancelled the permission: reconnecting fixes it. */
+export const GOOGLE_AUTH_LOST = 'ההרשאה מגוגל פגה או בוטלה. צריך לחבר את החשבון מחדש.';
+export const googleAuthLost = (msg) => /expired or revoked|invalid_grant|ההרשאה מגוגל פגה/i.test(String(msg ?? ''));
+
+export function createGoogleSync({ store, google, notifier, onAuthLost = null }) {
   async function tokenFor(businessId) {
     const conn = store.googleConnection(businessId);
     if (!conn) throw new GoogleError('העסק לא מחובר לגוגל');
     if (conn.access_token && conn.expires_at > Date.now() + 60e3) return google.open(conn.access_token);
-    const t = await google.refresh(google.open(conn.refresh_token));
+    let t;
+    try {
+      t = await google.refresh(google.open(conn.refresh_token));
+    } catch (err) {
+      // Google cancelled the permission (after 7 days while the app is in Testing, a changed
+      // password, or removed access): only connecting again brings it back.
+      if (!googleAuthLost(err.message)) throw err;
+      store.googleSyncResult(businessId, GOOGLE_AUTH_LOST);
+      onAuthLost?.(store.businessById(businessId), err.message);
+      throw new GoogleError(GOOGLE_AUTH_LOST);
+    }
     store.updateGoogleToken(businessId, google.seal(t.accessToken), t.expiresAt);
     return t.accessToken;
   }
