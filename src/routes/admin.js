@@ -18,6 +18,7 @@ import { googleOverview } from './performance.js';
 import { mapsTop3 } from '../rankings.js';
 import { dataArrival } from '../arrival.js';
 import * as V from '../views/admin.js';
+import { dashboardV2View } from '../views/dashboardV2.js';
 import { BIZ_COOKIE } from './context.js';
 
 const PAGE_SIZE = 50;
@@ -99,16 +100,30 @@ export function adminRoutes(ctx) {
     };
   };
 
+  /** The last good Maps check of the first tracked search: its nine points. */
+  const firstGrid = (businessId) => {
+    for (const k of store.rankKeywords(businessId)) {
+      const last = store.rankChecks(k.id, 1).find((c) => !c.error);
+      const points = last ? parseJson(last.points, []) : [];
+      if (points.length) return { keyword: k.keyword, points, top: points.filter((p) => p.rank != null && p.rank <= 3).length };
+    }
+    return null;
+  };
+
   admin.get('/', (req, res) => {
     const data = dashboardData(req);
     // The demo shows everything a manager sees; saving is blocked there anyway.
     const demo = Boolean(req.business.is_demo);
     const manages = req.can('manager') || demo;
+    // The new dashboard, tried at /admin?v=2 before it replaces the classic one.
+    const v2 = req.query.v === '2';
+    const extra = v2 ? { grid: firstGrid(req.business.id), competitors: store.competitorsFor(req.business.id) } : {};
     render(
       req,
       res,
       'דשבורד ראשי',
-      V.dashboardView({
+      (v2 ? dashboardV2View : V.dashboardView)({
+        ...extra,
         ...data,
         arrival: demo ? null : dataArrival(store, req.business, { serpOn: Boolean(ctx.serp), aiPlus: Boolean(req.plan.aiPlus) }),
         sendError: req.query.send === 'bad',

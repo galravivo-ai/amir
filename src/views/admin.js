@@ -335,7 +335,7 @@ function feed(items, empty) {
   return `<div class="waiting">${items.map(feedRow).join('')}</div>`;
 }
 
-function dashboardParts({
+export function dashboardParts({
   maps = null,
   overview = null,
   refreshed = false,
@@ -512,7 +512,7 @@ function fold({ id, ic, title, hint = '', body, open = false, tone = '' }) {
     <div class="fold-body">${body}</div>
   </details>`;
 }
-const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold').forEach(function(d){var k='gf-fold2-'+d.id;try{var v=localStorage.getItem(k);if(v!==null)d.open=v==='1'}catch(e){}if(location.hash==='#'+d.id||(d.id==='data'&&location.hash==='#profile'))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})})()</script>`;
+export const FOLD_SCRIPT = `<script>(function(){document.querySelectorAll('details.fold').forEach(function(d){var k='gf-fold2-'+d.id;try{var v=localStorage.getItem(k);if(v!==null)d.open=v==='1'}catch(e){}if(location.hash==='#'+d.id||(d.id==='data'&&location.hash==='#profile'))d.open=true;d.addEventListener('toggle',function(){try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}})})})()</script>`;
 
 /** The main page: where the business stands, in five numbers, and what to do now. */
 export function dashboardView(args) {
@@ -583,7 +583,7 @@ function monthPicker(args) {
 }
 
 /** All the numbers, folded at the bottom of the dashboard for whoever wants to dig in. */
-function dataSection(args, P) {
+export function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
   return fold({ id: 'data', ic: 'chart', title: 'עוד נתונים', hint: 'פעולות בפרופיל, נושאים חוזרים וסקרים', body: `
     ${args.overview?.metrics?.daily?.size ? profileSummaryCard({ metrics: args.overview.metrics, monthPick: monthPicker(args) }) : ''}
