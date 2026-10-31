@@ -80,14 +80,22 @@ function initialMark(name, size) {
 function pageTabs(current, { widgetInUse }) {
   const groups = [
     [['/admin/campaigns', 'קמפיינים וקישורים'], ['/admin/requests', 'לקוחות שקיבלו בקשה'], ['/admin/poster', 'עיצוב שלט QR'], widgetInUse && ['/admin/widget', "ווידג'ט לאתר"]],
-    [['/admin/growth', 'תוכנית פעולה'], ['/admin/maps', 'מיקום ובריאות במפות']],
+    [['/admin/growth', 'תוכנית פעולה', 'check'], ['/admin/maps', 'מיקום ובריאות במפות', 'pin']],
     [['/admin/reports/monthly', 'דוח חודשי'], ['/admin/insights', 'תובנות AI']],
   ].map((g) => g.filter(Boolean));
   const tabs = groups.find((g) => g.some(([href]) => isActive(href, current)));
   if (!tabs) return '';
   return `<nav class="page-tabs" aria-label="עמודים בקבוצה">${tabs
-    .map(([href, label]) => `<a href="${href}"${isActive(href, current) ? ' class="active" aria-current="page"' : ''}>${h(label)}</a>`)
+    .map(([href, label, ic]) => `<a href="${href}"${isActive(href, current) ? ' class="active" aria-current="page"' : ''}>${ic ? icon(ic, 18) : ''}<span>${h(label)}</span></a>`)
     .join('')}</nav>`;
+}
+
+/** The tabs go right under the page's title, where the eye already is; above the page when it has none. */
+function withTabs(body, tabs) {
+  if (!tabs) return body;
+  const at = body.indexOf('<div class="page-head">');
+  const end = at === -1 ? -1 : body.indexOf('</div>', at);
+  return end === -1 ? tabs + body : body.slice(0, end + 6) + tabs + body.slice(end + 6);
 }
 
 /** Active on its own page, and on the pages it holds as tabs (opts.also). */
@@ -328,9 +336,8 @@ ${install(brand)}
 <main class="app-main" id="main">
   <div class="install-bar" id="install-bar" hidden>${icon('phone', 20)}<span><b>אפליקציה בטלפון</b> במסך הבית, עם התראות על ביקורות חדשות</span><button type="button" class="btn primary btn-sm" data-install>התקנה</button><button type="button" class="icon-btn" data-install-off aria-label="לא עכשיו">${icon('close', 16)}</button></div>
   ${demo ? `<div class="demo-bar">${icon('spark', 18)}<span><b>חשבון דמו</b> של עסק לדוגמה, לצפייה בלבד. כל הנתונים כאן להמחשה.</span><a class="btn primary btn-sm" href="/register">פתיחת חשבון לעסק שלכם</a></div>` : accessBanner(access, current)}
-  ${pageTabs(current, { widgetInUse })}
   ${flash ? `<div class="flash">${h(flash)}</div>` : ''}
-  ${body}
+  ${withTabs(body, pageTabs(current, { widgetInUse }))}
 </main>
 </body>
 </html>`;

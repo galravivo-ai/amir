@@ -3091,3 +3091,9 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .wa-pill { min-height: 38px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #128a43; border: 1px solid #9ad8b3; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 .wa-pill:hover { background: #effaf3; }
 @media (max-width: 640px) { .g-title-row .wa-pill { width: 100%; justify-content: center; } }
+
+/* Tabs between pages that share a menu item: under the title, the full width, hard to miss */
+.page-tabs { width: 100% !important; display: flex; gap: 6px; padding: 5px; border-radius: 14px; margin: 4px 0 18px; box-shadow: var(--shadow-xs); }
+.page-tabs a { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 14px; border-radius: 10px; font-size: .98rem; }
+.page-tabs a.active { box-shadow: 0 6px 14px -8px rgba(75, 43, 214, .7); }
+@media (max-width: 640px) { .page-tabs a { padding: 10px 8px; font-size: .92rem; white-space: normal; text-align: center; line-height: 1.25; } .page-tabs a svg { flex: none; } }
