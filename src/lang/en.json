@@ -3002,5 +3002,17 @@
 "הטיפול עזר": "Handling helped",
 "{n} מתוך {n} לקוחות לא מרוצים אמרו שהבעיה נפתרה": "{n} of {n} unhappy customers said the problem was solved",
 "אחרי הטיפול נשאל את הלקוח אם הבעיה נפתרה, והתשובות יופיעו כאן": "After handling we ask the customer if the problem was solved, and the answers show here",
-"לפי {n} שענו על \"כמה תמליצו עלינו\". מעל {n} נחשב טוב, ומעל {n} מצוין": "Based on {n} who answered &quot;how likely are you to recommend us&quot;. Above {n} is good, above {n} excellent"
+"לפי {n} שענו על \"כמה תמליצו עלינו\". מעל {n} נחשב טוב, ומעל {n} מצוין": "Based on {n} who answered &quot;how likely are you to recommend us&quot;. Above {n} is good, above {n} excellent",
+"קישור אישי לסקר, בשתי לחיצות מעמוד הביקורות.": "A personal survey link, in two taps from the reviews page.",
+"בעמוד \"ביקורות בגוגל\" לוחצים \"בקשת ביקורת בוואטסאפ\", מקלידים שם וטלפון, והוואטסאפ נפתח עם הודעה מוכנה.": "On &quot;Google reviews&quot;, tap &quot;Ask for a review on WhatsApp&quot;, type a name and phone, and WhatsApp opens with a ready message.",
+"ב\"לקוחות שקיבלו בקשה\" (תחת \"איסוף ביקורות\") רואים את כולם: מי פתח את הקישור ומי כבר דירג, ואפשר להוריד לאקסל.": "&quot;Customers asked for a review&quot; (under &quot;Getting reviews&quot;) shows everyone: who opened the link and who rated, with an Excel download.",
+"ב\"הסגנון של טיוטות ה-AI\" בוחרים טון (חם, מקצועי, קצר או קליל), חתימה ואם מותר סמיילי, וה-AI כותב כך.": "In &quot;The style of AI drafts&quot; pick a tone (warm, professional, short or light), a sign-off and whether an emoji is fine, and the AI writes that way.",
+"קידום בגוגל מפות: תוכנית הפעולה": "Google Maps promotion: the action plan",
+"קידום בגוגל מפות: תוכנית הפעולה · GoFive": "Google Maps promotion: the action plan · GoFive",
+"מתחת: ביקורות ודירוגים לפי יום והתפלגות הכוכבים. ב\"עוד נתונים\" יש צפיות, שיחות, בקשות הגעה והחיפושים שבהם מצאו אתכם, עם בחירה לפי חודש.": "Below: reviews and ratings by day and the star breakdown. &quot;More data&quot; has views, calls, direction requests and the searches that found you, with a month picker.",
+"כן, בכל רגע, מעמוד \"התוכנית שלי\". המסלול נשאר פעיל עד סוף התקופה ששולמה, ואחרי זה לא תחויבו יותר. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על {n} חודשים ומקבלים {n}.": "Yes, any time, from &quot;My plan&quot;. The plan stays active until the end of the paid period, and you're not charged after that. Monthly has no commitment; yearly is paid upfront for {n} months and you get {n}.",
+"התראה על כל ביקורת, ותשובה ישר מהרשימה עם טיוטת AI בסגנון שלכם": "An alert for every review, and a reply right from the list with an AI draft in your style",
+"QR, סקרים ובקשות דירוג בוואטסאפ, עם רשימת כל מי שקיבל בקשה": "QR, surveys and WhatsApp rating requests, with a list of everyone asked",
+"✓ התראה על כל ביקורת, ותשובה ישר מהרשימה עם טיוטת AI בסגנון שלכם": "✓ An alert for every review, and a reply right from the list with an AI draft in your style",
+"✓ QR, סקרים ובקשות דירוג בוואטסאפ, עם רשימת כל מי שקיבל בקשה": "✓ QR, surveys and WhatsApp rating requests, with a list of everyone asked"
 }

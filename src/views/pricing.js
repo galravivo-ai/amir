@@ -9,11 +9,11 @@ const waOn = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PH
 // Every plan includes these; what changes is AI visibility beyond Google.
 const INCLUDED = [
   'דשבורד גוגל מיי ביזנס: ביקורות, צפיות, שיחות, הגעה ומה חיפשו',
-  'התראה על כל ביקורת, ותשובה ישר מהרשימה עם טיוטת AI',
+  'התראה על כל ביקורת, ותשובה ישר מהרשימה עם טיוטת AI בסגנון שלכם',
   'קידום במפות: תוכנית שבועית ובריאות הפרופיל',
   'מיקום בגוגל מפות והשוואה למתחרים',
   'נראות בתשובות ה-AI של גוגל',
-  'QR, סקרים ובקשות דירוג בוואטסאפ',
+  'QR, סקרים ובקשות דירוג בוואטסאפ, עם רשימת כל מי שקיבל בקשה',
   'התראה כשמשהו יורד, ודוח חודשי',
   'משתמשים, קמפיינים ודירוגים ללא הגבלה',
   // The website widget is off the menu, so it's not offered either.
