@@ -430,17 +430,13 @@ function dashboardParts({
     </div>
     <div class="grid2">
       <section class="card">
-        <h3>מדדים נוספים</h3>
-        <dl class="dl">
-          <dt>דירוג ממוצע בסקרים</dt><dd>${stats.avgRating ? `${stats.avgRating.toFixed(1)} ★` : '—'}</dd>
-          <dt>NPS</dt><dd>${stats.nps ?? '—'}${stats.npsCount ? ` <span class="muted small">(${stats.npsCount} עונים)</span>` : ''}</dd>
-          <dt>זמן טיפול ממוצע</dt><dd>${resolve}</dd>
-          <dt>לקוחות כועסים שהוחזרו</dt><dd>${
-            stats.recoveredAnswered
-              ? `${Math.round((stats.recoveredYes / stats.recoveredAnswered) * 100)}% <span class="muted small">(${stats.recoveredYes} מתוך ${stats.recoveredAnswered} שענו)</span>`
-              : '<span class="muted">עוד אין תשובות</span>'
-          }</dd>
-        </dl>
+        <h3>עוד מהסקר שלכם</h3>
+        <ul class="metric-list">
+          <li><span><b>דירוג ממוצע בסקר</b><small>הכוכבים שלקוחות נתנו בסקר שלכם (לא בגוגל)</small></span><em>${stats.avgRating ? `${stats.avgRating.toFixed(1)} ★` : '—'}</em></li>
+          <li><span><b>כמה ימליצו עליכם (NPS)</b><small>${stats.npsCount ? `לפי ${stats.npsCount} שענו על "כמה תמליצו עלינו". מעל 30 נחשב טוב, ומעל 50 מצוין` : 'יופיע כשלקוחות יענו על השאלה "כמה תמליצו עלינו" בסקר'}</small></span><em>${stats.nps ?? '—'}</em></li>
+          <li><span><b>זמן טיפול בלקוח לא מרוצה</b><small>${stats.avgResolveHours == null ? 'יופיע אחרי שתסמנו פנייה ראשונה כ"טופל"' : 'בממוצע, מהמשוב ועד שסומן "טופל"'}</small></span><em>${resolve}</em></li>
+          <li><span><b>הטיפול עזר</b><small>${stats.recoveredAnswered ? `${stats.recoveredYes} מתוך ${stats.recoveredAnswered} לקוחות לא מרוצים אמרו שהבעיה נפתרה` : 'אחרי הטיפול נשאל את הלקוח אם הבעיה נפתרה, והתשובות יופיעו כאן'}</small></span><em>${stats.recoveredAnswered ? `${Math.round((stats.recoveredYes / stats.recoveredAnswered) * 100)}%` : '—'}</em></li>
+        </ul>
       </section>
       <section class="card"><h3>מקורות סריקה</h3>
         ${

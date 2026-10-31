@@ -2990,5 +2990,17 @@
 "כל הפעולות, עם מה שכבר בוצע ומה הבא בתור, נמצאות בלשונית \"תוכנית פעולה\".": "All the actions, with what's done and what's next, are in the &quot;Action plan&quot; tab.",
 "מה לעשות כדי לעלות בגוגל מפות וב-AI: קודם הדחוף, ואחריו התוכנית.": "What to do to rise on Google Maps and in AI: urgent first, then the plan.",
 "בחירת חודש": "Pick a month",
-"טווח שנבחר": "Chosen range"
+"טווח שנבחר": "Chosen range",
+"עוד מהסקר שלכם": "More from your survey",
+"דירוג ממוצע בסקר": "Average survey rating",
+"הכוכבים שלקוחות נתנו בסקר שלכם (לא בגוגל)": "The stars customers gave in your survey (not on Google)",
+"כמה ימליצו עליכם (NPS)": "How likely to recommend you (NPS)",
+"יופיע כשלקוחות יענו על השאלה \"כמה תמליצו עלינו\" בסקר": "Shows once customers answer &quot;how likely are you to recommend us&quot; in the survey",
+"זמן טיפול בלקוח לא מרוצה": "Time to handle an unhappy customer",
+"יופיע אחרי שתסמנו פנייה ראשונה כ\"טופל\"": "Shows after you mark a first case as &quot;handled&quot;",
+"בממוצע, מהמשוב ועד שסומן \"טופל\"": "On average, from the feedback until marked &quot;handled&quot;",
+"הטיפול עזר": "Handling helped",
+"{n} מתוך {n} לקוחות לא מרוצים אמרו שהבעיה נפתרה": "{n} of {n} unhappy customers said the problem was solved",
+"אחרי הטיפול נשאל את הלקוח אם הבעיה נפתרה, והתשובות יופיעו כאן": "After handling we ask the customer if the problem was solved, and the answers show here",
+"לפי {n} שענו על \"כמה תמליצו עלינו\". מעל {n} נחשב טוב, ומעל {n} מצוין": "Based on {n} who answered &quot;how likely are you to recommend us&quot;. Above {n} is good, above {n} excellent"
 }
