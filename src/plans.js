@@ -28,7 +28,7 @@ export const PLANS = {
   },
   pro: {
     label: 'גוגל + AI',
-    price: 169,
+    price: 149,
     tagline: 'גוגל מיי ביזנס, וגם ההמלצות של עוזרי ה-AI',
     ...ALL_FEATURES,
     api: false,
@@ -36,7 +36,7 @@ export const PLANS = {
     waMonthly: 300,
     competitors: 10,
     rankKeywords: 4,
-    limits: { ai_draft: 200, insights: 10, health_run: 5, visibility_run: 4, rank_run: 4 },
+    limits: { ai_draft: 200, insights: 10, health_run: 5, visibility_run: 2, rank_run: 4 },
   },
   // Off the price list since the per-profile prices; kept for businesses already on it.
   business: {

@@ -40,7 +40,7 @@ test('the payer and the amount are read from any field name', () => {
 test('a call without the right secret is turned away and changes nothing', async () => {
   const biz = owner('nosecret@example.com');
   store.updateBusiness(biz.id, { plan_request: JSON.stringify({ plan: 'pro', cycle: 'monthly' }) });
-  assert.equal((await ipn({ email: 'nosecret@example.com', sum: '169' }, 'wrong-secret-0123456789abc')).status, 404);
+  assert.equal((await ipn({ email: 'nosecret@example.com', sum: '149' }, 'wrong-secret-0123456789abc')).status, 404);
   assert.equal(store.businessById(biz.id).billing, 'trial');
   assert.equal(store.recentIcountPayments().length, 0);
 });
@@ -48,7 +48,7 @@ test('a call without the right secret is turned away and changes nothing', async
 test('a payment that matches a plan request opens the plan, once', async () => {
   const biz = owner('payer@example.com');
   store.updateBusiness(biz.id, { plan_request: JSON.stringify({ plan: 'pro', cycle: 'annual' }) });
-  const form = { doc_id: '77', email: 'Payer@example.com', sum: '1690' };
+  const form = { doc_id: '77', email: 'Payer@example.com', sum: '1490' };
   assert.equal(await (await ipn(form)).text(), 'OK');
   const after = store.businessById(biz.id);
   assert.equal(after.billing, 'active');
@@ -83,7 +83,7 @@ test('a paid branch opens', async () => {
   store.updateGoogleLocation(main.id, { enabled: true });
   store.setLocationPending(north.id, true);
   store.markBranchPayRequested(north.id);
-  await ipn({ email: 'branches@example.com', sum: '135' });
+  await ipn({ email: 'branches@example.com', sum: '119' });
   const opened = store.googleLocation(north.id, biz.id);
   assert.equal(opened.pending_pay, 0);
   assert.equal(opened.enabled, 1);
@@ -108,9 +108,9 @@ test('the call is read whatever its format, and an empty check is not kept', asy
   assert.deepEqual({ ...last() }, { email: 'json@example.com', amount: 99 });
   const fd = new FormData();
   fd.append('email', 'multi@example.com');
-  fd.append('sum', '135');
+  fd.append('sum', '119');
   await fetch(`${base}/billing/icount/ipn/${SECRET}`, { method: 'POST', body: fd });
-  assert.deepEqual({ ...last() }, { email: 'multi@example.com', amount: 135 });
+  assert.deepEqual({ ...last() }, { email: 'multi@example.com', amount: 119 });
   await send('<ipn><email>xml@example.com</email><totalsum>790</totalsum></ipn>', 'text/xml');
   assert.deepEqual({ ...last() }, { email: 'xml@example.com', amount: 790 });
 });
@@ -121,7 +121,7 @@ test('paid with another email: matched by the amount when only one business went
   // an older request for the same amount doesn't count
   const old = owner('old@example.com');
   store.updateBusiness(old.id, { plan_request: JSON.stringify({ plan: 'pro', cycle: 'monthly', at: new Date(Date.now() - 10 * 864e5).toISOString() }) });
-  await ipn({ email: 'private.mail@example.com', sum: '169' });
+  await ipn({ email: 'private.mail@example.com', sum: '149' });
   assert.equal(store.businessById(biz.id).billing, 'active');
   assert.match(store.recentIcountPayments()[0].result, /לפי הסכום/);
   assert.equal(store.businessById(old.id).billing, 'trial');

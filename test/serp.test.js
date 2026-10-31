@@ -135,7 +135,7 @@ test('follow a place by link or by name, get alerts, answer on Google', async ()
   }
   const fourth = await req('/admin/google/places/add', { method: 'POST', form: { _csrf: token, data_id: '0x5:0x6', place_id: 'ChIJxxxxxxxxxx', title: 'x' } });
   assert.equal(fourth.location, '/admin/google?added=1');
-  assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>4<\/dd>.*<b>₪574<\/b> <small>₪169 \+ 3 סניפים × ₪135/s);
+  assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>4<\/dd>.*<b>₪506<\/b> <small>₪149 \+ 3 סניפים × ₪119/s);
   for (const d of ['0x3:0x4', '0x5:0x6']) {
     const extra = store.googleLocations(biz.id).find((l) => l.data_id === d);
     await req(`/admin/google/locations/${extra.id}/delete`, { method: 'POST', form: { _csrf: token } });
@@ -241,7 +241,7 @@ test('a paying account pays for a new branch before it opens; the system admin a
     assert.equal(pending.pending_pay, 1);
     const page = await req('/admin/google');
     assert.match(page.text, /ממתין לתשלום/);
-    assert.match(page.text, /₪135 לחודש/);
+    assert.match(page.text, /₪119 לחודש/);
     assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>1<\/dd>/);
 
     // Paying: off to the branch's payment page, and the operator hears with the new total.
@@ -249,8 +249,8 @@ test('a paying account pays for a new branch before it opens; the system admin a
     assert.equal(pay.location, 'https://app.icount.co.il/m/branch');
     const mail = store.db.prepare("SELECT * FROM outbox WHERE kind = 'branch_request' ORDER BY id DESC").get();
     assert.match(mail.to_addr, /serp-admin@example\.com/);
-    assert.match(mail.body, /₪135 לחודש/);
-    assert.match(mail.body, /₪304 לחודש/);
+    assert.match(mail.body, /₪119 לחודש/);
+    assert.match(mail.body, /₪268 לחודש/);
 
     // The system admin sees it and opens it; the business hears.
     const sa = await admin('/superadmin');
@@ -261,7 +261,7 @@ test('a paying account pays for a new branch before it opens; the system admin a
     assert.equal(opened.enabled, 1);
     assert.equal(opened.pending_pay, 0);
     assert.ok(store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'branch_active' AND business_id = ?").get(biz.id));
-    assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>2<\/dd>.*<b>₪304<\/b>/s);
+    assert.match((await req('/admin/plan')).text, /פרופילים בגוגל<\/dt><dd>2<\/dd>.*<b>₪268<\/b>/s);
 
     // A business on its trial adds branches freely.
     store.updateBusiness(biz.id, { billing: 'trial', trial_ends_at: new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 19).replace('T', ' ') });

@@ -133,7 +133,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   // Before upgrading: the prorated charge, said up front.
   const upQuote = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
   assert.match(upQuote, /השדרוג נכנס לתוקף <b>מיד<\/b>/);
-  assert.match(upQuote, /תחויבו עכשיו ב-<b>₪(6\d|70)(\.\d+)?<\/b>/);
+  assert.match(upQuote, /תחויבו עכשיו ב-<b>₪(4\d|50)(\.\d+)?<\/b>/);
 
   // Upgrade: charged now for the rest of the month, no new page.
   const up = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'monthly' } });
@@ -141,7 +141,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   assert.equal(charges.length, 1);
   assert.equal(charges[0].Token, 'tok-1');
   assert.equal(charges[0].CardExpirationMMYY, '0729');
-  assert.ok(charges[0].Amount > 58 && charges[0].Amount <= 70, `prorated ${charges[0].Amount}`);
+  assert.ok(charges[0].Amount > 41 && charges[0].Amount <= 50, `prorated ${charges[0].Amount}`);
   assert.equal(fresh().plan, 'pro');
   assert.equal(fresh().paid_until, paidUntil, 'the billing day stays');
 
@@ -187,7 +187,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
   declineCharges = false;
   const again = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'annual' } });
   const lp = again.location.split('/').at(-1);
-  assert.equal(pages.get(lp).body.Amount, 1690);
+  assert.equal(pages.get(lp).body.Amount, 1490);
   pages.get(lp).paid = true;
   await req(`/admin/billing/done?p=${pages.get(lp).body.ReturnValue}`);
   b = fresh();
@@ -195,7 +195,7 @@ test('pay by card, renew every month, upgrade, downgrade, cancel', async () => {
 
   // Cancelling: what happens first, then a reason; the paid year stays, the operator hears (a yearly refund).
   const cancelPage = (await req('/admin/plan/cancel')).text;
-  assert.match(cancelPage, /יוחזרו לכם.{0,10}1,521/, 'a yearly plan: 1,690 less one used month at 169');
+  assert.match(cancelPage, /יוחזרו לכם.{0,10}1,341/, 'a yearly plan: 1,490 less one used month at 149');
   assert.equal((await req('/admin/plan/cancel', { method: 'POST', form: { _csrf: token, reason: 'price', details: 'יקר לי' } })).location, '/admin/plan?canceled=1');
   assert.equal(fresh().auto_renew, 0);
   assert.equal(fresh().cancel_reason, 'המחיר גבוה מדי · יקר לי');
@@ -222,8 +222,8 @@ test('periods keep the day of the month', () => {
 test('the price: the plan for the first Google profile, every branch 20% off', async () => {
   const { amountFor } = await import('../src/billing.js');
   assert.equal(amountFor('basic', 'monthly'), 99);
-  assert.equal(amountFor('pro', 'monthly', 3), 169 + 135 + 135);
-  assert.equal(amountFor('pro', 'annual', 2), 1690 + 1350, 'a branch is 20% off');
+  assert.equal(amountFor('pro', 'monthly', 3), 149 + 119 + 119);
+  assert.equal(amountFor('pro', 'annual', 2), 1490 + 1190, 'a branch is 20% off');
   assert.equal(amountFor('basic', 'monthly', 3), 99 + 79 + 79);
   assert.equal(amountFor('enterprise', 'monthly', 4), null);
 });
@@ -248,7 +248,7 @@ test('7 free days with a saved card: nothing charged, small quotas, charged when
   assert.match(plan, /7 ימים חינם · גוגל \+ AI/);
   const confirm = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
   assert.match(confirm, /היום לא מחויבים/);
-  assert.match(confirm, /<b>₪169<\/b> לחודש/);
+  assert.match(confirm, /<b>₪149<\/b> לחודש/);
 
   // Cardcom's page only saves the card: no charge, no invoice.
   const go = await req('/admin/plan/request', { method: 'POST', form: { _csrf: token, plan: 'pro', cycle: 'monthly' } });
@@ -271,7 +271,7 @@ test('7 free days with a saved card: nothing charged, small quotas, charged when
   assert.equal(planOf(b).waMonthly, 20);
   const mine = (await req('/admin/plan')).text;
   assert.match(mine, /ניסיון חינם במסלול גוגל \+ AI/);
-  assert.match(mine, /יחויב ב-₪169 לחודש/);
+  assert.match(mine, /יחויב ב-₪149 לחודש/);
   assert.match(mine, /ביטול הניסיון, בלי חיוב/);
   assert.doesNotMatch(mine, /שמירת כרטיס לניסיון|₪0/, 'the card check is not in the payments list');
 

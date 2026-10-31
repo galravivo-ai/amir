@@ -3,6 +3,8 @@ import { isEn } from './lang.js';
 import { REPLY_TONES } from './replies.js';
 
 export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5-5';
+/** For high-volume, simple work (reply drafts, posts, the weekly AI-visibility answers). Empty = the main model. */
+export const AI_LIGHT_MODEL = process.env.AI_LIGHT_MODEL ?? 'claude-haiku-5-5';
 
 /** Fixed topic list, so tags can be counted and compared over time. */
 export const TOPICS = ['שירות', 'זמן המתנה', 'איכות', 'מחיר', 'ניקיון', 'אווירה', 'צוות', 'זמינות', 'מקצועיות', 'אחר'];
@@ -191,23 +193,47 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!client && !apiKey) return null;
   const anthropic = client || new Anthropic({ apiKey });
+  const light = String(AI_LIGHT_MODEL || '').trim();
 
-  async function ask(system, content, effort, format) {
+  /**
+   * Sends a request; `cheap` runs it on the light model first (no server-side fallback there,
+   * and its web search is the basic one), and on any refusal or error but a bad key, again on
+   * the main model, so a cheaper answer never costs a failed one.
+   */
+  async function create(params, cheap = false) {
+    if (!cheap || !light || light === params.model) return anthropic.beta.messages.create(params);
+    const { betas, fallbacks, ...rest } = params;
+    const lightParams = { ...rest, model: light };
+    if (rest.tools) lightParams.tools = rest.tools.map((t) => (t.type === 'web_search_20260209' ? { ...t, type: 'web_search_20250305' } : t));
+    try {
+      const m = await anthropic.beta.messages.create(lightParams);
+      if (m.stop_reason !== 'refusal') return m;
+    } catch (err) {
+      if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) throw err;
+      console.warn('[ai] light model failed, using the main one:', err.status ?? '', err.message);
+    }
+    return anthropic.beta.messages.create(params);
+  }
+
+  async function ask(system, content, effort, format, cheap = false) {
     // For someone who uses the system in English (tags stay the fixed Hebrew topic names).
     if (isEn() && system !== TAG_SYSTEM) system += ENGLISH;
     try {
-      const message = await anthropic.beta.messages.create({
-        model,
-        max_tokens: 16000,
-        system,
-        thinking: { type: 'adaptive' },
-        output_config: format ? { effort, format } : { effort },
-        // If the model declines, the API retries on a fallback model automatically.
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-        messages: [{ role: 'user', content }],
-      });
-      onUsage?.(message.usage);
+      const message = await create(
+        {
+          model,
+          max_tokens: 16000,
+          system,
+          thinking: { type: 'adaptive' },
+          output_config: format ? { effort, format } : { effort },
+          // If the model declines, the API retries on a fallback model automatically.
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
+          messages: [{ role: 'user', content }],
+        },
+        cheap,
+      );
+      onUsage?.(message.usage, message.model);
       return textOf(message);
     } catch (err) {
       if (err instanceof AiError) throw err;
@@ -248,17 +274,17 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
         `הערה חופשית: ${comment || '(אין)'}`,
         `</feedback>`,
       ];
-      return ask(REPLY_SYSTEM, lines.join('\n') + styleBlock(style), 'medium');
+      return ask(REPLY_SYSTEM, lines.join('\n') + styleBlock(style), 'medium', undefined, true);
     },
     /** A public reply to a Google review. */
     draftGoogleReply({ businessName, rating, comment, reviewer, style = null }) {
       const content = `שם העסק: ${businessName}\nשם הכותב: ${reviewer || 'לא ידוע'}\n<feedback>\nדירוג: ${rating} מתוך 5\n${comment || '(בלי טקסט)'}\n</feedback>`;
-      return ask(GOOGLE_REPLY_SYSTEM, content + styleBlock(style), 'medium');
+      return ask(GOOGLE_REPLY_SYSTEM, content + styleBlock(style), 'medium', undefined, true);
     },
     /** A Google Business Profile post from a short idea ("קפה ב-10 ש״ח השבוע"). */
     draftPost({ businessName, idea, topic = 'עדכון', title = '', cta = '' }) {
       const content = `שם העסק: ${businessName}\nסוג הפוסט: ${topic}${title ? `\nכותרת: ${title}` : ''}${cta ? `\nכפתור: ${cta}` : ''}\n<idea>\n${idea}\n</idea>`;
-      return ask(POST_SYSTEM, content, 'low');
+      return ask(POST_SYSTEM, content, 'low', undefined, true);
     },
     /** Content for one action of the promotion plan (see GROWTH_BRIEF). */
     growthDraft({ kind, facts }) {
@@ -292,7 +318,7 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
       try {
         // A long search can pause the turn; resume it a couple of times at most.
         for (let i = 0; i < 3; i++) {
-          const message = await anthropic.beta.messages.create({
+          const message = await create({
             model,
             max_tokens: 16000,
             system: WEB_ANSWER_SYSTEM + (city ? ` המשתמש נמצא ב${city}.` : ''),
@@ -308,8 +334,8 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
             betas: ['server-side-fallback-2026-07-01'],
             fallbacks: 'default',
             messages,
-          });
-          onUsage?.(message.usage);
+          }, true);
+          onUsage?.(message.usage, message.model);
           if (message.stop_reason === 'refusal') throw new AiError('ה-AI סירב לענות על השאלה הזו.');
           for (const block of message.content) {
             if (block.type === 'text') {

@@ -10,12 +10,14 @@ const scope = new AsyncLocalStorage();
 /** Runs `fn` with work counted against `businessId`. */
 export const withBusiness = (businessId, fn) => scope.run({ businessId }, fn);
 
-export function createMeter(store) {
+export function createMeter(store, { onRecord = null } = {}) {
   return {
     /** service: 'serp', 'ai', 'openai', 'gemini', 'perplexity'. */
     record(service, { calls = 1, tokensIn = 0, tokensOut = 0 } = {}) {
       try {
-        store.addApiUsage(scope.getStore()?.businessId ?? null, monthKey(), service, calls, tokensIn, tokensOut);
+        const businessId = scope.getStore()?.businessId ?? null;
+        store.addApiUsage(businessId, monthKey(), service, calls, tokensIn, tokensOut);
+        if (businessId) onRecord?.(businessId);
       } catch (err) {
         console.warn('[meter] could not record:', err.message);
       }

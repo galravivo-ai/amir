@@ -274,3 +274,27 @@ test('forgot and reset the password while a session is still in the browser', as
   const back = await client()('/login', { form: { email: 'reset-logged@example.com', password: 'newpassword1' } });
   assert.equal(back.location, '/admin');
 });
+
+test('reply drafts run on the light model, and fall back to the main one on a refusal or an error', async () => {
+  const { createAi, AI_MODEL, AI_LIGHT_MODEL } = await import('../src/ai.js');
+  const calls = [];
+  let mode = 'ok';
+  const client = { beta: { messages: { create: async (p) => {
+    calls.push(p);
+    if (p.model === AI_LIGHT_MODEL && mode === 'refuse') return { model: p.model, stop_reason: 'refusal', content: [] };
+    if (p.model === AI_LIGHT_MODEL && mode === 'error') throw new Error('overloaded');
+    return { model: p.model, stop_reason: 'end_turn', content: [{ type: 'text', text: `by ${p.model}` }], usage: {} };
+  } } } };
+  const ai = createAi({ client });
+  assert.equal(await ai.draftGoogleReply({ businessName: 'x', rating: 5, comment: 'טוב', reviewer: 'דנה' }), `by ${AI_LIGHT_MODEL}`);
+  assert.equal(calls[0].fallbacks, undefined, 'no server-side fallback on the light model');
+  for (const m of ['refuse', 'error']) {
+    mode = m;
+    assert.equal(await ai.draftGoogleReply({ businessName: 'x', rating: 1, comment: 'רע', reviewer: 'דנה' }), `by ${AI_MODEL}`);
+  }
+  // the deeper work stays on the main model
+  mode = 'ok';
+  calls.length = 0;
+  await ai.insights?.({ businessName: 'x', stats: {}, feedback: [] }).catch(() => {});
+  assert.ok(calls.every((c) => c.model === AI_MODEL));
+});

@@ -7,12 +7,13 @@ const mark = (state) => ({ ok: '✅', warn: '⚠️', off: '❌' })[state] || '�
 export const PRICES = {
   serp: { perCall: Number(process.env.SERPAPI_PRICE_USD) || 0.015, label: 'SerpApi' },
   ai: { perIn: 4 / 1e6, perOut: 20 / 1e6, label: 'Claude' },
+  ai_light: { perIn: 0.1 / 1e6, perOut: 0.5 / 1e6, label: 'Claude (קל)' },
   openai: { perCall: 0.03, label: 'ChatGPT' },
   gemini: { perCall: 0.015, label: 'Gemini' },
   perplexity: { perCall: 0.01, label: 'Perplexity' },
 };
-const RATE = Number(process.env.USD_ILS) || 3.7;
-const costOf = (row) => {
+export const RATE = Number(process.env.USD_ILS) || 3.7;
+export const costOf = (row) => {
   const p = PRICES[row.service] || {};
   return (p.perCall || 0) * row.calls + (p.perIn || 0) * row.tokens_in + (p.perOut || 0) * row.tokens_out;
 };

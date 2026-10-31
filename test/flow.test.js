@@ -1081,8 +1081,8 @@ test('trial, plan request and activation', async () => {
   assert.equal(req.location, '/admin/plan?requested=1');
   const page = await owner.req(req.location);
   assert.match(page.text, /ביקשת את מסלול <b>גוגל \+ AI<\/b> \(שנתי\)/);
-  assert.match(page.text, /₪1,690/);
-  assert.match(page.text, /₪169/);
+  assert.match(page.text, /₪1,490/);
+  assert.match(page.text, /₪149/);
 
   // A system admin sees the request and activates it.
   const root = await registeredOwner('billing-admin@example.com');

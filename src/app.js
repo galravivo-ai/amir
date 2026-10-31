@@ -13,7 +13,8 @@ import { createCardcom } from './cardcom.js';
 import { createBilling } from './billing.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { createWhatsApp } from './whatsapp.js';
-import { createUsage } from './usage.js';
+import { createUsage, monthKey } from './usage.js';
+import { costOf, RATE as USD_RATE } from './views/status.js';
 import { createMeter, withBusiness } from './meter.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
@@ -85,7 +86,8 @@ function securityHeaders(req, res, next) {
 export function createApp(db, options = {}) {
   const store = createStore(db);
   const mailer = createMailer(db, { transport: options.mailTransport });
-  const meter = createMeter(store);
+  let costCheck = null;
+  const meter = createMeter(store, { onRecord: (id) => costCheck?.(id) });
   const ai =
     options.ai !== undefined
       ? options.ai
@@ -97,8 +99,8 @@ export function createApp(db, options = {}) {
               todo: 'נכנסים ל-console.anthropic.com: בודקים את היתרה (Billing) ואת המפתח (API Keys). אם צריך מפתח חדש, מעדכנים את ANTHROPIC_API_KEY ב-Railway.',
               detail,
             }),
-          onUsage: (u) =>
-            meter.record('ai', {
+          onUsage: (u, usedModel) =>
+            meter.record(String(usedModel || '').includes('haiku') ? 'ai_light' : 'ai', {
               tokensIn: (u?.input_tokens || 0) + (u?.cache_read_input_tokens || 0) + (u?.cache_creation_input_tokens || 0),
               tokensOut: u?.output_tokens || 0,
             }),
@@ -110,6 +112,25 @@ export function createApp(db, options = {}) {
     const recent = store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'service_alert' AND subject = ? AND created_at > datetime('now', '-1 day') LIMIT 1").get(alert.subject);
     if (recent) return;
     notifier.serviceAlert({ admins: admins(), ...alert }).catch((err) => console.error('[notify] serviceAlert failed:', err));
+  };
+  // A business whose checks and AI cost more than COST_ALERT_ILS this month (default ₪60): the admins hear once.
+  const costLimit = Number(process.env.COST_ALERT_ILS) || 60;
+  const costChecked = new Map();
+  costCheck = (businessId) => {
+    if (Date.now() - (costChecked.get(businessId) || 0) < 15 * 60e3) return;
+    costChecked.set(businessId, Date.now());
+    const month = monthKey();
+    const ils = store.db.prepare('SELECT * FROM api_usage WHERE business_id = ? AND month = ?').all(businessId, month).reduce((s, r) => s + costOf(r), 0) * USD_RATE;
+    if (ils <= costLimit) return;
+    const b = store.businessById(businessId);
+    const subject = `עלות גבוהה ב-${month}: ${b?.name || `עסק ${businessId}`}`;
+    if (store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'service_alert' AND subject = ? LIMIT 1").get(subject)) return;
+    alertAdmins({
+      subject,
+      what: `הבדיקות וה-AI של <b>${String(b?.name || '').replace(/[<>&"]/g, '')}</b> (מסלול ${String(b?.plan || '')}) עלו החודש כ-₪${Math.round(ils)}, מעל ₪${costLimit}.`,
+      todo: 'לבדוק בעמוד מצב המערכת מה צרך: בדיקות AI, מיקום במפות, מתחרים או טיוטות. אם זה חוזר, אפשר להוריד לעסק מגבלות או לדבר איתו על מסלול.',
+      link: '/superadmin/status',
+    });
   };
   const notifier = createNotifier({ store, mailer, pusher, publicUrl: options.publicUrl, webhook: options.webhook });
   const google = options.google !== undefined ? options.google : createGoogle();
