@@ -32,6 +32,13 @@ const TOOLS = [
 
 const G_MARK = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 
+/** A half-circle gauge, as on the dashboard. */
+const gauge = (score) => {
+  const len = Math.PI * 80;
+  return `<svg class="lx-gauge-svg" viewBox="0 0 200 112" aria-hidden="true"><defs><linearGradient id="lxg" x1="0" x2="1"><stop offset="0" stop-color="#8b6dff"/><stop offset="1" stop-color="#5b3df5"/></linearGradient></defs><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#ece8fb" stroke-width="18" stroke-linecap="round"/><path class="lx-arc" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#lxg)" stroke-width="18" stroke-linecap="round" stroke-dasharray="${len}" stroke-dashoffset="${len * (1 - score / 100)}" style="--len:${len}"/><g class="lx-needle" style="--deg:${-90 + (score / 100) * 180}deg"><path d="M100 36 L106 100 L94 100 Z" fill="#17123a"/></g><circle cx="100" cy="100" r="9" fill="#17123a"/></svg>`;
+};
+const PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></svg>';
+
 // One short line under each tool's name on the shelf.
 const SUBS = { dashboard: 'צפיות, שיחות ומה חיפשו', reviews: 'התראה ותשובה בלחיצה', growth: 'תוכנית לכל שבוע', rank: 'איפה אתם בכל שכונה', ai: 'ChatGPT, Gemini וגוגל', qr: 'QR ווואטסאפ', competitors: 'דירוג, ביקורות וקצב', posts: 'מרעיון לפוסט מוכן', report: 'להדפסה ובמייל', network: 'כל הסניפים במסך אחד' };
 
@@ -49,7 +56,6 @@ export function landingCleanView({ signupOpen = true, trialOpen = false, contact
   const startLabel = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
   const card = payProvider() === 'cardcom';
 
-  const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 20)}</span><span class="v2-tool-t"><b>${h(name)}</b><small>${h(SUBS[key] || '')}</small></span></a>`);
   // The close-ups: one tab per tool; the chosen tool shows its screen, a line and its guide's points.
   const tabs = TOOLS.map(([key, ic, c, name], i) => `<button type="button" role="tab" class="v2-tab" id="tab-${key}" aria-controls="t-${key}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" style="--c:${c}">${icon(ic, 16)}<span>${h(name)}</span></button>`);
   const panels = TOOLS.map(([key, ic, c, name, line, guide, img], i) => {
@@ -57,7 +63,6 @@ export function landingCleanView({ signupOpen = true, trialOpen = false, contact
     return `<div class="v2-panel" role="tabpanel" id="t-${key}" aria-labelledby="tab-${key}" style="--c:${c}"${i ? ' hidden' : ''}>
       <div class="v2-panel-stage${PHONE.has(key) ? '' : ' wide'}"><button type="button" class="v2-frame" data-zoom aria-label="הגדלת המסך: ${h(name)}"><span class="v2-frame-bar"><i></i><i></i><i></i><em>gofive.co.il</em></span><picture>${PHONE.has(key) ? `<source media="(max-width: 860px)" srcset="${phoneShot(key)}" width="780" height="1400">` : ''}<img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="${i ? 'lazy' : 'eager'}"></picture><span class="v2-zoom">⤢</span></button></div>
       <div class="v2-panel-text">
-        <span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span>
         <h3>${h(name)}</h3>
         <p>${h(line)}</p>
         ${points.length ? `<ul>${points.map((x) => `<li>${icon('check', 16)}<span>${h(x)}</span></li>`).join('')}</ul>` : ''}
@@ -73,7 +78,7 @@ export function landingCleanView({ signupOpen = true, trialOpen = false, contact
       <div class="w-dist">${[[5, 78], [4, 14], [3, 4], [2, 2], [1, 2]].map(([n, v]) => `<span><small>${n}</small><i><u style="width:${v}%"></u></i></span>`).join('')}</div>`],
     ['עוזרי AI', 'גם ה-AI קורא אותו', 'ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.', `<div class="w-q">איפה כדאי לאכול ליד דיזנגוף?</div>
       <div class="w-a">${icon('spark', 13)} אני ממליץ על <b>ביסטרו הגפן</b>: פסטה טרייה, דירוג 4.7 בגוגל ושירות מוערך.</div>`],
-  ].map(([tag, title, text, art]) => `<article class="v2-why"><div class="v2-why-art" aria-hidden="true">${art}</div><div class="v2-why-text"><small>${h(tag)}</small><h3>${h(title)}</h3><p>${h(text)}</p></div></article>`);
+  ].map(([, title, text, art], i) => `<article class="lx-why lx-why-${i + 1}"><div class="lx-why-art" aria-hidden="true">${art}</div><div class="lx-why-text"><h3>${h(title)}</h3><p>${h(text)}</p></div></article>`);
   // How it works: three steps, each with a small screen that plays when it scrolls into view.
   const stepArt = [
     `<div class="s-connect"><span class="s-gbtn s-off">${G_MARK} התחברות עם Google</span><span class="s-gbtn s-on">${icon('check', 16)} מחובר לגוגל מיי ביזנס</span></div><div class="s-sub"><span class="s-off">או הדבקת קישור לגוגל מפות</span><span class="s-on">905 ביקורות · 18 חודשי נתונים נטענו</span></div>`,
@@ -143,63 +148,10 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
 .v2-btn.ghost.light:hover { background: rgba(255, 255, 255, .1); }
 
 /* hero */
-.v2-hero { padding: 70px 0 0; text-align: center; overflow: hidden; color: #fff; background: linear-gradient(180deg, transparent 72%, var(--soft) 72%), radial-gradient(900px 500px at 85% 0%, #3b2a99 0%, transparent 60%), linear-gradient(160deg, #120d33 0%, #1c1650 55%, #241b6b 100%); }
-.v2-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 980px; background: rgba(255, 255, 255, .1); font-size: .86rem; font-weight: 600; color: #fff; }
-.v2-eyebrow svg { color: var(--yellow); }
-.v2-hero h1 { margin: 18px auto 0; max-width: 18ch; font-size: clamp(2.3rem, 6vw, 4.4rem); line-height: 1.06; font-weight: 800; letter-spacing: -.02em; }
-.v2-hero h1 { color: #fff; }
-.v2-hero h1 em { font-style: normal; color: var(--yellow); }
-.v2-hero .v2-lead { margin: 18px auto 0; max-width: 46ch; color: #cfc9f2; font-size: clamp(1.05rem, 2vw, 1.3rem); }
-.v2-watch { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-weight: 600; color: #fff; }
-.v2-watch i { width: 30px; height: 30px; border-radius: 50%; background: var(--yellow); color: var(--night); display: grid; place-items: center; font-style: normal; font-size: .75rem; }
-.v2-hero-shot { margin: 48px auto 0; max-width: 1020px; padding: 0 22px; }
-.v2-device { border-radius: 20px; padding: 10px; background: linear-gradient(180deg, #2b2b2e, #18181a); box-shadow: 0 50px 90px -45px rgba(40, 20, 120, .55); }
-.v2-device img { border-radius: 11px; }
-.v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
-.v2-hero-shot { position: relative; }
-.v2-laptop { width: 86%; margin-inline-start: auto; }
 /* the phone in front of the laptop, and two notes floating beside them */
-.v2-hphone { position: absolute; left: 22px; bottom: -34px; width: 22%; padding: 7px; border-radius: 34px; background: linear-gradient(180deg, #2b2b2e, #111113); box-shadow: 0 40px 70px -30px rgba(20, 10, 70, .6), inset 0 0 0 1px rgba(255, 255, 255, .08); animation: v2-float 7s ease-in-out infinite; }
-.v2-hphone::before { content: ''; position: absolute; z-index: 2; top: 13px; left: 50%; width: 30%; height: 14px; transform: translateX(-50%); border-radius: 10px; background: #0b0920; }
-.v2-hphone img { display: block; width: 100%; padding-top: 24px; border-radius: 27px; background: #f6f4ff; aspect-ratio: 390 / 700; object-fit: cover; object-position: top; }
-.v2-chip { position: absolute; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: rgba(255, 255, 255, .97); color: var(--ink, #14112e); text-align: start; box-shadow: 0 24px 46px -22px rgba(20, 10, 70, .55); font-size: .84rem; line-height: 1.25; animation: v2-float 6s ease-in-out infinite; }
-.v2-chip b { display: block; font-weight: 700; }
-.v2-chip small { display: block; color: #6b6787; font-size: .78rem; }
-.v2-chip small.up { color: #12955c; font-weight: 600; }
-.v2-chip-ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; }
-.v2-chip-ico.star { background: #fff4cc; color: #e0a100; font-size: 1.05rem; }
-.v2-chip-ring { --p: 50; width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: conic-gradient(#6d4bff calc(var(--p) * 1%), #e8e4ff 0); }
-.v2-chip-ring b { width: 30px; height: 30px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: .8rem; color: #4b2fd6; }
-.v2-chip-review { top: 14%; right: 0; animation-delay: -2s; }
-.v2-chip-ai { top: 42%; left: 26%; animation-delay: -4s; }
-@keyframes v2-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-@media (prefers-reduced-motion: reduce) { .v2-hphone, .v2-chip { animation: none; } }
 
 /* the shelf: a night panel with every tool as a small card */
-.v2-shelf { padding: 28px 0 26px; background: var(--soft); }
-.v2-shelf + .v2-sec { padding-top: 56px; }
-.v2-shelf-box { position: relative; z-index: 1; margin-top: 0; overflow: hidden; border-radius: 26px; padding: 28px; color: #fff; background: radial-gradient(520px 260px at 92% 0%, rgba(124, 92, 255, .5), transparent 70%), radial-gradient(420px 240px at 0% 100%, rgba(255, 210, 63, .14), transparent 70%), linear-gradient(160deg, #1c1650 0%, #120d33 100%); box-shadow: 0 30px 60px -36px rgba(23, 18, 58, .8); }
-.v2-shelf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.v2-shelf-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(255, 210, 63, .14); color: var(--yellow); font-size: .76rem; font-weight: 700; }
-.v2-shelf-head h2 { margin: 8px 0 0; font-size: clamp(1.15rem, 2.4vw, 1.5rem); font-weight: 700; color: #fff; max-width: 28ch; line-height: 1.25; }
-.v2-shelf-head a { color: #d9d3ff; font-weight: 600; font-size: .9rem; white-space: nowrap; }
-.v2-tools { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.v2-tool { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); color: #fff; transition: background .2s, border-color .2s, transform .2s; }
-.v2-tool:hover { text-decoration: none; background: rgba(255, 255, 255, .09); border-color: color-mix(in srgb, var(--c) 60%, transparent); transform: translateY(-2px); }
-.v2-tool-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(140deg, color-mix(in srgb, var(--c) 80%, #fff), var(--c)); box-shadow: 0 8px 18px -8px var(--c); }
-.v2-tool-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.v2-tool-t b { font-size: .9rem; font-weight: 700; line-height: 1.25; }
-.v2-tool-t small { font-size: .76rem; color: #b9b3e0; line-height: 1.3; }
-@media (max-width: 1000px) { .v2-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 860px) {
-  .v2-shelf { padding-top: 22px; }
-  .v2-shelf-box { padding: 22px 16px 16px; border-radius: 22px; }
-  .v2-shelf-head { margin-bottom: 14px; }
-  .v2-shelf-head a { display: none; }
-  .v2-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .v2-tool { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; }
-  .v2-tool-ic { width: 36px; height: 36px; border-radius: 11px; }
-  .v2-tool-t b { font-size: .86rem; }
 }
 
 /* sections */
@@ -402,7 +354,7 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
 
 /* plans: the recommended one is a dark, premium card */
 .v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; gap: 22px; margin-top: 44px; }
-.v2-plan { position: relative; background: #fff; border-radius: 22px; padding: 34px 30px; border: 1px solid var(--line); border-top: 4px solid var(--brand); display: flex; flex-direction: column; }
+.v2-plan { position: relative; background: #fff; border-radius: 22px; padding: 34px 30px; border: 1px solid var(--line); display: flex; flex-direction: column; }
 .v2-plan.best { border: 0; color: #fff; background: radial-gradient(420px 260px at 85% 0%, rgba(124, 92, 255, .55), transparent 70%), linear-gradient(165deg, #1b1546 0%, #0e0b26 100%); box-shadow: 0 34px 60px -32px rgba(30, 15, 110, .8); }
 .v2-plan.best .v2-branch, .v2-plan.best .v2-price small { color: #b9b3e0; }
 .v2-plan.best li svg { color: var(--yellow); }
@@ -438,27 +390,13 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
 
 @media (max-width: 860px) {
   .v2-menu { display: none; }
-  .v2-hero { padding-top: 46px; }
   .v2-sec { padding: 70px 0; }
   .v2-plans, .v2-video-row { grid-template-columns: minmax(0, 1fr); }
   /* the video section: centered on a phone */
   .v2-video-row { text-align: center; gap: 30px; }
   .v2-video-row ul { justify-items: center; }
   .v2-video-row li { justify-content: center; }
-  .v2-device { padding: 6px; border-radius: 13px; }
   /* on a phone: the phone screen, big enough to read, with the notes around it */
-  .v2-hero-shot { margin-top: 36px; padding: 0 16px 8px; display: flex; justify-content: center; }
-  .v2-laptop { display: none; }
-  .v2-hphone { position: relative; left: auto; bottom: auto; width: min(66vw, 290px); padding-bottom: 0; border-radius: 34px 34px 0 0; animation: none; -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
-  .v2-hphone img { aspect-ratio: 390 / 610; border-radius: 27px 27px 0 0; }
-  .v2-chip { padding: 8px 11px; font-size: .74rem; gap: 8px; border-radius: 13px; }
-  .v2-chip small { font-size: .68rem; }
-  .v2-chip-ico { width: 28px; height: 28px; border-radius: 9px; }
-  .v2-chip-ring { width: 32px; height: 32px; }
-  .v2-chip-ring b { width: 25px; height: 25px; font-size: .7rem; }
-  .v2-chip-review { top: 20%; right: 8px; }
-  .v2-chip-ai { top: 56%; left: 8px; }
-  .v2-tools { justify-content: flex-start; }
   .v2-card { width: 84vw; border-radius: 24px; }
   .v2-card-img { padding: 16px 0 0 16px; }
   /* a phone shows the top of the screen at a readable size, with tap-to-open for the whole */
@@ -486,40 +424,187 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
 .v2-main .lp-talk-box { max-width: 640px; margin: 34px auto 0; text-align: center; }
 .v2-final .lp-talk-box { color: #fff; }
 .v2-final .lp-talk-box small, .v2-final .lp-talk-box small a { color: #cfc9f2; }
+
+/* ============================================================ the bento world, on the landing page */
+:root { --ease-out: cubic-bezier(.23, 1, .32, 1); --page: #f5f3fb; --card-sh: 0 1px 2px rgba(23, 18, 58, .05), 0 22px 50px -34px rgba(40, 20, 120, .45); }
+body.v2-page { background: var(--page); }
+::selection { background: rgba(91, 61, 245, .18); color: #17123a; }
+.v2-main :focus-visible { outline: 3px solid rgba(91, 61, 245, .45); outline-offset: 3px; border-radius: 12px; }
+.v2-main { caret-color: var(--brand); }
+.v2-sec { padding: 88px 0; }
+.v2-sec.soft { background: transparent; }
+.v2-head h2 { font-weight: 600; letter-spacing: -.02em; color: #17123a; }
+.lx-anchor { position: relative; top: -80px; }
+
+/* buttons: pills that answer the press */
+.lx-btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.lx-btn, .v2-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px; border-radius: 999px; font-weight: 700; font-size: 1.02rem; border: 1.5px solid transparent; transition: transform 160ms var(--ease-out), background-color 200ms ease, box-shadow 200ms ease; }
+.lx-btn:active, .v2-btn:active, .lx-pill:active { transform: scale(.97); }
+.lx-btn.night { background: #17123a; color: #fff !important; box-shadow: 0 14px 28px -14px rgba(23, 18, 58, .75); }
+.lx-btn.night:hover { background: #2a2170; text-decoration: none; }
+.lx-btn.ghost { background: #fff; color: #17123a !important; border-color: #e4e0f2; }
+.lx-btn.ghost:hover { border-color: #c9bfff; text-decoration: none; }
+
+/* hero: the words, and the dashboard itself built as a bento beside them */
+.lx-hero { position: relative; padding: 72px 0 40px; background: radial-gradient(800px 520px at 8% 10%, rgba(139, 109, 255, .16), transparent 62%), radial-gradient(700px 420px at 95% 0%, rgba(255, 210, 63, .14), transparent 60%); overflow: hidden; }
+.lx-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; }
+.lx-hero h1 { margin: 0; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -.03em; color: #17123a; max-width: 15ch; }
+.lx-hero h1 em { font-style: normal; color: var(--brand); }
+.lx-lead { margin: 22px 0 0; max-width: 46ch; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.6; color: #4d4870; }
+.lx-trust { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 26px; font-size: .9rem; color: #6b6787; font-weight: 600; }
+.lx-trust span, .lx-trust a { display: inline-flex; align-items: center; gap: 8px; }
+.lx-trust a { color: #17123a; }
+.lx-trust a svg { width: 26px; height: 26px; padding: 7px; border-radius: 50%; background: #ffd23f; color: #17123a; box-sizing: border-box; }
+
+.lx-bento { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.lx-tile { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 22px; background: #fff; box-shadow: var(--card-sh); color: #17123a; animation: lx-in 900ms var(--ease-out) both; animation-delay: calc(var(--i) * 70ms + 120ms); }
+.lx-tile small { color: #6b6787; font-size: .8rem; font-weight: 600; }
+.lx-tile b { font-family: 'Rubik', 'Assistant', sans-serif; font-weight: 600; font-size: 2.1rem; line-height: 1; letter-spacing: -.03em; }
+.lx-tile b span { font-size: .55em; color: #f5b400; margin-inline-start: 3px; }
+.lx-tile em { align-self: flex-start; font-style: normal; font-size: .74rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: #f0eef7; color: #6b6787; }
+.lx-tile em.up { background: #dcf6e8; color: #0f8a52; }
+.lx-k { grid-column: span 3; }
+.lx-accent { grid-column: span 2; grid-row: span 2; justify-content: space-between; color: #1c1650; background: radial-gradient(220px 180px at 0% 0%, rgba(255, 255, 255, .6), transparent 70%), linear-gradient(160deg, #ffd96a, #ffbd1a); box-shadow: 0 26px 46px -26px rgba(214, 150, 0, .8); }
+.lx-accent small { color: #6a4c00; }
+.lx-accent b { font-size: 4rem; margin-top: auto; }
+.lx-pill { align-self: flex-start; white-space: nowrap; padding: 8px 14px; border-radius: 999px; background: #fff; font-weight: 700; font-size: .84rem; box-shadow: 0 8px 16px -10px rgba(120, 80, 0, .6); transition: transform 160ms var(--ease-out); }
+.lx-gauge, .lx-mapt { grid-column: span 4; }
+.lx-gauge-row, .lx-map-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.lx-gauge-row b { font-size: 2.8rem; }
+.lx-gauge-svg { width: 150px; height: auto; }
+.lx-arc { animation: lx-arc 1400ms var(--ease-out) both 500ms; }
+.lx-needle { transform-origin: 100px 100px; transform: rotate(var(--deg)); animation: lx-needle 1400ms var(--ease-out) both 500ms; }
+.lx-grid { display: grid; grid-template-columns: repeat(3, 26px); gap: 5px; }
+.lx-grid i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: .72rem; font-weight: 800; color: #fff; background: #16a36a; }
+.lx-grid i.m { background: #f5a524; }
+.lx-grid i.me { box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(91, 61, 245, .4); }
+.lx-map-row span { display: flex; flex-direction: column; align-items: flex-end; color: #6b6787; font-size: .82rem; font-weight: 600; }
+.lx-map-row span b small { font-size: .5em; color: #6b6787; }
+.lx-ai { grid-column: span 6; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.lx-ai ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.lx-ai li { padding: 6px 12px; border-radius: 999px; font-size: .8rem; font-weight: 700; background: #dcf6e8; color: #0f8a52; }
+.lx-ai li::before { content: '✓ '; }
+.lx-ai li.n { background: #f2f0f8; color: #8a85a6; }
+.lx-ai li.n::before { content: '— '; }
+.lx-sample { grid-column: span 6; margin: 2px 0 0; text-align: center; font-size: .76rem; color: #8a85a6; }
+@keyframes lx-in { from { opacity: 0; transform: translateY(14px) scale(.98); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes lx-arc { from { stroke-dashoffset: var(--len); } }
+@keyframes lx-needle { from { transform: rotate(-90deg); } }
+
+/* why: one large tile and two beside it */
+.lx-whys { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: auto auto; gap: 14px; margin-top: 44px; }
+.lx-why { display: flex; flex-direction: column; border-radius: 26px; background: #fff; box-shadow: var(--card-sh); overflow: hidden; }
+.lx-why-1 { grid-row: span 2; }
+.lx-why-art { flex: 1; min-height: 170px; padding: 22px; display: flex; flex-direction: column; justify-content: center; gap: 10px; background: linear-gradient(160deg, #f7f5ff, #fbfaff); }
+.lx-why-1 .lx-why-art { padding: 30px; justify-content: space-between; min-height: 340px; background:
+  linear-gradient(118deg, transparent 47%, rgba(255, 255, 255, .95) 47% 49.5%, transparent 49.5%),
+  linear-gradient(28deg, transparent 63%, rgba(255, 255, 255, .95) 63% 65%, transparent 65%),
+  linear-gradient(0deg, transparent 34%, rgba(255, 255, 255, .9) 34% 36%, transparent 36%),
+  linear-gradient(90deg, transparent 22%, rgba(255, 255, 255, .9) 22% 23.5%, transparent 23.5%),
+  radial-gradient(180px 120px at 18% 30%, #d4f0de, transparent 70%),
+  radial-gradient(220px 140px at 88% 90%, #dbe8fb, transparent 70%),
+  #edeef4; }
+.lx-why-1 .w-search { box-shadow: var(--card-sh); border: 0; }
+.lx-why-1 .w-pack { padding: 10px; border-radius: 20px; background: #fff; box-shadow: 0 30px 50px -30px rgba(23, 18, 58, .45); }
+.lx-why-text { padding: 22px 24px 26px; }
+.lx-why h3 { margin: 0; font-size: 1.35rem; font-weight: 600; letter-spacing: -.01em; }
+.lx-why-1 h3 { font-size: 1.7rem; }
+.lx-why p { margin: 8px 0 0; color: #5b5680; line-height: 1.6; max-width: 52ch; }
+
+/* tools close-ups and the rest, in the same skin */
+.v2-tab { transition: background-color 200ms ease, color 200ms ease, transform 160ms var(--ease-out); }
+.v2-tab:active { transform: scale(.97); }
+.v2-panels { box-shadow: var(--card-sh) !important; border: 0 !important; }
+.lx-video-sec { padding-top: 0; }
+.lx-night { border-radius: 34px; padding: 56px; color: #f5f5f7; background: radial-gradient(700px 400px at 0% 0%, rgba(139, 109, 255, .35), transparent 65%), linear-gradient(160deg, #120d33, #1c1650 60%, #241b6b); box-shadow: 0 40px 80px -50px rgba(23, 18, 58, .9); }
+.lx-night h2 { color: #fff; }
+.v2-step-art { background: #fff; border: 0; box-shadow: var(--card-sh); }
+.v2-step-ic { border: 0; box-shadow: var(--card-sh); }
+.v2-plan { border: 0; border-radius: 28px; box-shadow: var(--card-sh); }
+.v2-plan:not(.best) { border-top: 0; }
+.v2-faq details { box-shadow: var(--card-sh); transition: box-shadow 200ms ease; }
+.v2-main .net-band { background: transparent; border: 0; }
+.v2-main .net-split { padding: 48px; border-radius: 34px; background: #fff; box-shadow: var(--card-sh); }
+.v2-main .net-mock { border: 0; box-shadow: var(--card-sh); background: #faf9ff; }
+.v2-main .lp-agency, .v2-main .pricing-network { border-radius: 22px; }
+.v2-final { padding: 0 0 96px; background: transparent; }
+.lx-final-card { text-align: center; padding: 80px 56px; }
+.lx-final-card p { color: #cfc9f2; }
+.v2-final .v2-btn.yellow { background: #ffd23f; border-color: #ffd23f; color: #1c1650; }
+.v2-final .v2-btn.ghost { color: #fff; border-color: rgba(255, 255, 255, .4); background: transparent; }
+
+@media (hover: hover) and (pointer: fine) {
+  .lx-tile { transition: transform 300ms var(--ease-out), box-shadow 300ms ease; }
+  .lx-tile:hover { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-tile, .lx-arc, .lx-needle { animation: none; }
+  .lx-tile { animation: lx-fade 300ms ease both; }
+}
+@keyframes lx-fade { from { opacity: 0; } }
+
+@media (max-width: 980px) {
+  .lx-hero { padding: 44px 0 24px; }
+  .lx-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .lx-hero-text { text-align: center; }
+  .lx-hero h1 { margin-inline: auto; }
+  .lx-lead { margin-inline: auto; }
+  .lx-btns, .lx-trust { justify-content: center; }
+  .lx-whys { grid-template-columns: minmax(0, 1fr); }
+  .lx-why-1 { grid-row: auto; }
+}
+@media (max-width: 760px) {
+  .v2-sec { padding: 64px 0; }
+  .v2-panels { background: #fff; border-radius: 26px; padding: 12px 12px 22px; }
+  .lx-hero h1 { font-size: clamp(2rem, 9vw, 2.6rem); }
+  .lx-btns { flex-direction: column; align-items: stretch; }
+  .lx-bento { gap: 10px; }
+  .lx-tile { padding: 14px; border-radius: 18px; }
+  .lx-tile b { font-size: 1.7rem; }
+  .lx-accent b { font-size: 3rem; }
+  .lx-accent { grid-column: span 6; grid-row: auto; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "s n" "p n"; align-items: center; row-gap: 10px; }
+  .lx-accent small { grid-area: s; }
+  .lx-accent .lx-pill { grid-area: p; justify-self: start; }
+  .lx-accent b { grid-area: n; margin: 0; }
+  .lx-gauge, .lx-mapt { grid-column: span 6; }
+  .lx-gauge-svg { width: 120px; }
+  .lx-gauge-row b { font-size: 2.2rem; }
+  .lx-grid { grid-template-columns: repeat(3, 22px); }
+  .lx-grid i { width: 22px; height: 22px; font-size: .64rem; }
+  .lx-night { padding: 32px 20px; border-radius: 26px; }
+  .lx-final-card { padding: 48px 20px; }
+  .v2-main .net-split { padding: 24px 18px; border-radius: 26px; }
+}
 </style>`,
     body: `<div class="v2-main">
 
-<header class="v2-hero">
-  <div class="v2-wrap">
-    <span class="v2-eyebrow">${icon('star', 16)} בנויה על Google Business Profile</span>
-    <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
-    <p class="v2-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
-    <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost light" href="#tools">איך זה נראה מבפנים</a></div>
-    <a class="v2-watch" href="#video"><i>▶</i>צפו בסרטון (36 שניות)</a>
-  </div>
-  <div class="v2-hero-shot">
-    <div class="v2-laptop">
-      <div class="v2-device"><img src="${shot('dashboard.jpg')}" alt="הדשבורד של ${h(op.brand)}" width="1120" height="730" fetchpriority="high"></div>
-      <div class="v2-device-base" aria-hidden="true"></div>
+<header class="lx-hero">
+  <div class="v2-wrap lx-hero-grid">
+    <div class="lx-hero-text">
+      <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
+      <p class="lx-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
+      <div class="lx-btns"><a class="lx-btn night" href="${start}">${h(startLabel)}</a><a class="lx-btn ghost" href="#tools">איך זה נראה מבפנים</a></div>
+      <div class="lx-trust"><span>${G_MARK}בנויה על Google Business Profile</span><a href="#video">${PLAY}צפו בסרטון · 36 שניות</a></div>
     </div>
-    <div class="v2-hphone"><img src="${phoneShot('dashboard')}" alt="הדשבורד של ${h(op.brand)} בטלפון" width="780" height="1400" fetchpriority="high"></div>
-    <div class="v2-chip v2-chip-review" aria-hidden="true"><span class="v2-chip-ico star">★</span><span><b>ביקורת חדשה 5★ בגוגל</b><small>"הפסטה הכי טובה בעיר"</small></span></div>
-    <div class="v2-chip v2-chip-ai" aria-hidden="true"><span class="v2-chip-ring" style="--p:62"><b>62</b></span><span><b>נראות ב-AI</b><small class="up">▲ 21 נק׳ החודש</small></span></div>
+    <div class="lx-bento" role="img" aria-label="הדשבורד של ${h(op.brand)} על עסק לדוגמה: דירוג 4.6, 56 ביקורות שמחכות לתשובה, ציון קידום 44 ומיקום במפות">
+      <div class="lx-tile lx-k" style="--i:0"><small>דירוג בגוגל</small><b>4.6<span>★</span></b><em>905 ביקורות</em></div>
+      <div class="lx-tile lx-k" style="--i:1"><small>פניות מגוגל</small><b>1,439</b><em class="up" dir="ltr">+12%</em></div>
+      <div class="lx-tile lx-accent" style="--i:2"><small>מחכים לתשובה</small><b>56</b><span class="lx-pill">לענות עכשיו</span></div>
+      <div class="lx-tile lx-gauge" style="--i:3"><small>ציון קידום</small><div class="lx-gauge-row"><b>44</b>${gauge(44)}</div></div>
+      <div class="lx-tile lx-mapt" style="--i:4"><small>מיקום בגוגל מפות</small><div class="lx-map-row"><div class="lx-grid">${[3, 3, 1, 4, 2, 1, 3, 3, 1].map((r, i) => `<i class="${r <= 3 ? 'g' : 'm'}${i === 4 ? ' me' : ''}">${r}</i>`).join('')}</div><span><b>8<small>/9</small></b>בטופ 3</span></div></div>
+      <div class="lx-tile lx-ai" style="--i:5"><small>נראות ב-AI</small><ul>${[['ChatGPT', 1], ['Gemini', 1], ['Perplexity', 0], ['Claude', 1]].map(([n, y]) => `<li class="${y ? 'y' : 'n'}">${n}</li>`).join('')}</ul></div>
+      <p class="lx-sample">ביסטרו הגפן · עסק לדוגמה</p>
+    </div>
   </div>
 </header>
 
-<section class="v2-shelf" id="features" aria-label="הכלים">
-  <div class="v2-wrap"><div class="v2-shelf-box">
-    <div class="v2-shelf-head"><div><span class="v2-shelf-pill">${TOOLS.length} כלים · חשבון אחד</span><h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2></div><a href="#tools">לכל הכלים ›</a></div>
-    <div class="v2-tools">${shelf.join('')}</div>
-  </div></div>
-</section>
 
 <section class="v2-sec soft" id="why">
   <div class="v2-wrap v2-head"><h2>הפרופיל בגוגל הוא חלון הראווה של העסק</h2><p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p></div>
-  ${rail('why-rail', why, 'why-rail')}
+  <div class="v2-wrap"><div class="lx-whys">${why.join('')}</div></div>
 </section>
 
+<div id="features" class="lx-anchor"></div>
 <section class="v2-sec" id="tools">
   <div class="v2-wrap v2-head"><h2>הכלים, מקרוב</h2><p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p></div>
   <div class="v2-wrap" id="screens">
@@ -528,8 +613,8 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
   </div>
 </section>
 
-<section class="v2-sec dark" id="video">
-  <div class="v2-wrap v2-video-row">
+<section class="v2-sec lx-video-sec" id="video">
+  <div class="v2-wrap"><div class="lx-night v2-video-row">
     <div>
       <h2>ככה עסקים נמצאים בגוגל וב-AI</h2>
       <ul>
@@ -540,7 +625,7 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
       </ul>
     </div>
     <div class="v2-video"><video controls playsinline preload="none" poster="${asset('media/gofive-intro.jpg')}" aria-label="סרטון הכרות עם ${h(op.brand)}"><source src="${asset('media/gofive-intro.mp4')}" type="video/mp4"></video></div>
-  </div>
+  </div></div>
 </section>
 
 <section class="v2-sec" id="how">
@@ -575,7 +660,7 @@ ${networkSection()}
 </section>
 
 <section class="v2-final">
-  <div class="v2-wrap">
+  <div class="v2-wrap"><div class="lx-night lx-final-card">
     <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
     <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
     <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="#talk">לדבר איתנו</a></div>
@@ -584,7 +669,7 @@ ${networkSection()}
       ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
       ${talkSent ? '' : '<small>הפרטים ישמשו כדי לחזור אליכם, ולעדכונים רק אם סימנתם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
     </div>
-  </div>
+  </div></div>
 </section>
 
 <script>
