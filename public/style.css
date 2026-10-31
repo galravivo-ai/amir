@@ -1589,7 +1589,7 @@ body.site .site-head { background: rgba(255, 255, 255, .9); border-bottom-color:
 
 /* hero */
 .lp-hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 3rem; align-items: center;
-  padding: 4.5rem max(16px, calc((100% - 1180px) / 2)) 5rem; background: #1a1446; color: #fff; }
+  padding: 4.5rem max(16px, calc((100% - 1180px) / 2)) 5rem; background: radial-gradient(1200px 600px at 85% -10%, #3b2a99 0%, transparent 60%), linear-gradient(160deg, #120d33 0%, #1c1650 55%, #241b6b 100%); color: #fff; }
 .lp-hero-glow { position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(124, 92, 255, .45), transparent 65%); inset-inline-end: -120px; bottom: -220px; pointer-events: none; }
 .lp-hero-text { position: relative; display: flex; flex-direction: column; gap: 1.4rem; }
 .lp-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .16); color: #e6e1ff; font-size: .9rem; font-weight: 600; text-decoration: none; }

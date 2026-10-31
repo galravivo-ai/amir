@@ -133,10 +133,38 @@ const G_LOGO = '<svg class="lp-g" width="18" height="18" viewBox="0 0 48 48" ari
 
 /** The product, drawn in HTML: the main dashboard, with an AI score and an alert floating over it. */
 function heroVisual() {
-  return `<figure class="lp-visual lp-hero-shot">
-    <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il</span></span>
-    <img src="${shot('dashboard.jpg')}" alt="הדשבורד של GoFive, על עסק לדוגמה" width="1120" height="730" fetchpriority="high">
-  </figure>`;
+  const bars = [38, 52, 44, 61, 70, 58, 49, 66, 74, 63, 80, 72, 88, 95];
+  const stat = (label, value, hint, up = true) =>
+    `<span class="lp-mstat"><small>${label}</small><b>${value}</b><i class="${up ? 'up' : 'down'}">${hint}</i></span>`;
+  return `<div class="lp-visual" aria-hidden="true">
+    <div class="lp-browser">
+      <div class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/admin</span><em class="lp-linked">${G_LOGO} מחובר לגוגל מיי ביזנס ✓</em></div>
+      <div class="lp-app">
+        <div class="lp-app-side"><b></b><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="lp-app-main">
+          <div class="lp-app-cover"><div><small>בוקר טוב, דנה</small><b>ביסטרו הגפן</b></div><span>30 ימים אחרונים ▾</span></div>
+          <div class="lp-mstats">
+            ${stat('דירוג בגוגל', '4.7★', '▲ 0.1')}
+            ${stat('צפיות בפרופיל', '5,916', '▲ 12%')}
+            ${stat('שיחות והגעה', '708', '▲ 8%')}
+            ${stat('מיקום במפות', '2.5', '▲ 1.1')}
+          </div>
+          <div class="lp-mchart">
+            <small>פעולות של לקוחות בפרופיל</small>
+            <div class="lp-mbars">${bars.map((v) => `<i style="height:${v}%"><u style="height:${Math.round(v * 0.45)}%"></u></i>`).join('')}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="lp-float lp-float-ai">
+      <span class="lp-ring" style="--p:62"><b>62</b></span>
+      <span><small>נראות ב-AI</small><b>ממליצים עליכם</b><i class="up">▲ 21 נק׳ החודש</i></span>
+    </div>
+    <div class="lp-float lp-float-alert">
+      <span class="lp-float-icon">★</span>
+      <span><b>ביקורת חדשה 5★ בגוגל</b><small>"הפסטה הכי טובה בעיר"</small></span>
+    </div>
+  </div>`;
 }
 
 export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר', support: 'פנייה לעזרה מתוך המערכת', pilot: 'משוב מפיילוט' };
@@ -294,11 +322,18 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     path: '/',
     body: `
 <section class="lp-hero">
+  <div class="lp-hero-glow" aria-hidden="true"></div>
   <div class="lp-hero-text">
-    <h1>מנהלים את גוגל מיי ביזנס של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
+    <span class="lp-pill lp-pill-g">${G_LOGO}<span>בנויה על <b class="lp-gbp">Google Business Profile</b></span></span>
+    <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="#screens">${icon('search', 18)} איך זה נראה מבפנים</a></div>
-    ${isEn() ? '' : `<a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span>צפו בסרטון קצר (36 שניות)</span></a>`}
+    ${isEn() ? '' : `<a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>`}
+    <div class="lp-checks">
+      <span>${icon('check', 16)}בלי התחייבות</span>
+      <span>${icon('check', 16)}בעברית מלאה</span>
+      <span>${icon('check', 16)}עומד בכללי גוגל</span>
+    </div>
   </div>
   ${heroVisual()}
 </section>
