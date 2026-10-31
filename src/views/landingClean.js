@@ -41,7 +41,7 @@ const TAGS = { dashboard: 'נתונים', reviews: 'ביקורות', growth: 'ק
 
 const rail = (id, cards, cls = '') => `<div class="v2-rail-wrap ${cls}" data-rail>
     <div class="v2-rail" id="${id}" tabindex="0">${cards.join('')}</div>
-    <div class="v2-rail-nav"><button type="button" class="v2-arrow" data-dir="prev" aria-label="הקודם" aria-controls="${id}">‹</button><span class="v2-dots" aria-hidden="true"></span><button type="button" class="v2-arrow" data-dir="next" aria-label="הבא" aria-controls="${id}">›</button></div>
+    <div class="v2-rail-nav"><button type="button" class="v2-arrow" data-dir="prev" aria-label="הקודם" aria-controls="${id}">‹</button><span class="v2-dots" aria-hidden="true"></span><span class="v2-count" aria-live="polite"></span><button type="button" class="v2-arrow" data-dir="next" aria-label="הבא" aria-controls="${id}">›</button></div>
   </div>`;
 
 export function landingCleanView({ signupOpen = true, trialOpen = false }) {
@@ -53,7 +53,7 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 26)}</span><span>${h(name)}</span></a>`);
   // Product cards: a colored stage with the real screen, then a label, the name and one line.
   const showcase = TOOLS.map(([key, ic, c, name, line, guide, img]) => `<article class="v2-card" id="t-${key}" style="--c:${c}">
-      <div class="v2-card-img"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"></div>
+      <button type="button" class="v2-card-img" data-zoom aria-label="הגדלת המסך: ${h(name)}"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"><span class="v2-zoom">⤢</span></button>
       <div class="v2-card-text"><span class="v2-card-tag">${icon(ic, 15)}${h(TAGS[key] || '')}</span><h3>${h(name)}</h3><p>${h(line)}</p><a href="/guide/${guide}">למדריך ›</a></div>
     </article>`);
   // Why: each point shows a small piece of the real thing, not just an icon.
@@ -193,8 +193,15 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 /* product cards: a colored stage with the screen, then plain text */
 .v2-card { width: min(86vw, 420px); border-radius: 20px; background: #fff; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; }
 .v2-card:hover { transform: translateY(-3px); box-shadow: 0 24px 40px -28px rgba(23, 18, 58, .45); }
-.v2-card-img { padding: 26px 26px 0; background: color-mix(in srgb, var(--c) 9%, #fff); border-bottom: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); }
-.v2-card-img img { border-radius: 10px 10px 0 0; box-shadow: 0 -1px 0 rgba(0, 0, 0, .04), 0 12px 28px -14px rgba(23, 18, 58, .35); aspect-ratio: 1120 / 640; object-fit: cover; object-position: top right; }
+.v2-card-img { display: block; width: 100%; border: 0; cursor: zoom-in; font: inherit; position: relative; overflow: hidden; padding: 26px 26px 0; background: color-mix(in srgb, var(--c) 9%, #fff); border-bottom: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); }
+.v2-card-img img { width: 100%; border-radius: 10px 10px 0 0; box-shadow: 0 -1px 0 rgba(0, 0, 0, .04), 0 12px 28px -14px rgba(23, 18, 58, .35); aspect-ratio: 16 / 10; object-fit: cover; object-position: top right; transition: transform .35s; }
+.v2-card-img:hover img { transform: scale(1.02); }
+.v2-zoom { position: absolute; bottom: 12px; left: 12px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(23, 18, 58, .72); color: #fff; font-size: .95rem; backdrop-filter: blur(6px); }
+.v2-count { display: none; direction: ltr; unicode-bidi: isolate; min-width: 52px; text-align: center; font-weight: 700; font-size: .9rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.v2-box { padding: 0; border: 0; background: transparent; max-width: min(96vw, 1200px); }
+.v2-box::backdrop { background: rgba(10, 8, 30, .82); }
+.v2-box img { width: 100%; border-radius: 12px; }
+.v2-box button { position: fixed; top: 14px; left: 14px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; font-size: 1.1rem; cursor: pointer; }
 .v2-card-text { padding: 20px 24px 24px; }
 .v2-card-tag { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; letter-spacing: .02em; color: var(--c); }
 .v2-card h3 { margin: 6px 0 0; font-size: 1.3rem; line-height: 1.2; font-weight: 700; }
@@ -343,7 +350,11 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-device { padding: 6px; border-radius: 13px; }
   .v2-tools { justify-content: flex-start; }
   .v2-card { width: 84vw; border-radius: 24px; }
-  .v2-card-img { padding: 18px 18px 0; }
+  .v2-card-img { padding: 16px 0 0 16px; }
+  /* a phone shows the top of the screen at a readable size, with tap-to-open for the whole */
+  .v2-card-img img { width: 175%; max-width: none; aspect-ratio: auto; height: 230px; object-fit: cover; object-position: top right; border-radius: 10px 0 0 0; }
+  .v2-rail-wrap.many .v2-dots { display: none; }
+  .v2-rail-wrap.many .v2-count { display: inline-block; }
   .v2-card-text { padding: 16px 18px 20px; }
   .v2-card h3 { font-size: 1.18rem; }
   .v2-plans { gap: 26px; }
@@ -445,6 +456,18 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   </div>
 </footer>
 <script>
+// A screenshot opens whole, in a light box.
+(function () {
+  var box = document.createElement('dialog'); box.className = 'v2-box';
+  box.innerHTML = '<button type="button" aria-label="סגירה">✕</button><img alt="">';
+  document.body.appendChild(box);
+  var bi = box.querySelector('img');
+  box.querySelector('button').onclick = function () { box.close(); };
+  box.addEventListener('click', function (e) { if (e.target === box) box.close(); });
+  document.querySelectorAll('[data-zoom]').forEach(function (z) {
+    z.addEventListener('click', function () { var im = z.querySelector('img'); bi.src = im.currentSrc || im.src; bi.alt = im.alt; if (box.showModal) box.showModal(); else window.open(bi.src); });
+  });
+})();
 // How it works: plays once when it scrolls into view.
 (function () {
   var st = document.querySelector('.v2-steps');
@@ -458,10 +481,13 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 document.querySelectorAll('[data-rail]').forEach(function (w) {
   var r = w.querySelector('.v2-rail'), dots = w.querySelector('.v2-dots'), cards = r.children, prev = w.querySelector('[data-dir=prev]'), next = w.querySelector('[data-dir=next]');
   for (var i = 0; i < cards.length; i++) dots.appendChild(document.createElement('i'));
+  var count = w.querySelector('.v2-count');
+  if (cards.length > 5) w.classList.add('many');
   function at() { var step = cards[0].getBoundingClientRect().width + 20; return Math.round(Math.abs(r.scrollLeft) / step); }
   function sync() {
     var n = at(), max = r.scrollWidth - r.clientWidth - 2;
     [].forEach.call(dots.children, function (d, i) { d.className = i === Math.min(n, cards.length - 1) ? 'on' : ''; });
+    count.textContent = Math.min(n, cards.length - 1) + 1 + ' / ' + cards.length;
     prev.disabled = Math.abs(r.scrollLeft) < 2; next.disabled = Math.abs(r.scrollLeft) >= max;
   }
   function go(dir) { r.scrollBy({ left: (dir === 'next' ? -1 : 1) * r.clientWidth * 0.85 }); }
