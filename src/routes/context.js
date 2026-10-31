@@ -46,11 +46,15 @@ export function createContext(
       // File uploads (multipart) are parsed later by their route, so their token travels in the query string.
       const multipart = String(req.headers['content-type'] ?? '').startsWith('multipart/form-data');
       const sent = multipart ? req.query?._csrf : req.body?._csrf;
-      if (req.method === 'POST' && req.user && sent !== req.user.csrf) {
+      // Forms for someone logged out (log in, sign up, forgot / reset the password) work the same
+      // when a session from before is still in the browser: they act on no session, and a reset
+      // carries its own secret link.
+      const loggedOutForm = /^\/(login|register|forgot|reset\/[\w-]+)$/.test(req.path);
+      if (req.method === 'POST' && req.user && !loggedOutForm && sent !== req.user.csrf) {
         return res.status(403).send(errorPage('פג תוקף הטופס. רעננו את הדף ונסו שוב'));
       }
       // The demo is for looking around: nothing in it can be changed.
-      if (req.method === 'POST' && isDemoUser(req.user) && req.path !== '/logout') {
+      if (req.method === 'POST' && isDemoUser(req.user) && req.path !== '/logout' && !loggedOutForm) {
         return res.status(403).send(errorPage('זה חשבון דמו לצפייה בלבד. כדי לשמור שינויים, פותחים חשבון ב-/register'));
       }
       next();

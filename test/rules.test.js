@@ -260,3 +260,17 @@ test('a trial landing page in a quieter style, at /v2, not indexed', async () =>
   assert.match(html, /data-rail/, 'sliders');
   assert.match(html, /href="\/register"|href="\/login"/);
 });
+
+test('forgot and reset the password while a session is still in the browser', async () => {
+  const { req } = await owner('reset-logged@example.com');
+  const sent = await req('/forgot', { form: { email: 'reset-logged@example.com' } });
+  assert.equal(sent.status, 200, 'no "the form expired"');
+  const mail = store.db.prepare("SELECT body FROM outbox WHERE to_addr = 'reset-logged@example.com' ORDER BY id DESC").get();
+  const token = mail.body.match(/\/reset\/([\w-]+)/)[1];
+  // other forms of a logged-in user still need the token
+  assert.equal((await req('/admin/business', { form: { name: 'x' } })).status, 403);
+  const done = await req(`/reset/${token}`, { form: { password: 'newpassword1', password2: 'newpassword1' } });
+  assert.equal(done.location, '/login?reset=1');
+  const back = await client()('/login', { form: { email: 'reset-logged@example.com', password: 'newpassword1' } });
+  assert.equal(back.location, '/admin');
+});
