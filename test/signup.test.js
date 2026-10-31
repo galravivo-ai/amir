@@ -165,7 +165,7 @@ test('the system admin can delete a user and the businesses they own', async () 
   }
 });
 
-test('a free week without a card, then paying on an iCount page; the operator activates', async () => {
+test('free trial days without a card, then paying on an iCount page; the operator activates', async () => {
   const saved = { trial: process.env.SIGNUP_TRIAL_DAYS, url: process.env.ICOUNT_URL_BASIC_MONTHLY };
   delete process.env.SIGNUP_TRIAL_DAYS;
   process.env.ICOUNT_URL_BASIC_MONTHLY = 'https://app.icount.co.il/m/test-basic';
@@ -180,7 +180,7 @@ test('a free week without a card, then paying on an iCount page; the operator ac
     store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
     const me = client(base);
     const form = (await me('/register')).text;
-    assert.match(form, /7 ימים חינם, בלי כרטיס אשראי/);
+    assert.match(form, /5 ימים חינם, בלי כרטיס אשראי/);
     await me('/register', { method: 'POST', form: { name: 'דנה', email: 'icount@example.com', password: 'password123', business: 'קפה', terms: '1' } });
     const biz = () => store.businessesFor(store.userByEmail('icount@example.com').id)[0];
     assert.equal(biz().billing, 'trial', 'straight in, no card');

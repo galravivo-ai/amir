@@ -1055,7 +1055,7 @@ test('trial, plan request and activation', async () => {
   assert.equal(biz().plan, 'pro', 'the trial opens every feature');
 
   const dash = await owner.req('/admin');
-  assert.match(dash.text, /תקופת ניסיון: עוד 7 ימים/);
+  assert.match(dash.text, /תקופת ניסיון: עוד 5 ימים/);
   const campaign = await createCampaign(owner);
   assert.equal((await client().req(`/r/${campaign.slug}`)).status, 200);
 

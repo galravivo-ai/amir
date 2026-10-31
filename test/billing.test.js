@@ -238,14 +238,14 @@ test('7 free days with a saved card: nothing charged, small quotas, charged when
     return { id: b.id, token: (await req('/account')).text.match(/name="_csrf" value="([^"]+)"/)[1] };
   };
   for (const k of Object.keys(jar)) delete jar[k];
-  assert.match((await req('/')).text, /href="\/register">7 ימים חינם</, 'the landing page offers the trial');
+  assert.match((await req('/')).text, /href="\/register">5 ימים חינם</, 'the landing page offers the trial');
   const { id, token } = await signUp('trial-card@example.com');
   const fresh = () => created.store.businessById(id);
 
   const plan = (await req('/admin/plan')).text;
-  assert.match(plan, /בוחרים מסלול ומתחילים 7 ימים חינם/);
+  assert.match(plan, /בוחרים מסלול ומתחילים 5 ימים חינם/);
   assert.match(plan, /מחברים את פרופיל העסק בגוגל/);
-  assert.match(plan, /7 ימים חינם · גוגל \+ AI/);
+  assert.match(plan, /5 ימים חינם · גוגל \+ AI/);
   const confirm = (await req('/admin/plan/change?plan=pro&cycle=monthly')).text;
   assert.match(confirm, /היום לא מחויבים/);
   assert.match(confirm, /<b>₪149<\/b> לחודש/);

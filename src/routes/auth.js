@@ -23,7 +23,7 @@ export function authRoutes(ctx) {
   // Logins from one address, across all emails (password guessing on many accounts).
   const loginLimit = rateLimiter({ windowMs: ctx.authLimit.windowMs, max: ctx.authLimit.max * 2 });
 
-  // How a new account starts: a card trial (Cardcom), a free week without a card, or neither.
+  // How a new account starts: a card trial (Cardcom), free days without a card, or neither.
   const trialMode = () => (ctx.billing ? 'card' : signupTrialDays() > 0 ? 'free' : '');
 
   const clean = (body) => ({
