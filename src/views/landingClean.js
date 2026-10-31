@@ -158,15 +158,29 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-device img { border-radius: 11px; }
 .v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
 
-/* the shelf: every tool, like products in a shop */
-.v2-shelf { padding: 54px 0 30px; background: var(--soft); }
-.v2-shelf h2 { text-align: center; margin: 0 0 22px; font-size: 1.25rem; font-weight: 700; }
-.v2-tools { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 22px 14px; justify-content: safe center; scrollbar-width: none; }
-.v2-tools::-webkit-scrollbar { display: none; }
-.v2-tool { flex: none; width: 118px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; color: var(--ink); font-size: .86rem; font-weight: 600; line-height: 1.3; }
-.v2-tool:hover { text-decoration: none; color: var(--c); }
-.v2-tool-ic { width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); transition: transform .15s; }
-.v2-tool:hover .v2-tool-ic { transform: translateY(-3px); }
+/* the shelf: every tool, like a shop's category bar */
+.v2-shelf { padding: 0 0 26px; background: var(--soft); }
+.v2-shelf + .v2-sec { padding-top: 56px; }
+.v2-shelf-box { position: relative; z-index: 1; margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 22px 22px 16px; box-shadow: 0 20px 40px -32px rgba(23, 18, 58, .45); }
+.v2-shelf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.v2-shelf-head h2 { margin: 0; font-size: 1.12rem; font-weight: 700; }
+.v2-shelf-head span { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.v2-tools { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+.v2-tool { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 4px; border-radius: 14px; text-align: center; color: var(--ink); font-size: .8rem; font-weight: 600; line-height: 1.25; transition: background .15s; }
+.v2-tool:hover { text-decoration: none; background: color-mix(in srgb, var(--c) 7%, #fff); }
+.v2-tool-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 11%, #fff); border: 1px solid color-mix(in srgb, var(--c) 16%, #fff); transition: transform .15s; }
+.v2-tool-ic svg { width: 22px; height: 22px; }
+.v2-tool:hover .v2-tool-ic { transform: translateY(-2px); }
+@media (max-width: 860px) {
+  .v2-shelf-box { padding: 18px 0 10px; border-radius: 20px; }
+  .v2-shelf-head { padding: 0 18px; margin-bottom: 8px; }
+  .v2-shelf-head h2 { font-size: 1rem; }
+  /* two rows that swipe sideways, with a hint that there's more */
+  .v2-tools { grid-template-columns: none; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: 84px; gap: 2px 4px; overflow-x: auto; padding: 0 14px 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-mask-image: linear-gradient(to left, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(to left, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%); }
+  .v2-tools::-webkit-scrollbar { display: none; }
+  .v2-tool { scroll-snap-align: start; font-size: .76rem; padding: 8px 2px; }
+  .v2-tool-ic { width: 46px; height: 46px; border-radius: 14px; }
+}
 
 /* sections */
 .v2-sec { padding: 96px 0; }
@@ -389,8 +403,10 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 </header>
 
 <section class="v2-shelf" aria-label="הכלים">
-  <h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2>
-  <div class="v2-tools">${shelf.join('')}</div>
+  <div class="v2-wrap"><div class="v2-shelf-box">
+    <div class="v2-shelf-head"><h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2><span>${TOOLS.length} כלים · חשבון אחד</span></div>
+    <div class="v2-tools">${shelf.join('')}</div>
+  </div></div>
 </section>
 
 <section class="v2-sec soft" id="why">
