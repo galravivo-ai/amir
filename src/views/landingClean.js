@@ -1,23 +1,15 @@
 import { asset, h } from '../util.js';
-import { branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
-import { icon, logoMark } from './icons.js';
-import { operatorInfo } from './site.js';
+import { ANNUAL_MONTHS, branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
+import { icon } from './icons.js';
+import { contactForm, networkSection, operatorInfo, sitePage, talkForm } from './site.js';
 import { featureGuide } from '../guide.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The app's own fonts (Assistant, Rubik), so the page and the system read alike.
-const FONTS = fs
-  .readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/style.css'), 'utf8')
-  .split('\n')
-  .filter((l) => l.startsWith('@font-face') && !l.includes('Secular'))
-  .join('\n')
-  .replaceAll('url(fonts/', 'url(/static/fonts/');
-
-// A trial version of the landing page in a store-like style: the tools shown
-// like products, sliders that swipe on a phone, big type and plenty of white.
-// The words are the current page's. Shown at /v2 only (not indexed), to compare.
+// The landing page (Hebrew): the tools shown like products in a store, sliders
+// that swipe on a phone, big type and plenty of white, inside the site's own
+// header and footer. English (/en) and /v1 keep the earlier page.
 
 const shot = (file) => asset(`media/guide/${file}`);
 // The phone-sized screens (390×700 at 2x), one per tool that has one.
@@ -51,7 +43,7 @@ const rail = (id, cards, cls = '') => `<div class="v2-rail-wrap ${cls}" data-rai
     <div class="v2-rail-nav"><button type="button" class="v2-arrow" data-dir="prev" aria-label="הקודם" aria-controls="${id}">‹</button><span class="v2-dots" aria-hidden="true"></span><span class="v2-count" aria-live="polite"></span><button type="button" class="v2-arrow" data-dir="next" aria-label="הבא" aria-controls="${id}">›</button></div>
   </div>`;
 
-export function landingCleanView({ signupOpen = true, trialOpen = false }) {
+export function landingCleanView({ signupOpen = true, trialOpen = false, contactSent = false, contactError = '', contactValues = {}, talkSent = false, talkError = '' }) {
   const op = operatorInfo();
   const start = signupOpen ? '/register' : '/login';
   const startLabel = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
@@ -97,8 +89,10 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const plan = (p, items, best = false) => `<article class="v2-plan${best ? ' best' : ''}">
       ${best ? '<span class="v2-badge">הכי משתלם</span>' : ''}
       <h3>${h(p.label)}</h3>
-      <p class="v2-price">₪${p.price}<small> לחודש</small></p>
-      <p class="v2-branch">כל סניף נוסף ₪${branchPrice(p)} לחודש</p>
+      <p class="v2-price" data-cycle="monthly">₪${p.price}<small> לחודש</small></p>
+      <p class="v2-price" data-cycle="annual" hidden>₪${(p.price * ANNUAL_MONTHS).toLocaleString('en-US')}<small> לשנה</small></p>
+      <p class="v2-branch" data-cycle="monthly">כל סניף נוסף ₪${branchPrice(p)} לחודש</p>
+      <p class="v2-branch" data-cycle="annual" hidden>חודשיים מתנה · כל סניף נוסף ₪${(branchPrice(p) * ANNUAL_MONTHS).toLocaleString('en-US')} לשנה</p>
       <ul>${items.map((x) => `<li>${icon('check', 16)}${h(x)}</li>`).join('')}</ul>
       <a class="v2-btn${best ? '' : ' ghost'}" href="${start}">${h(startLabel)}</a>
     </article>`;
@@ -115,39 +109,27 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
     ['אפשר לבטל?', 'כן, בכל רגע, מעמוד "התוכנית שלי". המסלול נשאר פעיל עד סוף התקופה ששולמה, ואחרי זה לא תחויבו יותר.'],
   ];
 
-  return `<!doctype html>
-<html lang="he" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>${h(op.brand)} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI</title>
-<link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
-<style>
-${FONTS}
+  return sitePage({
+    title: `${op.brand} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI`,
+    description: 'מערכת לניהול פרופיל גוגל מיי ביזנס (Google Business Profile): ביקורות ותשובות AI, צפיות ושיחות מהפרופיל, קידום ומיקום בגוגל מפות, מתחרים, ונראות ב-ChatGPT, Gemini ו-Perplexity. תוכנית שבועית לעלות במפות, והתראות.',
+    signupOpen,
+    path: '/',
+    bodyClass: 'site v2-page',
+    head: `<style>
 :root { --ink: #17123a; --muted: #5b5680; --soft: #f6f4ff; --line: #e6e2f5; --brand: #5b3df5; --brand-h: #4527e0; --yellow: #ffd23f; --night: #1c1650; --font: 'Assistant', 'Rubik', 'Segoe UI', Arial, sans-serif; --font-head: 'Rubik', 'Assistant', 'Segoe UI', sans-serif; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: #fff; color: var(--ink); font-family: var(--font); line-height: 1.47; -webkit-font-smoothing: antialiased; }
-a { color: var(--brand); text-decoration: none; }
-a:hover { text-decoration: underline; }
-img { max-width: 100%; height: auto; display: block; }
-h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
+body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(--font); line-height: 1.47; -webkit-font-smoothing: antialiased; }
+:where(.v2-main) a { color: var(--brand); text-decoration: none; }
+:where(.v2-main) a:hover { text-decoration: underline; }
+:where(.v2-main) img { max-width: 100%; height: auto; display: block; }
+:where(.v2-main) :is(h1, h2, h3), .v2-price, .v2-step b { font-family: var(--font-head); }
+.v2-main :is(h1, h2, h3) { color: inherit; }
 .v2-wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
 .v2-head { text-align: center; max-width: 760px; margin: 0 auto; }
 .v2-head h2 { margin: 0; font-size: clamp(1.9rem, 4.6vw, 3.2rem); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; }
 .v2-head p { margin: 14px auto 0; color: var(--muted); font-size: clamp(1.02rem, 1.9vw, 1.25rem); max-width: 46ch; }
 
-/* bar */
-.v2-nav { position: sticky; top: 0; z-index: 10; background: rgba(28, 22, 80, .92); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255, 255, 255, .08); }
-.v2-nav .v2-wrap { display: flex; align-items: center; justify-content: space-between; height: 54px; gap: 18px; }
-.v2-brand { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 700; font-size: 1.08rem; }
-.v2-brand:hover { text-decoration: none; }
-.v2-menu { display: flex; gap: 26px; font-size: .84rem; }
-.v2-menu a { color: #d9d3ff; opacity: .9; }
-.v2-menu a:hover { opacity: 1; text-decoration: none; }
-.v2-nav .v2-cta { font-size: .84rem; padding: 7px 16px; border-radius: 980px; background: var(--yellow); color: var(--night); font-weight: 700; }
-.v2-nav .v2-cta:hover { background: #ffdb5c; text-decoration: none; }
 
 /* buttons */
 .v2-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
@@ -430,9 +412,6 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-final p { color: #cfc9f2; margin: 14px 0 0; }
 .v2-final .v2-btn.ghost { color: #fff; border-color: rgba(255, 255, 255, .5); }
 .v2-final .v2-btn.ghost:hover { background: rgba(255, 255, 255, .1); }
-.v2-foot { background: #fff; color: var(--muted); font-size: .8rem; padding: 22px 0 34px; border-top: 1px solid var(--line); }
-.v2-foot .v2-wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.v2-foot a { color: var(--muted); margin-inline-start: 18px; }
 
 @media (max-width: 860px) {
   .v2-menu { display: none; }
@@ -471,16 +450,21 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   .v2-price { font-size: 2.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .v2-rail { scroll-behavior: auto; } }
-</style>
-</head>
-<body>
-<nav class="v2-nav" aria-label="ראשי">
-  <div class="v2-wrap">
-    <a class="v2-brand" href="/v2">${logoMark(28)}<span>${h(op.brand)}</span></a>
-    <div class="v2-menu"><a href="#tools">הכלים</a><a href="#how">איך זה עובד</a><a href="#pricing">מחירים</a><a href="#faq">שאלות נפוצות</a><a href="/guide">מדריכים</a><a href="/login">כניסה</a></div>
-    <a class="v2-cta" href="${start}">${h(startLabel)}</a>
-  </div>
-</nav>
+
+/* the site's own forms and the branches section, inside this page */
+.v2-cycle { display: flex; justify-content: center; margin: 26px 0 0; }
+.v2-cycle-in { display: inline-flex; padding: 4px; border-radius: 980px; background: #fff; border: 1px solid var(--line); }
+.v2-cycle button { border: 0; background: none; font: inherit; font-weight: 700; font-size: .95rem; padding: 8px 20px; border-radius: 980px; color: var(--muted); cursor: pointer; }
+.v2-cycle button[aria-pressed="true"] { background: var(--night); color: #fff; }
+.v2-cycle button em { font-style: normal; color: #12955c; font-size: .8rem; margin-inline-start: 4px; }
+.v2-cycle button[aria-pressed="true"] em { color: var(--yellow); }
+.v2-agency { max-width: 760px; margin: 30px auto 0; }
+.v2-netlink { max-width: 760px; margin: 26px auto 0; }
+.v2-main .lp-talk-box { max-width: 640px; margin: 34px auto 0; text-align: center; }
+.v2-final .lp-talk-box { color: #fff; }
+.v2-final .lp-talk-box small, .v2-final .lp-talk-box small a { color: #cfc9f2; }
+</style>`,
+    body: `<div class="v2-main">
 
 <header class="v2-hero">
   <div class="v2-wrap">
@@ -501,7 +485,7 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   </div>
 </header>
 
-<section class="v2-shelf" aria-label="הכלים">
+<section class="v2-shelf" id="features" aria-label="הכלים">
   <div class="v2-wrap"><div class="v2-shelf-box">
     <div class="v2-shelf-head"><div><span class="v2-shelf-pill">${TOOLS.length} כלים · חשבון אחד</span><h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2></div><a href="#tools">לכל הכלים ›</a></div>
     <div class="v2-tools">${shelf.join('')}</div>
@@ -515,7 +499,7 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 
 <section class="v2-sec" id="tools">
   <div class="v2-wrap v2-head"><h2>הכלים, מקרוב</h2><p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p></div>
-  <div class="v2-wrap">
+  <div class="v2-wrap" id="screens">
     <div class="v2-tabs" role="tablist" aria-label="הכלים">${tabs.join('')}</div>
     <div class="v2-panels">${panels.join('')}</div>
   </div>
@@ -544,13 +528,21 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 <section class="v2-sec soft" id="pricing">
   <div class="v2-wrap">
     <div class="v2-head"><h2>מחירים פשוטים, בלי הפתעות</h2><p>מחיר לפרופיל אחד בגוגל, ו-20% הנחה על כל סניף נוסף. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
+    <div class="v2-cycle" role="group" aria-label="תקופת תשלום"><div class="v2-cycle-in"><button type="button" data-set="monthly" aria-pressed="true">חודשי</button><button type="button" data-set="annual" aria-pressed="false">שנתי<em>חודשיים מתנה</em></button></div></div>
     <div class="v2-plans">
       ${plan(PLANS.basic, ['דשבורד גוגל מיי ביזנס: ביקורות, צפיות, שיחות ומה חיפשו', 'התראה על כל ביקורת, ותשובה עם טיוטת AI בסגנון שלכם', 'קידום במפות: תוכנית שבועית ובריאות הפרופיל', `מיקום במפות: ${PLANS.basic.rankKeywords} חיפושים · ${PLANS.basic.competitors} מתחרים`, 'QR, סקרים ובקשות דירוג בוואטסאפ'])}
       ${plan(PLANS.pro, ['כל מה שבמסלול גוגל', `מיקום במפות: ${PLANS.pro.rankKeywords} חיפושים · ${PLANS.pro.competitors} מתחרים`, 'נראות ב-ChatGPT, Gemini, Perplexity ו-Claude', 'תוכנית פעולה ו"על מי ממליצים במקומכם"'], true)}
     </div>
-    <p class="v2-small">המחירים כוללים מע״מ · בתשלום שנתי משלמים על 10 חודשים ומקבלים 12 · מבטלים בכל רגע, והמסלול נשאר פעיל עד סוף התקופה ששולמה · סוכנות או רשת גדולה? <a href="/#contact">נבנה הצעת מחיר</a></p>
+    <a class="pricing-network v2-netlink" href="#network"><span class="pn-ic">◆</span><span><b>כמה סניפים? 20% הנחה על כל סניף נוסף</b><small>וכל כלי הרשת כלולים: השוואה בין הסניפים, מנהל לכל סניף, תבניות תשובה משותפות, דוח חודשי מאוחד וחשבונית אחת.</small></span></a>
+    <p class="v2-small">המחירים כוללים מע״מ · בתשלום שנתי משלמים על 10 חודשים ומקבלים 12 · מבטלים בכל רגע, והמסלול נשאר פעיל עד סוף התקופה ששולמה · סוכנות או רשת גדולה? <a href="#contact">נבנה הצעת מחיר</a></p>
+    <details class="lp-agency v2-agency" id="contact"${contactSent || contactError ? ' open' : ''}>
+      <summary><span><b>סוכנות, או רשת עם עשרות סניפים?</b> נבנה לכם הצעת מחיר.</span><i>להשארת פרטים</i></summary>
+      ${contactSent ? '<div class="flash contact-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>' : contactForm(contactError, contactValues)}
+    </details>
   </div>
 </section>
+
+${networkSection()}
 
 <section class="v2-sec soft" id="faq" style="padding-top:0">
   <div class="v2-wrap">
@@ -563,16 +555,15 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   <div class="v2-wrap">
     <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
     <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
-    <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="/#talk">לדבר איתנו</a></div>
+    <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="#talk">לדבר איתנו</a></div>
+    <div class="lp-talk-box" id="talk">
+      <b>מעדיפים לדבר עם מישהו?</b><span>השאירו שם וטלפון ונחזור אליכם עוד היום.</span>
+      ${talkForm(talkSent, talkError, talkError ? contactValues : {})}
+      ${talkSent ? '' : '<small>הפרטים ישמשו כדי לחזור אליכם, ולעדכונים רק אם סימנתם. <a href="/privacy">מדיניות הפרטיות</a></small>'}
+    </div>
   </div>
 </section>
 
-<footer class="v2-foot">
-  <div class="v2-wrap">
-    <span>© ${new Date().getFullYear()} ${h(op.name)}</span>
-    <span><a href="/guide">מדריכים</a><a href="/terms">תנאי שימוש</a><a href="/privacy">פרטיות</a><a href="/accessibility">נגישות</a><a href="/">הגרסה הנוכחית</a></span>
-  </div>
-</footer>
 <script>
 // Close-ups: tabs (and the shelf's links) choose the tool shown.
 (function () {
@@ -602,6 +593,15 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
   document.querySelectorAll('[data-zoom]').forEach(function (z) {
     z.addEventListener('click', function () { var im = z.querySelector('img'); bi.src = im.currentSrc || im.src; bi.alt = im.alt; if (box.showModal) box.showModal(); else window.open(bi.src); });
   });
+})();
+// Prices: monthly or annual.
+(function () {
+  var bs = document.querySelectorAll('.v2-cycle button');
+  bs.forEach(function (b) { b.addEventListener('click', function () {
+    var c = b.getAttribute('data-set');
+    bs.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    document.querySelectorAll('#pricing [data-cycle]').forEach(function (el) { el.hidden = el.getAttribute('data-cycle') !== c; });
+  }); });
 })();
 // How it works: plays once when it scrolls into view.
 (function () {
@@ -633,6 +633,6 @@ document.querySelectorAll('[data-rail]').forEach(function (w) {
   sync();
 });
 </script>
-</body>
-</html>`;
+</div>`,
+  });
 }

@@ -250,15 +250,24 @@ test('the dashboard can show one calendar month', async () => {
   assert.match(page, /name="month" value="2026-09"/);
 });
 
-test('a trial landing page in a quieter style, at /v2, not indexed', async () => {
-  const res = await fetch(`${base}/v2`);
+test('the home page is the new landing page, in the site header, with the forms; /v1 keeps the earlier one', async () => {
+  const res = await fetch(`${base}/?lang=he`);
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('x-robots-tag'), 'noindex');
+  assert.equal(res.headers.get('x-robots-tag'), null);
   const html = await res.text();
-  assert.match(html, /<meta name="robots" content="noindex">/);
+  assert.doesNotMatch(html, /noindex/);
+  assert.match(html, /class="site-head"/, 'the site header and menu');
   assert.match(html, /ומקבלים יותר לקוחות מגוגל/);
-  assert.match(html, /data-rail/, 'sliders');
-  assert.match(html, /href="\/register"|href="\/login"/);
+  assert.match(html, /data-rail|v2-tabs/);
+  assert.match(html, /id="talk"/, 'the callback form');
+  assert.match(html, /id="contact"/, 'the agency form');
+  assert.match(html, /id="network"/, 'branches');
+  assert.match(html, /data-cycle="annual"/, 'annual prices');
+  assert.match(html, /property="og:image"/, 'share preview');
+  assert.equal((await fetch(`${base}/v2`, { redirect: 'manual' })).headers.get('location'), '/');
+  const v1 = await fetch(`${base}/v1`);
+  assert.equal(v1.headers.get('x-robots-tag'), 'noindex');
+  assert.match(await v1.text(), /class="lp-hero"/);
 });
 
 test('forgot and reset the password while a session is still in the browser', async () => {

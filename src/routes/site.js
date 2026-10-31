@@ -38,27 +38,30 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
     const error = !v.name ? 'נא למלא שם' : !phoneOk ? 'מספר הטלפון לא תקין. למשל: 050-1234567' : !v.phone && !v.email ? 'נא להשאיר טלפון או אימייל תקין' : '';
     if (error) {
       const talk = req.body.from === 'talk' ? { talkError: error } : { contactError: error };
-      return res.status(422).send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactValues: v, ...talk }));
+      return res.status(422).send(landingPage({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactValues: v, ...talk }));
     }
     store.createLead(v);
     await notifier?.leadReceived({ lead: v, kindLabel: LEAD_KINDS[v.kind], admins: adminEmails() }).catch((err) => console.error('[notify] lead failed:', err));
     res.redirect(303, done);
   });
 
+  // Hebrew gets the new page; English keeps the earlier one (it has the translations).
+  const landingPage = (o) => (isEn() ? landingView(o) : landingCleanView(o));
   const landing = (req, res) => {
     if (req.user) return res.redirect('/admin');
     // An agency's own domain is for its clients: no platform marketing page there.
     if (store.agencyByDomain(req.hostname)) return res.redirect('/login');
-    res.send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
+    res.send(landingPage({ signupOpen: signupOpen(), trialOpen: trialOpen(), contactSent: req.query.sent === '1', talkSent: req.query.sent === 'talk' }));
   };
   // Someone who chose English gets the English address (and back to Hebrew with ?lang=he).
   router.get('/', (req, res) => (isEn() && !req.query.lang && !req.user ? res.redirect(`/en${req.originalUrl.slice(1)}`) : landing(req, res)));
   router.get('/en', landing);
-  // A trial version of the landing page in a quieter style, to compare (not indexed).
-  router.get('/v2', (req, res) => {
+  // The earlier landing page, kept for a while to compare (not indexed); /v2 was the new one's trial address.
+  router.get('/v1', (req, res) => {
     res.set('X-Robots-Tag', 'noindex');
-    res.send(landingCleanView({ signupOpen: signupOpen(), trialOpen: trialOpen() }));
+    res.send(landingView({ signupOpen: signupOpen(), trialOpen: trialOpen() }));
   });
+  router.get('/v2', (req, res) => res.redirect(301, '/'));
   // Caddy asks here before issuing an HTTPS certificate on demand, so
   // certificates are only issued for domains that belong to an agency.
   router.get('/.well-known/tls-check', (req, res) => {

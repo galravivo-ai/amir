@@ -9,7 +9,7 @@ import { CONNECT_COMPARE, CONNECT_GUIDE, FEATURE_GUIDES, GUIDE_GROUPS } from '..
 /** Who runs this installation, from env (shown in the footer, privacy and terms). */
 
 /** Networks of branches: the tools a second profile opens, and the price per branch. */
-function networkSection() {
+export function networkSection() {
   const rows = [
     ['סניף דיזנגוף', '4.8', 38, '100%', '1,240'],
     ['סניף רמת החייל', '4.6', 24, '92%', '860'],
@@ -70,7 +70,7 @@ ${description ? `<meta name="twitter:description" content="${h(description)}">` 
 <meta name="twitter:image" content="${h(image)}">`;
 }
 
-function sitePage({ title, description = '', body, signupOpen = true, path = '' }) {
+export function sitePage({ title, description = '', body, signupOpen = true, path = '', head = '', bodyClass = 'site' }) {
   const op = operatorInfo();
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -85,8 +85,9 @@ ${shareMeta({ title, description, path })}
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <script src="${asset('assist.js')}"></script>
+${head}
 </head>
-<body class="site">
+<body class="${bodyClass}">
 <a class="skip-link" href="#main">דלג לתוכן</a>
 <header class="site-head">
   <a class="brand" href="${isEn() ? '/en' : '/'}">${logoMark(38)}${wordmark(op.brand)}</a>
@@ -169,7 +170,7 @@ function heroVisual() {
 
 export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר', support: 'פנייה לעזרה מתוך המערכת', pilot: 'משוב מפיילוט' };
 
-function contactForm(error = '', v = {}) {
+export function contactForm(error = '', v = {}) {
   const val = (k) => h(v[k] ?? '');
   return `<form method="post" action="/contact#contact" class="card contact-form">
     ${error ? `<div class="error">${h(error)}</div>` : ''}
@@ -193,7 +194,7 @@ function contactForm(error = '', v = {}) {
 }
 
 /** The short "we'll call you" form at the end of the landing page. */
-function talkForm(sent, error = '', v = {}) {
+export function talkForm(sent, error = '', v = {}) {
   if (sent) return '<div class="lp-talk-done">תודה! קיבלנו את הפרטים ונחזור אליכם בקרוב.</div>';
   const val = (k) => h(v[k] ?? '');
   return `<form method="post" action="/contact#talk" class="lp-talk">
