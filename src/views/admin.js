@@ -476,7 +476,7 @@ function dashboardParts({
   };
   const stat = (ic, label, value, hint = '', trend = '', href = '') => {
     const body = `<span class="st-label">${icon(ic, 16)}${h(label)}</span><span class="st-value">${value}</span><span class="st-hint ${trend}">${hint}</span>`;
-    return href ? `<a class="stat" href="${href}">${body}</a>` : `<div class="stat">${body}</div>`;
+    return href ? `<a class="stat st-${ic}" href="${href}">${body}</a>` : `<div class="stat st-${ic}">${body}</div>`;
   };
   const locked = (ic, label) => stat(ic, label, '<span class="st-lock">—</span>', 'אחרי חיבור לגוגל', 'muted', '#google');
   const rating = pub?.total ? pub.rating : g.total ? g.avg : null;

@@ -3097,3 +3097,23 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
 .page-tabs a { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 14px; border-radius: 10px; font-size: .98rem; }
 .page-tabs a.active { box-shadow: 0 6px 14px -8px rgba(75, 43, 214, .7); }
 @media (max-width: 640px) { .page-tabs a { padding: 10px 8px; font-size: .92rem; white-space: normal; text-align: center; line-height: 1.25; } .page-tabs a svg { flex: none; } }
+
+/* Dashboard color: each number has its own color (icon chip, top stripe, soft tint) */
+.stats .stat { --c: var(--purple); position: relative; overflow: hidden; border-top: 3px solid var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, #fff) 0%, #fff 70%); }
+.stats .stat .st-label svg { box-sizing: content-box; padding: 6px; border-radius: 10px; background: color-mix(in srgb, var(--c) 14%, #fff); color: var(--c); flex: none; }
+.stats .stat .st-label { color: color-mix(in srgb, var(--c) 55%, var(--ink)); }
+.stats .stat:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); border-top-color: var(--c); }
+.stats .st-star { --c: #e8a100; }
+.stats .st-chat { --c: #6d4bff; }
+.stats .st-alert { --c: #e5533d; }
+.stats .st-phone { --c: #12a150; }
+.stats .st-pin { --c: #1d7fe0; }
+.stats .st-shield { --c: #0f9e9e; }
+.stats .st-eye { --c: #c0398f; }
+/* the plan card and the open charts get a colored head */
+.todo-card { border-top: 3px solid var(--purple); background: linear-gradient(180deg, #f4f0ff 0%, #fff 90px); }
+.todo-card .todo-head h3 svg { padding: 6px; box-sizing: content-box; border-radius: 10px; background: var(--purple); color: #fff; }
+.dash-glance .card:first-child { border-top: 3px solid #6d4bff; }
+.dash-glance .card:last-child { border-top: 3px solid #e8a100; }
+.dash-glance h3 svg { padding: 5px; box-sizing: content-box; border-radius: 9px; background: #efeaff; color: #6d4bff; }
+.dash-glance .card:last-child h3 svg { background: #fff3d6; color: #e8a100; }
