@@ -8,7 +8,7 @@ import { profileCard, profileHint, profileSummaryCard, viewsOf } from './perform
 import { arrivalCard } from './google.js';
 import { TEMPLATES } from '../templates.js';
 import { TOPICS } from '../ai.js';
-import { PRESETS } from '../period.js';
+import { PRESETS, recentMonths } from '../period.js';
 import { inkOn, POSTER_FONTS, POSTER_PALETTES, POSTER_SIZES, POSTER_STYLES, SHEET4_SIZES } from '../poster.js';
 
 const csrfField = (csrf) => `<input type="hidden" name="_csrf" value="${h(csrf)}">`;
@@ -349,9 +349,13 @@ function dashboardParts({
   const g = google || { total: 0, count: 0, daily: new Map(), distribution: [0, 0, 0, 0, 0], waiting: [], unanswered: 0 };
   const checklist =
     onboarding && !onboarding.complete && !onboarding.dismissed && can('manager') ? onboardingCard(onboarding, csrf) : '';
-  const presetOptions = Object.entries(PRESETS)
-    .map(([k, l]) => `<option value="${k}" ${k === period.key ? 'selected' : ''}>${h(l)}</option>`)
-    .join('');
+  // A month picked lower on the page shows here as the current choice.
+  const monthLabel = period.key === 'month' ? (recentMonths(24).find((m) => m.value === period.month)?.label ?? '') : '';
+  const presetOptions =
+    (monthLabel ? `<option value="" selected>${h(monthLabel)}</option>` : '') +
+    Object.entries(PRESETS)
+      .map(([k, l]) => `<option value="${k}" ${k === period.key ? 'selected' : ''}>${h(l)}</option>`)
+      .join('');
   const filter = `<form method="get" class="filters cover-filters">
       ${
         campaigns.length
@@ -360,7 +364,8 @@ function dashboardParts({
               .join('')}</select>`
           : ''
       }
-      <select name="range" aria-label="טווח זמנים" onchange="if(this.value==='custom'){var c=this.form.querySelector('.range-custom');c.hidden=false;c.querySelector('input').focus()}else{this.form.submit()}">${presetOptions}</select>
+      ${monthLabel ? `<input type="hidden" name="month" value="${h(period.month)}">` : ''}
+      <select name="range" aria-label="טווח זמנים" onchange="if(this.form.month)this.form.month.disabled=true;if(this.value==='custom'){var c=this.form.querySelector('.range-custom');c.hidden=false;c.querySelector('input').focus()}else{this.form.submit()}">${presetOptions}</select>
       <span class="range-custom" ${period.key === 'custom' ? '' : 'hidden'}>
         <label>מ-<input type="date" name="from" value="${h(period.fromDay)}" max="${h(period.todayDay)}" dir="ltr"></label>
         <label>עד<input type="date" name="to" value="${h(period.toDay)}" max="${h(period.todayDay)}" dir="ltr"></label>
@@ -557,11 +562,23 @@ function glance(args, P) {
   </div>`;
 }
 
+/** Picks one calendar month for the whole dashboard (the campaign filter stays). */
+function monthPicker(args) {
+  const { period, campaignId = null } = args;
+  return `<form method="get" action="/admin#data" class="month-pick">
+    ${campaignId ? `<input type="hidden" name="campaign" value="${campaignId}">` : ''}
+    <select name="month" aria-label="חודש" onchange="this.form.submit()">
+      <option value="">${h(period.key === 'month' ? 'בחירת חודש' : `${PRESETS[period.key] || 'טווח שנבחר'}`)}</option>
+      ${recentMonths(12).map((m) => `<option value="${m.value}" ${period.month === m.value ? 'selected' : ''}>${h(m.label)}</option>`).join('')}
+    </select>
+  </form>`;
+}
+
 /** All the numbers, folded at the bottom of the dashboard for whoever wants to dig in. */
 function dataSection(args, P) {
   const { overview = null, refreshed = false, topics = [], period } = args;
   return fold({ id: 'data', ic: 'chart', title: 'עוד נתונים', hint: 'פעולות בפרופיל, נושאים חוזרים וסקרים', body: `
-    ${args.overview?.metrics?.daily?.size ? `<section class="card"><h3>${icon('search', 18)} מהפרופיל בגוגל</h3>${profileSummaryCard({ metrics: args.overview.metrics })}</section>` : ''}
+    ${args.overview?.metrics?.daily?.size ? profileSummaryCard({ metrics: args.overview.metrics, monthPick: monthPicker(args) }) : ''}
     <div class="stats stats-1">
       ${P.pub?.replyRate != null ? P.stat('chat', 'ענו לביקורות', `${Math.round(P.pub.replyRate)}<small>%</small>`, P.pub.prevReplyRate != null && Math.round(P.pub.replyRate - P.pub.prevReplyRate) ? `${P.pub.replyRate > P.pub.prevReplyRate ? '▲' : '▼'} ${Math.abs(Math.round(P.pub.replyRate - P.pub.prevReplyRate))}%` : 'מהביקורות בתקופה', P.pub.prevReplyRate != null ? (P.pub.replyRate >= P.pub.prevReplyRate ? 'up' : 'down') : '') : ''}
     </div>

@@ -3061,3 +3061,6 @@ html[dir="rtl"] .todo-go { transform: rotate(90deg); }
   .todo-list li a { padding-block: 10px; }
   .gr-urgent h2 { font-size: 1.1rem; margin-bottom: .5rem; }
 }
+.month-pick { margin: 0; }
+.month-pick select { min-height: 36px; width: auto; font-size: .9rem; }
+.fold-body > .card.pf-sum > .card-head > h3 { display: flex; }

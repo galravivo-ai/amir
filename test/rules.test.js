@@ -231,3 +231,21 @@ test('the invoices list: card payments and iCount payments, with number and link
   assert.match(page, /מס׳ 5021/);
   assert.match(page, /מסלול גוגל, חודשי</);
 });
+
+test('the dashboard can show one calendar month', async () => {
+  const { resolvePeriod, recentMonths } = await import('../src/period.js');
+  const now = Date.parse('2026-10-31T10:00:00Z');
+  const sep = resolvePeriod({ month: '2026-09' }, now);
+  assert.equal(sep.key, 'month');
+  assert.equal(sep.label, 'בספטמבר 2026');
+  assert.equal(sep.fromDay, '2026-09-01');
+  assert.equal(sep.toDay, '2026-09-30');
+  assert.equal(sep.days, 30);
+  assert.equal(resolvePeriod({ month: '2026-10' }, now).to, null, 'this month runs up to now');
+  assert.equal(resolvePeriod({ month: '2027-01' }, now).key, '30d', 'not a future month');
+  assert.deepEqual(recentMonths(2, now).map((m) => m.label), ['אוקטובר 2026', 'ספטמבר 2026']);
+  const { req } = await owner('months@example.com');
+  const page = (await req('/admin?month=2026-09')).text;
+  assert.equal((await req('/admin?month=2026-09')).status, 200);
+  assert.match(page, /name="month" value="2026-09"/);
+});

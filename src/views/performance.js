@@ -189,7 +189,7 @@ export function profileCard({ connected, metrics, lastSync, errors, googleReady,
  * Google profile (views, calls, directions, website, messages, against the
  * period before) and the searches they found it with.
  */
-export function profileSummaryCard({ metrics }) {
+export function profileSummaryCard({ metrics, monthPick = '' }) {
   if (!metrics?.daily?.size) return '';
   const t = metrics.totals;
   const p = metrics.prev || {};
@@ -204,7 +204,7 @@ export function profileSummaryCard({ metrics }) {
   const maps = sum(t, MAPS);
   const search = sum(t, SEARCH);
   return `<section class="card pf-sum">
-    <div class="card-head"><h3>${GOOGLE_G} מהפרופיל בגוגל</h3><a class="small" href="#data">לגרפים המלאים ↓</a></div>
+    <div class="card-head"><h3>${GOOGLE_G} מהפרופיל בגוגל</h3>${monthPick || '<a class="small" href="#data">לגרפים המלאים ↓</a>'}</div>
     <div class="pf-tiles">
       ${tile('eye', 'צפיות בפרופיל', viewsOf(t), viewsOf(p))}
       ${shown.map(([k, label, ic]) => tile(ic, label, t[k] || 0, p[k] || 0)).join('')}

@@ -20,6 +20,19 @@ export const PRESETS = {
   custom: 'טווח תאריכים…',
 };
 
+export const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+/** The last `n` calendar months in Israel, newest first: [{ value: 'YYYY-MM', label }]. */
+export function recentMonths(n = 12, now = Date.now()) {
+  const t = localDate(now);
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.UTC(t.y, t.m - i, 1));
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth();
+    return { value: `${y}-${String(m + 1).padStart(2, '0')}`, label: `${MONTHS[m]} ${y}` };
+  });
+}
+
 const PHRASES = {
   today: 'היום',
   yesterday: 'אתמול',
@@ -70,6 +83,30 @@ const fmt = (ms) => new Date(ms).toLocaleDateString('he-IL', { timeZone: TZ });
  * "custom" with `from` / `to` as YYYY-MM-DD), and the older `days`.
  */
 export function resolvePeriod(query = {}, now = Date.now()) {
+  // One calendar month (month=YYYY-MM), up to two years back.
+  const mm = /^(\d{4})-(\d{2})$/.exec(String(query.month ?? ''));
+  if (mm) {
+    const today = localDate(now);
+    const y = Number(mm[1]);
+    const m = Number(mm[2]) - 1;
+    const back = (today.y - y) * 12 + (today.m - m);
+    if (m >= 0 && m < 12 && back >= 0 && back < 24) {
+      const from = midnight(y, m, 1);
+      const end = midnight(y, m + 1, 1);
+      const to = end >= now ? null : end;
+      return {
+        key: 'month',
+        month: `${mm[1]}-${mm[2]}`,
+        from,
+        to,
+        label: back === 0 ? 'החודש' : `ב${MONTHS[m]} ${y}`,
+        days: Math.max(1, Math.round(((to ?? now) - from) / DAY)),
+        fromDay: isoDay(localDate(from)),
+        toDay: isoDay(localDate((to ?? now) - 1)),
+        todayDay: isoDay(today),
+      };
+    }
+  }
   let key = String(query.range ?? '');
   if (!PRESETS[key]) key = { 7: '7d', 30: '30d', 90: '90d', 365: '365d' }[Number(query.days)] || '30d';
   const today = localDate(now);
