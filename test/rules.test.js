@@ -249,3 +249,13 @@ test('the dashboard can show one calendar month', async () => {
   assert.equal((await req('/admin?month=2026-09')).status, 200);
   assert.match(page, /name="month" value="2026-09"/);
 });
+
+test('a trial landing page in a quieter style, at /v2, not indexed', async () => {
+  const res = await fetch(`${base}/v2`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex');
+  const html = await res.text();
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  assert.match(html, /בשליטה מלאה/);
+  assert.match(html, /href="\/register"|href="\/login"/);
+});

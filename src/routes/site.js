@@ -7,6 +7,7 @@ import { isEn } from '../lang.js';
 import { accessibilityView, cookiesView, guideConnectView, guideFeatureView, guideHubView, landingView, LEAD_KINDS, operatorInfo, privacyView, publicBase, termsView } from '../views/site.js';
 import { rateLimiter } from './public.js';
 import { FEATURE_GUIDES, featureGuide } from '../guide.js';
+import { landingCleanView } from '../views/landingClean.js';
 
 const SW = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js');
 
@@ -53,6 +54,11 @@ export function siteRoutes(store, { signupOpen = () => true, trialOpen = () => f
   // Someone who chose English gets the English address (and back to Hebrew with ?lang=he).
   router.get('/', (req, res) => (isEn() && !req.query.lang && !req.user ? res.redirect(`/en${req.originalUrl.slice(1)}`) : landing(req, res)));
   router.get('/en', landing);
+  // A trial version of the landing page in a quieter style, to compare (not indexed).
+  router.get('/v2', (req, res) => {
+    res.set('X-Robots-Tag', 'noindex');
+    res.send(landingCleanView({ signupOpen: signupOpen(), trialOpen: trialOpen() }));
+  });
   // Caddy asks here before issuing an HTTPS certificate on demand, so
   // certificates are only issued for domains that belong to an agency.
   router.get('/.well-known/tls-check', (req, res) => {
