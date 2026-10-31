@@ -250,7 +250,7 @@ export function authRoutes(ctx) {
       userId,
       admin ? { name: v.business, plan: 'business' } : viaPass ? { name: v.business, plan: pass.plan, trialDays: pass.days, passId: pass.id } : newBusiness(v.business),
     );
-    ctx.startSession(res, userId);
+    ctx.startSession(res, userId, { menu: false }); // a new account opens on its getting-started steps
     // The getting-started guide, by email (in the background: sign-up never waits for it).
     if (!admin) {
       ctx.notifier

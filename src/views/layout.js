@@ -311,7 +311,8 @@ b.addEventListener('click',function(){var c=!g.classList.contains('folded');set(
   <script>(function(){var b=document.body,o=document.querySelector('.m-burger'),sc=document.querySelector('.nav-scrim');
 function t(open){b.classList.toggle('nav-open',open);o.setAttribute('aria-expanded',String(open));sc.hidden=!open;if(open)document.querySelector('.m-close').focus()}
 o.addEventListener('click',function(){t(true)});sc.addEventListener('click',function(){t(false)});document.querySelector('.m-close').addEventListener('click',function(){t(false);o.focus()});
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList.contains('nav-open')){t(false);o.focus()}})})();</script>
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&b.classList.contains('nav-open')){t(false);o.focus()}});
+if(/(?:^|; )gf_menu=1/.test(document.cookie)){document.cookie='gf_menu=; Max-Age=0; Path=/';addEventListener('load',function(){if(matchMedia('(max-width: 900px)').matches&&getComputedStyle(o).display!=='none'&&!document.querySelector('dialog[open]'))t(true)})}})();</script>
   <button type="button" class="side-install" data-install hidden>${icon('phone', 18)}<span>התקנה כאפליקציה בטלפון</span></button>
   <button type="button" class="side-help" onclick="document.getElementById('help-dlg').showModal()">${icon('chat', 18)}<span>צריכים עזרה? כתבו לנו</span></button>
   ${usageBlock}

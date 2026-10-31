@@ -298,3 +298,14 @@ test('reply drafts run on the light model, and fall back to the main one on a re
   await ai.insights?.({ businessName: 'x', stats: {}, feedback: [] }).catch(() => {});
   assert.ok(calls.every((c) => c.model === AI_MODEL));
 });
+
+test('signing in opens the phone menu once; a brand-new account does not', async () => {
+  const fresh = client();
+  await fresh('/register', { form: { name: 'Owner', email: 'menu@example.com', password: 'password123', business: 'עסק', terms: '1' } });
+  const page = await fresh('/admin');
+  assert.match(page.text, /gf_menu=1/, 'the layout knows to open the menu');
+  const res = await fetch(`${base}/login`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'email=menu%40example.com&password=password123' });
+  assert.ok(res.headers.getSetCookie().some((c) => c.startsWith('gf_menu=1')), 'signing in sets the one-time flag');
+  const reg = await fetch(`${base}/register`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=N&email=menu2%40example.com&password=password123&business=x&terms=1' });
+  assert.ok(!reg.headers.getSetCookie().some((c) => c.startsWith('gf_menu=')), 'a new account opens on its first steps');
+});

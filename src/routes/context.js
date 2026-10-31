@@ -35,8 +35,10 @@ export function createContext(
     /** Who gets operator emails such as plan requests. */
     adminEmails: () => [...new Set([...store.superadminEmails(), ...superEmails])],
 
-    startSession(res, userId) {
+    startSession(res, userId, { menu = true } = {}) {
       res.cookie(SESSION_COOKIE, store.createSession(userId), { ...cookieOpts, maxAge: 30 * 864e5 });
+      // Right after signing in, a phone opens with the menu showing (the page reads it once and clears it).
+      if (menu) res.cookie('gf_menu', '1', { ...cookieOpts, httpOnly: false, maxAge: 10 * 60e3 });
     },
 
     /** Loads req.user and enforces CSRF on every POST made with a session. */
