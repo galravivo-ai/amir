@@ -256,6 +256,7 @@ test('a trial landing page in a quieter style, at /v2, not indexed', async () =>
   assert.equal(res.headers.get('x-robots-tag'), 'noindex');
   const html = await res.text();
   assert.match(html, /<meta name="robots" content="noindex">/);
-  assert.match(html, /בשליטה מלאה/);
+  assert.match(html, /ומקבלים יותר לקוחות מגוגל/);
+  assert.match(html, /data-rail/, 'sliders');
   assert.match(html, /href="\/register"|href="\/login"/);
 });

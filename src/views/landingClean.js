@@ -1,153 +1,257 @@
 import { asset, h } from '../util.js';
-import { branchPrice, PLANS, TRIAL_DAYS } from '../plans.js';
-import { logoMark } from './icons.js';
+import { branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
+import { icon, logoMark } from './icons.js';
 import { operatorInfo } from './site.js';
 
-// A trial version of the landing page in a quiet, product-first style: big type,
-// lots of white, one large screenshot per section, few words. Shown at /v2 only
-// (not indexed), next to the current page, to compare.
+// A trial version of the landing page in a store-like style: the tools shown
+// like products, sliders that swipe on a phone, big type and plenty of white.
+// The words are the current page's. Shown at /v2 only (not indexed), to compare.
 
 const shot = (file) => asset(`media/guide/${file}`);
 
-const section = ({ id, tone = '', kicker, title, text, link, image, alt, narrow = false }) => `
-<section class="v2-sec ${tone}" id="${id}">
-  <div class="v2-wrap v2-center">
-    ${kicker ? `<p class="v2-kicker">${h(kicker)}</p>` : ''}
-    <h2>${title}</h2>
-    <p class="v2-lead">${h(text)}</p>
-    ${link ? `<p class="v2-links"><a href="${h(link[1])}">${h(link[0])} ›</a></p>` : ''}
-    <figure class="v2-shot${narrow ? ' narrow' : ''}"><img src="${shot(image)}" alt="${h(alt)}" width="1120" height="730" loading="lazy"></figure>
-  </div>
-</section>`;
+// The tools, as the shop's shelf: [key, icon, color, name, line, guide, screenshot].
+const TOOLS = [
+  ['dashboard', 'chart', '#6d4bff', 'דשבורד גוגל מיי ביזנס', 'הדירוג, הביקורות, כמה ראו את הפרופיל, כמה התקשרו, ביקשו הגעה ונכנסו לאתר, ומה חיפשו כשמצאו אתכם.', 'dashboard', 'dashboard.jpg'],
+  ['reviews', 'star', '#e8a100', 'ביקורות ותשובות AI', 'כל ביקורת חדשה מגיעה עם התראה, ותשובה מנוסחת בסגנון שלכם שנשאר רק לאשר.', 'reviews', 'reviews.jpg'],
+  ['growth', 'pin', '#1d7fe0', 'קידום בגוגל מפות', 'תוכנית קצרה לכל שבוע, מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות מול המוביל באזור, ובאיזה כיוון אתם חלשים.', 'growth', 'growth.jpg'],
+  ['rank', 'search', '#12a150', 'מיקום בגוגל מפות', 'איפה אתם מופיעים בגוגל מפות בכל שכונה, מול המתחרים. בדיקה שבועית מ-9 נקודות מראה אם עליתם.', 'rankings', 'rank.jpg'],
+  ['ai', 'spark', '#c0398f', 'נראות ב-AI', 'האם ChatGPT, Gemini וגוגל ממליצים עליכם בשאלות מקומיות, על מי ממליצים במקומכם, ומה לעשות כדי שכן.', 'ai', 'ai.jpg'],
+  ['qr', 'qr', '#e5533d', 'עוד ביקורות בגוגל', 'שלט QR מעוצב ובקשת דירוג בוואטסאפ, גם אוטומטית אחרי כל ביקור. לקוח לא מרוצה מגיע אליכם, לא לגוגל.', 'qr', 'poster.jpg'],
+  ['competitors', 'rivals', '#0f9e9e', 'השוואה למתחרים', 'הדירוג, כמות הביקורות והקצב של המתחרים באזור, מול שלכם.', 'competitors', 'competitors.jpg'],
+  ['posts', 'chat', '#6d4bff', 'פוסטים עם AI', 'מרעיון קצר לפוסט מוכן לפרופיל בגוגל, עם תמונה, בלי להיכנס לגוגל.', 'posts', 'posts.jpg'],
+  ['report', 'report', '#e8a100', 'דוח חודשי', 'כל החודש בעמוד אחד, להדפסה או לשליחה. מגיע גם במייל בתחילת כל חודש.', 'report', 'report.jpg'],
+  ['network', 'branches', '#1d7fe0', 'רשתות וסניפים', 'כל הסניפים במסך אחד: השוואה, מנהל לכל סניף, תבניות תשובה משותפות ודוח מאוחד.', 'network', 'network.jpg'],
+];
+
+const rail = (id, cards, cls = '') => `<div class="v2-rail-wrap ${cls}" data-rail>
+    <div class="v2-rail" id="${id}" tabindex="0">${cards.join('')}</div>
+    <div class="v2-rail-nav"><button type="button" class="v2-arrow" data-dir="prev" aria-label="הקודם" aria-controls="${id}">‹</button><span class="v2-dots" aria-hidden="true"></span><button type="button" class="v2-arrow" data-dir="next" aria-label="הבא" aria-controls="${id}">›</button></div>
+  </div>`;
 
 export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const op = operatorInfo();
   const start = signupOpen ? '/register' : '/login';
-  const startLabel = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל';
-  const plan = (p, note) => `<div class="v2-plan">
+  const startLabel = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
+  const card = payProvider() === 'cardcom';
+
+  const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 26)}</span><span>${h(name)}</span></a>`);
+  const showcase = TOOLS.map(([key, ic, c, name, line, guide, img]) => `<article class="v2-card" id="t-${key}" style="--c:${c}">
+      <div class="v2-card-text"><span class="v2-card-ic">${icon(ic, 20)}</span><h3>${h(name)}</h3><p>${h(line)}</p><a href="/guide/${guide}">למדריך ›</a></div>
+      <div class="v2-card-img"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"></div>
+    </article>`);
+  const why = [
+    ['pin', '#1d7fe0', 'חיפוש ומפות', 'שם לקוחות מוצאים אתכם', 'בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.'],
+    ['star', '#e8a100', 'ביקורות', 'ביקורות מכריעות', 'דירוג, כמות ומענה לביקורות: זה מה שלקוחות בודקים, וגם מה שגוגל שוקלת.'],
+    ['spark', '#c0398f', 'עוזרי AI', 'גם ה-AI קורא אותו', 'ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.'],
+  ].map(([ic, c, tag, title, text]) => `<article class="v2-why" style="--c:${c}"><span class="v2-why-ic">${icon(ic, 24)}</span><small>${h(tag)}</small><h3>${h(title)}</h3><p>${h(text)}</p></article>`);
+  const steps = [
+    ['1', 'מחברים את גוגל מיי ביזנס', 'עם חשבון הגוגל של העסק, או בהדבקת קישור לגוגל מפות.'],
+    ['2', 'המערכת בודקת', 'פרופיל, מפות, מתחרים ו-AI. הכול רץ לבד, כל שבוע.'],
+    ['3', 'עושים את מה שחשוב', 'תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.'],
+  ].map(([n, title, text]) => `<article class="v2-step"><b>${n}</b><h3>${h(title)}</h3><p>${h(text)}</p></article>`);
+
+  const plan = (p, items, best = false) => `<article class="v2-plan${best ? ' best' : ''}">
+      ${best ? '<span class="v2-badge">הכי משתלם</span>' : ''}
       <h3>${h(p.label)}</h3>
       <p class="v2-price">₪${p.price}<small> לחודש</small></p>
-      <p class="v2-note">${h(note)}</p>
-      <p class="v2-branch">כל סניף נוסף ₪${branchPrice(p)}</p>
-      <a class="v2-btn" href="${start}">${h(startLabel)}</a>
-    </div>`;
+      <p class="v2-branch">כל סניף נוסף ₪${branchPrice(p)} לחודש</p>
+      <ul>${items.map((x) => `<li>${icon('check', 16)}${h(x)}</li>`).join('')}</ul>
+      <a class="v2-btn${best ? '' : ' ghost'}" href="${start}">${h(startLabel)}</a>
+    </article>`;
+
+  const faq = [
+    ['מה זה גוגל מיי ביזנס?', 'גוגל מיי ביזנס (היום נקרא Google Business Profile) הוא הפרופיל החינמי של העסק בגוגל: מה שמופיע בחיפוש ובגוגל מפות, עם הכתובת, השעות, התמונות, הביקורות וכפתורי ההתקשרות. GoFive מתחברת לפרופיל הזה ועוזרת לנהל ולקדם אותו.'],
+    ['צריך שיהיה לעסק פרופיל בגוגל?', 'כן, GoFive עובדת על הפרופיל הקיים שלכם בגוגל מיי ביזנס. אם עוד אין לכם, פותחים אחד בחינם ב-business.google.com, ואנחנו נעזור לכם להשלים אותו בעזרת ציון הבריאות וההמלצות.'],
+    ['מה זה "נראות ב-AI"?', 'יותר ויותר אנשים שואלים עוזר AI "איפה יש מסעדה טובה ליד…" במקום לחפש. GoFive שואלת את עוזרי ה-AI בכל שבוע את השאלות המקומיות שהלקוחות שלכם שואלים, מראה אם ממליצים עליכם ועל מי ממליצים במקומכם, ונותנת תוכנית פעולה כדי להופיע.'],
+    ['איך GoFive עוזרת לעלות בגוגל מפות?', 'גוגל מדרגת עסקים במפות לפי כמה הפרופיל מתאים לחיפוש, כמה העסק בולט ופעיל, וכמה הוא קרוב למי שמחפש. GoFive בודקת את כל אלה כל שבוע, ובעמוד "קידום בגוגל מפות" מחכה לכם רשימה אחת מהנתונים שלכם: מה להשלים, מה לעשות השבוע, ובאיזה כיוון אתם חלשים.'],
+    ['מאיפה מגיעים הנתונים של הצפיות והשיחות?', 'ישירות מגוגל. מחברים פעם אחת את חשבון הגוגל שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד.'],
+    ['מה קורה כשלקוח לא מרוצה?', 'הוא לא מועבר לגוגל. במקום זה הוא משאיר לכם הודעה ופרטים, אתם מקבלים התראה מיד, וחוזרים אליו כדי לתקן.'],
+    ['אפשר לראות את המערכת לפני שמשלמים?', trialOpen ? (card ? `כן: ${TRIAL_DAYS} ימים חינם על העסק שלכם, ורק אם ממשיכים מחויבים בסוף. מבטלים בקליק לפני כן.` : `כן: ${TRIAL_DAYS} ימים חינם על העסק שלכם, בלי כרטיס אשראי ובלי התחייבות.`) : 'כן, בצילומי המסך כאן רואים את כל המסכים על עסק לדוגמה. ואפשר להשאיר פרטים ונראה לכם.'],
+    ['יש לי כמה סניפים. כמה זה עולה?', `הסניף הראשון במחיר המסלול, וכל סניף נוסף ב-20% הנחה: ₪${branchPrice(PLANS.basic)} לחודש במסלול "${PLANS.basic.label}" ו-₪${branchPrice(PLANS.pro)} במסלול "${PLANS.pro.label}", כולל מע״מ. כל הסניפים מנוהלים מחשבון אחד.`],
+    ['אפשר לבטל?', 'כן, בכל רגע, מעמוד "התוכנית שלי". המסלול נשאר פעיל עד סוף התקופה ששולמה, ואחרי זה לא תחויבו יותר.'],
+  ];
+
   return `<!doctype html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${h(op.brand)} · גוגל מיי ביזנס, בשליטה מלאה</title>
+<title>${h(op.brand)} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI</title>
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <style>
-:root { --ink: #1d1d1f; --muted: #6e6e73; --soft: #f5f5f7; --line: #d2d2d7; --blue: #4b2bd6; --blue-h: #3a1fb8; }
+:root { --ink: #1d1d1f; --muted: #6e6e73; --soft: #f5f5f7; --line: #d2d2d7; --brand: #4b2bd6; --brand-h: #3a1fb8; --yellow: #ffd23f; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: #fff; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Assistant", "Heebo", Arial, sans-serif; line-height: 1.47; -webkit-font-smoothing: antialiased; }
-a { color: var(--blue); text-decoration: none; }
+a { color: var(--brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
 img { max-width: 100%; height: auto; display: block; }
-.v2-wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
-.v2-center { text-align: center; }
+.v2-wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
+.v2-head { text-align: center; max-width: 760px; margin: 0 auto; }
+.v2-head h2 { margin: 0; font-size: clamp(1.9rem, 4.6vw, 3.2rem); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; }
+.v2-head p { margin: 14px auto 0; color: var(--muted); font-size: clamp(1.02rem, 1.9vw, 1.25rem); max-width: 46ch; }
 
-/* the bar: thin, translucent, quiet */
-.v2-nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0, 0, 0, .08); }
-.v2-nav .v2-wrap { display: flex; align-items: center; justify-content: space-between; height: 52px; gap: 18px; }
-.v2-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; font-size: 1.05rem; }
+/* bar */
+.v2-nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .8); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0, 0, 0, .08); }
+.v2-nav .v2-wrap { display: flex; align-items: center; justify-content: space-between; height: 54px; gap: 18px; }
+.v2-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 700; font-size: 1.08rem; }
 .v2-brand:hover { text-decoration: none; }
-.v2-menu { display: flex; gap: 26px; font-size: .82rem; }
-.v2-menu a { color: var(--ink); opacity: .8; }
+.v2-menu { display: flex; gap: 26px; font-size: .84rem; }
+.v2-menu a { color: var(--ink); opacity: .78; }
 .v2-menu a:hover { opacity: 1; text-decoration: none; }
-.v2-nav .v2-cta { font-size: .8rem; padding: 6px 14px; border-radius: 980px; background: var(--blue); color: #fff; }
-.v2-nav .v2-cta:hover { background: var(--blue-h); text-decoration: none; }
+.v2-nav .v2-cta { font-size: .84rem; padding: 7px 16px; border-radius: 980px; background: var(--brand); color: #fff; font-weight: 600; }
+.v2-nav .v2-cta:hover { background: var(--brand-h); text-decoration: none; }
 
-/* the hero: one line, one sentence, two links, the product */
-.v2-hero { padding: 72px 0 0; text-align: center; overflow: hidden; }
-.v2-hero h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: 1.05; font-weight: 700; letter-spacing: -.015em; }
-.v2-hero .v2-lead { font-size: clamp(1.2rem, 2.4vw, 1.6rem); color: var(--ink); margin: 14px auto 0; max-width: 34ch; font-weight: 400; }
-.v2-links { margin: 20px 0 0; display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; font-size: 1.12rem; }
-.v2-hero-shot { margin: 54px auto 0; max-width: 1000px; padding: 0 22px; }
-.v2-device { border-radius: 18px; padding: 10px; background: linear-gradient(180deg, #2b2b2e, #1a1a1c); box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .45); }
-.v2-device img { border-radius: 10px; }
-.v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #d9d9de, #b8b8bf); border-radius: 0 0 16px 16px; }
+/* buttons */
+.v2-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+.v2-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 26px; border-radius: 980px; background: var(--brand); color: #fff; font-weight: 600; font-size: 1.02rem; border: 1.5px solid var(--brand); }
+.v2-btn:hover { background: var(--brand-h); border-color: var(--brand-h); text-decoration: none; }
+.v2-btn.ghost { background: transparent; color: var(--brand); }
+.v2-btn.ghost:hover { background: #f1edff; }
+.v2-btn.yellow { background: var(--yellow); border-color: var(--yellow); color: #1c1650; }
+.v2-btn.yellow:hover { background: #ffdb5c; }
 
-/* sections: centered headline, one line, one big image; white and soft gray in turn */
-.v2-sec { padding: 110px 0 0; overflow: hidden; }
+/* hero */
+.v2-hero { padding: 70px 0 0; text-align: center; overflow: hidden; background: radial-gradient(900px 420px at 50% 100%, #efeaff 0%, #fff 70%); }
+.v2-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 980px; background: var(--soft); font-size: .86rem; font-weight: 600; color: var(--ink); }
+.v2-hero h1 { margin: 18px auto 0; max-width: 18ch; font-size: clamp(2.3rem, 6vw, 4.4rem); line-height: 1.06; font-weight: 800; letter-spacing: -.02em; }
+.v2-hero h1 em { font-style: normal; color: var(--brand); }
+.v2-hero .v2-lead { margin: 18px auto 0; max-width: 46ch; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.3rem); }
+.v2-watch { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-weight: 600; }
+.v2-watch i { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-style: normal; font-size: .75rem; }
+.v2-hero-shot { margin: 48px auto 0; max-width: 1020px; padding: 0 22px; }
+.v2-device { border-radius: 20px; padding: 10px; background: linear-gradient(180deg, #2b2b2e, #18181a); box-shadow: 0 50px 90px -45px rgba(40, 20, 120, .55); }
+.v2-device img { border-radius: 11px; }
+.v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
+
+/* the shelf: every tool, like products in a shop */
+.v2-shelf { padding: 54px 0 10px; }
+.v2-shelf h2 { text-align: center; margin: 0 0 22px; font-size: 1.25rem; font-weight: 700; }
+.v2-tools { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 22px 14px; justify-content: safe center; scrollbar-width: none; }
+.v2-tools::-webkit-scrollbar { display: none; }
+.v2-tool { flex: none; width: 118px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; color: var(--ink); font-size: .86rem; font-weight: 600; line-height: 1.3; }
+.v2-tool:hover { text-decoration: none; color: var(--c); }
+.v2-tool-ic { width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); transition: transform .15s; }
+.v2-tool:hover .v2-tool-ic { transform: translateY(-3px); }
+
+/* sections */
+.v2-sec { padding: 96px 0; }
 .v2-sec.soft { background: var(--soft); }
-.v2-kicker { margin: 0 0 8px; color: var(--blue); font-weight: 600; font-size: 1.05rem; }
-.v2-sec h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
-.v2-sec .v2-lead { margin: 16px auto 0; max-width: 40ch; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.3rem); }
-.v2-shot { margin: 50px auto 0; max-width: 960px; }
-.v2-shot.narrow { max-width: 360px; padding-bottom: 90px; }
-.v2-shot.narrow img { border-radius: 22px !important; }
-.v2-shot img { border-radius: 18px 18px 0 0; box-shadow: 0 -2px 0 rgba(0, 0, 0, .03), 0 30px 60px -30px rgba(0, 0, 0, .25); }
+.v2-sec.dark { background: #0d0b1f; color: #f5f5f7; }
+.v2-sec.dark .v2-head p { color: #a1a1a6; }
 
-/* a pair of tiles */
-.v2-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 0 0; }
-.v2-tile { background: var(--soft); border-radius: 28px; padding: 46px 34px 0; text-align: center; overflow: hidden; display: flex; flex-direction: column; }
-.v2-tile h3 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.12; font-weight: 700; }
-.v2-tile p { margin: 10px auto 0; color: var(--muted); max-width: 30ch; }
-.v2-tile img { margin-top: 30px; border-radius: 14px 14px 0 0; }
-.v2-tile.dark { background: #000; color: #f5f5f7; }
-.v2-tile.dark p { color: #a1a1a6; }
+/* sliders: swipe on a phone, arrows and dots on a computer */
+.v2-rail-wrap { margin-top: 40px; }
+.v2-rail { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 22px; padding: 6px 22px 20px; scrollbar-width: none; scroll-behavior: smooth; }
+.v2-rail::-webkit-scrollbar { display: none; }
+.v2-rail > * { scroll-snap-align: start; flex: none; }
+.v2-rail-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
+.v2-arrow { width: 38px; height: 38px; border-radius: 50%; border: 0; background: #e8e8ed; color: var(--ink); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.v2-arrow:hover { background: #dcdce1; }
+.v2-arrow:disabled { opacity: .35; cursor: default; }
+.v2-sec.dark .v2-arrow { background: #2a2740; color: #fff; }
+.v2-dots { display: flex; gap: 7px; }
+.v2-dots i { width: 7px; height: 7px; border-radius: 50%; background: #c7c7cc; transition: width .2s, background .2s; }
+.v2-dots i.on { width: 22px; border-radius: 4px; background: var(--ink); }
+.v2-sec.dark .v2-dots i.on { background: #fff; }
+@media (min-width: 1240px) { .v2-rail { padding-inline: max(22px, calc((100vw - 1180px) / 2)); scroll-padding: 0 max(22px, calc((100vw - 1180px) / 2)); } }
 
-/* numbers: three facts, big */
-.v2-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; padding: 90px 0; text-align: center; }
-.v2-facts b { display: block; font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -.01em; }
-.v2-facts span { color: var(--muted); }
+/* product cards */
+.v2-card { width: min(86vw, 440px); border-radius: 28px; background: #fff; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0, 0, 0, .04), 0 20px 40px -24px rgba(0, 0, 0, .25); }
+.v2-card-text { padding: 30px 28px 20px; }
+.v2-card-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--c); }
+.v2-card h3 { margin: 16px 0 0; font-size: 1.5rem; line-height: 1.15; font-weight: 700; }
+.v2-card p { margin: 10px 0 0; color: var(--muted); min-height: 4.4em; }
+.v2-card-text a { display: inline-block; margin-top: 10px; font-weight: 600; }
+.v2-card-img { margin-top: auto; padding: 0 0 0 28px; background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--c) 10%, #fff) 100%); }
+.v2-card-img img { border-radius: 14px 0 0 0; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .3); aspect-ratio: 1120 / 730; object-fit: cover; object-position: top right; }
+
+/* why cards */
+.v2-why { width: min(80vw, 360px); border-radius: 24px; padding: 30px 26px; background: #fff; border-top: 4px solid var(--c); }
+.v2-why-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); }
+.v2-why small { display: block; margin-top: 16px; color: var(--c); font-weight: 700; }
+.v2-why h3 { margin: 4px 0 0; font-size: 1.35rem; }
+.v2-why p { margin: 8px 0 0; color: var(--muted); }
+@media (min-width: 1100px) { .why-rail .v2-rail { justify-content: center; } .why-rail .v2-rail-nav { display: none; } }
+
+/* video */
+.v2-video-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 50px; align-items: center; }
+.v2-video-row h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1.12; }
+.v2-video-row ul { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; color: #c9c6dc; font-size: 1.08rem; }
+.v2-video-row li { display: flex; gap: 10px; align-items: center; }
+.v2-video-row li svg { color: var(--yellow); flex: none; }
+.v2-video { border-radius: 22px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .8); }
+.v2-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* steps */
+.v2-step { width: min(78vw, 340px); border-radius: 24px; padding: 30px 26px; background: var(--soft); }
+.v2-step b { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 1.2rem; }
+.v2-step h3 { margin: 16px 0 0; font-size: 1.3rem; }
+.v2-step p { margin: 8px 0 0; color: var(--muted); }
+@media (min-width: 1100px) { .steps-rail .v2-rail { justify-content: center; } .steps-rail .v2-rail-nav { display: none; } }
 
 /* plans */
-.v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; gap: 22px; margin: 50px 0 0; }
-.v2-plan { background: #fff; border-radius: 22px; padding: 34px 28px; text-align: center; border: 1px solid var(--line); }
-.v2-plan h3 { margin: 0; font-size: 1.5rem; }
-.v2-price { margin: 12px 0 0; font-size: 2.6rem; font-weight: 700; }
-.v2-price small { font-size: 1rem; font-weight: 400; color: var(--muted); }
-.v2-note { color: var(--muted); min-height: 3em; }
-.v2-branch { font-size: .9rem; color: var(--muted); }
-.v2-btn { display: inline-block; margin-top: 12px; padding: 11px 24px; border-radius: 980px; background: var(--blue); color: #fff; font-size: 1.02rem; }
-.v2-btn:hover { background: var(--blue-h); text-decoration: none; }
-.v2-small { color: var(--muted); font-size: .86rem; margin: 26px auto 0; max-width: 60ch; }
+.v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; gap: 22px; margin-top: 44px; }
+.v2-plan { position: relative; background: #fff; border-radius: 28px; padding: 34px 30px; border: 1px solid var(--line); display: flex; flex-direction: column; }
+.v2-plan.best { border: 2px solid var(--brand); box-shadow: 0 24px 50px -30px rgba(75, 43, 214, .6); }
+.v2-badge { position: absolute; top: -13px; inset-inline-start: 50%; transform: translateX(50%); background: var(--yellow); color: #1c1650; font-size: .8rem; font-weight: 700; padding: 4px 12px; border-radius: 980px; }
+.v2-plan h3 { margin: 0; font-size: 1.45rem; }
+.v2-price { margin: 10px 0 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -.02em; }
+.v2-price small { font-size: 1rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.v2-branch { margin: 2px 0 0; color: var(--muted); font-size: .92rem; }
+.v2-plan ul { list-style: none; padding: 0; margin: 20px 0 24px; display: grid; gap: 10px; }
+.v2-plan li { display: flex; gap: 8px; align-items: flex-start; font-size: .96rem; }
+.v2-plan li svg { color: var(--brand); flex: none; margin-top: 3px; }
+.v2-plan .v2-btn { margin-top: auto; }
+.v2-small { text-align: center; color: var(--muted); font-size: .9rem; margin: 26px auto 0; max-width: 70ch; }
 
 /* questions */
-.v2-faq { max-width: 760px; margin: 40px auto 0; text-align: start; }
-.v2-faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
-.v2-faq summary { cursor: pointer; font-size: 1.15rem; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.v2-faq { max-width: 820px; margin: 36px auto 0; }
+.v2-faq details { background: #fff; border-radius: 18px; padding: 18px 22px; margin-bottom: 10px; }
+.v2-faq summary { cursor: pointer; font-size: 1.08rem; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .v2-faq summary::-webkit-details-marker { display: none; }
-.v2-faq summary::after { content: "+"; color: var(--blue); font-weight: 400; font-size: 1.4rem; line-height: 1; }
+.v2-faq summary::after { content: "+"; flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #f1edff; color: var(--brand); font-size: 1.2rem; }
 .v2-faq details[open] summary::after { content: "–"; }
 .v2-faq p { color: var(--muted); margin: 12px 0 0; }
 
-.v2-final { padding: 110px 0; text-align: center; }
-.v2-final h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; }
-.v2-foot { background: var(--soft); color: var(--muted); font-size: .78rem; padding: 22px 0 34px; border-top: 1px solid var(--line); }
+.v2-final { padding: 100px 0; text-align: center; background: linear-gradient(160deg, #1c1650, #2c1f86); color: #fff; }
+.v2-final h2 { margin: 0 auto; max-width: 20ch; font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.12; }
+.v2-final p { color: #cfc9f2; margin: 14px 0 0; }
+.v2-final .v2-btn.ghost { color: #fff; border-color: rgba(255, 255, 255, .5); }
+.v2-final .v2-btn.ghost:hover { background: rgba(255, 255, 255, .1); }
+.v2-foot { background: var(--soft); color: var(--muted); font-size: .8rem; padding: 22px 0 34px; border-top: 1px solid var(--line); }
 .v2-foot .v2-wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .v2-foot a { color: var(--muted); margin-inline-start: 18px; }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .v2-menu { display: none; }
-  .v2-hero { padding-top: 48px; }
-  .v2-sec { padding-top: 76px; }
-  .v2-tiles, .v2-plans, .v2-facts { grid-template-columns: minmax(0, 1fr); }
-  .v2-tile { border-radius: 22px; padding: 36px 22px 0; }
-  .v2-device { padding: 6px; border-radius: 12px; }
+  .v2-hero { padding-top: 46px; }
+  .v2-sec { padding: 70px 0; }
+  .v2-plans, .v2-video-row { grid-template-columns: minmax(0, 1fr); }
+  .v2-device { padding: 6px; border-radius: 13px; }
+  .v2-tools { justify-content: flex-start; }
+  .v2-card { border-radius: 24px; }
 }
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media (prefers-reduced-motion: reduce) { .v2-rail { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
 <nav class="v2-nav" aria-label="ראשי">
   <div class="v2-wrap">
-    <a class="v2-brand" href="/v2">${logoMark(26)}<span>${h(op.brand)}</span></a>
-    <div class="v2-menu"><a href="#reviews">ביקורות</a><a href="#maps">מפות</a><a href="#ai">AI</a><a href="#pricing">מחירים</a><a href="/guide">מדריכים</a><a href="/login">כניסה</a></div>
+    <a class="v2-brand" href="/v2">${logoMark(28)}<span>${h(op.brand)}</span></a>
+    <div class="v2-menu"><a href="#tools">הכלים</a><a href="#how">איך זה עובד</a><a href="#pricing">מחירים</a><a href="#faq">שאלות נפוצות</a><a href="/guide">מדריכים</a><a href="/login">כניסה</a></div>
     <a class="v2-cta" href="${start}">${h(startLabel)}</a>
   </div>
 </nav>
 
 <header class="v2-hero">
   <div class="v2-wrap">
-    <h1>גוגל מיי ביזנס.<br>בשליטה מלאה.</h1>
-    <p class="v2-lead">ביקורות, מפות ו-AI במקום אחד. ובכל שבוע, מה לעשות כדי לעלות.</p>
-    <p class="v2-links"><a href="${start}">${h(startLabel)} ›</a><a href="#reviews">איך זה עובד ›</a></p>
+    <span class="v2-eyebrow">${icon('star', 16)} בנויה על Google Business Profile</span>
+    <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
+    <p class="v2-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
+    <div class="v2-btns"><a class="v2-btn" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="#tools">איך זה נראה מבפנים</a></div>
+    <a class="v2-watch" href="#video"><i>▶</i>צפו בסרטון (36 שניות)</a>
   </div>
   <div class="v2-hero-shot">
     <div class="v2-device"><img src="${shot('dashboard.jpg')}" alt="הדשבורד של ${h(op.brand)}" width="1120" height="730" fetchpriority="high"></div>
@@ -155,55 +259,64 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </header>
 
-${section({ id: 'reviews', kicker: 'ביקורות', title: 'כל ביקורת.<br>תשובה אחת בלחיצה.', text: 'התראה על כל ביקורת חדשה, וטיוטה של ה-AI בסגנון שלכם. נשאר רק לאשר.', link: ['עוד על ביקורות', '/guide/reviews'], image: 'reviews.jpg', alt: 'רשימת הביקורות בגוגל עם תשובות' })}
+<section class="v2-shelf" aria-label="הכלים">
+  <h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2>
+  <div class="v2-tools">${shelf.join('')}</div>
+</section>
 
-${section({ id: 'maps', tone: 'soft', kicker: 'קידום בגוגל מפות', title: 'יודעים מה לעשות.<br>רואים שעליתם.', text: 'תוכנית קצרה לכל שבוע, מהנתונים של העסק. בדיקה שבועית מראה איפה אתם במפות, בכל שכונה.', link: ['עוד על הקידום', '/guide/growth'], image: 'growth.jpg', alt: 'תוכנית הפעולה וציון הקידום' })}
+<section class="v2-sec soft" id="why">
+  <div class="v2-wrap v2-head"><h2>הפרופיל בגוגל הוא חלון הראווה של העסק</h2><p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p></div>
+  ${rail('why-rail', why, 'why-rail')}
+</section>
 
-<section class="v2-sec">
-  <div class="v2-wrap">
-    <div class="v2-tiles">
-      <article class="v2-tile"><h3>מיקום במפות.</h3><p>איפה אתם מופיעים סביב העסק, מול המתחרים.</p><img src="${shot('rank.jpg')}" alt="מיקום בגוגל מפות סביב העסק" width="1120" height="730" loading="lazy"></article>
-      <article class="v2-tile dark" id="ai"><h3>גם ב-AI.</h3><p>האם ChatGPT, Gemini וגוגל ממליצים עליכם, ומה לעשות כדי שכן.</p><img src="${shot('ai.jpg')}" alt="נראות בתשובות של עוזרי AI" width="1120" height="730" loading="lazy"></article>
+<section class="v2-sec" id="tools">
+  <div class="v2-wrap v2-head"><h2>הכלים, מקרוב</h2><p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p></div>
+  ${rail('tools-rail', showcase)}
+</section>
+
+<section class="v2-sec dark" id="video">
+  <div class="v2-wrap v2-video-row">
+    <div>
+      <h2>ככה עסקים נמצאים בגוגל וב-AI</h2>
+      <ul>
+        <li>${icon('check', 18)}קישור, QR ווואטסאפ שמביאים ביקורות</li>
+        <li>${icon('check', 18)}לקוח לא מרוצה מגיע אליכם, לא לגוגל</li>
+        <li>${icon('check', 18)}תשובות לביקורות בלחיצה</li>
+        <li>${icon('check', 18)}נראות בגוגל וב-AI, במסך אחד</li>
+      </ul>
     </div>
+    <div class="v2-video"><video controls playsinline preload="none" poster="${asset('media/gofive-intro.jpg')}" aria-label="סרטון הכרות עם ${h(op.brand)}"><source src="${asset('media/gofive-intro.mp4')}" type="video/mp4"></video></div>
   </div>
 </section>
 
-${section({ id: 'more', kicker: 'עוד ביקורות', title: 'לבקש ביקורת.<br>בשתי לחיצות.', text: 'קישור אישי בוואטסאפ ושלט QR לשולחן. לקוח לא מרוצה מגיע קודם אליכם, לא לגוגל.', link: ['עוד על איסוף ביקורות', '/guide/qr'], image: 'poster.jpg', alt: 'שלט QR מעוצב לבקשת ביקורת', narrow: true })}
+<section class="v2-sec" id="how">
+  <div class="v2-wrap v2-head"><h2>איך זה עובד</h2><p>מתחילים בכמה דקות, והמערכת ממשיכה לבד.</p></div>
+  ${rail('steps-rail', steps, 'steps-rail')}
+</section>
 
 <section class="v2-sec soft" id="pricing">
-  <div class="v2-wrap v2-center">
-    <h2>פשוט.<br>בלי התחייבות.</h2>
-    <p class="v2-lead">מחיר לפרופיל אחד בגוגל, וכל סניף נוסף ב-20% הנחה. כולל מע״מ.</p>
+  <div class="v2-wrap">
+    <div class="v2-head"><h2>מחירים פשוטים, בלי הפתעות</h2><p>מחיר לפרופיל אחד בגוגל, ו-20% הנחה על כל סניף נוסף. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
     <div class="v2-plans">
-      ${plan(PLANS.basic, 'כל מה שצריך לגוגל מיי ביזנס ולגוגל מפות.')}
-      ${plan(PLANS.pro, 'הכול, ובנוסף נראות ב-ChatGPT, Gemini, Perplexity ו-Claude.')}
+      ${plan(PLANS.basic, ['דשבורד גוגל מיי ביזנס: ביקורות, צפיות, שיחות ומה חיפשו', 'התראה על כל ביקורת, ותשובה עם טיוטת AI בסגנון שלכם', 'קידום במפות: תוכנית שבועית ובריאות הפרופיל', `מיקום במפות: ${PLANS.basic.rankKeywords} חיפושים · ${PLANS.basic.competitors} מתחרים`, 'QR, סקרים ובקשות דירוג בוואטסאפ'])}
+      ${plan(PLANS.pro, ['כל מה שבמסלול גוגל', `מיקום במפות: ${PLANS.pro.rankKeywords} חיפושים · ${PLANS.pro.competitors} מתחרים`, 'נראות ב-ChatGPT, Gemini, Perplexity ו-Claude', 'תוכנית פעולה ו"על מי ממליצים במקומכם"'], true)}
     </div>
-    <p class="v2-small">${trialOpen ? `${TRIAL_DAYS} ימים חינם להתחלה. ` : ''}מבטלים בכל רגע, והמסלול נשאר פעיל עד סוף התקופה ששולמה.</p>
-    <div class="v2-facts" aria-label="בקצרה">
-      <div><b>דקה</b><span>לחבר את הפרופיל בגוגל</span></div>
-      <div><b>כל שבוע</b><span>בדיקה של מפות, פרופיל ו-AI</span></div>
-      <div><b>עברית</b><span>מערכת, מיילים וטיוטות</span></div>
-    </div>
+    <p class="v2-small">המחירים כוללים מע״מ · בתשלום שנתי משלמים על 10 חודשים ומקבלים 12 · מבטלים בכל רגע, והמסלול נשאר פעיל עד סוף התקופה ששולמה · סוכנות או רשת גדולה? <a href="/#contact">נבנה הצעת מחיר</a></p>
   </div>
 </section>
 
-<section class="v2-sec" id="faq">
-  <div class="v2-wrap v2-center">
-    <h2>שאלות.</h2>
-    <div class="v2-faq">
-      <details><summary>צריך שיהיה לעסק פרופיל בגוגל?</summary><p>כן. אם עוד אין, פותחים בחינם ב-business.google.com, וציון הבריאות עוזר להשלים אותו.</p></details>
-      <details><summary>מאיפה מגיעים הנתונים?</summary><p>ישירות מגוגל. מחברים פעם אחת את החשבון שמנהל את העסק, ו-18 החודשים האחרונים נטענים לבד.</p></details>
-      <details><summary>מה קורה כשלקוח לא מרוצה?</summary><p>הוא משאיר לכם הודעה במקום ביקורת, ואתם מקבלים התראה מיד וחוזרים אליו.</p></details>
-      <details><summary>יש לי כמה סניפים.</summary><p>כל סניף נוסף ב-20% הנחה, וכל הסניפים מנוהלים מחשבון אחד.</p></details>
-      <details><summary>אפשר לבטל?</summary><p>כן, בכל רגע. המסלול נשאר פעיל עד סוף התקופה ששולמה.</p></details>
-    </div>
+<section class="v2-sec soft" id="faq" style="padding-top:0">
+  <div class="v2-wrap">
+    <div class="v2-head"><h2>כל מה שרציתם לשאול</h2><p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים.</p></div>
+    <div class="v2-faq">${faq.map(([q, a]) => `<details><summary>${h(q)}</summary><p>${h(a)}</p></details>`).join('')}</div>
   </div>
 </section>
 
 <section class="v2-final">
   <div class="v2-wrap">
-    <h2>מתחילים היום.</h2>
-    <p class="v2-links"><a href="${start}">${h(startLabel)} ›</a><a href="/#talk">לדבר איתנו ›</a></p>
+    <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
+    <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
+    <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="/#talk">לדבר איתנו</a></div>
   </div>
 </section>
 
@@ -213,6 +326,25 @@ ${section({ id: 'more', kicker: 'עוד ביקורות', title: 'לבקש ביק
     <span><a href="/guide">מדריכים</a><a href="/terms">תנאי שימוש</a><a href="/privacy">פרטיות</a><a href="/accessibility">נגישות</a><a href="/">הגרסה הנוכחית</a></span>
   </div>
 </footer>
+<script>
+// Sliders: arrows move a screen's worth, dots follow the scroll (right to left).
+document.querySelectorAll('[data-rail]').forEach(function (w) {
+  var r = w.querySelector('.v2-rail'), dots = w.querySelector('.v2-dots'), cards = r.children, prev = w.querySelector('[data-dir=prev]'), next = w.querySelector('[data-dir=next]');
+  for (var i = 0; i < cards.length; i++) dots.appendChild(document.createElement('i'));
+  function at() { var step = cards[0].getBoundingClientRect().width + 20; return Math.round(Math.abs(r.scrollLeft) / step); }
+  function sync() {
+    var n = at(), max = r.scrollWidth - r.clientWidth - 2;
+    [].forEach.call(dots.children, function (d, i) { d.className = i === Math.min(n, cards.length - 1) ? 'on' : ''; });
+    prev.disabled = Math.abs(r.scrollLeft) < 2; next.disabled = Math.abs(r.scrollLeft) >= max;
+  }
+  function go(dir) { r.scrollBy({ left: (dir === 'next' ? -1 : 1) * r.clientWidth * 0.85 }); }
+  prev.addEventListener('click', function () { go('prev'); });
+  next.addEventListener('click', function () { go('next'); });
+  r.addEventListener('scroll', function () { window.requestAnimationFrame(sync); }, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+});
+</script>
 </body>
 </html>`;
 }
