@@ -36,6 +36,9 @@ const TOOLS = [
 
 const G_MARK = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 
+// One short line under each tool's name on the shelf.
+const SUBS = { dashboard: 'צפיות, שיחות ומה חיפשו', reviews: 'התראה ותשובה בלחיצה', growth: 'תוכנית לכל שבוע', rank: 'איפה אתם בכל שכונה', ai: 'ChatGPT, Gemini וגוגל', qr: 'QR ווואטסאפ', competitors: 'דירוג, ביקורות וקצב', posts: 'מרעיון לפוסט מוכן', report: 'להדפסה ובמייל', network: 'כל הסניפים במסך אחד' };
+
 // The small label above each tool's name.
 const TAGS = { dashboard: 'נתונים', reviews: 'ביקורות', growth: 'קידום', rank: 'מפות', ai: 'AI', qr: 'איסוף ביקורות', competitors: 'מתחרים', posts: 'תוכן', report: 'דוחות', network: 'רשתות' };
 
@@ -50,7 +53,7 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
   const startLabel = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
   const card = payProvider() === 'cardcom';
 
-  const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 26)}</span><span>${h(name)}</span></a>`);
+  const shelf = TOOLS.map(([key, ic, c, name]) => `<a class="v2-tool" href="#t-${key}" style="--c:${c}"><span class="v2-tool-ic">${icon(ic, 20)}</span><span class="v2-tool-t"><b>${h(name)}</b><small>${h(SUBS[key] || '')}</small></span></a>`);
   // Product cards: a colored stage with the real screen, then a label, the name and one line.
   const showcase = TOOLS.map(([key, ic, c, name, line, guide, img]) => `<article class="v2-card" id="t-${key}" style="--c:${c}">
       <button type="button" class="v2-card-img" data-zoom aria-label="הגדלת המסך: ${h(name)}"><img src="${shot(img)}" alt="${h(name)}" width="1120" height="730" loading="lazy"><span class="v2-zoom">⤢</span></button>
@@ -158,28 +161,31 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-device img { border-radius: 11px; }
 .v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
 
-/* the shelf: every tool, like a shop's category bar */
-.v2-shelf { padding: 0 0 26px; background: var(--soft); }
+/* the shelf: a night panel with every tool as a small card */
+.v2-shelf { padding: 28px 0 26px; background: var(--soft); }
 .v2-shelf + .v2-sec { padding-top: 56px; }
-.v2-shelf-box { position: relative; z-index: 1; margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 22px 22px 16px; box-shadow: 0 20px 40px -32px rgba(23, 18, 58, .45); }
-.v2-shelf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.v2-shelf-head h2 { margin: 0; font-size: 1.12rem; font-weight: 700; }
-.v2-shelf-head span { color: var(--muted); font-size: .85rem; font-weight: 600; }
-.v2-tools { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
-.v2-tool { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 4px; border-radius: 14px; text-align: center; color: var(--ink); font-size: .8rem; font-weight: 600; line-height: 1.25; transition: background .15s; }
-.v2-tool:hover { text-decoration: none; background: color-mix(in srgb, var(--c) 7%, #fff); }
-.v2-tool-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 11%, #fff); border: 1px solid color-mix(in srgb, var(--c) 16%, #fff); transition: transform .15s; }
-.v2-tool-ic svg { width: 22px; height: 22px; }
-.v2-tool:hover .v2-tool-ic { transform: translateY(-2px); }
+.v2-shelf-box { position: relative; z-index: 1; margin-top: 0; overflow: hidden; border-radius: 26px; padding: 28px; color: #fff; background: radial-gradient(520px 260px at 92% 0%, rgba(124, 92, 255, .5), transparent 70%), radial-gradient(420px 240px at 0% 100%, rgba(255, 210, 63, .14), transparent 70%), linear-gradient(160deg, #1c1650 0%, #120d33 100%); box-shadow: 0 30px 60px -36px rgba(23, 18, 58, .8); }
+.v2-shelf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.v2-shelf-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(255, 210, 63, .14); color: var(--yellow); font-size: .76rem; font-weight: 700; }
+.v2-shelf-head h2 { margin: 8px 0 0; font-size: clamp(1.15rem, 2.4vw, 1.5rem); font-weight: 700; color: #fff; max-width: 28ch; line-height: 1.25; }
+.v2-shelf-head a { color: #d9d3ff; font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.v2-tools { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.v2-tool { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); color: #fff; transition: background .2s, border-color .2s, transform .2s; }
+.v2-tool:hover { text-decoration: none; background: rgba(255, 255, 255, .09); border-color: color-mix(in srgb, var(--c) 60%, transparent); transform: translateY(-2px); }
+.v2-tool-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(140deg, color-mix(in srgb, var(--c) 80%, #fff), var(--c)); box-shadow: 0 8px 18px -8px var(--c); }
+.v2-tool-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v2-tool-t b { font-size: .9rem; font-weight: 700; line-height: 1.25; }
+.v2-tool-t small { font-size: .76rem; color: #b9b3e0; line-height: 1.3; }
+@media (max-width: 1000px) { .v2-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 860px) {
-  .v2-shelf-box { padding: 18px 0 10px; border-radius: 20px; }
-  .v2-shelf-head { padding: 0 18px; margin-bottom: 8px; }
-  .v2-shelf-head h2 { font-size: 1rem; }
-  /* two rows that swipe sideways, with a hint that there's more */
-  .v2-tools { grid-template-columns: none; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: 84px; gap: 2px 4px; overflow-x: auto; padding: 0 14px 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-mask-image: linear-gradient(to left, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(to left, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%); }
-  .v2-tools::-webkit-scrollbar { display: none; }
-  .v2-tool { scroll-snap-align: start; font-size: .76rem; padding: 8px 2px; }
-  .v2-tool-ic { width: 46px; height: 46px; border-radius: 14px; }
+  .v2-shelf { padding-top: 22px; }
+  .v2-shelf-box { padding: 22px 16px 16px; border-radius: 22px; }
+  .v2-shelf-head { margin-bottom: 14px; }
+  .v2-shelf-head a { display: none; }
+  .v2-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .v2-tool { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; }
+  .v2-tool-ic { width: 36px; height: 36px; border-radius: 11px; }
+  .v2-tool-t b { font-size: .86rem; }
 }
 
 /* sections */
@@ -404,7 +410,7 @@ h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 
 <section class="v2-shelf" aria-label="הכלים">
   <div class="v2-wrap"><div class="v2-shelf-box">
-    <div class="v2-shelf-head"><h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2><span>${TOOLS.length} כלים · חשבון אחד</span></div>
+    <div class="v2-shelf-head"><div><span class="v2-shelf-pill">${TOOLS.length} כלים · חשבון אחד</span><h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2></div><a href="#tools">לכל הכלים ›</a></div>
     <div class="v2-tools">${shelf.join('')}</div>
   </div></div>
 </section>
