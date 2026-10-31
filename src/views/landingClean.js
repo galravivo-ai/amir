@@ -2,6 +2,17 @@ import { asset, h } from '../util.js';
 import { branchPrice, payProvider, PLANS, TRIAL_DAYS } from '../plans.js';
 import { icon, logoMark } from './icons.js';
 import { operatorInfo } from './site.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// The app's own fonts (Assistant, Rubik), so the page and the system read alike.
+const FONTS = fs
+  .readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/style.css'), 'utf8')
+  .split('\n')
+  .filter((l) => l.startsWith('@font-face') && !l.includes('Secular'))
+  .join('\n')
+  .replaceAll('url(fonts/', 'url(/static/fonts/');
 
 // A trial version of the landing page in a store-like style: the tools shown
 // like products, sliders that swipe on a phone, big type and plenty of white.
@@ -80,28 +91,30 @@ export function landingCleanView({ signupOpen = true, trialOpen = false }) {
 <title>${h(op.brand)} · ניהול גוגל מיי ביזנס, ביקורות ונראות ב-AI</title>
 <link rel="icon" type="image/svg+xml" href="/static/brand/gofive-mark.svg">
 <style>
-:root { --ink: #1d1d1f; --muted: #6e6e73; --soft: #f5f5f7; --line: #d2d2d7; --brand: #4b2bd6; --brand-h: #3a1fb8; --yellow: #ffd23f; }
+${FONTS}
+:root { --ink: #17123a; --muted: #5b5680; --soft: #f6f4ff; --line: #e6e2f5; --brand: #5b3df5; --brand-h: #4527e0; --yellow: #ffd23f; --night: #1c1650; --font: 'Assistant', 'Rubik', 'Segoe UI', Arial, sans-serif; --font-head: 'Rubik', 'Assistant', 'Segoe UI', sans-serif; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: #fff; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Assistant", "Heebo", Arial, sans-serif; line-height: 1.47; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #fff; color: var(--ink); font-family: var(--font); line-height: 1.47; -webkit-font-smoothing: antialiased; }
 a { color: var(--brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
 img { max-width: 100%; height: auto; display: block; }
+h1, h2, h3, .v2-price, .v2-brand, .v2-step b { font-family: var(--font-head); }
 .v2-wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
 .v2-head { text-align: center; max-width: 760px; margin: 0 auto; }
 .v2-head h2 { margin: 0; font-size: clamp(1.9rem, 4.6vw, 3.2rem); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; }
 .v2-head p { margin: 14px auto 0; color: var(--muted); font-size: clamp(1.02rem, 1.9vw, 1.25rem); max-width: 46ch; }
 
 /* bar */
-.v2-nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .8); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0, 0, 0, .08); }
+.v2-nav { position: sticky; top: 0; z-index: 10; background: rgba(28, 22, 80, .92); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .v2-nav .v2-wrap { display: flex; align-items: center; justify-content: space-between; height: 54px; gap: 18px; }
-.v2-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 700; font-size: 1.08rem; }
+.v2-brand { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 700; font-size: 1.08rem; }
 .v2-brand:hover { text-decoration: none; }
 .v2-menu { display: flex; gap: 26px; font-size: .84rem; }
-.v2-menu a { color: var(--ink); opacity: .78; }
+.v2-menu a { color: #d9d3ff; opacity: .9; }
 .v2-menu a:hover { opacity: 1; text-decoration: none; }
-.v2-nav .v2-cta { font-size: .84rem; padding: 7px 16px; border-radius: 980px; background: var(--brand); color: #fff; font-weight: 600; }
-.v2-nav .v2-cta:hover { background: var(--brand-h); text-decoration: none; }
+.v2-nav .v2-cta { font-size: .84rem; padding: 7px 16px; border-radius: 980px; background: var(--yellow); color: var(--night); font-weight: 700; }
+.v2-nav .v2-cta:hover { background: #ffdb5c; text-decoration: none; }
 
 /* buttons */
 .v2-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
@@ -111,22 +124,26 @@ img { max-width: 100%; height: auto; display: block; }
 .v2-btn.ghost:hover { background: #f1edff; }
 .v2-btn.yellow { background: var(--yellow); border-color: var(--yellow); color: #1c1650; }
 .v2-btn.yellow:hover { background: #ffdb5c; }
+.v2-btn.ghost.light { color: #fff; border-color: rgba(255, 255, 255, .45); }
+.v2-btn.ghost.light:hover { background: rgba(255, 255, 255, .1); }
 
 /* hero */
-.v2-hero { padding: 70px 0 0; text-align: center; overflow: hidden; background: radial-gradient(900px 420px at 50% 100%, #efeaff 0%, #fff 70%); }
-.v2-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 980px; background: var(--soft); font-size: .86rem; font-weight: 600; color: var(--ink); }
+.v2-hero { padding: 70px 0 0; text-align: center; overflow: hidden; color: #fff; background: linear-gradient(180deg, transparent 72%, var(--soft) 72%), radial-gradient(900px 500px at 85% 0%, #3b2a99 0%, transparent 60%), linear-gradient(160deg, #120d33 0%, #1c1650 55%, #241b6b 100%); }
+.v2-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 980px; background: rgba(255, 255, 255, .1); font-size: .86rem; font-weight: 600; color: #fff; }
+.v2-eyebrow svg { color: var(--yellow); }
 .v2-hero h1 { margin: 18px auto 0; max-width: 18ch; font-size: clamp(2.3rem, 6vw, 4.4rem); line-height: 1.06; font-weight: 800; letter-spacing: -.02em; }
-.v2-hero h1 em { font-style: normal; color: var(--brand); }
-.v2-hero .v2-lead { margin: 18px auto 0; max-width: 46ch; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.3rem); }
-.v2-watch { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-weight: 600; }
-.v2-watch i { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-style: normal; font-size: .75rem; }
+.v2-hero h1 { color: #fff; }
+.v2-hero h1 em { font-style: normal; color: var(--yellow); }
+.v2-hero .v2-lead { margin: 18px auto 0; max-width: 46ch; color: #cfc9f2; font-size: clamp(1.05rem, 2vw, 1.3rem); }
+.v2-watch { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-weight: 600; color: #fff; }
+.v2-watch i { width: 30px; height: 30px; border-radius: 50%; background: var(--yellow); color: var(--night); display: grid; place-items: center; font-style: normal; font-size: .75rem; }
 .v2-hero-shot { margin: 48px auto 0; max-width: 1020px; padding: 0 22px; }
 .v2-device { border-radius: 20px; padding: 10px; background: linear-gradient(180deg, #2b2b2e, #18181a); box-shadow: 0 50px 90px -45px rgba(40, 20, 120, .55); }
 .v2-device img { border-radius: 11px; }
 .v2-device-base { height: 14px; margin: 0 -4%; background: linear-gradient(180deg, #dcdce1, #b6b6bd); border-radius: 0 0 16px 16px; }
 
 /* the shelf: every tool, like products in a shop */
-.v2-shelf { padding: 54px 0 10px; }
+.v2-shelf { padding: 54px 0 30px; background: var(--soft); }
 .v2-shelf h2 { text-align: center; margin: 0 0 22px; font-size: 1.25rem; font-weight: 700; }
 .v2-tools { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 22px 14px; justify-content: safe center; scrollbar-width: none; }
 .v2-tools::-webkit-scrollbar { display: none; }
@@ -138,7 +155,7 @@ img { max-width: 100%; height: auto; display: block; }
 /* sections */
 .v2-sec { padding: 96px 0; }
 .v2-sec.soft { background: var(--soft); }
-.v2-sec.dark { background: #0d0b1f; color: #f5f5f7; }
+.v2-sec.dark { background: linear-gradient(160deg, #120d33, #1c1650 60%, #241b6b); color: #f5f5f7; }
 .v2-sec.dark .v2-head p { color: #a1a1a6; }
 
 /* sliders: swipe on a phone, arrows and dots on a computer */
@@ -158,9 +175,9 @@ img { max-width: 100%; height: auto; display: block; }
 @media (min-width: 1240px) { .v2-rail { padding-inline: max(22px, calc((100vw - 1180px) / 2)); scroll-padding: 0 max(22px, calc((100vw - 1180px) / 2)); } }
 
 /* product cards */
-.v2-card { width: min(86vw, 440px); border-radius: 28px; background: #fff; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0, 0, 0, .04), 0 20px 40px -24px rgba(0, 0, 0, .25); }
+.v2-card { width: min(86vw, 440px); border-radius: 22px; border: 1px solid var(--line); border-top: 4px solid var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, #fff) 0%, #fff 45%); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0, 0, 0, .04), 0 20px 40px -24px rgba(0, 0, 0, .25); }
 .v2-card-text { padding: 30px 28px 20px; }
-.v2-card-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--c); }
+.v2-card-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, #fff); }
 .v2-card h3 { margin: 16px 0 0; font-size: 1.5rem; line-height: 1.15; font-weight: 700; }
 .v2-card p { margin: 10px 0 0; color: var(--muted); min-height: 4.4em; }
 .v2-card-text a { display: inline-block; margin-top: 10px; font-weight: 600; }
@@ -168,7 +185,7 @@ img { max-width: 100%; height: auto; display: block; }
 .v2-card-img img { border-radius: 14px 0 0 0; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .3); aspect-ratio: 1120 / 730; object-fit: cover; object-position: top right; }
 
 /* why cards */
-.v2-why { width: min(80vw, 360px); border-radius: 24px; padding: 30px 26px; background: #fff; border-top: 4px solid var(--c); }
+.v2-why { width: min(80vw, 360px); border-radius: 22px; padding: 30px 26px; border: 1px solid var(--line); border-top: 4px solid var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, #fff) 0%, #fff 60%); }
 .v2-why-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); }
 .v2-why small { display: block; margin-top: 16px; color: var(--c); font-weight: 700; }
 .v2-why h3 { margin: 4px 0 0; font-size: 1.35rem; }
@@ -200,7 +217,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* plans: the recommended one is a dark, premium card */
 .v2-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; gap: 22px; margin-top: 44px; }
-.v2-plan { position: relative; background: #fff; border-radius: 28px; padding: 34px 30px; border: 1px solid var(--line); display: flex; flex-direction: column; }
+.v2-plan { position: relative; background: #fff; border-radius: 22px; padding: 34px 30px; border: 1px solid var(--line); border-top: 4px solid var(--brand); display: flex; flex-direction: column; }
 .v2-plan.best { border: 0; color: #fff; background: radial-gradient(420px 260px at 85% 0%, rgba(124, 92, 255, .55), transparent 70%), linear-gradient(165deg, #1b1546 0%, #0e0b26 100%); box-shadow: 0 34px 60px -32px rgba(30, 15, 110, .8); }
 .v2-plan.best .v2-branch, .v2-plan.best .v2-price small { color: #b9b3e0; }
 .v2-plan.best li svg { color: var(--yellow); }
@@ -233,7 +250,7 @@ img { max-width: 100%; height: auto; display: block; }
 .v2-final p { color: #cfc9f2; margin: 14px 0 0; }
 .v2-final .v2-btn.ghost { color: #fff; border-color: rgba(255, 255, 255, .5); }
 .v2-final .v2-btn.ghost:hover { background: rgba(255, 255, 255, .1); }
-.v2-foot { background: var(--soft); color: var(--muted); font-size: .8rem; padding: 22px 0 34px; border-top: 1px solid var(--line); }
+.v2-foot { background: #fff; color: var(--muted); font-size: .8rem; padding: 22px 0 34px; border-top: 1px solid var(--line); }
 .v2-foot .v2-wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .v2-foot a { color: var(--muted); margin-inline-start: 18px; }
 
@@ -271,7 +288,7 @@ img { max-width: 100%; height: auto; display: block; }
     <span class="v2-eyebrow">${icon('star', 16)} בנויה על Google Business Profile</span>
     <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="v2-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
-    <div class="v2-btns"><a class="v2-btn" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost" href="#tools">איך זה נראה מבפנים</a></div>
+    <div class="v2-btns"><a class="v2-btn yellow" href="${start}">${h(startLabel)}</a><a class="v2-btn ghost light" href="#tools">איך זה נראה מבפנים</a></div>
     <a class="v2-watch" href="#video"><i>▶</i>צפו בסרטון (36 שניות)</a>
   </div>
   <div class="v2-hero-shot">
