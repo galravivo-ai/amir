@@ -9,6 +9,8 @@ const scope = new AsyncLocalStorage();
 
 /** Runs `fn` with work counted against `businessId`. */
 export const withBusiness = (businessId, fn) => scope.run({ businessId }, fn);
+/** The business whose work is running now, if any. */
+export const currentBusiness = () => scope.getStore()?.businessId ?? null;
 
 export function createMeter(store, { onRecord = null } = {}) {
   return {

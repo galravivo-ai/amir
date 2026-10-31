@@ -24,7 +24,7 @@ export const PLANS = {
     waMonthly: 100,
     competitors: 5,
     rankKeywords: 2,
-    limits: { ai_draft: 50, insights: 4, health_run: 2, visibility_run: 2, rank_run: 2 },
+    limits: { ai_draft: 50, insights: 4, health_run: 2, visibility_run: 2, rank_run: 2, place_search: 30 },
   },
   pro: {
     label: 'גוגל + AI',
@@ -36,7 +36,7 @@ export const PLANS = {
     waMonthly: 300,
     competitors: 10,
     rankKeywords: 4,
-    limits: { ai_draft: 200, insights: 10, health_run: 5, visibility_run: 2, rank_run: 4 },
+    limits: { ai_draft: 200, insights: 10, health_run: 5, visibility_run: 2, rank_run: 4, place_search: 40 },
   },
   // Off the price list since the per-profile prices; kept for businesses already on it.
   business: {
@@ -50,7 +50,7 @@ export const PLANS = {
     waMonthly: 1000,
     competitors: 10,
     rankKeywords: 6,
-    limits: { ai_draft: 500, insights: 30, health_run: 10, visibility_run: 10, rank_run: 10 },
+    limits: { ai_draft: 500, insights: 30, health_run: 10, visibility_run: 10, rank_run: 10, place_search: 100 },
   },
   // Large chains and agencies get a personal quote; a system admin assigns this plan.
   enterprise: {
@@ -64,7 +64,7 @@ export const PLANS = {
     waMonthly: 3000,
     competitors: 20,
     rankKeywords: 15,
-    limits: { ai_draft: 2000, insights: 100, health_run: 30, visibility_run: 30, rank_run: 30 },
+    limits: { ai_draft: 2000, insights: 100, health_run: 30, visibility_run: 30, rank_run: 30, place_search: 300 },
   },
 };
 

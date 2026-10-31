@@ -2,6 +2,9 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
+import { withBusiness } from '../src/meter.js';
+import { monthKey } from '../src/usage.js';
+import { createSerp } from '../src/serp.js';
 
 let server;
 let base;
@@ -317,4 +320,34 @@ test('signing in opens the phone menu once; a brand-new account does not', async
   assert.ok(res.headers.getSetCookie().some((c) => c.startsWith('gf_menu=1')), 'signing in sets the one-time flag');
   const reg = await fetch(`${base}/register`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=N&email=menu2%40example.com&password=password123&business=x&terms=1' });
   assert.ok(!reg.headers.getSetCookie().some((c) => c.startsWith('gf_menu=')), 'a new account opens on its first steps');
+});
+
+test('a hard monthly spending cap stops paid AI and searches for one business, and tells the admins once', async () => {
+  const under = (await owner('cap-under@example.com')).biz;
+  store.updateBusiness(under.id, { billing: 'active', plan: 'pro' });
+  assert.equal(withBusiness(under.id, () => created.spendGate()), null, 'under the cap');
+
+  const over = (await owner('cap-over@example.com')).biz;
+  store.updateBusiness(over.id, { billing: 'active', plan: 'pro' });
+  // ₪149 a month: the cap is half, about ₪75; 1,500 searches cost about ₪83
+  store.addApiUsage(over.id, monthKey(), 'serp', 1500, 0, 0);
+  const stop = withBusiness(over.id, () => created.spendGate());
+  assert.match(stop, /תקרת השימוש החודשית/);
+  withBusiness(over.id, () => created.spendGate());
+  const alerts = store.db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE kind = 'service_alert' AND subject LIKE 'תקרת עלות%'").get().n;
+  assert.equal(alerts, 1, 'the admins hear once');
+
+  // the search itself is never sent
+  let sent = 0;
+  const serp = createSerp({ apiKey: 'k', fetchImpl: async () => { sent++; return new Response('{}'); }, gate: () => stop });
+  await assert.rejects(() => serp.find('פיצה תל אביב'), /תקרת השימוש/);
+  assert.equal(sent, 0);
+  // outside any business (a system task) there is no cap
+  assert.equal(created.spendGate(), null);
+});
+
+test('every plan has a monthly limit on Maps business searches', async () => {
+  const { PLANS } = await import('../src/plans.js');
+  const { TRIAL_LIMITS } = await import('../src/usage.js');
+  for (const p of [...Object.values(PLANS).map((x) => x.limits), TRIAL_LIMITS]) assert.ok(p.place_search > 0);
 });

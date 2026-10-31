@@ -894,7 +894,7 @@ export function createStore(db) {
     },
     /** Completed comments not tagged yet, only for businesses whose plan includes AI. */
     untaggedResponses: (plans, limit = 20) =>
-      q(`SELECT r.id, r.comment, r.rating FROM responses r
+      q(`SELECT r.id, r.comment, r.rating, b.id AS business_id FROM responses r
          JOIN campaigns c ON c.id = r.campaign_id JOIN businesses b ON b.id = c.business_id
          WHERE r.completed = 1 AND r.comment != '' AND r.tagged_at IS NULL AND r.created_at >= ?
            AND b.plan IN (${plans.map(() => '?').join(',') || "''"})
@@ -927,7 +927,7 @@ export function createStore(db) {
       );
     },
     untaggedGoogleReviews: (plans, limit = 20) =>
-      q(`SELECT g.id, g.comment, g.rating FROM google_reviews g
+      q(`SELECT g.id, g.comment, g.rating, b.id AS business_id FROM google_reviews g
          JOIN google_locations l ON l.id = g.location_id JOIN businesses b ON b.id = l.business_id
          WHERE g.comment != '' AND g.tagged_at IS NULL AND l.enabled = 1 AND g.create_time >= ?
            AND b.plan IN (${plans.map(() => '?').join(',') || "''"})

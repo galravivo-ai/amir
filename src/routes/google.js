@@ -181,6 +181,11 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       res.locals.error = 'הדביקו קישור לעסק בגוגל מפות, או כתבו את שם העסק והעיר.';
       return connectPage(req, res);
     }
+    const over = ctx.usage.take(req.business, 'place_search');
+    if (over) {
+      res.locals.error = over;
+      return connectPage(req, res);
+    }
     try {
       const found = await serp.find(query);
       if (found.direct) return addPlace(req, res, found.direct);

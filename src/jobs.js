@@ -6,6 +6,7 @@ import { buildReport, lastMonth, monthRange } from './report.js';
 import { monthlySummary } from './routes/reports.js';
 import { sendWhatsAppInvite } from './whatsapp.js';
 import { withBusinessLang } from './lang.js';
+import { withBusiness } from './meter.js';
 
 /**
  * Periodic background work: invite reminders, SLA alerts and weekly reports.
@@ -58,22 +59,28 @@ export function createJobs({ store, notifier, ai = null, googleSync = null, serp
     return sent;
   }
 
-  /** Tags new comments by topic with AI, a small batch each run. */
+  /**
+   * Tags new comments by topic with AI, a small batch each run, counted against each
+   * business (so its spending cap applies). A business over its cap gets no topics for
+   * the batch, so it never blocks the queue.
+   */
   async function aiTagging() {
     if (!ai?.tagComments) return 0;
     const plans = Object.entries(PLANS).filter(([, p]) => p.ai).map(([k]) => k);
     let tagged = 0;
-    const batch = store.untaggedResponses(plans, 20);
-    if (batch.length) {
-      const tags = await ai.tagComments(batch.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
-      for (const r of batch) store.setTags(r.id, tags.get(r.id) ?? []);
-      tagged += batch.length;
-    }
-    const reviews = store.untaggedGoogleReviews(plans, 20);
-    if (reviews.length) {
-      const tags = await ai.tagComments(reviews.map((r) => ({ id: r.id, text: r.comment, rating: r.rating })));
-      for (const r of reviews) store.setGoogleTags(r.id, tags.get(r.id) ?? []);
-      tagged += reviews.length;
+    const byBusiness = (rows) => [...rows.reduce((m, r) => m.set(r.business_id, [...(m.get(r.business_id) || []), r]), new Map())];
+    for (const [rows, save] of [[store.untaggedResponses(plans, 20), store.setTags], [store.untaggedGoogleReviews(plans, 20), store.setGoogleTags]]) {
+      for (const [businessId, group] of byBusiness(rows)) {
+        let tags = new Map();
+        try {
+          tags = await withBusiness(businessId, () => ai.tagComments(group.map((r) => ({ id: r.id, text: r.comment, rating: r.rating }))));
+        } catch (err) {
+          if (!err.capped) throw err; // a passing failure: the batch is tried again next run
+          console.warn('[tags] skipped, over the spending cap:', businessId);
+        }
+        for (const r of group) save(r.id, tags.get(r.id) ?? []);
+        tagged += group.length;
+      }
     }
     return tagged;
   }

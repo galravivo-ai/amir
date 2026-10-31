@@ -10,10 +10,11 @@ export const ACTIONS = {
   health_run: 'בדיקת בריאות פרופיל ידנית',
   visibility_run: 'בדיקת נראות ב-AI ידנית',
   rank_run: 'בדיקת מיקום במפות ידנית (לכל חיפוש)',
+  place_search: 'חיפוש עסק בגוגל מפות (חיבור ומתחרים)',
 };
 
 /** During the trial: enough to see every feature work, small enough to keep the costs down. */
-export const TRIAL_LIMITS = { ai_draft: 20, insights: 2, health_run: 1, visibility_run: 1, rank_run: 1 };
+export const TRIAL_LIMITS = { ai_draft: 20, insights: 2, health_run: 1, visibility_run: 1, rank_run: 1, place_search: 10 };
 
 export const monthKey = (now = Date.now()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit' }).format(new Date(now)).slice(0, 7);

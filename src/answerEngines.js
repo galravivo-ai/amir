@@ -123,9 +123,11 @@ function perplexity({ key, model, fetchImpl }) {
 }
 
 /** The engines whose keys are set: { chatgpt?, gemini?, perplexity? }. */
-export function createAnswerEngines({ env = process.env, fetchImpl = globalThis.fetch, onCall = null } = {}) {
+export function createAnswerEngines({ env = process.env, fetchImpl = globalThis.fetch, onCall = null, gate = null } = {}) {
   const out = {};
   const metered = (name, fn) => async (...args) => {
+    const stop = gate?.();
+    if (stop) throw new Error(stop);
     onCall?.(name);
     return fn(...args);
   };

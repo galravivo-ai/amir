@@ -132,11 +132,14 @@ function findReviews(r) {
 const OUT_OF_SEARCHES = /run out of searches|searches? (limit|quota)|plan.*(limit|exceeded)/i;
 export const QUOTA_MESSAGE = 'שירות הבדיקות של המערכת הגיע למכסת החיפושים החודשית. הבדיקות יחזרו לפעול לבד כשהמכסה תתחדש או תוגדל.';
 
-export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch, onCall = null, onQuota = null } = {}) {
+export function createSerp({ apiKey = process.env.SERPAPI_KEY, fetchImpl = globalThis.fetch, onCall = null, onQuota = null, gate = null } = {}) {
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) return null;
 
   async function call(params) {
+    // Over its monthly spending cap: no paid search for this business until the month turns.
+    const stop = gate?.();
+    if (stop) throw new SerpError(stop, 429);
     const q = new URLSearchParams({ ...params, api_key: apiKey });
     const res = await fetchImpl(`${API}?${q}`, { signal: AbortSignal.timeout(60e3) });
     onCall?.();

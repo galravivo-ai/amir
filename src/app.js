@@ -1,4 +1,4 @@
-import { signupTrialDays } from './plans.js';
+import { accessOf, planOf, priceFor, profilesOf, signupTrialDays } from './plans.js';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,7 @@ import { webhookRoutes } from './routes/webhooks.js';
 import { createWhatsApp } from './whatsapp.js';
 import { createUsage, monthKey } from './usage.js';
 import { costOf, RATE as USD_RATE } from './views/status.js';
-import { createMeter, withBusiness } from './meter.js';
+import { createMeter, currentBusiness, withBusiness } from './meter.js';
 import { createCompetitors } from './competitors.js';
 import { competitorRoutes } from './routes/competitors.js';
 import { mapsRoutes } from './routes/maps.js';
@@ -88,10 +88,49 @@ export function createApp(db, options = {}) {
   const mailer = createMailer(db, { transport: options.mailTransport });
   let costCheck = null;
   const meter = createMeter(store, { onRecord: (id) => costCheck?.(id) });
+  // A hard monthly spending cap per business, whatever runs (a check by hand, a weekly
+  // job, a draft): COST_CAP_PCT of what the business pays a month (default 50%), at least
+  // ₪30; ₪25 during a trial (TRIAL_COST_CAP_ILS). Custom-priced chains have none. Once
+  // over, paid AI and searches stop for that business until the month turns, and the
+  // admins hear once. COST_CAP_PCT=0 turns it off.
+  const capPct = Number(process.env.COST_CAP_PCT ?? 50);
+  const monthCost = (businessId) =>
+    store.db.prepare('SELECT * FROM api_usage WHERE business_id = ? AND month = ?').all(businessId, monthKey()).reduce((sum, r) => sum + costOf(r), 0) * USD_RATE;
+  const capOf = (b) => {
+    if (accessOf(b).state === 'trial') return Number(process.env.TRIAL_COST_CAP_ILS) || 25;
+    const p = planOf(b);
+    if (p.price == null) return Infinity;
+    return Math.max(30, (priceFor(p, 'monthly', profilesOf(store, b.id)) * capPct) / 100);
+  };
+  const capChecked = new Map();
+  const spendGate = () => {
+    const id = currentBusiness();
+    if (!id || !(capPct > 0)) return null;
+    const seen = capChecked.get(id);
+    if (seen && Date.now() - seen.at < 60e3) return seen.stop;
+    const b = store.businessById(id);
+    const cap = b ? capOf(b) : Infinity;
+    const spent = cap === Infinity ? 0 : monthCost(id);
+    const stop = spent >= cap ? 'הגעתם לתקרת השימוש החודשית בבדיקות וב-AI. הן יחזרו לפעול ב-1 לחודש. שאלות? כתבו לנו.' : null;
+    capChecked.set(id, { at: Date.now(), stop });
+    if (stop) {
+      const subject = `תקרת עלות ב-${monthKey()}: ${b?.name || `עסק ${id}`}`;
+      if (!store.db.prepare("SELECT 1 FROM outbox WHERE kind = 'service_alert' AND subject = ? LIMIT 1").get(subject)) {
+        alertAdmins({
+          subject,
+          what: `<b>${String(b?.name || '').replace(/[<>&"]/g, '')}</b> הגיע החודש לתקרת העלות (כ-₪${Math.round(spent)} מתוך ₪${Math.round(cap)}). הבדיקות וה-AI שלו נעצרו עד 1 לחודש. שאר המערכת עובדת.`,
+          todo: 'לבדוק בעמוד מצב המערכת מה צרך. אם זה שימוש לגיטימי, אפשר להעלות את COST_CAP_PCT ב-Railway, או לדבר עם העסק על מסלול.',
+          link: '/superadmin/status',
+        });
+      }
+    }
+    return stop;
+  };
   const ai =
     options.ai !== undefined
       ? options.ai
       : createAi({
+          gate: spendGate,
           onAuthError: (detail) =>
             alertAdmins({
               subject: 'ה-AI הפסיק לעבוד: מפתח Anthropic',
@@ -120,7 +159,7 @@ export function createApp(db, options = {}) {
     if (Date.now() - (costChecked.get(businessId) || 0) < 15 * 60e3) return;
     costChecked.set(businessId, Date.now());
     const month = monthKey();
-    const ils = store.db.prepare('SELECT * FROM api_usage WHERE business_id = ? AND month = ?').all(businessId, month).reduce((s, r) => s + costOf(r), 0) * USD_RATE;
+    const ils = monthCost(businessId);
     if (ils <= costLimit) return;
     const b = store.businessById(businessId);
     const subject = `עלות גבוהה ב-${month}: ${b?.name || `עסק ${businessId}`}`;
@@ -157,12 +196,12 @@ export function createApp(db, options = {}) {
     const admins = [...new Set([...store.superadminEmails(), ...String(process.env.SUPERADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)])];
     notifier.serviceQuota({ admins, service: 'SerpApi', detail }).catch((err) => console.error('[notify] serviceQuota failed:', err));
   };
-  const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp'), onQuota });
+  const serp = options.serp !== undefined ? options.serp : createSerp({ onCall: () => meter.record('serp'), onQuota, gate: spendGate });
   const serpSync = serp ? createSerpSync({ store, serp, notifier }) : null;
   const competitors = serp ? createCompetitors({ store, serp }) : null;
   const health = serp ? createHealth({ store, serp, ai }) : null;
   const rankings = serp ? createRankings({ store, serp }) : null;
-  const answerEngines = options.answerEngines ?? createAnswerEngines({ onCall: (name) => meter.record(name) });
+  const answerEngines = options.answerEngines ?? createAnswerEngines({ onCall: (name) => meter.record(name), gate: spendGate });
   const visibility = createVisibility({ store, serp, ai, extra: answerEngines });
   const cardcom = options.cardcom !== undefined ? options.cardcom : createCardcom();
   const billing = cardcom ? createBilling({ store, cardcom, notifier }) : null;
@@ -227,5 +266,5 @@ export function createApp(db, options = {}) {
     console.error(`[http] ${req.method} ${req.originalUrl}${req.user ? ` · ${req.user.email}` : ''}${req.business ? ` · ${req.business.name}` : ''}:`, err);
     res.status(500).send(errorPage('אירעה שגיאה בשרת, נסו שוב מאוחר יותר'));
   });
-  return { app, store, mailer, notifier, pusher, adminEmails: ctx.adminEmails, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, health, rankings, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing, health, rankings };
+  return { app, store, mailer, notifier, pusher, spendGate, adminEmails: ctx.adminEmails, jobs: createJobs({ store, notifier, ai, googleSync, serpSync, visibility, billing, whatsapp, competitors, health, rankings, ctx, backups: options.backups ?? true }), googleSync, serpSync, visibility, billing, health, rankings };
 }

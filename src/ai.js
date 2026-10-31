@@ -188,7 +188,7 @@ function textOf(message) {
  * Returns an AI helper, or null when no Anthropic credentials are configured.
  * `client` can be injected for tests.
  */
-export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL, onUsage = null, onAuthError = null } = {}) {
+export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model = AI_MODEL, onUsage = null, onAuthError = null, gate = null } = {}) {
   // A key pasted with spaces, a line break or quotes around it still works.
   apiKey = String(apiKey ?? '').trim().replace(/^["']|["']$/g, '');
   if (!client && !apiKey) return null;
@@ -201,6 +201,9 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
    * the main model, so a cheaper answer never costs a failed one.
    */
   async function create(params, cheap = false) {
+    // Over its monthly spending cap: no AI for this business until the month turns.
+    const stop = gate?.();
+    if (stop) throw Object.assign(new AiError(stop), { capped: true });
     if (!cheap || !light || light === params.model) return anthropic.beta.messages.create(params);
     const { betas, fallbacks, ...rest } = params;
     const lightParams = { ...rest, model: light };
@@ -412,7 +415,7 @@ export function createAi({ client, apiKey = process.env.ANTHROPIC_API_KEY, model
       const content = `הנושאים האפשריים: ${TOPICS.join(', ')}\n<feedback>\n${items
         .map((i) => `#${i.id} (${i.rating}★): ${String(i.text).replace(/\s+/g, ' ').slice(0, 800)}`)
         .join('\n')}\n</feedback>`;
-      const text = await ask(TAG_SYSTEM, content, 'low', { type: 'json_schema', schema: TAG_SCHEMA });
+      const text = await ask(TAG_SYSTEM, content, 'low', { type: 'json_schema', schema: TAG_SCHEMA }, true);
       let parsed;
       try {
         parsed = JSON.parse(text);

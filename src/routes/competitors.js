@@ -31,6 +31,8 @@ export function competitorRoutes(ctx, { serp, competitors }) {
   router.post('/competitors/find', manager, async (req, res) => {
     if (!serp) return page(req, res);
     const query = String(req.body.q ?? '').trim().slice(0, 500);
+    const over = ctx.usage.take(req.business, 'place_search');
+    if (over) return page(req, res, { query, error: over });
     try {
       const found = await serp.find(query);
       if (found.direct) return add(req, res, found.direct);
@@ -58,7 +60,8 @@ export function competitorRoutes(ctx, { serp, competitors }) {
       return page(req, res, { error: `המסלול שלכם כולל עד ${req.plan.competitors} מתחרים. כדי להוסיף, הסירו מתחרה או שדרגו את המסלול.` });
     }
     const c = store.addCompetitor(req.business.id, p);
-    if (!c.checked_at) await competitors.check(c);
+    // The first check of a new competitor counts, so adding and removing can't go around the limit.
+    if (!c.checked_at && !ctx.usage.take(req.business, 'place_search')) await competitors.check(c);
     res.redirect(303, '/admin/competitors?added=1');
   }
 
