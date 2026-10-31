@@ -19,7 +19,6 @@ function networkSection() {
   return `<section class="lp-band net-band" id="network">
   <div class="net-split">
     <div class="net-text">
-      <span class="hero-pill"><b>לרשתות</b>כמה סניפים, חשבון אחד</span>
       <h2>כל הסניפים שלכם בגוגל, במסך אחד</h2>
       <p>יש לכם יותר מסניף אחד? מהפרופיל השני בגוגל, החשבון הופך לחשבון רשת. כל סניף נוסף ב-20% הנחה, וכל כלי הרשת כלולים בלי תוספת.</p>
       <ul class="net-lp-list">${NETWORK_TOOLS.map(([ic, t, d]) => `<li><span>${icon(ic, 18)}</span><div><b>${h(t)}</b><small>${h(d)}</small></div></li>`).join('')}</ul>
@@ -134,38 +133,10 @@ const G_LOGO = '<svg class="lp-g" width="18" height="18" viewBox="0 0 48 48" ari
 
 /** The product, drawn in HTML: the main dashboard, with an AI score and an alert floating over it. */
 function heroVisual() {
-  const bars = [38, 52, 44, 61, 70, 58, 49, 66, 74, 63, 80, 72, 88, 95];
-  const stat = (label, value, hint, up = true) =>
-    `<span class="lp-mstat"><small>${label}</small><b>${value}</b><i class="${up ? 'up' : 'down'}">${hint}</i></span>`;
-  return `<div class="lp-visual" aria-hidden="true">
-    <div class="lp-browser">
-      <div class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il/admin</span><em class="lp-linked">${G_LOGO} מחובר לגוגל מיי ביזנס ✓</em></div>
-      <div class="lp-app">
-        <div class="lp-app-side"><b></b><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="lp-app-main">
-          <div class="lp-app-cover"><div><small>בוקר טוב, דנה</small><b>ביסטרו הגפן</b></div><span>30 ימים אחרונים ▾</span></div>
-          <div class="lp-mstats">
-            ${stat('דירוג בגוגל', '4.7★', '▲ 0.1')}
-            ${stat('צפיות בפרופיל', '5,916', '▲ 12%')}
-            ${stat('שיחות והגעה', '708', '▲ 8%')}
-            ${stat('מיקום במפות', '2.5', '▲ 1.1')}
-          </div>
-          <div class="lp-mchart">
-            <small>פעולות של לקוחות בפרופיל</small>
-            <div class="lp-mbars">${bars.map((v) => `<i style="height:${v}%"><u style="height:${Math.round(v * 0.45)}%"></u></i>`).join('')}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="lp-float lp-float-ai">
-      <span class="lp-ring" style="--p:62"><b>62</b></span>
-      <span><small>נראות ב-AI</small><b>ממליצים עליכם</b><i class="up">▲ 21 נק׳ החודש</i></span>
-    </div>
-    <div class="lp-float lp-float-alert">
-      <span class="lp-float-icon">★</span>
-      <span><b>ביקורת חדשה 5★ בגוגל</b><small>"הפסטה הכי טובה בעיר"</small></span>
-    </div>
-  </div>`;
+  return `<figure class="lp-visual lp-hero-shot">
+    <span class="lp-browser-bar"><i></i><i></i><i></i><span>gofive.co.il</span></span>
+    <img src="${shot('dashboard.jpg')}" alt="הדשבורד של GoFive, על עסק לדוגמה" width="1120" height="730" fetchpriority="high">
+  </figure>`;
 }
 
 export const LEAD_KINDS = { agency: 'סוכנות / משווק', chain: 'רשת עם יותר מ-10 סניפים', other: 'אחר', callback: 'בקשה לשיחה מהאתר', support: 'פנייה לעזרה מתוך המערכת', pilot: 'משוב מפיילוט' };
@@ -280,15 +251,6 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     ['אפשר לבטל?', 'כן, בכל רגע. במסלול חודשי אין התחייבות, ובמסלול שנתי משלמים מראש על 10 חודשים ומקבלים 12.'],  ];
   const start = trialOpen ? `${TRIAL_DAYS} ימים חינם` : 'להתחיל עכשיו';
   const trial = signupOpen ? `<a class="btn lp-cta" href="/register">${start}</a>` : '<a class="btn lp-cta" href="/login">כניסה</a>';
-  const engines = [
-    ['Google', 'google'],
-    ['Google Maps', 'googlemaps'],
-    ['ChatGPT', 'chatgpt'],
-    ['Gemini', 'gemini'],
-    ['Perplexity', 'perplexity'],
-    ['Claude', 'claude'],
-    ['AI Overviews', 'google'],
-  ];
 
   // The bento: each tile shows the feature itself, not just a sentence about it.
   const tile = (cls, ic, title, text, art = '') =>
@@ -306,7 +268,7 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
   </div>`;
   const rankGrid = `<div class="lp-art lp-rank">${[3, 2, 4, 1, 1, 2, 5, 3, 7].map((n) => `<i class="r${n <= 3 ? 'g' : n <= 5 ? 'm' : 'b'}">${n}</i>`).join('')}</div>`;
   const review = `<div class="lp-art lp-review"><div class="lp-rv"><b>מיכל א.</b> <span>★★★★★</span><p>שירות מקסים, נחזור!</p></div>
-    <div class="lp-rv lp-rv-reply"><small>${icon('spark', 12)} תשובה שה-AI ניסח</small><p>תודה מיכל! שמחנו לארח, מחכים לכם שוב 💜</p></div></div>`;
+    <div class="lp-rv lp-rv-reply"><small>${icon('spark', 12)} תשובה שה-AI ניסח</small><p>תודה מיכל, שמחנו לארח אתכם. מחכים לכם שוב.</p></div></div>`;
   const aiArt = `<div class="lp-art lp-ai-mini">${[['ChatGPT', 'yes'], ['Gemini', 'yes'], ['Perplexity', 'no'], ['Claude', 'yes']]
     .map(([n, s]) => `<span><b>${n}</b><i class="${s}">${s === 'yes' ? '✓ הוזכרתם' : '✗ לא'}</i></span>`)
     .join('')}</div>`;
@@ -332,31 +294,18 @@ export function landingView({ signupOpen, trialOpen = false, contactSent = false
     path: '/',
     body: `
 <section class="lp-hero">
-  <div class="lp-hero-glow" aria-hidden="true"></div>
   <div class="lp-hero-text">
-    <span class="lp-pill lp-pill-g">${G_LOGO}<span>בנויה על <b class="lp-gbp">Google Business Profile</b></span></span>
-    <h1>מנהלים את <em>גוגל מיי ביזנס</em> של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
+    <h1>מנהלים את גוגל מיי ביזנס של העסק, ומקבלים יותר לקוחות מגוגל וגם מה-AI</h1>
     <p class="lp-lead">GoFive מתחברת לפרופיל העסק בגוגל ומראה בדשבורד אחד את הביקורות, הצפיות והשיחות, את המיקום במפות ואם ה-AI ממליץ עליכם. ובכל שבוע: מה לעשות כדי לעלות.</p>
     <div class="lp-actions">${trial}<a class="btn lp-ghost" href="#screens">${icon('search', 18)} איך זה נראה מבפנים</a></div>
-    ${isEn() ? '' : `<a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span><b>צפו בסרטון</b><small>GoFive ב-36 שניות</small></span></a>`}
-    <div class="lp-checks">
-      <span>${icon('check', 16)}בלי התחייבות</span>
-      <span>${icon('check', 16)}בעברית מלאה</span>
-      <span>${icon('check', 16)}עומד בכללי גוגל</span>
-    </div>
+    ${isEn() ? '' : `<a class="lp-watch" href="#video" onclick="var v=document.querySelector('#video video');if(v){setTimeout(function(){v.play()},500)}"><span class="lp-watch-play">▶</span><span>צפו בסרטון קצר (36 שניות)</span></a>`}
   </div>
   ${heroVisual()}
-</section>
-
-<section class="lp-engines" aria-label="איפה אנחנו בודקים">
-  <span class="lp-engines-label">מתחילים מהפרופיל בגוגל מיי ביזנס, ובודקים אתכם בכל מקום שלקוחות מחפשים</span>
-  <div class="lp-engines-row">${engines.map(([name, logo]) => `<span class="lp-engine"><img src="${asset(`brands/${logo}.svg`)}" alt="" width="24" height="24" loading="lazy">${name}</span>`).join('')}</div>
 </section>
 
 ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
   <div class="lp-video-wrap">
   <div class="lp-video-text">
-    <span class="lp-kicker">GoFive ב-36 שניות</span>
     <h2>ככה עסקים נמצאים בגוגל וב-AI</h2>
     <ul>
       <li>קישור, QR ווואטסאפ שמביאים ביקורות</li>
@@ -375,7 +324,6 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
 
 <section class="lp-band" id="why">
   <div class="lp-head">
-    <span class="lp-kicker">למה דווקא גוגל מיי ביזנס</span>
     <h2>הפרופיל בגוגל הוא חלון הראווה של העסק</h2>
     <p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p>
   </div>
@@ -389,8 +337,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
           <span><i>C</i><b>מסעדת הנמל</b><em>4.3 ★ (2.1K)</em><u>נסגר בקרוב</u></span>
         </div>
       </div>
-      <div class="lp-why-body"><span class="lp-why-tag">${icon('pin', 15)} חיפוש ומפות</span>
-        <h3>שם לקוחות מוצאים אתכם</h3>
+      <div class="lp-why-body"><h3>שם לקוחות מוצאים אתכם</h3>
         <p>בחיפוש "ליד" ובגוגל מפות מוצגים קודם הפרופילים. מי שלמעלה מקבל את הלקוח.</p></div>
     </article>
     <article class="lp-why-card">
@@ -399,8 +346,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
         <div class="lp-wdist">${[[5, 78], [4, 14], [3, 4], [2, 2], [1, 2]].map(([n, v]) => `<span><small>${n}</small><i><u style="width:${v}%"></u></i></span>`).join('')}</div>
         <div class="lp-wreply">${icon('check', 13)} ענינו ל-96% מהביקורות</div>
       </div>
-      <div class="lp-why-body"><span class="lp-why-tag">${icon('star', 15)} ביקורות</span>
-        <h3>ביקורות מכריעות</h3>
+      <div class="lp-why-body"><h3>ביקורות מכריעות</h3>
         <p>דירוג, כמות ומענה לביקורות: זה מה שלקוחות בודקים, וגם מה שגוגל שוקלת.</p></div>
     </article>
     <article class="lp-why-card">
@@ -408,8 +354,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
         <div class="lp-wbubble user">איפה כדאי לאכול ליד דיזנגוף?</div>
         <div class="lp-wbubble bot">${icon('spark', 13)} אני ממליץ על <b>ביסטרו הגפן</b>: פסטה טרייה, דירוג 4.7 בגוגל ושירות מוערך.<span class="lp-wsrc">${G_LOGO} Google Maps</span></div>
       </div>
-      <div class="lp-why-body"><span class="lp-why-tag">${icon('spark', 15)} עוזרי AI</span>
-        <h3>גם ה-AI קורא אותו</h3>
+      <div class="lp-why-body"><h3>גם ה-AI קורא אותו</h3>
         <p>ChatGPT וגוגל AI נשענים על פרופילים וביקורות כשהם ממליצים על עסק באזור.</p></div>
     </article>
   </div>
@@ -418,7 +363,6 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
 
 <section class="lp-band alt" id="features">
   <div class="lp-head">
-    <span class="lp-kicker">הכול במקום אחד</span>
     <h2>כל מה שצריך כדי שהפרופיל בגוגל יעבוד בשבילכם</h2>
     <p>במקום להיכנס לגוגל מיי ביזנס כל יום ולנחש, מערכת אחת שרואה את כל התמונה ואומרת מה לעשות.</p>
   </div>
@@ -428,20 +372,11 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
     ${tile('wide', 'pin', 'קידום בגוגל מפות', 'תוכנית קצרה לכל שבוע, מהנתונים שלכם: מה להשלים בפרופיל, כמה ביקורות חסרות מול המוביל באזור, ובאיזה כיוון סביב העסק אתם חלשים. בדיקה שבועית מ-9 נקודות מראה אם עליתם.', mapsArt)}
     ${tile('', 'qr', 'עוד ביקורות בגוגל', 'שלט QR מעוצב ובקשת דירוג בוואטסאפ, גם אוטומטית אחרי כל ביקור.', qr)}
   </div>
-  <div class="lp-more">
-    <span>${icon('bell', 16)} התראה כשמשהו יורד</span>
-    <span>${icon('rivals', 16)} השוואה למתחרים</span>
-    <span>${icon('report', 16)} דוח חודשי</span>
-    <span>${icon('chat', 16)} פוסטים עם AI</span>
-    <a href="#network">${icon('branches', 16)} רשתות וסניפים</a>
-    <span>${icon('check', 16)} עברית ואנגלית</span>
-  </div>
 </section>
 
 <section class="lp-band ai-band" id="ai">
   <div class="ai-split">
     <div class="ai-text">
-      <span class="hero-pill"><b>חדש</b>נראות ב-AI</span>
       <h2>כשלקוח שואל את ChatGPT "איפה כדאי…", אתם בתשובה?</h2>
       <p>עוזרי AI הם גוגל החדש. הם עונים על שאלות מקומיות עם רשימה קצרה של עסקים, ומי שלא בה, לא קיים. GoFive בודקת את זה בשבילכם כל שבוע, ואומרת בדיוק מה לעשות.</p>
       <ul class="ai-list">
@@ -464,10 +399,10 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
 </section>
 
 <section class="lp-band" id="how">
-  <div class="lp-head"><span class="lp-kicker">מתחילים בכמה דקות</span><h2>איך זה עובד</h2></div>
+  <div class="lp-head"><h2>איך זה עובד</h2></div>
   <div class="lp-steps">
     <div class="lp-step">
-      <div class="lp-step-top"><span class="lp-step-n">1</span><em>דקה אחת</em></div>
+      <div class="lp-step-top"><span class="lp-step-n">1</span></div>
       <h3>מחברים את גוגל מיי ביזנס</h3>
       <p>עם חשבון הגוגל של העסק, או בהדבקת קישור לגוגל מפות.</p>
       <div class="lp-step-art" aria-hidden="true">
@@ -477,7 +412,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
       </div>
     </div>
     <div class="lp-step">
-      <div class="lp-step-top"><span class="lp-step-n">2</span><em>אוטומטי, כל שבוע</em></div>
+      <div class="lp-step-top"><span class="lp-step-n">2</span></div>
       <h3>המערכת בודקת</h3>
       <p>פרופיל, מפות, מתחרים ו-AI. הכול רץ לבד.</p>
       <div class="lp-step-art lp-checking" aria-hidden="true">
@@ -488,7 +423,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
       </div>
     </div>
     <div class="lp-step">
-      <div class="lp-step-top"><span class="lp-step-n">3</span><em>10 דקות בשבוע</em></div>
+      <div class="lp-step-top"><span class="lp-step-n">3</span></div>
       <h3>עושים את מה שחשוב</h3>
       <p>תוכנית קצרה לכל שבוע כדי לעלות במפות, ותשובות שה-AI כבר ניסח.</p>
       <div class="lp-step-art lp-todo" aria-hidden="true">
@@ -501,7 +436,7 @@ ${isEn() ? '' : `<section class="lp-band lp-video-band" id="video">
 </section>
 
 <section class="lp-band" id="screens">
-  <div class="lp-head"><span class="lp-kicker">מבפנים</span><h2>ככה זה נראה מבפנים</h2><p>צילומי מסך מעסק לדוגמה. אחרי ההרשמה רואים את אותם המסכים עם הנתונים שלכם.</p></div>
+  <div class="lp-head"><h2>ככה זה נראה מבפנים</h2><p>צילומי מסך מעסק לדוגמה. אחרי ההרשמה רואים את אותם המסכים עם הנתונים שלכם.</p></div>
   <div class="lp-screens">
     <div class="lp-screens-tabs" role="tablist" aria-label="מסכים במערכת">${SCREENS.map(([key, label], i) => `<button type="button" role="tab" id="shot-tab-${key}" aria-controls="shot-${key}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-shot="${key}">${h(label)}</button>`).join('')}</div>
     <figure class="lp-screens-frame">
@@ -528,7 +463,7 @@ d.addEventListener('close',function(){if(last)last.focus()})})();</script>
 </section>
 
 <section class="lp-band alt" id="pricing">
-  <div class="lp-head"><span class="lp-kicker">מחירים</span><h2>מחירים פשוטים, בלי הפתעות</h2><p>מחיר לפרופיל אחד בגוגל, ו-20% הנחה על כל סניף נוסף. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
+  <div class="lp-head"><h2>מחירים פשוטים, בלי הפתעות</h2><p>מחיר לפרופיל אחד בגוגל, ו-20% הנחה על כל סניף נוסף. בלי דמי הקמה, בלי התחייבות, מבטלים בכל רגע.</p></div>
   ${pricingCards({
     idPrefix: 'lp',
     compact: true,
@@ -550,7 +485,6 @@ ${networkSection()}
 <section class="lp-band" id="faq">
   <div class="lp-faq">
     <aside class="lp-faq-side">
-      <span class="lp-kicker">שאלות נפוצות</span>
       <h2>כל מה שרציתם לשאול</h2>
       <p>על גוגל מיי ביזנס, על החיבור, על ה-AI ועל המחירים. לא מצאתם תשובה? <a href="#talk">השאירו פרטים</a> ונחזור אליכם.</p>
       <div class="lp-faq-card">
@@ -570,7 +504,6 @@ ${networkSection()}
 <div class="lp-sticky" aria-hidden="false">${trial}<a class="btn lp-ghost-dark" href="#screens">צילומי מסך</a></div>
 
 <section class="lp-final">
-  <div class="lp-hero-glow" aria-hidden="true"></div>
   <h2>הפרופיל שלכם בגוגל יכול להביא הרבה יותר לקוחות</h2>
   <p>מחברים את גוגל מיי ביזנס תוך דקה ורואים את כל הנתונים. בלי התחייבות, מבטלים בכל רגע.</p>
   <div class="lp-actions center">${trial}<a class="btn lp-ghost" href="#talk">לדבר איתנו</a></div>
