@@ -546,6 +546,8 @@ body.v2-page { background: var(--page); }
 @media (max-width: 980px) {
   .lx-hero { padding: 44px 0 24px; }
   .lx-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  /* on a phone or tablet the cards stacked into a whole screen of their own: the words carry the hero there */
+  .lx-bento { display: none; }
   .lx-hero-text { text-align: center; }
   .lx-hero h1 { margin-inline: auto; }
   .lx-lead { margin-inline: auto; }
