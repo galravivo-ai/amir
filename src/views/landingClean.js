@@ -452,8 +452,6 @@ body.v2-page { background: var(--page); }
   radial-gradient(520px 380px at 92% 8%, rgba(255, 196, 46, .22), transparent 62%),
   radial-gradient(900px 500px at 50% 120%, rgba(91, 61, 245, .45), transparent 70%),
   linear-gradient(165deg, #0d0a26 0%, #17114a 55%, #221a6e 100%); }
-/* the night meets the page in a soft curve */
-.lx-hero::after { content: ''; position: absolute; inset: auto 0 -1px 0; height: 56px; z-index: -1; background: var(--page); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
 .lx-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; }
 .lx-hero h1 { margin: 0; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -.03em; color: #fff; max-width: 15ch; }
 .lx-hero h1 em { font-style: normal; color: #ffd23f; }
@@ -553,7 +551,6 @@ body.v2-page { background: var(--page); }
 
 @media (max-width: 980px) {
   .lx-hero { padding: 48px 0 64px; }
-  .lx-hero::after { height: 26px; }
   .lx-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
   /* on a phone or tablet the cards stacked into a whole screen of their own: the words carry the hero there */
   .lx-bento { display: none; }
