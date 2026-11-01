@@ -3362,3 +3362,18 @@ body.app .flash, body.app .warn, body.app .error { border-radius: 16px; }
   body.app .page-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   body.app .page-tabs a { flex: none; }
 }
+
+/* The site header on a phone: one row (logo, language, sign-up, menu); the login link lives in the menu. */
+@media (max-width: 860px) {
+  .site-head:not(.menu-open) { flex-wrap: nowrap; }
+  .site-head .brand { flex: none; }
+  .site-cta { flex-wrap: nowrap; gap: .5rem; min-width: 0; }
+  .site-cta > a:not(.btn):not(.lang-switch) { display: none; }
+  .site-head.menu-open nav .nav-login { display: block; font-weight: 800; color: var(--purple); }
+  .site-cta .btn { white-space: nowrap; padding-inline: .9em; }
+}
+@media (max-width: 400px) {
+  .site-head { gap: .5rem; }
+  .site-cta > a.lang-switch { padding: .15rem .5rem; font-size: .78rem; }
+  .site-cta .btn { font-size: .85rem; }
+}

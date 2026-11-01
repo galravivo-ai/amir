@@ -427,6 +427,7 @@ body.v2-page { margin: 0; background: #fff; color: var(--ink); font-family: var(
 
 /* ============================================================ the bento world, on the landing page */
 :root { --ease-out: cubic-bezier(.23, 1, .32, 1); --page: #f5f3fb; --card-sh: 0 1px 2px rgba(23, 18, 58, .05), 0 22px 50px -34px rgba(40, 20, 120, .45); }
+.lx-hero .lx-tile { box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 30px 60px -30px rgba(0, 0, 0, .55); }
 body.v2-page { background: var(--page); }
 ::selection { background: rgba(91, 61, 245, .18); color: #17123a; }
 .v2-main :focus-visible { outline: 3px solid rgba(91, 61, 245, .45); outline-offset: 3px; border-radius: 12px; }
@@ -440,20 +441,27 @@ body.v2-page { background: var(--page); }
 .lx-btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
 .lx-btn, .v2-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px; border-radius: 999px; font-weight: 700; font-size: 1.02rem; border: 1.5px solid transparent; transition: transform 160ms var(--ease-out), background-color 200ms ease, box-shadow 200ms ease; }
 .lx-btn:active, .v2-btn:active, .lx-pill:active { transform: scale(.97); }
-.lx-btn.night { background: #17123a; color: #fff !important; box-shadow: 0 14px 28px -14px rgba(23, 18, 58, .75); }
-.lx-btn.night:hover { background: #2a2170; text-decoration: none; }
-.lx-btn.ghost { background: #fff; color: #17123a !important; border-color: #e4e0f2; }
-.lx-btn.ghost:hover { border-color: #c9bfff; text-decoration: none; }
+.lx-btn.night { background: #ffd23f; color: #1c1650 !important; box-shadow: 0 16px 30px -14px rgba(255, 196, 46, .7); }
+.lx-btn.night:hover { background: #ffdb5c; text-decoration: none; }
+.lx-btn.ghost { background: rgba(255, 255, 255, .08); color: #fff !important; border-color: rgba(255, 255, 255, .28); }
+.lx-btn.ghost:hover { background: rgba(255, 255, 255, .14); text-decoration: none; }
 
 /* hero: the words, and the dashboard itself built as a bento beside them */
-.lx-hero { position: relative; padding: 72px 0 40px; background: radial-gradient(800px 520px at 8% 10%, rgba(139, 109, 255, .16), transparent 62%), radial-gradient(700px 420px at 95% 0%, rgba(255, 210, 63, .14), transparent 60%); overflow: hidden; }
+.lx-hero { position: relative; isolation: isolate; padding: 84px 0 96px; color: #fff; overflow: hidden; background:
+  radial-gradient(620px 420px at 12% 18%, rgba(139, 109, 255, .55), transparent 65%),
+  radial-gradient(520px 380px at 92% 8%, rgba(255, 196, 46, .22), transparent 62%),
+  radial-gradient(900px 500px at 50% 120%, rgba(91, 61, 245, .45), transparent 70%),
+  linear-gradient(165deg, #0d0a26 0%, #17114a 55%, #221a6e 100%); }
+/* the night meets the page in a soft curve */
+.lx-hero::after { content: ''; position: absolute; inset: auto 0 -1px 0; height: 56px; z-index: -1; background: var(--page); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
 .lx-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; }
-.lx-hero h1 { margin: 0; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -.03em; color: #17123a; max-width: 15ch; }
-.lx-hero h1 em { font-style: normal; color: var(--brand); }
-.lx-lead { margin: 22px 0 0; max-width: 46ch; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.6; color: #4d4870; }
-.lx-trust { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 26px; font-size: .9rem; color: #6b6787; font-weight: 600; }
+.lx-hero h1 { margin: 0; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -.03em; color: #fff; max-width: 15ch; }
+.lx-hero h1 em { font-style: normal; color: #ffd23f; }
+.lx-lead { margin: 22px 0 0; max-width: 46ch; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.6; color: #d4cff5; }
+.lx-trust { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 26px; font-size: .9rem; color: #c4bfe6; font-weight: 600; }
 .lx-trust span, .lx-trust a { display: inline-flex; align-items: center; gap: 8px; }
-.lx-trust a { color: #17123a; }
+.lx-trust a { color: #fff; }
+.lx-trust span svg { padding: 4px; border-radius: 50%; background: #fff; box-sizing: content-box; }
 .lx-trust a svg { width: 26px; height: 26px; padding: 7px; border-radius: 50%; background: #ffd23f; color: #17123a; box-sizing: border-box; }
 
 .lx-bento { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
@@ -486,7 +494,7 @@ body.v2-page { background: var(--page); }
 .lx-ai li::before { content: '✓ '; }
 .lx-ai li.n { background: #f2f0f8; color: #8a85a6; }
 .lx-ai li.n::before { content: '— '; }
-.lx-sample { grid-column: span 6; margin: 2px 0 0; text-align: center; font-size: .76rem; color: #8a85a6; }
+.lx-sample { grid-column: span 6; margin: 2px 0 0; text-align: center; font-size: .76rem; color: #a9a3d6; }
 @keyframes lx-in { from { opacity: 0; transform: translateY(14px) scale(.98); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 @keyframes lx-arc { from { stroke-dashoffset: var(--len); } }
 @keyframes lx-needle { from { transform: rotate(-90deg); } }
@@ -544,7 +552,8 @@ body.v2-page { background: var(--page); }
 @keyframes lx-fade { from { opacity: 0; } }
 
 @media (max-width: 980px) {
-  .lx-hero { padding: 44px 0 24px; }
+  .lx-hero { padding: 48px 0 64px; }
+  .lx-hero::after { height: 26px; }
   .lx-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
   /* on a phone or tablet the cards stacked into a whole screen of their own: the words carry the hero there */
   .lx-bento { display: none; }
