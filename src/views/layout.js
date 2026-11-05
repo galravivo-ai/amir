@@ -225,6 +225,7 @@ ${SKIP()}
         ['/admin/responses', 'משוב מהסקר', 'inbox', openCount, { tip: 'מה שלקוחות כתבו בסקר שלכם, דרך שלט ה-QR או קישור ששלחתם. פרטי, לא מתפרסם בגוגל' }],
         ['/admin/campaigns', 'איסוף ביקורות', 'qr', 0, { also: ['/admin/requests', '/admin/poster', '/admin/widget'], tip: 'קמפיינים, שלט QR וקישורים לבקשת ביקורת' }],
         ['/admin/google/posts', 'פוסטים בגוגל', 'chat'],
+        !notConnected && role !== 'viewer' && ['/admin/google/profile', 'הפרופיל בגוגל', 'pin', 0, { also: ['/admin/google/locations'], tip: 'עריכת התיאור, הקטגוריות, שעות הפתיחה, הטלפון והאתר בפרופיל בגוגל' }],
       ],
     },
     {

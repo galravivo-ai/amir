@@ -3410,3 +3410,5 @@ body.app .flash, body.app .warn, body.app .error { border-radius: 16px; }
   .pe-grid2 { grid-template-columns: minmax(0, 1fr); }
   .pe-range input { width: 118px; }
 }
+.pe-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.pe-pick .card { display: grid; gap: 4px; color: inherit; }

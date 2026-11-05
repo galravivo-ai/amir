@@ -201,6 +201,14 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
     render(req, res, 'עריכת הפרופיל', profileEditView({ loc, profile, csrf: req.user.csrf, edits: store.profileEdits(loc.id), aiAvailable, saved: req.query.saved === '1', ...extra }));
   }
   router.get('/google/locations/:id/profile', manager, (req, res) => profilePage(req, res));
+  // From the menu: straight to the profile when there is one branch, a choice when there are more.
+  router.get('/google/profile', manager, (req, res) => {
+    const locs = store.googleLocations(req.business.id).filter((l) => l.source !== 'serp' && l.enabled && !l.pending_pay);
+    if (!sync || !locs.length) return res.redirect(303, '/admin/google');
+    if (locs.length === 1) return res.redirect(303, `/admin/google/locations/${locs[0].id}/profile`);
+    render(req, res, 'הפרופיל בגוגל', `<div class="page-head"><h1>הפרופיל בגוגל</h1></div><p class="muted">איזה סניף לערוך?</p>
+      <div class="pe-pick">${locs.map((l) => `<a class="card" href="/admin/google/locations/${l.id}/profile"><b>${h(l.title)}</b><span class="muted small">${h(l.address)}</span></a>`).join('')}</div>`);
+  });
 
   router.get('/google/categories', manager, async (req, res) => {
     const q = String(req.query.q ?? '').trim().slice(0, 60);
