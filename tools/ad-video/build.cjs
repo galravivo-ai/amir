@@ -38,6 +38,25 @@ const PAGES = ['system', 'reviews', 'gbp'];
       });
     }, [VARIANTS[v] || {}, w, h, f === 'feed']);
     await page.goto('file://' + path.join(__dirname, PAGES.includes(v) ? `${v}.html` : 'ad.html'), { waitUntil: 'load' });
+    // The GoFive logo at the top of every frame (inside the Stories safe area), hidden on the closing call.
+    await page.evaluate(([feed]) => {
+      const u = innerWidth / 1080;
+      const el = document.createElement('div');
+      el.id = 'toplogo';
+      el.style.cssText = `position:fixed;z-index:50;left:0;right:0;top:${(feed ? 56 : 210) * u}px;display:flex;justify-content:center;align-items:center;gap:${16 * u}px;direction:ltr;pointer-events:none`;
+      el.innerHTML = `<img src="${new URL('../../public/brand/gofive-mark.svg', location.href)}" style="width:${76 * u}px;height:${76 * u}px"><b style="font-family:Rubik,sans-serif;font-weight:700;font-size:${56 * u}px;color:#fff;letter-spacing:-.02em">GoFive</b>`;
+      document.body.appendChild(el);
+      // room for it: the scenes start below the logo
+      const st = document.createElement('style');
+      st.textContent = `.scene{padding-top:${(feed ? 150 : 320) * u}px !important}`;
+      document.head.appendChild(st);
+      const original = window.render;
+      window.render = (t) => {
+        original(t);
+        const end = document.getElementById('cta') || document.getElementById('s5');
+        el.style.opacity = end && end.style.display !== 'none' ? 0 : 1;
+      };
+    }, [f === 'feed']);
     await page.evaluate(() => document.fonts.ready);
     const frames = fs.mkdtempSync(path.join(out, `.frames-${v}-${f}-`));
     const total = await page.evaluate(() => window.TOTAL);
