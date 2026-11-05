@@ -1,6 +1,8 @@
-// Builds the GoFive Facebook/Instagram ad videos from ad.html, frame by frame.
-//   node tools/ad-video/build.cjs [outDir] [variant] [format]
-// variant: general | restaurant | salon | garage (default: all)
+// Builds the GoFive Facebook/Instagram ad videos, frame by frame.
+//   node tools/ad-video/build.cjs [outDir] [video] [format]
+// video: system | reviews | gbp (their own pages), or general | restaurant | salon | garage
+//        (the first ad, ad.html); default: all
+// MUSIC=path/to/track.mp3 adds the track under the video, faded in and out.
 // format: story (1080x1920, 9:16) | feed (1080x1350, 4:5) (default: both)
 // Needs Playwright's Chromium and ffmpeg. The sample businesses are illustrations.
 const { chromium } = require('playwright');
@@ -16,13 +18,13 @@ const VARIANTS = {
 };
 const FORMATS = { story: [1080, 1920], feed: [1080, 1350] };
 const FPS = 30;
+const PAGES = ['system', 'reviews', 'gbp'];
 
 (async () => {
   const out = path.resolve(process.argv[2] || 'ad-videos');
-  const vs = process.argv[3] ? [process.argv[3]] : Object.keys(VARIANTS);
+  const vs = process.argv[3] ? [process.argv[3]] : [...PAGES, ...Object.keys(VARIANTS)];
   const fs_ = process.argv[4] ? [process.argv[4]] : Object.keys(FORMATS);
   fs.mkdirSync(out, { recursive: true });
-  const html = 'file://' + path.join(__dirname, 'ad.html');
   const browser = await chromium.launch();
   for (const v of vs) for (const f of fs_) {
     const [w, h] = FORMATS[f];
@@ -34,8 +36,8 @@ const FPS = 30;
         document.documentElement.style.setProperty('--h', h + 'px');
         if (feed) document.body.classList.add('feed');
       });
-    }, [VARIANTS[v], w, h, f === 'feed']);
-    await page.goto(html, { waitUntil: 'load' });
+    }, [VARIANTS[v] || {}, w, h, f === 'feed']);
+    await page.goto('file://' + path.join(__dirname, PAGES.includes(v) ? `${v}.html` : 'ad.html'), { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
     const frames = fs.mkdtempSync(path.join(out, `.frames-${v}-${f}-`));
     const total = await page.evaluate(() => window.TOTAL);
@@ -44,7 +46,9 @@ const FPS = 30;
       await page.screenshot({ path: path.join(frames, `${String(i).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92 });
     }
     const file = path.join(out, `GoFive-ad-${v}-${f === 'story' ? '9x16' : '4x5'}.mp4`);
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(frames, '%05d.jpg'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'medium', '-movflags', '+faststart', file]);
+    const music = process.env.MUSIC;
+    const audio = music ? ['-i', music, '-filter_complex', `[1:a]atrim=0:${total},afade=t=in:d=0.4,afade=t=out:st=${total - 1.5}:d=1.5,volume=0.9[a]`, '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k'] : [];
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(frames, '%05d.jpg'), ...audio, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'medium', '-movflags', '+faststart', '-t', String(total), file]);
     fs.rmSync(frames, { recursive: true, force: true });
     await page.close();
     console.log(file);

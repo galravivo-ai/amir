@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><title>GoFive ad</title><link rel="stylesheet" href="kit.css"><script src="engine.js"></script></head>
+<body><div id="root"></div>
+<script>
+const { $, enter, type, count, scenes, cta, ctaRender } = AdKit;
+document.getElementById('root').innerHTML = `
+<section class="scene" id="h">
+  <div class="card review a" id="h1"><div class="stars1">★☆☆☆☆</div><p>"חיכיתי שעה ואף אחד לא חזר אליי"</p><div class="who">לקוח לא מרוצה · ביקורת בגוגל</div></div>
+  <h1 class="a" id="h2">ביקורת אחת כזאת<br><em>מבריחה לקוחות</em></h1>
+</section>
+<section class="scene" id="u">
+  <h2 class="a" id="u1">עם GoFive, לקוח לא מרוצה<br>מגיע <em>אליכם</em>, לא לגוגל</h2>
+  <div class="phone-notif a" id="u2"><span class="ico" style="background:#e5484d">${ICON.bell}</span><div><b>לקוח לא מרוצה השאיר פרטים</b><small>"חיכיתי שעה..." · לחזור אליו עכשיו</small></div></div>
+  <p class="sub a" id="u3">מקבלים התראה מיד, חוזרים אליו ומתקנים</p>
+</section>
+<section class="scene" id="g">
+  <h2 class="a" id="g1">ולקוחות מרוצים מקבלים<br>בקשה <em>לדרג בגוגל</em></h2>
+  <div class="phone-notif a" id="g2"><span class="ico" style="background:#25d366">${ICON.wa}</span><div><b>נו, איך היה אצלנו?</b><small>לחצו לדרג אותנו בגוגל ⭐</small></div></div>
+  <div class="card wait a" id="g3"><span>ביקורות<br>חדשות</span><b class="big" id="g3n">0</b></div>
+</section>
+<section class="scene" id="r">
+  <h2 class="a" id="r1">ותשובה לכל ביקורת,<br><em>בלחיצה</em></h2>
+  <div class="card review a" id="r2">
+    <div class="stars">★★★★★</div><p>"שירות מעולה, ממליץ בחום!"</p><div class="who">דנה כ. · ביקורת חדשה בגוגל</div>
+    <div class="reply"><div class="ai">${ICON.spark} טיוטה של ה-AI, בסגנון שלכם</div><div id="r2t"></div></div>
+    <div class="send"><i id="r2b">שליחה לגוגל</i></div>
+  </div>
+</section>
+<section class="scene" id="f">
+  <h2 class="a" id="f0">וזה רק חלק מהכלים</h2>
+  <div class="tiles"><div class="tile a" id="ft0"><span class="ico" style="background:#e8a100">${ICON.star}</span><b>ביקורות ותשובות AI</b></div><div class="tile a" id="ft1"><span class="ico" style="background:#1d7fe0">${ICON.pin}</span><b>מיקום בגוגל מפות</b></div><div class="tile a" id="ft2"><span class="ico" style="background:#0f9e9e">${ICON.rivals}</span><b>השוואה למתחרים</b></div><div class="tile a" id="ft3"><span class="ico" style="background:#c0398f">${ICON.spark}</span><b>נראות ב-AI</b></div><div class="tile a" id="ft4"><span class="ico" style="background:#e5533d">${ICON.qr}</span><b>QR ווואטסאפ</b></div><div class="tile a" id="ft5"><span class="ico" style="background:#6d4bff">${ICON.report}</span><b>דוח חודשי</b></div></div>
+</section>
+${cta()}
+<p class="sample" id="sample">המחשה · עסק לדוגמה</p>`;
+const REPLY = 'תודה רבה, דנה! שמחים לשמוע, ומחכים לראות אותך שוב.';
+const SC = [['h', 0, 4.4], ['u', 4.4, 9], ['g', 9, 13.6], ['r', 13.6, 18.6], ['f', 18.6, 21.6], ['cta', 21.6, 26]];
+window.TOTAL = 26;
+window.render = (t) => {
+  scenes(t, SC);
+  $('sample').style.opacity = t < 21.6 ? 1 : 0;
+  enter('h1', t, .1, { y: -120, scale: 1.1, dur: .6 }); enter('h2', t, 1.2);
+  enter('u1', t, 4.5); enter('u2', t, 5.4, { y: -80 }); enter('u3', t, 6.6, { y: 30 });
+  enter('g1', t, 9.1); enter('g2', t, 9.9, { y: -80 }); enter('g3', t, 10.8); count('g3n', 18, t, 11, 1.4);
+  enter('r1', t, 13.7); enter('r2', t, 14.2);
+  type('r2t', REPLY, t, 14.8, 30);
+  const sent = t > 14.8 + REPLY.length / 30 + .5;
+  $('r2b').textContent = sent ? 'נשלח לגוגל ✓' : 'שליחה לגוגל'; $('r2b').className = sent ? 'done' : '';
+  enter('f0', t, 18.7); for (let i = 0; i < 6; i++) enter('ft' + i, t, 19 + i * .15, { y: 30, scale: .9 });
+  ctaRender(t, 21.6);
+};
+render(0);
+</script></body></html>

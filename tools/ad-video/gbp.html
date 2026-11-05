@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><title>GoFive ad</title><link rel="stylesheet" href="kit.css"><script src="engine.js"></script></head>
+<body><div id="root"></div>
+<script>
+const { $, enter, type, count, scenes, cta, ctaRender, gauge, gaugeTo, ease } = AdKit;
+const MISS = ['תיאור העסק קצר מדי', 'אין תמונות חדשות', 'לא פורסם פוסט החודש', '12 ביקורות בלי תשובה'];
+const FIXED = ['תיאור העסק הושלם', 'נוספו תמונות חדשות', 'פורסם פוסט חדש', 'כל הביקורות קיבלו תשובה'];
+document.getElementById('root').innerHTML = `
+<section class="scene" id="h">
+  <h1 class="a" id="h1">הפרופיל שלכם בגוגל<br><em>באמת עובד</em> בשבילכם?</h1>
+  <div class="gauge-wrap a" id="h2"><div><small>ציון הפרופיל</small><b id="h2n">0</b><small>מתוך 100</small></div>${gauge('hg')}</div>
+</section>
+<section class="scene" id="m">
+  <h2 class="a" id="m0">גוגל מדרגת עסקים גם<br>לפי הפרופיל. <em>מה חסר אצלכם?</em></h2>
+  <div class="list">${MISS.map((x, i) => `<div class="check a" id="m${i + 1}"><i id="m${i + 1}i">!</i><span>${x}</span></div>`).join('')}</div>
+</section>
+<section class="scene" id="p">
+  <h2 class="a" id="p0"><em>GoFive</em> אומרת בדיוק<br>מה לעשות, כל שבוע</h2>
+  <div class="gauge-wrap a" id="p1"><div><small>ציון הפרופיל</small><b id="p1n">48</b><small>מתוך 100</small></div>${gauge('pg')}</div>
+  <div class="list">${MISS.map((x, i) => `<div class="check a" id="q${i + 1}"><i id="q${i + 1}i">!</i><span id="q${i + 1}s">${x}</span></div>`).join('')}</div>
+</section>
+<section class="scene" id="g">
+  <h2 class="a" id="g0">ועוקבת אחרי המיקום שלכם<br><em>בגוגל מפות</em>, בכל שכונה</h2>
+  <div class="grid a" id="g1">${[3, 2, 1, 4, 1, 1, 6, 2, 3].map((r, i) => `<i class="${r <= 3 ? 'g' : 'm'}${i === 4 ? ' me' : ''}" id="gg${i}">${r}</i>`).join('')}</div>
+  <p class="sub a" id="g2">ומול המתחרים שלכם באזור</p>
+</section>
+<section class="scene" id="f">
+  <h2 class="a" id="f0">והכול במערכת אחת</h2>
+  <div class="tiles"><div class="tile a" id="ft0"><span class="ico" style="background:#e8a100">${ICON.star}</span><b>ביקורות ותשובות AI</b></div><div class="tile a" id="ft1"><span class="ico" style="background:#1d7fe0">${ICON.pin}</span><b>מיקום בגוגל מפות</b></div><div class="tile a" id="ft2"><span class="ico" style="background:#0f9e9e">${ICON.rivals}</span><b>השוואה למתחרים</b></div><div class="tile a" id="ft3"><span class="ico" style="background:#c0398f">${ICON.spark}</span><b>נראות ב-AI</b></div><div class="tile a" id="ft4"><span class="ico" style="background:#e5533d">${ICON.qr}</span><b>QR ווואטסאפ</b></div><div class="tile a" id="ft5"><span class="ico" style="background:#6d4bff">${ICON.report}</span><b>דוח חודשי</b></div></div>
+</section>
+${cta()}
+<p class="sample" id="sample">המחשה · עסק לדוגמה</p>`;
+const SC = [['h', 0, 4.4], ['m', 4.4, 9.2], ['p', 9.2, 14.6], ['g', 14.6, 18.6], ['f', 18.6, 21.6], ['cta', 21.6, 26]];
+window.TOTAL = 26;
+window.render = (t) => {
+  scenes(t, SC);
+  $('sample').style.opacity = t < 21.6 ? 1 : 0;
+  enter('h1', t, .1); enter('h2', t, .8);
+  const s1 = Math.round(48 * ease((t - 1.1) / 1.4)); $('h2n').textContent = s1; gaugeTo('hg', s1);
+  enter('m0', t, 4.5); for (let i = 1; i <= 4; i++) enter('m' + i, t, 5.2 + (i - 1) * .45, { y: 30 });
+  enter('p0', t, 9.3); enter('p1', t, 9.8); for (let i = 1; i <= 4; i++) enter('q' + i, t, 10 + (i - 1) * .1, { y: 20 });
+  let done = 0;
+  for (let i = 1; i <= 4; i++) {
+    const on = t > 10.9 + (i - 1) * .75; if (on) done++;
+    const c = $('q' + i); c.className = 'check a' + (on ? ' ok' : ''); $('q' + i + 'i').innerHTML = on ? ICON.check : '!'; $('q' + i + 's').textContent = on ? FIXED[i - 1] : MISS[i - 1];
+  }
+  const s2 = Math.round(48 + (82 - 48) * ease((t - 10.9) / 3.2)); $('p1n').textContent = s2; gaugeTo('pg', s2);
+  enter('g0', t, 14.7); enter('g1', t, 15.1, { y: 30 });
+  for (let i = 0; i < 9; i++) { const p = ease((t - 15.4 - i * .07) / .45); const c = $('gg' + i); c.style.transform = `scale(${.6 + .4 * p})`; c.style.opacity = p; }
+  enter('g2', t, 16.4, { y: 30 });
+  enter('f0', t, 18.7); for (let i = 0; i < 6; i++) enter('ft' + i, t, 19 + i * .15, { y: 30, scale: .9 });
+  ctaRender(t, 21.6);
+};
+render(0);
+</script></body></html>

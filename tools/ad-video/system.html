@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><title>GoFive ad</title><link rel="stylesheet" href="kit.css"><script src="engine.js"></script></head>
+<body><div id="root"></div>
+<script>
+const { $, enter, type, count, scenes, cta, ctaRender, ease } = AdKit;
+document.getElementById('root').innerHTML = `
+<section class="scene" id="h">
+  <h1 class="a" id="h1">כמה לקוחות הלכו השבוע<br>למתחרה <em>שמעליכם בגוגל</em>?</h1>
+  <div class="pack">
+    <div class="card a" id="h2" style="display:flex;align-items:center;gap:calc(26*var(--u))"><span class="pin" style="background:#16a36a">1</span><b style="font-family:Rubik;font-size:calc(46*var(--u));flex:1">המתחרה</b><small style="font-size:calc(34*var(--u));color:#6b6787">4.8 ★ · <span id="h2n">0</span> ביקורות</small></div>
+    <div class="card a" id="h3" style="display:flex;align-items:center;gap:calc(26*var(--u));opacity:.85"><span class="pin">4</span><b style="font-family:Rubik;font-size:calc(46*var(--u));flex:1">העסק שלכם</b><small style="font-size:calc(34*var(--u));color:#6b6787">4.3 ★ · <span id="h3n">0</span> ביקורות</small></div>
+  </div>
+</section>
+<section class="scene" id="w">
+  <h2 class="a" id="w1"><em>GoFive</em> מנהלת את הפרופיל<br>שלכם בגוגל, ממקום אחד</h2>
+  <div class="flow a" id="w2"><div class="box">${G}<b>הפרופיל בגוגל</b></div><span class="arrow">→</span><div class="box"><img src="../../public/brand/gofive-mark.svg" alt=""><b>GoFive</b></div></div>
+  <p class="sub a" id="w3">מתחברים פעם אחת, והמערכת עובדת בשבילכם כל שבוע</p>
+</section>
+<section class="scene" id="b">
+  <h2 class="a" id="b0">מה זה נותן לכם?</h2>
+  <div class="list">
+    <div class="row a" id="b1"><span class="ico" style="background:#16a36a">${ICON.check}</span><div><b>יותר לקוחות מגוגל ומהמפות</b></div></div>
+    <div class="row a" id="b2"><span class="ico" style="background:#e8a100">${ICON.star}</span><div><b>יותר ביקורות טובות בגוגל</b></div></div>
+    <div class="row a" id="b3"><span class="ico" style="background:#c0398f">${ICON.spark}</span><div><b>גם ה-AI ממליץ עליכם</b></div></div>
+    <div class="row a" id="b4"><span class="ico" style="background:#5b3df5">${ICON.chart}</span><div><b>10 דקות בשבוע, בלי לנחש</b><small>תוכנית שבועית: מה לעשות כדי לעלות</small></div></div>
+  </div>
+</section>
+<section class="scene" id="f">
+  <h2 class="a" id="f0">הכול במערכת אחת</h2>
+  <div class="tiles"><div class="tile a" id="ft0"><span class="ico" style="background:#e8a100">${ICON.star}</span><b>ביקורות ותשובות AI</b></div><div class="tile a" id="ft1"><span class="ico" style="background:#1d7fe0">${ICON.pin}</span><b>מיקום בגוגל מפות</b></div><div class="tile a" id="ft2"><span class="ico" style="background:#0f9e9e">${ICON.rivals}</span><b>השוואה למתחרים</b></div><div class="tile a" id="ft3"><span class="ico" style="background:#c0398f">${ICON.spark}</span><b>נראות ב-AI</b></div><div class="tile a" id="ft4"><span class="ico" style="background:#e5533d">${ICON.qr}</span><b>QR ווואטסאפ</b></div><div class="tile a" id="ft5"><span class="ico" style="background:#6d4bff">${ICON.report}</span><b>דוח חודשי</b></div></div>
+</section>
+${cta()}
+<p class="sample" id="sample">המחשה</p>`;
+const SC = [['h', 0, 4.4], ['w', 4.4, 9.4], ['b', 9.4, 15.2], ['f', 15.2, 19.4], ['cta', 19.4, 24]];
+window.TOTAL = 24;
+window.render = (t) => {
+  scenes(t, SC);
+  $('sample').style.opacity = t < 19.4 ? 1 : 0;
+  enter('h1', t, .1); enter('h2', t, .8, { y: 40 }); enter('h3', t, 1.0, { y: 40 });
+  count('h2n', 320, t, 1.0, 1.4); count('h3n', 41, t, 1.2, 1.2);
+  enter('w1', t, 4.5); enter('w2', t, 5.1, { y: 40, scale: .9 }); enter('w3', t, 6.4, { y: 30 });
+  enter('b0', t, 9.5); ['b1', 'b2', 'b3', 'b4'].forEach((id, i) => enter(id, t, 10.0 + i * .7, { y: 40 }));
+  enter('f0', t, 15.3); for (let i = 0; i < 6; i++) enter('ft' + i, t, 15.6 + i * .18, { y: 30, scale: .9 });
+  ctaRender(t, 19.4);
+};
+render(0);
+</script></body></html>
