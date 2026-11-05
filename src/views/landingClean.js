@@ -583,6 +583,27 @@ body.v2-page { background: var(--page); }
   .lx-final-card { padding: 48px 20px; }
   .v2-main .net-split { padding: 24px 18px; border-radius: 26px; }
 }
+
+/* collecting reviews: the customer's three screens */
+.lx-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 44px; }
+.lx-step { position: relative; margin: 0; padding: 26px 22px 24px; border-radius: 30px; background: #fff; box-shadow: var(--card-sh); display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+.lx-step.good { background: linear-gradient(180deg, #ecfbf3, #fff 40%); }
+.lx-step.warn { background: linear-gradient(180deg, #fff6e5, #fff 40%); }
+.lx-n { position: absolute; top: 18px; inset-inline-start: 18px; padding: 5px 12px; border-radius: 999px; font-family: 'Rubik', sans-serif; font-weight: 700; font-size: .85rem; background: #17123a; color: #fff; }
+.lx-step.good .lx-n { background: #16a36a; }
+.lx-step.warn .lx-n { background: #f5a524; color: #1c1650; }
+.lx-phone { width: min(230px, 80%); padding: 8px; border-radius: 34px; background: linear-gradient(180deg, #2b2b2e, #111113); box-shadow: 0 30px 50px -28px rgba(23, 18, 58, .7); }
+.lx-phone img { display: block; width: 100%; border-radius: 27px; aspect-ratio: 390 / 700; object-fit: cover; object-position: top; }
+.lx-step figcaption b { display: block; font-family: 'Rubik', sans-serif; font-weight: 600; font-size: 1.2rem; color: #17123a; }
+.lx-step figcaption small { display: block; margin-top: 4px; color: #5b5680; font-size: .95rem; line-height: 1.5; }
+.lx-perks { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.lx-perks li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: #fff; box-shadow: var(--card-sh); font-weight: 600; font-size: .92rem; color: #17123a; }
+.lx-perks svg { color: var(--brand); }
+@media (max-width: 860px) {
+  .lx-flow { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; margin: 30px -22px 0; padding: 4px 22px 18px; scrollbar-width: none; }
+  .lx-flow::-webkit-scrollbar { display: none; }
+  .lx-step { flex: none; width: 78vw; scroll-snap-align: center; }
+}
 </style>`,
     body: `<div class="v2-main">
 
@@ -610,6 +631,17 @@ body.v2-page { background: var(--page); }
 <section class="v2-sec soft" id="why">
   <div class="v2-wrap v2-head"><h2>הפרופיל בגוגל הוא חלון הראווה של העסק</h2><p>לפני שלקוח מתקשר, מגיע או מזמין, הוא רואה את הפרופיל שלכם בגוגל. שם הוא מחליט.</p></div>
   <div class="v2-wrap"><div class="lx-whys">${why.join('')}</div></div>
+</section>
+
+<section class="v2-sec" id="collect">
+  <div class="v2-wrap v2-head"><h2>יותר ביקורות טובות בגוגל. ולקוח לא מרוצה מגיע קודם אליכם</h2><p>שולחים קישור בוואטסאפ או תולים שלט QR. הלקוח מדרג בכמה שניות, והמערכת ממשיכה לפי הדירוג.</p></div>
+  <div class="v2-wrap"><div class="lx-flow">
+    <figure class="lx-step"><span class="lx-n">1</span><div class="lx-phone"><img src="${asset('media/flow/rate.jpg')}" alt="מסך הדירוג שהלקוח רואה" width="390" height="700" loading="lazy"></div><figcaption><b>הלקוח מדרג</b><small>מהקישור בוואטסאפ או מסריקת ה-QR, בלי הרשמה</small></figcaption></figure>
+    <figure class="lx-step good"><span class="lx-n" dir="ltr">4–5 ★</span><div class="lx-phone"><img src="${asset('media/flow/google.jpg')}" alt="מסך התודה עם כפתור כתיבת ביקורת בגוגל" width="390" height="700" loading="lazy"></div><figcaption><b>מרוצה? ישר לגוגל</b><small>כפתור אחד לכתיבת ביקורת בפרופיל שלכם</small></figcaption></figure>
+    <figure class="lx-step warn"><span class="lx-n" dir="ltr">1–3 ★</span><div class="lx-phone"><img src="${asset('media/flow/private.jpg')}" alt="טופס פרטי ללקוח לא מרוצה" width="390" height="700" loading="lazy"></div><figcaption><b>לא מרוצה? קודם אליכם</b><small>טופס פרטי, ואתם מקבלים התראה מיד כדי לחזור אליו ולתקן</small></figcaption></figure>
+  </div>
+  <ul class="lx-perks"><li>${icon('qr', 18)}שלט QR מעוצב להדפסה</li><li>${icon('chat', 18)}בקשת דירוג בוואטסאפ, גם אוטומטית אחרי ביקור</li><li>${icon('alert', 18)}התראה על כל לקוח לא מרוצה</li><li>${icon('chart', 18)}כל התשובות והנתונים בדשבורד</li></ul>
+  </div>
 </section>
 
 <div id="features" class="lx-anchor"></div>
