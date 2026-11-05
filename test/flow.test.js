@@ -1055,7 +1055,7 @@ test('trial, plan request and activation', async () => {
   assert.equal(biz().plan, 'pro', 'the trial opens every feature');
 
   const dash = await owner.req('/admin');
-  assert.match(dash.text, /תקופת ניסיון: עוד 5 ימים/);
+  assert.match(dash.text, /תקופת ניסיון: עוד 7 ימים/);
   const campaign = await createCampaign(owner);
   assert.equal((await client().req(`/r/${campaign.slug}`)).status, 200);
 
@@ -1066,7 +1066,7 @@ test('trial, plan request and activation', async () => {
   await jobs.trialNotices();
   assert.equal(outbox('trial_ending').filter((m) => m.to_addr === 'trial@example.com').length, 1);
 
-  // Trial over: surveys, API and widget stop; the data stays visible.
+  // Trial over: surveys, API and widget stop; the data is kept, and only the plan page is open.
   store.updateBusiness(biz().id, { trial_ends_at: '2000-01-01 00:00:00' });
   await jobs.trialNotices();
   assert.equal(outbox('trial_ended').filter((m) => m.to_addr === 'trial@example.com').length, 1);
@@ -1074,7 +1074,8 @@ test('trial, plan request and activation', async () => {
   assert.match(scan.text, /לא פעיל כרגע/);
   const rate = await client().req(`/r/${campaign.slug}/rate`, { method: 'POST', form: { rating: '5' } });
   assert.equal(rate.location, `/r/${campaign.slug}`, 'no rating is recorded');
-  assert.match((await owner.req('/admin')).text, /תקופת הניסיון הסתיימה/);
+  assert.equal((await owner.req('/admin')).location, '/admin/plan', 'only the plan page until a plan is paid');
+  assert.match((await owner.req('/admin/plan')).text, /תקופת הניסיון הסתיימה/);
 
   // The owner asks for a plan; admins are told.
   const req = await owner.req('/admin/plan/request', { method: 'POST', form: { _csrf: await csrfOf(owner), plan: 'pro', cycle: 'annual' } });

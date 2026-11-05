@@ -144,14 +144,16 @@ export function createContext(
     },
 
     /**
-     * A new account that hasn't paid yet: only the plan page and checkout
-     * (and switching to another business). Everything starts after the first payment.
+     * An account that isn't paid: new and not paid yet, its trial over, or its plan
+     * stopped. Only the plan page and checkout stay open (and switching to another
+     * business); everything comes back, data included, once a plan is paid.
      */
     requirePaid(req, res, next) {
-      if (req.access?.reason !== 'new') return next();
+      if (req.access?.state !== 'paused') return next();
       if (/^\/(plan|billing)(\/|$)/.test(req.path) || req.path === '/switch') return next();
       if (req.method === 'GET') return res.redirect(303, '/admin/plan');
-      res.status(402).send(errorPage('כדי להתחיל, בוחרים מסלול בעמוד "התוכנית שלי"'));
+      const why = req.access.reason === 'trial' ? 'תקופת הניסיון הסתיימה. כדי להמשיך' : req.access.reason === 'new' ? 'כדי להתחיל' : 'כדי לחזור';
+      res.status(402).send(errorPage(`${why}, בוחרים מסלול בעמוד "התוכנית שלי"`));
     },
 
     requireRole(min) {

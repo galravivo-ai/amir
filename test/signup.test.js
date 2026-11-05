@@ -180,7 +180,7 @@ test('free trial days without a card, then paying on an iCount page; the operato
     store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
     const me = client(base);
     const form = (await me('/register')).text;
-    assert.match(form, /5 ימים חינם, בלי כרטיס אשראי/);
+    assert.match(form, /7 ימים חינם, בלי כרטיס אשראי/);
     await me('/register', { method: 'POST', form: { name: 'דנה', email: 'icount@example.com', password: 'password123', business: 'קפה', terms: '1' } });
     const biz = () => store.businessesFor(store.userByEmail('icount@example.com').id)[0];
     assert.equal(biz().billing, 'trial', 'straight in, no card');

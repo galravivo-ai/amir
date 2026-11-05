@@ -361,3 +361,17 @@ test('the dashboard is the bento one, with the classic one a click away', async 
   assert.match(page.text, /href="\/admin\?classic=1"/);
   assert.doesNotMatch((await req('/admin?classic=1')).text, /class="d2"/, 'the classic one on request');
 });
+
+test('when the trial ends, only the plan page stays open until a plan is paid', async () => {
+  const { req, csrf, biz } = await owner('trial-over@example.com');
+  store.updateBusiness(biz.id, { billing: 'trial', trial_ends_at: sql(Date.now() - 1000) });
+  assert.equal((await req('/admin')).location, '/admin/plan', 'the dashboard leads to the plan');
+  assert.equal((await req('/admin/google/reviews')).location, '/admin/plan');
+  assert.match((await req('/admin/plan')).text, /תקופת הניסיון הסתיימה/);
+  const post = await req('/admin/campaigns/new', { form: { _csrf: csrf, name: 'x' } });
+  assert.equal(post.status, 402);
+  assert.match(post.text, /תקופת הניסיון הסתיימה\. כדי להמשיך/);
+  // paid on iCount and activated: everything is back
+  store.updateBusiness(biz.id, { billing: 'active', plan: 'basic' });
+  assert.equal((await req('/admin')).status, 200);
+});

@@ -113,7 +113,7 @@ export const PUBLIC_PLANS = Object.fromEntries(Object.entries(PLANS).filter(([, 
  * SIGNUP_TRIAL_DAYS turns one on for every new account.
  */
 export const TRIAL_PLAN = 'pro';
-export const TRIAL_DAYS = 5;
+export const TRIAL_DAYS = 7;
 /** Every new account starts with TRIAL_DAYS free days, no card (SIGNUP_TRIAL_DAYS changes it; 0 turns it off). */
 export const signupTrialDays = () => {
   const raw = String(process.env.SIGNUP_TRIAL_DAYS ?? '').trim();
