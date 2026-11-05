@@ -7,7 +7,7 @@ const startTerms = (trialOpen) =>
     ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, בלי כרטיס אשראי</b>
         <ul><li>נרשמים ומתחילים מיד, עם כל האפשרויות.</li>
         <li>בסוף הניסיון בוחרים מסלול: ₪${PLANS.basic.price} או ₪${PLANS.pro.price} לחודש (כולל מע״מ), ו-20% הנחה על כל סניף נוסף.</li>
-        <li>לא בחרתם? הסקרים פשוט נעצרים, בלי שום חיוב, והנתונים נשמרים.</li></ul>
+        <li>לא בחרתם? החשבון נעצר בלי שום חיוב, והנתונים נשמרים עד שתבחרו מסלול.</li></ul>
         <a href="/terms#billing" target="_blank">התנאים המלאים</a></div>`
     : trialOpen
     ? `<div class="start-terms"><b>${TRIAL_DAYS} ימים חינם, ואז ממשיכים רק אם מתאים</b>
