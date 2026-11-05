@@ -3286,7 +3286,7 @@ a.d2-kpi:hover { text-decoration: none; transform: translateY(-2px); }
   .d2-score, .d2-maps { grid-column: span 6; }
   .d2-accent { grid-column: span 12; min-height: 0; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "h n" "b n"; align-items: center; }
   .d2-accent .d2-card-h { grid-area: h; }
-  .d2-accent-btn { grid-area: b; }
+  .d2-accent-btn { grid-area: b; justify-self: start; }
   .d2-accent-num { grid-area: n; margin: 0; text-align: end; }
   .d2-chart, .d2-week, .d2-dist, .d2-rivals { grid-column: span 6; }
 }

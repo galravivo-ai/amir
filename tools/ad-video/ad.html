@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>GoFive ad</title>
+<style>
+@font-face { font-family: 'Rubik'; font-weight: 500; src: url(../../public/fonts/rubik-hebrew-500-normal.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: 'Rubik'; font-weight: 500; src: url(../../public/fonts/rubik-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Rubik'; font-weight: 700; src: url(../../public/fonts/rubik-hebrew-700-normal.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: 'Rubik'; font-weight: 700; src: url(../../public/fonts/rubik-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Assistant'; font-weight: 400; src: url(../../public/fonts/assistant-hebrew-400-normal.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: 'Assistant'; font-weight: 400; src: url(../../public/fonts/assistant-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Assistant'; font-weight: 700; src: url(../../public/fonts/assistant-hebrew-700-normal.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: 'Assistant'; font-weight: 700; src: url(../../public/fonts/assistant-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+
+:root { --night: #120d33; --brand: #5b3df5; --yellow: #ffd23f; --ink: #17123a; --u: calc(var(--w) / 1080); }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: var(--w); height: var(--h); overflow: hidden; }
+body { font-family: 'Assistant', sans-serif; color: #fff; background:
+  radial-gradient(calc(900 * var(--u)) calc(700 * var(--u)) at 10% 8%, rgba(139, 109, 255, .55), transparent 65%),
+  radial-gradient(calc(800 * var(--u)) calc(600 * var(--u)) at 95% 30%, rgba(255, 196, 46, .2), transparent 62%),
+  radial-gradient(calc(1100 * var(--u)) calc(800 * var(--u)) at 50% 110%, rgba(91, 61, 245, .5), transparent 70%),
+  linear-gradient(165deg, #0d0a26, #17114a 55%, #221a6e); }
+.scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(54 * var(--u)); padding: calc(110 * var(--u)) calc(80 * var(--u)); text-align: center; }
+.a { will-change: transform, opacity, filter; }
+h1, h2, .big { font-family: 'Rubik', sans-serif; font-weight: 700; letter-spacing: -.02em; line-height: 1.08; }
+h1 { font-size: calc(104 * var(--u)); }
+h1 em, h2 em { font-style: normal; color: var(--yellow); }
+h2 { font-size: calc(78 * var(--u)); }
+.sub { font-size: calc(44 * var(--u)); color: #d4cff5; line-height: 1.35; }
+.card { background: #fff; color: var(--ink); border-radius: calc(44 * var(--u)); padding: calc(40 * var(--u)) calc(44 * var(--u)); box-shadow: 0 calc(40 * var(--u)) calc(80 * var(--u)) calc(-30 * var(--u)) rgba(0, 0, 0, .6); width: 100%; text-align: right; }
+.sample { position: absolute; bottom: calc(46 * var(--u)); left: 0; right: 0; text-align: center; font-size: calc(26 * var(--u)); color: #a9a3d6; }
+
+/* scene 1: the search */
+.search { display: flex; align-items: center; gap: calc(22 * var(--u)); padding: calc(30 * var(--u)) calc(38 * var(--u)); border-radius: 999px; background: #fff; color: var(--ink); font-size: calc(44 * var(--u)); width: 100%; box-shadow: 0 calc(30 * var(--u)) calc(60 * var(--u)) calc(-30 * var(--u)) rgba(0, 0, 0, .6); }
+.search svg { width: calc(46 * var(--u)); height: calc(46 * var(--u)); flex: none; }
+.caret { display: inline-block; width: calc(4 * var(--u)); height: 1em; background: var(--brand); vertical-align: middle; margin-inline-start: 2px; }
+.pack { display: grid; gap: calc(18 * var(--u)); width: 100%; }
+.pack .card { display: flex; align-items: center; gap: calc(26 * var(--u)); padding: calc(30 * var(--u)) calc(36 * var(--u)); }
+.pin { width: calc(64 * var(--u)); height: calc(64 * var(--u)); border-radius: 50%; display: grid; place-items: center; background: #e5484d; color: #fff; font-family: 'Rubik'; font-weight: 700; font-size: calc(32 * var(--u)); flex: none; }
+.pack b { font-family: 'Rubik'; font-weight: 700; font-size: calc(44 * var(--u)); flex: 1; }
+.pack small { font-size: calc(34 * var(--u)); color: #6b6787; white-space: nowrap; }
+.pack .me { outline: calc(6 * var(--u)) solid var(--yellow); }
+.pack .me .tag { font-size: calc(26 * var(--u)); font-weight: 700; padding: calc(6 * var(--u)) calc(16 * var(--u)); border-radius: 999px; background: var(--yellow); color: var(--ink); }
+
+/* scene 2: reviews */
+.wait { background: radial-gradient(calc(400 * var(--u)) calc(300 * var(--u)) at 0 0, rgba(255, 255, 255, .6), transparent 70%), linear-gradient(160deg, #ffd96a, #ffbd1a); color: #1c1650; display: flex; align-items: center; justify-content: space-between; }
+.wait span { font-size: calc(46 * var(--u)); font-weight: 700; }
+.wait .big { font-size: calc(170 * var(--u)); line-height: 1; }
+.review .stars { color: #f5b400; font-size: calc(48 * var(--u)); letter-spacing: .08em; }
+.review p { font-size: calc(46 * var(--u)); font-weight: 700; margin-top: calc(10 * var(--u)); }
+.review .who { font-size: calc(30 * var(--u)); color: #6b6787; margin-top: calc(6 * var(--u)); }
+.reply { background: #f3f0ff; border-radius: calc(30 * var(--u)); padding: calc(28 * var(--u)) calc(32 * var(--u)); margin-top: calc(26 * var(--u)); font-size: calc(38 * var(--u)); line-height: 1.4; min-height: calc(160 * var(--u)); }
+.reply .ai { display: inline-flex; align-items: center; gap: calc(8 * var(--u)); font-size: calc(26 * var(--u)); font-weight: 700; color: var(--brand); margin-bottom: calc(8 * var(--u)); }
+.send { display: flex; justify-content: flex-start; margin-top: calc(24 * var(--u)); }
+.send i { font-style: normal; font-family: 'Rubik'; font-weight: 700; font-size: calc(36 * var(--u)); padding: calc(18 * var(--u)) calc(44 * var(--u)); border-radius: 999px; background: var(--brand); color: #fff; }
+.send i.done { background: #16a36a; }
+
+/* scene 3: maps and AI */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(22 * var(--u)); width: calc(560 * var(--u)); padding: calc(34 * var(--u)); border-radius: calc(48 * var(--u)); background: #fff; }
+.grid i { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-family: 'Rubik'; font-weight: 700; font-size: calc(52 * var(--u)); color: #fff; background: #c9c4dc; }
+.grid i.g { background: #16a36a; } .grid i.m { background: #f5a524; } .grid i.me { box-shadow: 0 0 0 calc(8 * var(--u)) #fff, 0 0 0 calc(16 * var(--u)) rgba(91, 61, 245, .6); }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(16 * var(--u)); }
+.chips span { padding: calc(18 * var(--u)) calc(32 * var(--u)); border-radius: 999px; background: #dcf6e8; color: #0f8a52; font-family: 'Rubik'; font-weight: 700; font-size: calc(38 * var(--u)); }
+
+/* scene 4: the phone */
+.phone { width: calc(560 * var(--u)); padding: calc(18 * var(--u)); border-radius: calc(80 * var(--u)); background: linear-gradient(180deg, #2b2b2e, #111113); box-shadow: 0 calc(60 * var(--u)) calc(120 * var(--u)) calc(-40 * var(--u)) rgba(0, 0, 0, .8); position: relative; }
+.phone::before { content: ''; position: absolute; top: calc(34 * var(--u)); left: 50%; width: calc(150 * var(--u)); height: calc(36 * var(--u)); transform: translateX(-50%); border-radius: 99px; background: #0b0920; z-index: 2; }
+.phone .scr { border-radius: calc(64 * var(--u)); overflow: hidden; background: #f6f4ff; padding-top: calc(70 * var(--u)); height: calc(940 * var(--u)); }
+.phone img { width: 100%; display: block; }
+
+/* scene 5: the call */
+.logo { display: flex; align-items: center; gap: calc(24 * var(--u)); direction: ltr; }
+.logo img { width: calc(150 * var(--u)); }
+.logo b { font-family: 'Rubik'; font-weight: 700; font-size: calc(110 * var(--u)); letter-spacing: -.02em; }
+.cta { font-family: 'Rubik'; font-weight: 700; font-size: calc(56 * var(--u)); padding: calc(34 * var(--u)) calc(80 * var(--u)); border-radius: 999px; background: var(--yellow); color: #1c1650; box-shadow: 0 calc(30 * var(--u)) calc(60 * var(--u)) calc(-24 * var(--u)) rgba(255, 196, 46, .8); direction: ltr; }
+.gline { display: inline-flex; align-items: center; gap: calc(14 * var(--u)); font-size: calc(32 * var(--u)); color: #c4bfe6; }
+.gline svg { width: calc(40 * var(--u)); height: calc(40 * var(--u)); padding: calc(6 * var(--u)); background: #fff; border-radius: 50%; }
+
+/* 4:5 feed: everything a little tighter */
+body.feed .scene { gap: calc(34 * var(--u)); padding: calc(70 * var(--u)) calc(80 * var(--u)); }
+body.feed h1 { font-size: calc(88 * var(--u)); }
+body.feed h2 { font-size: calc(66 * var(--u)); }
+body.feed .sub { font-size: calc(38 * var(--u)); }
+body.feed .phone .scr { height: calc(620 * var(--u)); }
+body.feed .phone { width: calc(470 * var(--u)); }
+body.feed .grid { width: calc(440 * var(--u)); }
+body.feed .wait .big { font-size: calc(130 * var(--u)); }
+body.feed .card { padding: calc(30 * var(--u)) calc(38 * var(--u)); }
+body.feed .reply { min-height: calc(130 * var(--u)); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const G = '<svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="#6b6787" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+const SPARK = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>';
+
+const V = window.AD || {};
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+document.getElementById('root').innerHTML = `
+<section class="scene" id="s1">
+  <h1 class="a" id="s1h">לקוחות מחפשים<br><em>${esc(V.what)}</em> לידם</h1>
+  <div class="search a" id="s1s">${SEARCH}<span id="s1q"></span><i class="caret" id="s1c"></i></div>
+  <div class="pack">
+    ${V.names.map((n, i) => `<div class="card a${i === V.me ? ' me' : ''}" id="s1p${i}"><span class="pin">${i + 1}</span><b>${esc(n)}</b>${i === V.me ? '<span class="tag">אתם</span>' : ''}<small>${V.stars[i]} ★</small></div>`).join('')}
+  </div>
+  <h2 class="a" id="s1t">איפה <em>אתם</em> ברשימה?</h2>
+</section>
+<section class="scene" id="s2">
+  <h2 class="a" id="s2h">כל ביקורת מקבלת<br><em>תשובה</em>, בלחיצה</h2>
+  <div class="card wait a" id="s2w"><span>מחכים<br>לתשובה</span><b class="big" id="s2n">0</b></div>
+  <div class="card review a" id="s2r">
+    <div class="stars">★★★★★</div><p>"${esc(V.review)}"</p><div class="who">${esc(V.reviewer)} · ביקורת חדשה בגוגל</div>
+    <div class="reply"><div class="ai">${SPARK} טיוטה של ה-AI, בסגנון שלכם</div><div id="s2t"></div></div>
+    <div class="send"><i id="s2b">שליחה לגוגל</i></div>
+  </div>
+</section>
+<section class="scene" id="s3">
+  <h2 class="a" id="s3h">איפה אתם <em>בגוגל מפות</em>,<br>בכל שכונה</h2>
+  <div class="grid a" id="s3g">${[3, 2, 1, 4, 1, 1, 6, 2, 3].map((r, i) => `<i class="${r <= 3 ? 'g' : 'm'}${i === 4 ? ' me' : ''}" id="s3g${i}">${r}</i>`).join('')}</div>
+  <h2 class="a" id="s3a">וגם: ה-AI <em>ממליץ</em> עליכם?</h2>
+  <div class="chips a" id="s3c"><span>ChatGPT ✓</span><span>Gemini ✓</span><span>Claude ✓</span></div>
+</section>
+<section class="scene" id="s4">
+  <h2 class="a" id="s4h">הכול בדשבורד אחד.<br><em>ובכל שבוע:</em> מה לעשות</h2>
+  <div class="phone a" id="s4p"><div class="scr"><img id="s4i" src="dashboard-m.png" alt=""></div></div>
+</section>
+<section class="scene" id="s5">
+  <div class="logo a" id="s5l"><img src="../../public/brand/gofive-mark.svg" alt=""><b>GoFive</b></div>
+  <h1 class="a" id="s5h"><em>7 ימים חינם</em><br>על העסק שלכם</h1>
+  <p class="sub a" id="s5s">בלי כרטיס אשראי · בלי התחייבות · בעברית</p>
+  <div class="cta a" id="s5c">gofive.co.il</div>
+  <span class="gline a" id="s5g">${G}בנויה על Google Business Profile</span>
+</section>
+<p class="sample" id="sample">${esc(V.sample)}</p>`;
+
+// ---- the timeline: render(t) puts every element where it belongs at second t ----
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const ease = (x) => 1 - Math.pow(1 - clamp(x), 4);           // strong ease-out
+const inOut = (x) => { x = clamp(x); return x < .5 ? 8 * x ** 4 : 1 - Math.pow(-2 * x + 2, 4) / 2; };
+const SC = { s1: [0, 4.2], s2: [4.2, 9.4], s3: [9.4, 13.4], s4: [13.4, 17], s5: [17, 21] };
+const TOTAL = 21;
+function enter(el, t, at, { y = 60, dur = .7, scale = .96, blur = 8 } = {}) {
+  const p = ease((t - at) / dur);
+  el.style.opacity = p;
+  el.style.transform = `translateY(${(1 - p) * y * (innerWidth / 1080)}px) scale(${scale + (1 - scale) * p})`;
+  el.style.filter = p < 1 ? `blur(${(1 - p) * blur}px)` : 'none';
+}
+function type(el, text, t, at, cps = 26) {
+  const n = Math.max(0, Math.min(text.length, Math.floor((t - at) * cps)));
+  el.textContent = text.slice(0, n);
+  return n === text.length;
+}
+function render(t) {
+  for (const [id, [a, b]] of Object.entries(SC)) {
+    const s = $(id);
+    const out = clamp((t - (b - .35)) / .35);
+    s.style.display = t >= a - .01 && t < b ? 'flex' : 'none';
+    s.style.opacity = 1 - out;
+    s.style.transform = `scale(${1 - out * .04})`;
+    s.style.filter = out ? `blur(${out * 10}px)` : 'none';
+  }
+  $('sample').style.opacity = t < SC.s5[0] ? 1 : 0;
+  // 1: the search
+  enter($('s1h'), t, .1);
+  enter($('s1s'), t, .5);
+  const typed = type($('s1q'), V.query, t, 1.0, 22);
+  $('s1c').style.opacity = !typed || Math.floor(t * 2) % 2 ? 1 : 0;
+  V.names.forEach((_, i) => enter($('s1p' + i), t, 1.9 + i * .14, { y: 40 }));
+  enter($('s1t'), t, 2.9);
+  // 2: the reviews
+  enter($('s2h'), t, 4.3);
+  enter($('s2w'), t, 4.7);
+  $('s2n').textContent = Math.round(V.waiting * ease((t - 4.9) / 1.1));
+  enter($('s2r'), t, 5.7);
+  const done = type($('s2t'), V.reply, t, 6.3, 30);
+  const sent = t > 6.3 + V.reply.length / 30 + .5;
+  $('s2b').textContent = sent ? 'נשלח לגוגל ✓' : 'שליחה לגוגל';
+  $('s2b').className = sent ? 'done' : '';
+  $('s2b').style.transform = `scale(${t > 6.3 + V.reply.length / 30 + .35 && !sent ? .95 : 1})`;
+  // 3: maps and AI
+  enter($('s3h'), t, 9.5);
+  enter($('s3g'), t, 9.9, { y: 30 });
+  for (let i = 0; i < 9; i++) {
+    const p = ease((t - 10.2 - i * .07) / .45);
+    const c = $('s3g' + i); c.style.transform = `scale(${.6 + .4 * p})`; c.style.opacity = p;
+  }
+  enter($('s3a'), t, 11.3);
+  enter($('s3c'), t, 11.7, { y: 30 });
+  // 4: the phone, scrolling the real dashboard
+  enter($('s4h'), t, 13.5);
+  enter($('s4p'), t, 13.8, { y: 140, scale: .92 });
+  const img = $('s4i'); const max = Math.max(0, img.offsetHeight - img.parentElement.clientHeight + 70);
+  img.style.transform = `translateY(${-max * inOut((t - 14.6) / 2.2)}px)`;
+  // 5: the call
+  enter($('s5l'), t, 17.1, { y: 30 });
+  enter($('s5h'), t, 17.4);
+  enter($('s5s'), t, 17.8, { y: 30 });
+  enter($('s5c'), t, 18.1, { y: 30, scale: .9 });
+  enter($('s5g'), t, 18.4, { y: 20 });
+  const pulse = t > 19 ? 1 + .03 * Math.sin((t - 19) * 5) : 1;
+  if (t > 18.8) $('s5c').style.transform = `scale(${pulse})`;
+}
+window.render = render;
+window.TOTAL = TOTAL;
+render(0);
+</script>
+</body>
+</html>
