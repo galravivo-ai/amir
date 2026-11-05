@@ -60,7 +60,8 @@ function locationsTable(locations, { campaigns, csrf, can, deletable, debug = fa
     .map(
       (l) => `<tr><td data-l="סניף"><b>${h(l.title || 'טוען פרטים…')}</b><div class="muted small">${h(l.address)}</div>
           ${l.sync_error ? `<div class="danger-text small">הבדיקה האחרונה נכשלה: ${h(l.sync_error)}</div>` : ''}
-          ${debug && l.source === 'serp' ? `<a class="small" href="/admin/google/locations/${l.id}/debug">בדיקת SerpApi</a>` : ''}</td>
+          ${debug && l.source === 'serp' ? `<a class="small" href="/admin/google/locations/${l.id}/debug">בדיקת SerpApi</a>` : ''}
+          ${l.source !== 'serp' && can('manager') && !l.pending_pay ? `<a class="pe-link" href="/admin/google/locations/${l.id}/profile">${icon('gear', 15)} עריכת הפרופיל בגוגל</a>` : ''}</td>
         <td data-l="דירוג">${l.total_reviews ? `${Number(l.avg_rating).toFixed(1)} ★ <span class="muted small">(${Number(l.total_reviews).toLocaleString('he-IL')})</span>` : '—'}
           <div class="muted small">${l.synced_at ? `נבדק ${h(formatDate(l.synced_at))}` : l.source === 'serp' && !l.sync_error && !l.pending_pay ? '<span class="g-loading">טוען ביקורות…</span>' : ''}</div></td>
         <td data-l="מעקב">${

@@ -3377,3 +3377,36 @@ body.app .flash, body.app .warn, body.app .error { border-radius: 16px; }
   .site-cta > a.lang-switch { padding: .15rem .5rem; font-size: .78rem; }
   .site-cta .btn { font-size: .85rem; }
 }
+
+/* editing the Google profile */
+.pe-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .85rem; font-weight: 700; }
+.pe-sec { display: grid; gap: 10px; }
+.pe-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pe-head h2 { margin: 0; font-size: 1.15rem; }
+.pe-count { font-size: .85rem; color: var(--muted); }
+.pe-sec textarea { width: 100%; line-height: 1.6; }
+.pe-sec .ai-btn { justify-self: start; }
+.pe-cat { position: relative; display: grid; gap: 8px; margin-bottom: 8px; }
+.pe-current { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-items: center; }
+.pe-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #f1edff; color: #3a1fb0; font-weight: 700; font-size: .9rem; }
+.pe-x { border: 0; background: none; color: inherit; font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 2px; }
+.pe-results { position: absolute; z-index: 5; top: 100%; inset-inline: 0; list-style: none; margin: 4px 0 0; padding: 6px; max-height: 260px; overflow: auto; background: #fff; border-radius: 16px; box-shadow: 0 20px 40px -20px rgba(23, 18, 58, .45), 0 0 0 1px #ebe8f5; }
+.pe-results button { display: block; width: 100%; text-align: start; padding: 9px 12px; border: 0; background: none; border-radius: 10px; font: inherit; cursor: pointer; }
+.pe-results button:hover { background: #f3f0ff; }
+.pe-results li.muted { padding: 9px 12px; }
+.pe-hours { display: grid; gap: 8px; }
+.pe-day { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 14px; border-radius: 16px; background: #faf9fe; }
+.pe-day > b { width: 54px; }
+.pe-range { display: inline-flex; align-items: center; gap: 6px; }
+.pe-range input { width: 120px; }
+.pe-second.empty input { opacity: .55; }
+.pe-closed-label { display: none; color: var(--muted); font-weight: 600; }
+.pe-day.closed .pe-range { display: none; }
+.pe-day.closed .pe-closed-label { display: inline; }
+.pe-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pe-locked { background: #faf9fe; }
+.pe-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 6px 0 22px; }
+@media (max-width: 700px) {
+  .pe-grid2 { grid-template-columns: minmax(0, 1fr); }
+  .pe-range input { width: 118px; }
+}

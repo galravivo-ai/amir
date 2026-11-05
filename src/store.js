@@ -1201,6 +1201,11 @@ export function createStore(db) {
          WHERE c.business_id = ? AND i.wa_sent_at >= strftime('%Y-%m-01 00:00:00', 'now')`).get(businessId).n,
 
     // ---------- competitors ----------
+    addProfileEdit: ({ businessId, locationId, userId, fields, ok, error = null }) =>
+      q('INSERT INTO profile_edits (business_id, location_id, user_id, fields, ok, error) VALUES (?, ?, ?, ?, ?, ?)').run(businessId, locationId, userId ?? null, JSON.stringify(fields), ok ? 1 : 0, error),
+    profileEdits: (locationId, limit = 10) =>
+      q(`SELECT e.*, u.name AS user_name FROM profile_edits e LEFT JOIN users u ON u.id = e.user_id
+         WHERE e.location_id = ? ORDER BY e.id DESC LIMIT ?`).all(locationId, limit),
     competitorsFor: (businessId) => q('SELECT * FROM competitors WHERE business_id = ? ORDER BY id').all(businessId),
     competitorById: (businessId, id) => q('SELECT * FROM competitors WHERE business_id = ? AND id = ?').get(businessId, id) || null,
     addCompetitor(businessId, { dataId = '', placeId = '', title = '', address = '' }) {

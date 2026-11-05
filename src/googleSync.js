@@ -79,6 +79,26 @@ export function createGoogleSync({ store, google, notifier, onAuthLost = null })
     return results;
   }
 
+  /** A location's profile as Google holds it now. */
+  async function profile(businessId, loc) {
+    return google.getProfile(await tokenFor(businessId), loc.name);
+  }
+
+  /** Sends changed profile fields to Google and keeps a record of the attempt. */
+  async function saveProfile(businessId, loc, userId, patch, fields) {
+    const token = await tokenFor(businessId);
+    try {
+      const after = await google.updateProfile(token, loc.name, patch, fields);
+      store.addProfileEdit({ businessId, locationId: loc.id, userId, fields, ok: true });
+      return after;
+    } catch (err) {
+      store.addProfileEdit({ businessId, locationId: loc.id, userId, fields, ok: false, error: err.message });
+      throw err;
+    }
+  }
+
+  const searchCategories = async (businessId, query) => google.searchCategories(await tokenFor(businessId), query);
+
   async function reply(businessId, review, text) {
     const token = await tokenFor(businessId);
     await google.reply(token, review.name, text);
@@ -155,5 +175,5 @@ export function createGoogleSync({ store, google, notifier, onAuthLost = null })
     return n;
   }
 
-  return { syncMetrics, syncAllMetrics, tokenFor, refreshLocations, syncBusiness, reply, publishPost, syncAll };
+  return { syncMetrics, syncAllMetrics, tokenFor, refreshLocations, syncBusiness, reply, publishPost, syncAll, profile, saveProfile, searchCategories };
 }

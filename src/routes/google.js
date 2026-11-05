@@ -10,6 +10,8 @@ import { GoogleError } from '../google.js';
 import { SerpError, writeReviewUrl } from '../serp.js';
 import { h, imageMime, safeUrl } from '../util.js';
 import * as V from '../views/google.js';
+import { DAYS, DESCRIPTION_MAX, hoursOf, profileEditView } from '../views/profileEdit.js';
+import { growthFacts } from '../growth.js';
 import { waSendBlock } from '../views/admin.js';
 import { whatsAppLeft } from '../whatsapp.js';
 import { amountFor } from '../billing.js';
@@ -144,6 +146,121 @@ export function googleRoutes(ctx, { google, sync, serp = null, serpSync = null }
       console.warn('[google] connect failed:', err.message);
       fail(humanError(err));
     }
+  });
+
+  // ---------- editing a location's Google profile (description, categories, hours, phone, website) ----------
+  const editable = (req) => {
+    const loc = store.googleLocation(Number(req.params.id), req.business.id);
+    return loc && loc.source !== 'serp' && sync ? loc : null;
+  };
+  const toTime = (v) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(v ?? '').trim());
+    if (!m) return null;
+    const hours = Number(m[1]), minutes = Number(m[2]);
+    return hours < 24 && minutes < 60 ? { hours, minutes } : null;
+  };
+  const NEXT = Object.fromEntries(DAYS.map(([d], i) => [d, DAYS[(i + 1) % 7][0]]));
+  /** The form's values, read back into the shape the page shows. */
+  function formValues(body) {
+    const pick = (v) => { const [name, ...label] = String(v ?? '').split('|'); return name.startsWith('categories/') ? { name, displayName: label.join('|') } : null; };
+    const extra = [].concat(body.extra ?? []).map(pick).filter(Boolean).slice(0, 9);
+    const hours = {};
+    for (const [d] of DAYS) {
+      hours[d] = [];
+      if (body[`open_${d}`] !== '1') continue;
+      for (const [f, t] of [[`from_${d}`, `to_${d}`], [`from2_${d}`, `to2_${d}`]]) if (toTime(body[f]) && toTime(body[t])) hours[d].push([body[f], body[t]]);
+    }
+    return { description: String(body.description ?? '').replace(/\r/g, '').trim(), primary: pick(body.primary), extra, phone: String(body.phone ?? '').trim(), website: String(body.website ?? '').trim(), hours };
+  }
+  /** Google's periods from the form's ranges; a range that ends at or before its start closes the next day. */
+  function periodsOf(hours) {
+    const periods = [];
+    for (const [d] of DAYS) {
+      for (const [from, to] of hours[d]) {
+        const o = toTime(from), c = to === '23:59' ? { hours: 24, minutes: 0 } : toTime(to);
+        const overnight = c.hours !== 24 && (c.hours * 60 + c.minutes) <= (o.hours * 60 + o.minutes);
+        periods.push({ openDay: d, openTime: o, closeDay: overnight ? NEXT[d] : d, closeTime: c });
+      }
+    }
+    return periods;
+  }
+  const sameHours = (a, b) => JSON.stringify(DAYS.map(([d]) => (a[d] || []).map(([x, y]) => [x, y === '23:59' ? '24:00' : y]))) === JSON.stringify(DAYS.map(([d]) => (b[d] || []).map(([x, y]) => [x, y === '23:59' ? '24:00' : y])));
+
+  async function profilePage(req, res, extra = {}) {
+    const loc = editable(req);
+    if (!loc) return notFound(res);
+    let profile = extra.profile;
+    if (!profile) {
+      try {
+        profile = await sync.profile(req.business.id, loc);
+      } catch (err) {
+        return render(req, res, 'עריכת הפרופיל', `<div class="page-head"><h1>עריכת הפרופיל בגוגל</h1><a class="btn" href="/admin/google">חזרה</a></div><div class="error">${h(humanError(err))}</div>`);
+      }
+    }
+    const aiAvailable = Boolean(ctx.ai?.growthDraft && req.plan.ai);
+    render(req, res, 'עריכת הפרופיל', profileEditView({ loc, profile, csrf: req.user.csrf, edits: store.profileEdits(loc.id), aiAvailable, saved: req.query.saved === '1', ...extra }));
+  }
+  router.get('/google/locations/:id/profile', manager, (req, res) => profilePage(req, res));
+
+  router.get('/google/categories', manager, async (req, res) => {
+    const q = String(req.query.q ?? '').trim().slice(0, 60);
+    const loc = store.googleLocations(req.business.id).find((l) => l.source !== 'serp');
+    if (!q || !loc || !sync) return res.json([]);
+    try {
+      res.json(await sync.searchCategories(req.business.id, q));
+    } catch (err) {
+      res.json({ error: humanError(err) });
+    }
+  });
+
+  router.post('/google/locations/:id/profile/ai', manager, async (req, res) => {
+    const values = formValues(req.body);
+    const over = ctx.usage.take(req.business, 'ai_draft');
+    if (over) return profilePage(req, res, { values, aiError: over });
+    try {
+      const draft = String(await ctx.ai.growthDraft({ kind: 'description', facts: growthFacts(store, req.business) })).trim().slice(0, DESCRIPTION_MAX);
+      profilePage(req, res, { values, aiDraft: draft });
+    } catch (err) {
+      ctx.usage.give(req.business, 'ai_draft');
+      profilePage(req, res, { values, aiError: err instanceof AiError ? err.message : 'ה-AI לא הצליח לכתוב עכשיו. נסו שוב.' });
+    }
+  });
+
+  router.post('/google/locations/:id/profile', manager, async (req, res) => {
+    const loc = editable(req);
+    if (!loc) return notFound(res);
+    const v = formValues(req.body);
+    let current;
+    try {
+      current = await sync.profile(req.business.id, loc);
+    } catch (err) {
+      return profilePage(req, res, { values: v, error: humanError(err), profile: {} });
+    }
+    const error =
+      v.description.length > DESCRIPTION_MAX ? `התיאור ארוך מדי (עד ${DESCRIPTION_MAX} תווים).`
+      : /https?:\/\/|www\./i.test(v.description) ? 'גוגל לא מאשרת קישורים בתיאור. הסירו את הקישור ונסו שוב.'
+      : !v.primary ? 'צריך לבחור קטגוריה ראשית.'
+      : v.phone && !(/^[0-9+()\s.-]+$/.test(v.phone) && /^\d{9,15}$/.test(v.phone.replace(/\D/g, ''))) ? 'מספר הטלפון לא תקין. למשל: 03-1234567'
+      : v.website && !/^https?:\/\/[^\s.]+\.[^\s]+$/i.test(v.website) ? 'כתובת האתר לא תקינה. למשל: https://www.example.co.il'
+      : '';
+    if (error) return profilePage(req, res, { values: v, error, profile: current });
+    // Only what changed goes to Google.
+    const patch = {};
+    const fields = [];
+    if (v.description !== (current.profile?.description || '')) { patch.profile = { description: v.description }; fields.push('profile.description'); }
+    const cats = { primaryCategory: { name: v.primary.name }, additionalCategories: v.extra.filter((c) => c.name !== v.primary.name).map((c) => ({ name: c.name })) };
+    const curCats = { primaryCategory: { name: current.categories?.primaryCategory?.name }, additionalCategories: (current.categories?.additionalCategories || []).map((c) => ({ name: c.name })) };
+    if (JSON.stringify(cats) !== JSON.stringify(curCats)) { patch.categories = cats; fields.push('categories'); }
+    if (!sameHours(v.hours, hoursOf(current.regularHours))) { patch.regularHours = { periods: periodsOf(v.hours) }; fields.push('regularHours'); }
+    if (v.phone !== (current.phoneNumbers?.primaryPhone || '')) { patch.phoneNumbers = { primaryPhone: v.phone }; fields.push('phoneNumbers.primaryPhone'); }
+    if (v.website !== (current.websiteUri || '')) { patch.websiteUri = v.website; fields.push('websiteUri'); }
+    if (!fields.length) return res.redirect(303, `/admin/google/locations/${loc.id}/profile`);
+    try {
+      await sync.saveProfile(req.business.id, loc, req.user.id, patch, fields);
+    } catch (err) {
+      return profilePage(req, res, { values: v, error: `גוגל לא קיבלה את השינוי: ${humanError(err)}`, profile: current });
+    }
+    res.redirect(303, `/admin/google/locations/${loc.id}/profile?saved=1`);
   });
 
   router.post('/google/locations/:id', manager, (req, res) => {

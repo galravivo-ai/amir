@@ -193,3 +193,4 @@ GoFive Admin
 | FLOW-047 | שפות (ממשק וסקר) | USER, CUSTOMER | Localization | Implemented |
 | FLOW-048 | תהליכי רקע (מרוכז) | SYSTEM | Background | Implemented |
 | FLOW-049 | תקרת הוצאה חודשית לכל עסק | SYSTEM, GOFIVE ADMIN | System | Implemented |
+| FLOW-050 | עריכת הפרופיל בגוגל (בלי שם וכתובת) | OWNER, MANAGER, GOOGLE | Google | Implemented (בפיתוח) |

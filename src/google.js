@@ -34,6 +34,8 @@ const ymd = (iso) => {
 const pad = (n) => String(n).padStart(2, '0');
 /** The performance API wants "locations/L"; we store "accounts/A/locations/L". */
 const perfLocation = (name) => String(name).slice(String(name).indexOf('locations/'));
+/** What the profile editor reads and may change (not the name and the address, for now). */
+export const PROFILE_MASK = 'title,categories,profile,phoneNumbers,websiteUri,regularHours,metadata,storefrontAddress';
 const SCOPES = ['https://www.googleapis.com/auth/business.manage', 'openid', 'email'];
 
 export const STARS = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
@@ -280,6 +282,17 @@ export function createGoogle({
       return out;
     },
 
+    /** The editable part of a location's profile, as Google holds it now. */
+    getProfile: (token, locationName) =>
+      call(`${INFO_URL}/${perfLocation(locationName)}?${new URLSearchParams({ readMask: PROFILE_MASK })}`, { token }),
+    /** Sends the changed fields; Google reviews edits before they show (metadata.hasPendingEdits). */
+    updateProfile: (token, locationName, patch, fields) =>
+      call(`${INFO_URL}/${perfLocation(locationName)}?${new URLSearchParams({ updateMask: fields.join(',') })}`, { method: 'PATCH', token, body: patch }),
+    /** Google's business categories matching a few words, in Hebrew, for Israel. */
+    async searchCategories(token, query) {
+      const q = new URLSearchParams({ regionCode: 'IL', languageCode: 'he', view: 'BASIC', pageSize: '20', filter: `displayName=${query}` });
+      return ((await call(`${INFO_URL}/categories?${q}`, { token })).categories || []).map((c) => ({ name: c.name, displayName: c.displayName }));
+    },
     reply: (token, reviewName, comment) => call(`${REVIEWS_URL}/${reviewName}/reply`, { method: 'PUT', token, body: { comment } }),
   };
 }

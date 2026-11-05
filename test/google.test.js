@@ -8,6 +8,16 @@ import { profilesOf } from '../src/plans.js';
 // A stand-in for Google's OAuth and Business Profile APIs.
 const fakeGoogle = {
   calls: [],
+  patches: [],
+  profile: {
+    title: 'קפה במרכז',
+    categories: { primaryCategory: { name: 'categories/gcid:cafe', displayName: 'בית קפה' }, additionalCategories: [] },
+    profile: { description: 'בית קפה קטן במרכז העיר.' },
+    phoneNumbers: { primaryPhone: '03-1234567' },
+    websiteUri: 'https://cafe.example.com',
+    regularHours: { periods: [{ openDay: 'SUNDAY', openTime: { hours: 8 }, closeDay: 'SUNDAY', closeTime: { hours: 20 } }] },
+    metadata: {},
+  },
   reviews: [
     { name: 'accounts/1/locations/9/reviews/a', reviewer: { displayName: 'דנה' }, starRating: 'FIVE', comment: 'מעולה', createTime: '2026-09-01T10:00:00Z', updateTime: '2026-09-01T10:00:00Z' },
   ],
@@ -25,6 +35,16 @@ const fakeGoogle = {
     }
     if (url.startsWith('https://mybusinessaccountmanagement.googleapis.com/v1/accounts')) {
       return json(200, { accounts: [{ name: 'accounts/1' }] });
+    }
+    if (url.startsWith('https://mybusinessbusinessinformation.googleapis.com/v1/locations/9?readMask=')) {
+      return json(200, fakeGoogle.profile);
+    }
+    if (url.startsWith('https://mybusinessbusinessinformation.googleapis.com/v1/locations/9?updateMask=') && init.method === 'PATCH') {
+      fakeGoogle.patches.push([new URL(url).searchParams.get('updateMask'), JSON.parse(init.body)]);
+      return json(200, { ...fakeGoogle.profile, ...JSON.parse(init.body), metadata: { hasPendingEdits: true } });
+    }
+    if (url.startsWith('https://mybusinessbusinessinformation.googleapis.com/v1/categories?')) {
+      return json(200, { categories: [{ name: 'categories/gcid:italian_restaurant', displayName: 'מסעדה איטלקית' }, { name: 'categories/gcid:pizza_restaurant', displayName: 'פיצרייה' }] });
     }
     if (url.startsWith('https://mybusinessbusinessinformation.googleapis.com/v1/accounts/1/locations')) {
       return json(200, {
@@ -434,4 +454,41 @@ test('profile performance: views, calls, directions and searches from Google', a
   const q = new URL(fakeGoogle.calls.slice(before).find((c) => c[1].includes(':fetchMultiDailyMetricsTimeSeries'))[1]).searchParams;
   const from = Date.UTC(q.get('dailyRange.start_date.year'), q.get('dailyRange.start_date.month') - 1, q.get('dailyRange.start_date.day'));
   assert.ok(Date.now() - from < 23 * 864e5);
+});
+
+test('editing the Google profile: only what changed goes to Google, the name and address stay out', async () => {
+  const req = await owner('g-profile@example.com');
+  const token = await csrf(req);
+  const biz = created.store.businessesFor(created.store.userByEmail('g-profile@example.com').id)[0];
+  const start = await req('/admin/google/connect', { method: 'POST', form: { _csrf: token } });
+  await req(`/admin/google/callback?code=abc&state=${new URL(start.location).searchParams.get('state')}`);
+  const [loc] = created.store.googleLocations(biz.id);
+  assert.match((await req('/admin/google')).text, new RegExp(`/admin/google/locations/${loc.id}/profile`), 'a link from the branches');
+
+  const page = (await req(`/admin/google/locations/${loc.id}/profile`)).text;
+  assert.match(page, /בית קפה קטן במרכז העיר/);
+  assert.match(page, /name="from_SUNDAY" value="08:00"/);
+  assert.match(page, /אותם עורכים כרגע ישירות בגוגל/, 'name and address are not editable here');
+  assert.doesNotMatch(page, /name="title"|name="address"/);
+
+  const cats = await req('/admin/google/categories?q=מסעדה');
+  assert.match(cats.text, /מסעדה איטלקית/);
+
+  // A link in the description is refused before anything is sent.
+  const before = fakeGoogle.patches.length;
+  const bad = await req(`/admin/google/locations/${loc.id}/profile`, { method: 'POST', form: { _csrf: token, description: 'בואו ל-www.cafe.co.il', primary: 'categories/gcid:cafe|בית קפה', open_SUNDAY: '1', from_SUNDAY: '08:00', to_SUNDAY: '20:00', phone: '03-1234567', website: 'https://cafe.example.com' } });
+  assert.match(bad.text, /גוגל לא מאשרת קישורים בתיאור/);
+  assert.equal(fakeGoogle.patches.length, before);
+
+  // A new description and Monday's hours: only those two fields are sent.
+  const ok = await req(`/admin/google/locations/${loc.id}/profile`, { method: 'POST', form: { _csrf: token, description: 'בית קפה שכונתי עם מאפים טריים.', primary: 'categories/gcid:cafe|בית קפה', open_SUNDAY: '1', from_SUNDAY: '08:00', to_SUNDAY: '20:00', open_MONDAY: '1', from_MONDAY: '18:00', to_MONDAY: '02:00', phone: '03-1234567', website: 'https://cafe.example.com' } });
+  assert.equal(ok.location, `/admin/google/locations/${loc.id}/profile?saved=1`);
+  const [mask, body] = fakeGoogle.patches.at(-1);
+  assert.equal(mask, 'profile.description,regularHours');
+  assert.equal(body.profile.description, 'בית קפה שכונתי עם מאפים טריים.');
+  assert.deepEqual(body.regularHours.periods.find((p) => p.openDay === 'MONDAY'), { openDay: 'MONDAY', openTime: { hours: 18, minutes: 0 }, closeDay: 'TUESDAY', closeTime: { hours: 2, minutes: 0 } }, 'past midnight closes the next day');
+  assert.equal(body.title, undefined);
+  const after = (await req(`/admin/google/locations/${loc.id}/profile?saved=1`)).text;
+  assert.match(after, /השינויים נשלחו לגוגל/);
+  assert.match(after, /תיאור, שעות פתיחה/, 'the change is recorded');
 });

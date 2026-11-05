@@ -739,6 +739,20 @@ const MIGRATIONS = [
   `
   ALTER TABLE payments ADD COLUMN document TEXT;
   `,
+  // v46: edits to a location's Google profile made from here: who, what, and Google's answer
+  `
+  CREATE TABLE profile_edits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    location_id INTEGER NOT NULL REFERENCES google_locations(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    fields TEXT NOT NULL DEFAULT '[]',
+    ok INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_profile_edits_location ON profile_edits(location_id, id);
+  `,
 ];
 
 function migrate(db) {
