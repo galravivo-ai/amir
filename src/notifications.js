@@ -346,6 +346,28 @@ export function createNotifier({ store, mailer, pusher = null, publicUrl = () =>
       });
     },
 
+    /** Someone signed up: the operator hears right away, with where they came from. */
+    async signupReceived({ user, business, admins, source = '', via = '' }) {
+      if (!admins.length || !user || !business) return false;
+      const ends = business.trial_ends_at ? new Date(business.trial_ends_at.replace(' ', 'T') + (business.trial_ends_at.includes('Z') ? '' : 'Z')).toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }) : '';
+      return send({
+        kind: 'signup',
+        businessId: business.id,
+        to: admins,
+        subject: `נרשם עסק חדש: ${business.name}`,
+        html: emailLayout({
+          title: 'הרשמה חדשה ל-GoFive',
+          brand: true,
+          body: `<p><b>${h(business.name)}</b> נרשם עכשיו${PLANS[business.plan] ? ` (מסלול ${h(PLANS[business.plan].label)})` : ''}.</p>
+            <p>${h(user.name)} · <a dir="ltr" href="mailto:${h(user.email)}">${h(user.email)}</a></p>
+            <p style="color:#6b7280">נרשם דרך: ${h(via || 'אימייל וסיסמה')}${ends ? ` · הניסיון נגמר ב-${h(ends)}` : ''}</p>
+            <p style="color:#6b7280">הגיע מ: <span dir="ltr">${h(source || 'ישיר (בלי פרמטר של מודעה)')}</span></p>
+            ${user.marketing_consent ? '<p style="color:#15803d">✓ אישר/ה קבלת דיוור פרסומי</p>' : ''}
+            ${emailButton(url('/superadmin#businesses'), 'לניהול המערכת')}`,
+        }),
+      });
+    },
+
     /** A business asked for a plan: tell the people who activate plans. */
     async planRequested({ business, plan, cycle, user, admins, profiles = 1, amount = null }) {
       if (!admins.length) return false;

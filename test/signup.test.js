@@ -210,3 +210,28 @@ test('free trial days without a card, then paying on an iCount page; the operato
     }
   }
 });
+
+test('a new sign-up emails the system admins, with the ad it came from', async () => {
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const { store } = created;
+  try {
+    const op = client(base);
+    await op('/register', { method: 'POST', form: { name: 'מפעיל', email: 'op@example.com', password: 'password123', business: 'GoFive', terms: '1' } });
+    store.db.prepare('UPDATE users SET is_superadmin = 1 WHERE email = ?').run('op@example.com');
+    const me = client(base);
+    await me('/?utm_source=facebook&utm_campaign=launch&utm_content=reviews');
+    await me('/register', { method: 'POST', form: { name: 'דנה', email: 'dana@example.com', password: 'password123', business: 'מספרת דנה', terms: '1' } });
+    await new Promise((r) => setTimeout(r, 50));
+    const mail = store.db.prepare("SELECT * FROM outbox WHERE kind = 'signup'").all();
+    assert.equal(mail.length, 1);
+    assert.match(mail[0].to_addr ?? mail[0].recipient ?? JSON.stringify(mail[0]), /op@example\.com/);
+    assert.match(mail[0].subject, /מספרת דנה/);
+    assert.match(JSON.stringify(mail[0]), /utm|source=facebook/);
+    assert.match(JSON.stringify(mail[0]), /content=reviews/);
+  } finally {
+    server.close();
+  }
+});

@@ -232,6 +232,18 @@ export function createApp(db, options = {}) {
 
   app.use(securityHeaders);
   app.use(parseCookies);
+  // Where a visitor came from (an ad's utm_* or fbclid), first touch, for the new-signup email.
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.cookies?.gf_src) {
+      const q = req.query || {};
+      const parts = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+        .filter((k) => q[k])
+        .map((k) => `${k.slice(4)}=${String(q[k]).slice(0, 60)}`);
+      if (!parts.length && q.fbclid) parts.push('source=facebook (fbclid)');
+      if (parts.length) res.cookie('gf_src', `${parts.join(' · ')} · ${req.path}`.slice(0, 300), { maxAge: 30 * 864e5, httpOnly: true, sameSite: 'lax' });
+    }
+    next();
+  });
   app.use(express.urlencoded({ extended: false, limit: '100kb', parameterLimit: 500 }));
   app.use('/static', express.static(path.join(root, 'public'), { maxAge: '1h' }));
   app.get('/healthz', (_req, res) => res.json({ ok: true }));

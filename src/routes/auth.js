@@ -188,7 +188,7 @@ export function authRoutes(ctx) {
     // Signed up meanwhile (another tab): just sign in.
     const existing = store.userByEmail(v.email);
     if (existing) return logIn(res, existing);
-    startAccount(res, v, pass);
+    startAccount(req, res, v, pass, 'חשבון גוגל');
   });
 
   router.get('/login/2fa', (req, res) => {
@@ -237,11 +237,11 @@ export function authRoutes(ctx) {
       res.status(422);
       return render(req, res, 'הרשמה', V.registerView({ inApp: inAppBrowser(req.get('user-agent')), trialOpen: trialMode(), error, values: { ...v, pass: pass?.code }, pass, google: Boolean(ctx.google) }));
     }
-    startAccount(res, v, pass);
+    startAccount(req, res, v, pass);
   });
 
   /** A new person and their business: the account, the trial or free pass, the session and the guide. */
-  function startAccount(res, v, pass) {
+  function startAccount(req, res, v, pass, via = 'אימייל וסיסמה') {
     const userId = createUser(v);
     // The system admin's own business is never on a trial.
     const admin = ctx.isSuperadmin(store.userById(userId));
@@ -256,6 +256,10 @@ export function authRoutes(ctx) {
       ctx.notifier
         ?.welcomeGuide({ user: store.userById(userId), business: store.businessById(businessId) })
         .catch((err) => console.error('[notify] welcome guide failed:', err));
+      // The operator hears about every new sign-up (in the background as well).
+      ctx.notifier
+        ?.signupReceived({ user: store.userById(userId), business: store.businessById(businessId), admins: ctx.adminEmails(), source: String(req.cookies?.gf_src || ''), via: viaPass ? `${via} · קישור גישה חינם` : via })
+        .catch((err) => console.error('[notify] signup alert failed:', err));
     }
     res.redirect(303, admin ? '/superadmin' : '/admin');
   }
