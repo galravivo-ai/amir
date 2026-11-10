@@ -245,6 +245,11 @@ export function createApp(db, options = {}) {
     next();
   });
   app.use(express.urlencoded({ extended: false, limit: '100kb', parameterLimit: 500 }));
+  // Express 5 leaves req.body undefined when a POST has no form body (bots, JSON, an empty request): every route reads {}.
+  app.use((req, _res, next) => {
+    if (req.body === undefined) req.body = {};
+    next();
+  });
   app.use('/static', express.static(path.join(root, 'public'), { maxAge: '1h' }));
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
 

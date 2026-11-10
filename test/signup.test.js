@@ -235,3 +235,20 @@ test('a new sign-up emails the system admins, with the ad it came from', async (
     server.close();
   }
 });
+
+test('a POST with no form body gets a normal answer, not a server error', async () => {
+  const created = createApp(openDb(':memory:'), { authLimit: { windowMs: 60e3, max: 1000 }, backups: false, google: null, ai: null, answerEngines: {}, cardcom: null, whatsapp: null, serp: null });
+  const server = created.app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    for (const path of ['/login', '/register', '/forgot']) {
+      const empty = await fetch(base + path, { method: 'POST', redirect: 'manual' });
+      assert.ok(empty.status < 500, `${path} empty: ${empty.status}`);
+      const json = await fetch(base + path, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/json' }, body: '{"email":"x@example.com"}' });
+      assert.ok(json.status < 500, `${path} json: ${json.status}`);
+    }
+  } finally {
+    server.close();
+  }
+});
